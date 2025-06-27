@@ -1,0 +1,41 @@
+{
+  "version": "2.5.0",
+  "releaseDate": "2025-06-23",
+  "forceUpdate": false,
+  "changes": {
+    "all": [
+      {
+        "type": "improvement",
+        "description": "¡Filtro 'En uso' mejorado! Ahora tus territorios asignados aparecen siempre al principio de la lista para un acceso más rápido."
+      },
+      {
+        "type": "improvement",
+        "description": "Nuevo indicador visual: un punto azul en el filtro 'En uso' te avisa si tienes territorios asignados sin necesidad de hacer clic."
+      },
+      {
+        "type": "fix",
+        "description": "Mejorado el contraste de los íconos en los botones de filtro activos para mayor claridad visual."
+      },
+       {
+        "type": "fix",
+        "description": "Se restauró el botón 'Agregar dirección' para los publicadores en la vista de territorio."
+      },
+      {
+        "type": "fix",
+        "description": "Corregido un error crítico que impedía cerrar la sesión correctamente."
+      }
+    ],
+    "admin": [
+      {
+        "type": "fix",
+        "description": "Solucionado un error que bloqueaba la aplicación al ver las propuestas de cambios pendientes."
+      }
+    ],
+    "publisher": [
+      {
+        "type": "fix",
+        "description": "Corregido un error que impedía visualizar el historial de propuestas en la sección 'Mis Propuestas'."
+      }
+    ]
+  }
+}
