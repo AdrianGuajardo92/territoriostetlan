@@ -8779,7 +8779,7 @@ const closeModal = () => {
 if ('serviceWorker' in navigator) {
     // TEMPORAL: Forzar actualización del Service Worker (REMOVER DESPUÉS DE 1 SEMANA)
     // Descomentar las siguientes líneas solo si necesitas forzar actualización
-    /*
+    
     navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for(let registration of registrations) {
             registration.unregister();
@@ -8790,7 +8790,7 @@ if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js');
         }, 1000);
     });
-    */
+    
     
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
