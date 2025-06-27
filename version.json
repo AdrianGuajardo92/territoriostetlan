@@ -1,42 +1,46 @@
 {
-  "version": "2.5.0",
-  "releaseDate": "2025-06-23",
+  "version": "1.0.1",
+  "releaseDate": "2024-12-26",
   "forceUpdate": false,
   "changes": {
     "all": [
       {
-        "type": "improvement",
-        "description": "¡Filtro 'En uso' mejorado! Ahora tus territorios asignados aparecen siempre al principio de la lista para un acceso más rápido."
+        "type": "new",
+        "description": "Aplicación reestructurada con componentes modulares para facilitar futuras actualizaciones."
+      },
+      {
+        "type": "new",
+        "description": "Sistema de autenticación mejorado con código de acceso en lugar de email."
       },
       {
         "type": "improvement",
-        "description": "Nuevo indicador visual: un punto azul en el filtro 'En uso' te avisa si tienes territorios asignados sin necesidad de hacer clic."
+        "description": "Modal de estadísticas completamente funcional con 3 vistas: General, Progreso y Rendimiento."
       },
       {
-        "type": "fix",
-        "description": "Mejorado el contraste de los íconos en los botones de filtro activos para mayor claridad visual."
-      },
-       {
-        "type": "fix",
-        "description": "Se restauró el botón 'Agregar dirección' para los publicadores en la vista de territorio."
-      },
-      {
-        "type": "fix",
-        "description": "Corregido un error crítico que impedía cerrar la sesión correctamente."
+        "type": "improvement",
+        "description": "Sistema de cambio de contraseña actualizado y funcional."
       }
     ],
     "admin": [
       {
-        "type": "fix",
-        "description": "Solucionado un error que bloqueaba la aplicación al ver las propuestas de cambios pendientes."
+        "type": "new",
+        "description": "Panel de administración completo con gestión de propuestas, usuarios y territorios."
+      },
+      {
+        "type": "new",
+        "description": "Vista de estadísticas avanzadas para administradores."
       }
     ],
     "publisher": [
       {
-        "type": "fix",
-        "description": "Corregido un error que impedía visualizar el historial de propuestas en la sección 'Mis Propuestas'."
+        "type": "improvement",
+        "description": "Menú móvil rediseñado con interfaz más limpia y elegante."
+      },
+      {
+        "type": "improvement",
+        "description": "Búsqueda mejorada con filtros por tipo (territorios/direcciones)."
       }
     ]
   },
-  "lastUpdated": "2024-01-01"
+  "lastUpdated": "2024-12-26"
 }
