@@ -1,20 +1,24 @@
 {
-  "version": "2.5.1",
+  "version": "2.5.2",
   "releaseDate": "2025-06-29",
   "forceUpdate": false,
   "changes": {
     "all": [
       {
         "type": "fix",
-        "description": "¡Solucionado! La ruta optimizada ahora funciona correctamente en todos los dispositivos. Se mejoró el manejo de permisos de ubicación."
+        "description": "¡Proceso de actualización mejorado! Ahora muestra el progreso claramente y se completa sin necesidad de reiniciar manualmente."
+      },
+      {
+        "type": "fix",
+        "description": "Solicitud de permisos de ubicación simplificada. Ahora aparece el diálogo nativo del navegador automáticamente."
       },
       {
         "type": "improvement",
-        "description": "Mensajes más claros al solicitar permisos de ubicación, con instrucciones específicas para cada navegador."
+        "description": "Mensajes de error más claros con íconos y sugerencias específicas según el problema."
       },
       {
         "type": "improvement",
-        "description": "Mayor tiempo de espera para obtener la ubicación en dispositivos con GPS lento."
+        "description": "El proceso de actualización ahora cierra automáticamente la ventana y muestra la versión correcta."
       },
       {
         "type": "improvement",

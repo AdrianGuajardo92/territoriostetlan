@@ -7238,7 +7238,7 @@ const AppProvider = ({ children }) => {
     const [userNotificationsCount, setUserNotificationsCount] = useState(0);
     
     // Sistema de versiones y actualizaciones
-    const CURRENT_VERSION = '2.5.1'; // Versión actual de la app
+    const CURRENT_VERSION = '2.5.2'; // Versión actual de la app
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -7520,7 +7520,7 @@ const handleLogout = () => {
     // Función para actualizar la aplicación
     const performUpdate = async () => {
         setIsUpdating(true);
-        showToast('Actualizando aplicación...', 'info', 10000); // Toast más largo
+        showToast('Iniciando actualización...', 'info', 3000);
         
         try {
             // Guardar el estado del usuario antes de recargar
@@ -7528,11 +7528,18 @@ const handleLogout = () => {
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
             }
             
+            // Progress tracker
+            let progress = 0;
+            const updateProgress = (msg, percent) => {
+                progress = percent;
+                showToast(msg, 'info', 5000);
+            };
+            
             // Si hay service worker, actualizarlo
             if ('serviceWorker' in navigator) {
                 const registration = await navigator.serviceWorker.getRegistration();
                 if (registration) {
-                    showToast('Descargando actualización...', 'info', 10000);
+                    updateProgress('📥 Descargando actualización...', 20);
                     
                     // Forzar actualización del service worker
                     await registration.update();
@@ -7542,57 +7549,113 @@ const handleLogout = () => {
                     
                     if (newWorker) {
                         // Crear una promesa para esperar el estado activated
-                        await new Promise((resolve) => {
+                        const activationPromise = new Promise((resolve) => {
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'activated') {
                                     resolve();
                                 }
                             });
-                            
-                            // Enviar mensaje para skipWaiting
-                            newWorker.postMessage({ type: 'SKIP_WAITING' });
                         });
                         
+                        updateProgress('🔄 Instalando nueva versión...', 40);
+                        
+                        // Enviar mensaje para skipWaiting
+                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                        
+                        // Esperar con timeout
+                        await Promise.race([
+                            activationPromise,
+                            new Promise(resolve => setTimeout(resolve, 5000))
+                        ]);
+                        
+                        updateProgress('🧹 Limpiando caché anterior...', 60);
+                        
                         // Limpiar caché
-                        showToast('Limpiando caché...', 'info', 5000);
                         if ('caches' in window) {
                             const names = await caches.keys();
                             await Promise.all(names.map(name => caches.delete(name)));
                         }
                         
-                        showToast('¡Actualización completa! Recargando...', 'success', 3000);
+                        updateProgress('✅ ¡Actualización completada!', 100);
                         
-                        // Esperar un poco para que el usuario vea el mensaje
+                        // Mostrar éxito antes de recargar
                         await new Promise(resolve => setTimeout(resolve, 1500));
                         
-                        // Recargar con un flag especial
+                        // Marcar como actualizado y cerrar modal
                         localStorage.setItem('justUpdated', 'true');
-                        window.location.reload(true);
+                        localStorage.setItem('updateVersion', updateInfo.version);
+                        setIsUpdating(false);
+                        setShowUpdateModal(false);
+                        setUpdateAvailable(false);
+                        
+                        // Dar tiempo para que el modal se cierre
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        // Recargar suavemente
+                        window.location.reload();
                     } else {
-                        // Si no hay nuevo worker, solo recargar
-                        showToast('Aplicando cambios...', 'info', 3000);
+                        // Si no hay nuevo worker, aplicar actualización simple
+                        updateProgress('🔄 Aplicando actualización...', 80);
                         await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        updateProgress('✅ ¡Actualización completada!', 100);
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        
                         localStorage.setItem('justUpdated', 'true');
-                        window.location.reload(true);
+                        localStorage.setItem('updateVersion', updateInfo.version);
+                        setIsUpdating(false);
+                        setShowUpdateModal(false);
+                        setUpdateAvailable(false);
+                        
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        window.location.reload();
                     }
                 } else {
                     // Sin service worker
-                    showToast('Aplicando actualización...', 'info', 3000);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    updateProgress('🔄 Aplicando actualización...', 50);
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    updateProgress('✅ ¡Actualización completada!', 100);
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
                     localStorage.setItem('justUpdated', 'true');
-                    window.location.reload(true);
+                    localStorage.setItem('updateVersion', updateInfo.version);
+                    setIsUpdating(false);
+                    setShowUpdateModal(false);
+                    setUpdateAvailable(false);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    window.location.reload();
                 }
             } else {
                 // Si no hay service worker, solo recargar
-                showToast('Recargando aplicación...', 'info', 3000);
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                updateProgress('🔄 Aplicando actualización...', 50);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                updateProgress('✅ ¡Actualización completada!', 100);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
                 localStorage.setItem('justUpdated', 'true');
-                window.location.reload(true);
+                localStorage.setItem('updateVersion', updateInfo.version);
+                setIsUpdating(false);
+                setShowUpdateModal(false);
+                setUpdateAvailable(false);
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                window.location.reload();
             }
         } catch (error) {
             console.error('Error al actualizar:', error);
-            showToast('Error al actualizar. Intenta recargar manualmente.', 'error', 5000);
+            showToast('❌ Error al actualizar. Por favor, recarga la página manualmente.', 'error', 5000);
             setIsUpdating(false);
+            
+            // Intentar recuperación automática
+            setTimeout(() => {
+                showToast('🔄 Intentando actualización alternativa...', 'info');
+                localStorage.setItem('justUpdated', 'true');
+                localStorage.setItem('updateVersion', updateInfo?.version || CURRENT_VERSION);
+                window.location.reload(true);
+            }, 3000);
         }
     };
     
@@ -7606,11 +7669,21 @@ const handleLogout = () => {
                 localStorage.removeItem('lastVersionCheck'); // Limpiar última verificación
                 setUpdateAvailable(false); // Asegurar que no muestre actualización disponible
                 setUpdateInfo(null); // Limpiar info de actualización
-                showToast(`¡Aplicación actualizada exitosamente a la versión ${CURRENT_VERSION}!`, 'success', 5000);
-                // Dar tiempo para que Firebase se inicialice completamente
+                
+                // Obtener la versión actualizada
+                const updatedVersion = localStorage.getItem('updateVersion') || CURRENT_VERSION;
+                localStorage.removeItem('updateVersion');
+                
+                // Mostrar notificación de éxito con animación
                 setTimeout(() => {
-                    if (state.addresses.length === 0) {
-                        // Forzar recarga de datos si no hay direcciones
+                    showToast(`🎉 ¡Aplicación actualizada exitosamente a la versión ${updatedVersion}!`, 'success', 6000);
+                }, 500);
+                
+                // Verificar integridad de datos
+                setTimeout(() => {
+                    if (state.addresses.length === 0 && !state.isLoading) {
+                        // Si no hay datos después de 3 segundos, forzar recarga
+                        console.log('Forzando recarga de datos post-actualización...');
                         window.location.reload();
                     }
                 }, 3000);
@@ -8473,36 +8546,7 @@ useEffect(() => {
                 }
                 
                 updateSortState(territoryId, { isLocating: true });
-                
-                // Verificar permisos primero
-                try {
-                    const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-                    
-                    if (permissionStatus.state === 'denied') {
-                        updateSortState(territoryId, { isLocating: false });
-                        showToast("Los permisos de ubicación están bloqueados. Por favor, habilítalos en la configuración de tu navegador.", "error");
-                        
-                        // Dar instrucciones específicas según el navegador
-                        const userAgent = navigator.userAgent.toLowerCase();
-                        let instructions = "";
-                        if (userAgent.includes('chrome')) {
-                            instructions = "En Chrome: Configuración > Privacidad y seguridad > Configuración de sitios > Ubicación";
-                        } else if (userAgent.includes('firefox')) {
-                            instructions = "En Firefox: Configuración > Privacidad y seguridad > Permisos > Ubicación";
-                        } else if (userAgent.includes('safari')) {
-                            instructions = "En Safari: Preferencias > Sitios web > Ubicación";
-                        }
-                        if (instructions) {
-                            setTimeout(() => showToast(instructions, "info"), 1000);
-                        }
-                        return;
-                    }
-                } catch (e) {
-                    // Si navigator.permissions no está disponible, continuamos
-                    console.log("navigator.permissions no disponible, continuando...");
-                }
-                
-                showToast("Obteniendo tu ubicación...", "info");
+                showToast("Solicitando acceso a tu ubicación...", "info");
                 
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
@@ -8513,28 +8557,55 @@ useEffect(() => {
                     (error) => {
                         updateSortState(territoryId, { isLocating: false });
                         
-                        let errorMessage = "No se pudo obtener tu ubicación. ";
+                        let errorMessage = "";
+                        let showInstructions = false;
+                        
                         switch(error.code) {
                             case error.PERMISSION_DENIED:
-                                errorMessage += "Por favor, permite el acceso a tu ubicación y vuelve a intentar.";
+                                errorMessage = "📍 Permiso de ubicación denegado";
+                                showInstructions = true;
                                 break;
                             case error.POSITION_UNAVAILABLE:
-                                errorMessage += "La información de ubicación no está disponible.";
+                                errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
                                 break;
                             case error.TIMEOUT:
-                                errorMessage += "La solicitud de ubicación tardó demasiado tiempo.";
+                                errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
                                 break;
                             default:
-                                errorMessage += "Error desconocido.";
+                                errorMessage = "❌ No se pudo obtener la ubicación.";
                         }
                         
                         showToast(errorMessage, "error");
                         
-                        // Si es un error de permisos, dar instrucciones adicionales
-                        if (error.code === error.PERMISSION_DENIED) {
-                            setTimeout(() => {
-                                showToast("Recarga la página después de permitir los permisos.", "info");
-                            }, 2000);
+                        // Solo mostrar instrucciones si realmente se denegó el permiso
+                        if (showInstructions && navigator.permissions) {
+                            navigator.permissions.query({ name: 'geolocation' }).then(result => {
+                                if (result.state === 'denied') {
+                                    // Permisos bloqueados permanentemente
+                                    setTimeout(() => {
+                                        const userAgent = navigator.userAgent.toLowerCase();
+                                        if (userAgent.includes('chrome') || userAgent.includes('edge')) {
+                                            showToast("💡 Para habilitar ubicación: Haz clic en el candado junto a la URL → Ubicación → Permitir", "info", 8000);
+                                        } else if (userAgent.includes('firefox')) {
+                                            showToast("💡 Para habilitar ubicación: Haz clic en el ícono de ubicación en la barra de direcciones", "info", 8000);
+                                        } else if (userAgent.includes('safari')) {
+                                            showToast("💡 Para habilitar ubicación: Safari → Preferencias → Sitios web → Ubicación", "info", 8000);
+                                        } else {
+                                            showToast("💡 Habilita los permisos de ubicación en la configuración de tu navegador y recarga la página", "info", 8000);
+                                        }
+                                    }, 1500);
+                                } else {
+                                    // El usuario simplemente canceló el diálogo
+                                    setTimeout(() => {
+                                        showToast("💡 Para usar esta función, permite el acceso a tu ubicación cuando se solicite", "info", 6000);
+                                    }, 1500);
+                                }
+                            }).catch(() => {
+                                // Si no podemos verificar, dar instrucciones genéricas
+                                setTimeout(() => {
+                                    showToast("💡 Vuelve a intentar y permite el acceso a tu ubicación cuando aparezca la ventana", "info", 6000);
+                                }, 1500);
+                            });
                         }
                     },
                     { 
@@ -8559,36 +8630,7 @@ useEffect(() => {
                 }
                 
                 updateSortState(territoryId, { isCalculatingRoute: true });
-                
-                // Verificar permisos primero
-                try {
-                    const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-                    
-                    if (permissionStatus.state === 'denied') {
-                        updateSortState(territoryId, { isCalculatingRoute: false });
-                        showToast("Los permisos de ubicación están bloqueados. Por favor, habilítalos en la configuración de tu navegador.", "error");
-                        
-                        // Dar instrucciones específicas según el navegador
-                        const userAgent = navigator.userAgent.toLowerCase();
-                        let instructions = "";
-                        if (userAgent.includes('chrome')) {
-                            instructions = "En Chrome: Configuración > Privacidad y seguridad > Configuración de sitios > Ubicación";
-                        } else if (userAgent.includes('firefox')) {
-                            instructions = "En Firefox: Configuración > Privacidad y seguridad > Permisos > Ubicación";
-                        } else if (userAgent.includes('safari')) {
-                            instructions = "En Safari: Preferencias > Sitios web > Ubicación";
-                        }
-                        if (instructions) {
-                            setTimeout(() => showToast(instructions, "info"), 1000);
-                        }
-                        return;
-                    }
-                } catch (e) {
-                    // Si navigator.permissions no está disponible, continuamos
-                    console.log("navigator.permissions no disponible, continuando...");
-                }
-                
-                showToast("Obteniendo tu ubicación...", "info");
+                showToast("Solicitando acceso a tu ubicación...", "info");
 
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
@@ -8626,28 +8668,55 @@ useEffect(() => {
                     (error) => {
                         updateSortState(territoryId, { isCalculatingRoute: false });
                         
-                        let errorMessage = "No se pudo obtener tu ubicación. ";
+                        let errorMessage = "";
+                        let showInstructions = false;
+                        
                         switch(error.code) {
                             case error.PERMISSION_DENIED:
-                                errorMessage += "Por favor, permite el acceso a tu ubicación y vuelve a intentar.";
+                                errorMessage = "📍 Permiso de ubicación denegado";
+                                showInstructions = true;
                                 break;
                             case error.POSITION_UNAVAILABLE:
-                                errorMessage += "La información de ubicación no está disponible.";
+                                errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
                                 break;
                             case error.TIMEOUT:
-                                errorMessage += "La solicitud de ubicación tardó demasiado tiempo.";
+                                errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
                                 break;
                             default:
-                                errorMessage += "Error desconocido.";
+                                errorMessage = "❌ No se pudo obtener la ubicación.";
                         }
                         
                         showToast(errorMessage, "error");
                         
-                        // Si es un error de permisos, dar instrucciones adicionales
-                        if (error.code === error.PERMISSION_DENIED) {
-                            setTimeout(() => {
-                                showToast("Recarga la página después de permitir los permisos.", "info");
-                            }, 2000);
+                        // Solo mostrar instrucciones si realmente se denegó el permiso
+                        if (showInstructions && navigator.permissions) {
+                            navigator.permissions.query({ name: 'geolocation' }).then(result => {
+                                if (result.state === 'denied') {
+                                    // Permisos bloqueados permanentemente
+                                    setTimeout(() => {
+                                        const userAgent = navigator.userAgent.toLowerCase();
+                                        if (userAgent.includes('chrome') || userAgent.includes('edge')) {
+                                            showToast("💡 Para habilitar ubicación: Haz clic en el candado junto a la URL → Ubicación → Permitir", "info", 8000);
+                                        } else if (userAgent.includes('firefox')) {
+                                            showToast("💡 Para habilitar ubicación: Haz clic en el ícono de ubicación en la barra de direcciones", "info", 8000);
+                                        } else if (userAgent.includes('safari')) {
+                                            showToast("💡 Para habilitar ubicación: Safari → Preferencias → Sitios web → Ubicación", "info", 8000);
+                                        } else {
+                                            showToast("💡 Habilita los permisos de ubicación en la configuración de tu navegador y recarga la página", "info", 8000);
+                                        }
+                                    }, 1500);
+                                } else {
+                                    // El usuario simplemente canceló el diálogo
+                                    setTimeout(() => {
+                                        showToast("💡 Para usar esta función, permite el acceso a tu ubicación cuando se solicite", "info", 6000);
+                                    }, 1500);
+                                }
+                            }).catch(() => {
+                                // Si no podemos verificar, dar instrucciones genéricas
+                                setTimeout(() => {
+                                    showToast("💡 Vuelve a intentar y permite el acceso a tu ubicación cuando aparezca la ventana", "info", 6000);
+                                }, 1500);
+                            });
                         }
                     },
                     { 
