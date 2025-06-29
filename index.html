@@ -7238,7 +7238,7 @@ const AppProvider = ({ children }) => {
     const [userNotificationsCount, setUserNotificationsCount] = useState(0);
     
     // Sistema de versiones y actualizaciones
-    const CURRENT_VERSION = '2.5.3'; // Versión actual de la app
+    const CURRENT_VERSION = '2.5.4'; // Versión actual de la app
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -8532,133 +8532,175 @@ useEffect(() => {
                 }));
             };
 
-            const handleSortByDistance = async (territoryId) => {
+            const handleSortByDistance = (territoryId) => {
                 // Verificar compatibilidad
                 if (!navigator.geolocation) {
                     showToast("Tu navegador no soporta geolocalización.", "error");
                     return;
                 }
                 
-                // Verificar HTTPS
-                if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                // Verificar HTTPS solo en desktop
+                if (!window.matchMedia('(max-width: 768px)').matches && 
+                    location.protocol !== 'https:' && 
+                    location.hostname !== 'localhost') {
                     showToast("La geolocalización requiere una conexión segura (HTTPS).", "error");
                     return;
                 }
                 
                 updateSortState(territoryId, { isLocating: true });
-                showToast("Obteniendo tu ubicación...", "info");
                 
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const userLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
-                        updateSortState(territoryId, { isLocating: false, sortOrder: 'distance', userLocation: userLoc });
-                        showToast("Direcciones ordenadas por proximidad.", "success");
-                    },
-                    (error) => {
-                        updateSortState(territoryId, { isLocating: false });
-                        
-                        let errorMessage = "";
-                        
-                        switch(error.code) {
-                            case error.PERMISSION_DENIED:
-                                errorMessage = "📍 Para usar esta función, permite el acceso a tu ubicación";
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
-                                break;
-                            case error.TIMEOUT:
-                                errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
-                                break;
-                            default:
-                                errorMessage = "❌ No se pudo obtener la ubicación. Intenta nuevamente.";
+                // Solicitar ubicación inmediatamente para activar el diálogo
+                try {
+                    // Mostrar mensaje solo después de un pequeño delay para no interferir
+                    setTimeout(() => {
+                        if (sortState.isLocating) {
+                            showToast("Obteniendo tu ubicación...", "info");
                         }
-                        
-                        showToast(errorMessage, "error");
-                    },
-                    { 
-                        enableHighAccuracy: true, 
-                        timeout: 15000,  // Aumentado a 15 segundos
-                        maximumAge: 0 
-                    }
-                );
+                    }, 500);
+                    
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            const userLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
+                            updateSortState(territoryId, { isLocating: false, sortOrder: 'distance', userLocation: userLoc });
+                            showToast("Direcciones ordenadas por proximidad.", "success");
+                        },
+                        (error) => {
+                            updateSortState(territoryId, { isLocating: false });
+                            
+                            let errorMessage = "";
+                            
+                            switch(error.code) {
+                                case error.PERMISSION_DENIED:
+                                    errorMessage = "📍 Para usar esta función, permite el acceso a tu ubicación";
+                                    // En móviles, sugerir recargar si no apareció el diálogo
+                                    if (window.matchMedia('(max-width: 768px)').matches) {
+                                        setTimeout(() => {
+                                            showToast("💡 Si no apareció la ventana de permisos, recarga la página e intenta de nuevo", "info", 6000);
+                                        }, 1500);
+                                    }
+                                    break;
+                                case error.POSITION_UNAVAILABLE:
+                                    errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
+                                    break;
+                                case error.TIMEOUT:
+                                    errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
+                                    break;
+                                default:
+                                    errorMessage = "❌ No se pudo obtener la ubicación. Intenta nuevamente.";
+                            }
+                            
+                            showToast(errorMessage, "error");
+                        },
+                        { 
+                            enableHighAccuracy: false, // Cambiar a false para móviles
+                            timeout: 10000,
+                            maximumAge: 0 
+                        }
+                    );
+                } catch (e) {
+                    updateSortState(territoryId, { isLocating: false });
+                    showToast("❌ Error al solicitar ubicación. Recarga la página e intenta de nuevo.", "error");
+                    console.error("Error al solicitar geolocalización:", e);
+                }
             };
 
-            const handleOptimizedRoute = async (territoryId) => {
+            const handleOptimizedRoute = (territoryId) => {
                 // Verificar compatibilidad
                 if (!navigator.geolocation) {
                     showToast("Tu navegador no soporta geolocalización.", "error");
                     return;
                 }
                 
-                // Verificar HTTPS
-                if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                // Verificar HTTPS solo en desktop
+                if (!window.matchMedia('(max-width: 768px)').matches && 
+                    location.protocol !== 'https:' && 
+                    location.hostname !== 'localhost') {
                     showToast("La geolocalización requiere una conexión segura (HTTPS).", "error");
                     return;
                 }
                 
                 updateSortState(territoryId, { isCalculatingRoute: true });
-                showToast("Obteniendo tu ubicación...", "info");
+                
+                // Solicitar ubicación inmediatamente para activar el diálogo
+                try {
+                    // Mostrar mensaje solo después de un pequeño delay para no interferir
+                    setTimeout(() => {
+                        if (sortState.isCalculatingRoute) {
+                            showToast("Obteniendo tu ubicación...", "info");
+                        }
+                    }, 500);
+                    
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            const currentLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
+                            const territoryAddresses = addresses.filter(a => a.territoryId === territoryId);
+                            const addressesWithCoords = territoryAddresses.map(address => ({ ...address, coords: (address.latitude && address.longitude) ? { lat: address.latitude, lng: address.longitude } : extractCoordinatesFromMapUrl(address.mapUrl) })).filter(a => a.coords);
+                            
+                            if (addressesWithCoords.length === 0) {
+                                showToast("No hay direcciones con ubicación para crear la ruta.", "warning");
+                                updateSortState(territoryId, { isCalculatingRoute: false });
+                                return;
+                            }
 
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const currentLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
-                        const territoryAddresses = addresses.filter(a => a.territoryId === territoryId);
-                        const addressesWithCoords = territoryAddresses.map(address => ({ ...address, coords: (address.latitude && address.longitude) ? { lat: address.latitude, lng: address.longitude } : extractCoordinatesFromMapUrl(address.mapUrl) })).filter(a => a.coords);
-                        
-                        if (addressesWithCoords.length === 0) {
-                            showToast("No hay direcciones con ubicación para crear la ruta.", "warning");
+                            const route = [];
+                            let unvisited = [...addressesWithCoords];
+                            let currentPosition = currentLoc;
+                            while (unvisited.length > 0) {
+                                let nearestIndex = 0;
+                                let nearestDistance = Infinity;
+                                unvisited.forEach((address, index) => {
+                                    const distance = getDistance(currentPosition.lat, currentPosition.lng, address.coords.lat, address.coords.lng);
+                                    if (distance < nearestDistance) {
+                                        nearestDistance = distance;
+                                        nearestIndex = index;
+                                    }
+                                });
+                                const nearest = unvisited.splice(nearestIndex, 1)[0];
+                                route.push({ ...nearest, routeOrder: route.length + 1 });
+                                currentPosition = nearest.coords;
+                            }
+                            
+                            updateSortState(territoryId, { isCalculatingRoute: false, sortOrder: 'optimized', userLocation: currentLoc, optimizedRoute: route });
+                            showToast(`¡Ruta optimizada creada con ${route.length} direcciones!`, "success");
+                        },
+                        (error) => {
                             updateSortState(territoryId, { isCalculatingRoute: false });
-                            return;
+                            
+                            let errorMessage = "";
+                            
+                            switch(error.code) {
+                                case error.PERMISSION_DENIED:
+                                    errorMessage = "📍 Para crear la ruta, permite el acceso a tu ubicación";
+                                    // En móviles, sugerir recargar si no apareció el diálogo
+                                    if (window.matchMedia('(max-width: 768px)').matches) {
+                                        setTimeout(() => {
+                                            showToast("💡 Si no apareció la ventana de permisos, recarga la página e intenta de nuevo", "info", 6000);
+                                        }, 1500);
+                                    }
+                                    break;
+                                case error.POSITION_UNAVAILABLE:
+                                    errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
+                                    break;
+                                case error.TIMEOUT:
+                                    errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
+                                    break;
+                                default:
+                                    errorMessage = "❌ No se pudo obtener la ubicación. Intenta nuevamente.";
+                            }
+                            
+                            showToast(errorMessage, "error");
+                        },
+                        { 
+                            enableHighAccuracy: false, // Cambiar a false para móviles
+                            timeout: 10000,
+                            maximumAge: 0 
                         }
-
-                        const route = [];
-                        let unvisited = [...addressesWithCoords];
-                        let currentPosition = currentLoc;
-                        while (unvisited.length > 0) {
-                            let nearestIndex = 0;
-                            let nearestDistance = Infinity;
-                            unvisited.forEach((address, index) => {
-                                const distance = getDistance(currentPosition.lat, currentPosition.lng, address.coords.lat, address.coords.lng);
-                                if (distance < nearestDistance) {
-                                    nearestDistance = distance;
-                                    nearestIndex = index;
-                                }
-                            });
-                            const nearest = unvisited.splice(nearestIndex, 1)[0];
-                            route.push({ ...nearest, routeOrder: route.length + 1 });
-                            currentPosition = nearest.coords;
-                        }
-                        
-                        updateSortState(territoryId, { isCalculatingRoute: false, sortOrder: 'optimized', userLocation: currentLoc, optimizedRoute: route });
-                        showToast(`¡Ruta optimizada creada con ${route.length} direcciones!`, "success");
-                    },
-                    (error) => {
-                        updateSortState(territoryId, { isCalculatingRoute: false });
-                        
-                        let errorMessage = "";
-                        
-                        switch(error.code) {
-                            case error.PERMISSION_DENIED:
-                                errorMessage = "📍 Para crear la ruta, permite el acceso a tu ubicación";
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
-                                break;
-                            case error.TIMEOUT:
-                                errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
-                                break;
-                            default:
-                                errorMessage = "❌ No se pudo obtener la ubicación. Intenta nuevamente.";
-                        }
-                        
-                        showToast(errorMessage, "error");
-                    },
-                    { 
-                        enableHighAccuracy: true, 
-                        timeout: 15000,  // Aumentado a 15 segundos
-                        maximumAge: 0 
-                    }
-                );
+                    );
+                } catch (e) {
+                    updateSortState(territoryId, { isCalculatingRoute: false });
+                    showToast("❌ Error al solicitar ubicación. Recarga la página e intenta de nuevo.", "error");
+                    console.error("Error al solicitar geolocalización:", e);
+                }
             };
             
             const handleResetSort = (territoryId) => {

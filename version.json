@@ -1,20 +1,24 @@
 {
-  "version": "2.5.3",
+  "version": "2.5.4",
   "releaseDate": "2025-06-29",
   "forceUpdate": false,
   "changes": {
     "all": [
       {
         "type": "fix",
-        "description": "¡Ruta optimizada funcionando perfectamente! Se eliminó la verificación de permisos que causaba problemas en móviles."
+        "description": "¡SOLUCIONADO! El diálogo de permisos ahora aparece correctamente en todos los dispositivos móviles."
       },
       {
         "type": "fix",
-        "description": "Los permisos de ubicación ahora funcionan como en cualquier app normal - solo pide permiso cuando lo necesita."
+        "description": "Eliminado async/await que interfería con la solicitud de permisos en móviles."
       },
       {
         "type": "improvement",
-        "description": "Mensajes más simples y directos sin instrucciones complicadas de configuración."
+        "description": "Desactivada alta precisión GPS para mejorar compatibilidad con dispositivos móviles."
+      },
+      {
+        "type": "improvement",
+        "description": "Agregado mensaje de ayuda si el diálogo no aparece en móviles."
       },
       {
         "type": "improvement",
