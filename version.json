@@ -1,5 +1,5 @@
 {
-  "version": "2.5.8",
+  "version": "2.5.9",
   "date": "2025-01-29",
   "forceUpdate": false,
   "changes": {
@@ -63,6 +63,14 @@
       {
         "type": "improvement",
         "description": "Eliminada verificación previa que bloqueaba los permisos"
+      },
+      {
+        "type": "fix",
+        "description": "Solucionado problema crítico: La app ya no se reinstala en cada carga"
+      },
+      {
+        "type": "fix",
+        "description": "Los permisos de ubicación ahora se mantienen correctamente"
       }
     ],
     "admin": [],
@@ -82,6 +90,10 @@
       {
         "type": "fix",
         "description": "Ruta optimizada funciona correctamente al primer intento"
+      },
+      {
+        "type": "fix",
+        "description": "Ruta optimizada ahora funciona correctamente sin pedir permisos repetidamente"
       }
     ]
   },

@@ -7378,7 +7378,7 @@ const AppProvider = ({ children }) => {
     const [userNotificationsCount, setUserNotificationsCount] = useState(0);
     
     // Sistema de versiones y actualizaciones
-    const CURRENT_VERSION = '2.5.8'; // Versión actual de la app
+    const CURRENT_VERSION = '2.5.9'; // Versión actual de la app
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -9067,21 +9067,6 @@ const closeModal = () => {
         
 // --- REGISTRO DEL SERVICE WORKER MEJORADO ---
 if ('serviceWorker' in navigator) {
-    // TEMPORAL: Forzar actualización del Service Worker (REMOVER DESPUÉS DE 1 SEMANA)
-    // Descomentar las siguientes líneas solo si necesitas forzar actualización
-    
-    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
-            registration.unregister();
-        }
-    }).then(() => {
-        // Re-registrar después de un pequeño delay
-        setTimeout(() => {
-            navigator.serviceWorker.register('/sw.js');
-        }, 1000);
-    });
-    
-    
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
             .then(registration => {
