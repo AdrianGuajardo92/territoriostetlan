@@ -9,6 +9,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://placehold.co/192x192/4f46e5/ffffff?text=LS">
+    <!-- Permisos para PWA -->
+    <meta name="permissions" content="geolocation notifications">
+    <meta http-equiv="Permissions-Policy" content="geolocation=(self)">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <!-- Tailwind CSS con configuración optimizada -->
 <script>
@@ -7238,7 +7241,7 @@ const AppProvider = ({ children }) => {
     const [userNotificationsCount, setUserNotificationsCount] = useState(0);
     
     // Sistema de versiones y actualizaciones
-    const CURRENT_VERSION = '2.5.4'; // Versión actual de la app
+    const CURRENT_VERSION = '2.5.5'; // Versión actual de la app
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);

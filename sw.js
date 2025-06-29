@@ -1,6 +1,6 @@
 // Service Worker Agresivo para Gestor de Territorios LS
-const CACHE_NAME = 'territorio-ls-v2.5.4';
-const RUNTIME_CACHE = 'territorio-runtime-v2.5.4';
+const CACHE_NAME = 'territorio-ls-v2.5.5';
+const RUNTIME_CACHE = 'territorio-runtime-v2.5.5';
 
 // Recursos críticos que SIEMPRE deben estar en cache
 const CRITICAL_RESOURCES = [
@@ -61,6 +61,14 @@ self.addEventListener('install', event => {
       })
       .then(() => {
         console.log('[SW] Instalación completa, activando inmediatamente...');
+        // Registrar permisos necesarios para la PWA
+        if ('permissions' in navigator) {
+          console.log('[SW] Registrando permisos de la aplicación...');
+          // Esto ayuda a que Android reconozca los permisos
+          navigator.permissions.query({ name: 'geolocation' }).then(result => {
+            console.log('[SW] Estado de permiso de geolocalización:', result.state);
+          });
+        }
         return self.skipWaiting(); // Activar inmediatamente
       })
   );
@@ -307,4 +315,4 @@ self.addEventListener('message', event => {
   }
 });
 
-console.log('[SW] Service Worker Agresivo cargado - v2.5.4');
+console.log('[SW] Service Worker Agresivo cargado - v2.5.5');
