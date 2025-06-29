@@ -1,9 +1,21 @@
 {
-  "version": "2.5.0",
-  "releaseDate": "2025-06-23",
+  "version": "2.5.1",
+  "releaseDate": "2025-06-29",
   "forceUpdate": false,
   "changes": {
     "all": [
+      {
+        "type": "fix",
+        "description": "¡Solucionado! La ruta optimizada ahora funciona correctamente en todos los dispositivos. Se mejoró el manejo de permisos de ubicación."
+      },
+      {
+        "type": "improvement",
+        "description": "Mensajes más claros al solicitar permisos de ubicación, con instrucciones específicas para cada navegador."
+      },
+      {
+        "type": "improvement",
+        "description": "Mayor tiempo de espera para obtener la ubicación en dispositivos con GPS lento."
+      },
       {
         "type": "improvement",
         "description": "¡Filtro 'En uso' mejorado! Ahora tus territorios asignados aparecen siempre al principio de la lista para un acceso más rápido."

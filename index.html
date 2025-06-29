@@ -8459,10 +8459,51 @@ useEffect(() => {
                 }));
             };
 
-            const handleSortByDistance = (territoryId) => {
-                if (!navigator.geolocation) return showToast("La geolocalización no es compatible.", "error");
+            const handleSortByDistance = async (territoryId) => {
+                // Verificar compatibilidad
+                if (!navigator.geolocation) {
+                    showToast("Tu navegador no soporta geolocalización.", "error");
+                    return;
+                }
+                
+                // Verificar HTTPS
+                if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                    showToast("La geolocalización requiere una conexión segura (HTTPS).", "error");
+                    return;
+                }
+                
                 updateSortState(territoryId, { isLocating: true });
+                
+                // Verificar permisos primero
+                try {
+                    const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+                    
+                    if (permissionStatus.state === 'denied') {
+                        updateSortState(territoryId, { isLocating: false });
+                        showToast("Los permisos de ubicación están bloqueados. Por favor, habilítalos en la configuración de tu navegador.", "error");
+                        
+                        // Dar instrucciones específicas según el navegador
+                        const userAgent = navigator.userAgent.toLowerCase();
+                        let instructions = "";
+                        if (userAgent.includes('chrome')) {
+                            instructions = "En Chrome: Configuración > Privacidad y seguridad > Configuración de sitios > Ubicación";
+                        } else if (userAgent.includes('firefox')) {
+                            instructions = "En Firefox: Configuración > Privacidad y seguridad > Permisos > Ubicación";
+                        } else if (userAgent.includes('safari')) {
+                            instructions = "En Safari: Preferencias > Sitios web > Ubicación";
+                        }
+                        if (instructions) {
+                            setTimeout(() => showToast(instructions, "info"), 1000);
+                        }
+                        return;
+                    }
+                } catch (e) {
+                    // Si navigator.permissions no está disponible, continuamos
+                    console.log("navigator.permissions no disponible, continuando...");
+                }
+                
                 showToast("Obteniendo tu ubicación...", "info");
+                
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const userLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
@@ -8471,16 +8512,83 @@ useEffect(() => {
                     },
                     (error) => {
                         updateSortState(territoryId, { isLocating: false });
-                        showToast("No se pudo obtener tu ubicación.", "error");
+                        
+                        let errorMessage = "No se pudo obtener tu ubicación. ";
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage += "Por favor, permite el acceso a tu ubicación y vuelve a intentar.";
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage += "La información de ubicación no está disponible.";
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage += "La solicitud de ubicación tardó demasiado tiempo.";
+                                break;
+                            default:
+                                errorMessage += "Error desconocido.";
+                        }
+                        
+                        showToast(errorMessage, "error");
+                        
+                        // Si es un error de permisos, dar instrucciones adicionales
+                        if (error.code === error.PERMISSION_DENIED) {
+                            setTimeout(() => {
+                                showToast("Recarga la página después de permitir los permisos.", "info");
+                            }, 2000);
+                        }
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    { 
+                        enableHighAccuracy: true, 
+                        timeout: 15000,  // Aumentado a 15 segundos
+                        maximumAge: 0 
+                    }
                 );
             };
 
-            const handleOptimizedRoute = (territoryId) => {
-                if (!navigator.geolocation) return showToast("La geolocalización no es compatible.", "error");
+            const handleOptimizedRoute = async (territoryId) => {
+                // Verificar compatibilidad
+                if (!navigator.geolocation) {
+                    showToast("Tu navegador no soporta geolocalización.", "error");
+                    return;
+                }
+                
+                // Verificar HTTPS
+                if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                    showToast("La geolocalización requiere una conexión segura (HTTPS).", "error");
+                    return;
+                }
+                
                 updateSortState(territoryId, { isCalculatingRoute: true });
-                showToast("Calculando ruta optimizada...", "info");
+                
+                // Verificar permisos primero
+                try {
+                    const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+                    
+                    if (permissionStatus.state === 'denied') {
+                        updateSortState(territoryId, { isCalculatingRoute: false });
+                        showToast("Los permisos de ubicación están bloqueados. Por favor, habilítalos en la configuración de tu navegador.", "error");
+                        
+                        // Dar instrucciones específicas según el navegador
+                        const userAgent = navigator.userAgent.toLowerCase();
+                        let instructions = "";
+                        if (userAgent.includes('chrome')) {
+                            instructions = "En Chrome: Configuración > Privacidad y seguridad > Configuración de sitios > Ubicación";
+                        } else if (userAgent.includes('firefox')) {
+                            instructions = "En Firefox: Configuración > Privacidad y seguridad > Permisos > Ubicación";
+                        } else if (userAgent.includes('safari')) {
+                            instructions = "En Safari: Preferencias > Sitios web > Ubicación";
+                        }
+                        if (instructions) {
+                            setTimeout(() => showToast(instructions, "info"), 1000);
+                        }
+                        return;
+                    }
+                } catch (e) {
+                    // Si navigator.permissions no está disponible, continuamos
+                    console.log("navigator.permissions no disponible, continuando...");
+                }
+                
+                showToast("Obteniendo tu ubicación...", "info");
 
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
@@ -8513,13 +8621,40 @@ useEffect(() => {
                         }
                         
                         updateSortState(territoryId, { isCalculatingRoute: false, sortOrder: 'optimized', userLocation: currentLoc, optimizedRoute: route });
-                        showToast(`¡Ruta optimizada creada!`, "success");
+                        showToast(`¡Ruta optimizada creada con ${route.length} direcciones!`, "success");
                     },
                     (error) => {
                         updateSortState(territoryId, { isCalculatingRoute: false });
-                        showToast("No se pudo obtener tu ubicación para la ruta.", "error");
+                        
+                        let errorMessage = "No se pudo obtener tu ubicación. ";
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage += "Por favor, permite el acceso a tu ubicación y vuelve a intentar.";
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage += "La información de ubicación no está disponible.";
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage += "La solicitud de ubicación tardó demasiado tiempo.";
+                                break;
+                            default:
+                                errorMessage += "Error desconocido.";
+                        }
+                        
+                        showToast(errorMessage, "error");
+                        
+                        // Si es un error de permisos, dar instrucciones adicionales
+                        if (error.code === error.PERMISSION_DENIED) {
+                            setTimeout(() => {
+                                showToast("Recarga la página después de permitir los permisos.", "info");
+                            }, 2000);
+                        }
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    { 
+                        enableHighAccuracy: true, 
+                        timeout: 15000,  // Aumentado a 15 segundos
+                        maximumAge: 0 
+                    }
                 );
             };
             
