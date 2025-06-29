@@ -7238,7 +7238,7 @@ const AppProvider = ({ children }) => {
     const [userNotificationsCount, setUserNotificationsCount] = useState(0);
     
     // Sistema de versiones y actualizaciones
-    const CURRENT_VERSION = '2.5.2'; // Versión actual de la app
+    const CURRENT_VERSION = '2.5.3'; // Versión actual de la app
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -8546,7 +8546,7 @@ useEffect(() => {
                 }
                 
                 updateSortState(territoryId, { isLocating: true });
-                showToast("Solicitando acceso a tu ubicación...", "info");
+                showToast("Obteniendo tu ubicación...", "info");
                 
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
@@ -8558,12 +8558,10 @@ useEffect(() => {
                         updateSortState(territoryId, { isLocating: false });
                         
                         let errorMessage = "";
-                        let showInstructions = false;
                         
                         switch(error.code) {
                             case error.PERMISSION_DENIED:
-                                errorMessage = "📍 Permiso de ubicación denegado";
-                                showInstructions = true;
+                                errorMessage = "📍 Para usar esta función, permite el acceso a tu ubicación";
                                 break;
                             case error.POSITION_UNAVAILABLE:
                                 errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
@@ -8572,41 +8570,10 @@ useEffect(() => {
                                 errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
                                 break;
                             default:
-                                errorMessage = "❌ No se pudo obtener la ubicación.";
+                                errorMessage = "❌ No se pudo obtener la ubicación. Intenta nuevamente.";
                         }
                         
                         showToast(errorMessage, "error");
-                        
-                        // Solo mostrar instrucciones si realmente se denegó el permiso
-                        if (showInstructions && navigator.permissions) {
-                            navigator.permissions.query({ name: 'geolocation' }).then(result => {
-                                if (result.state === 'denied') {
-                                    // Permisos bloqueados permanentemente
-                                    setTimeout(() => {
-                                        const userAgent = navigator.userAgent.toLowerCase();
-                                        if (userAgent.includes('chrome') || userAgent.includes('edge')) {
-                                            showToast("💡 Para habilitar ubicación: Haz clic en el candado junto a la URL → Ubicación → Permitir", "info", 8000);
-                                        } else if (userAgent.includes('firefox')) {
-                                            showToast("💡 Para habilitar ubicación: Haz clic en el ícono de ubicación en la barra de direcciones", "info", 8000);
-                                        } else if (userAgent.includes('safari')) {
-                                            showToast("💡 Para habilitar ubicación: Safari → Preferencias → Sitios web → Ubicación", "info", 8000);
-                                        } else {
-                                            showToast("💡 Habilita los permisos de ubicación en la configuración de tu navegador y recarga la página", "info", 8000);
-                                        }
-                                    }, 1500);
-                                } else {
-                                    // El usuario simplemente canceló el diálogo
-                                    setTimeout(() => {
-                                        showToast("💡 Para usar esta función, permite el acceso a tu ubicación cuando se solicite", "info", 6000);
-                                    }, 1500);
-                                }
-                            }).catch(() => {
-                                // Si no podemos verificar, dar instrucciones genéricas
-                                setTimeout(() => {
-                                    showToast("💡 Vuelve a intentar y permite el acceso a tu ubicación cuando aparezca la ventana", "info", 6000);
-                                }, 1500);
-                            });
-                        }
                     },
                     { 
                         enableHighAccuracy: true, 
@@ -8630,7 +8597,7 @@ useEffect(() => {
                 }
                 
                 updateSortState(territoryId, { isCalculatingRoute: true });
-                showToast("Solicitando acceso a tu ubicación...", "info");
+                showToast("Obteniendo tu ubicación...", "info");
 
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
@@ -8669,12 +8636,10 @@ useEffect(() => {
                         updateSortState(territoryId, { isCalculatingRoute: false });
                         
                         let errorMessage = "";
-                        let showInstructions = false;
                         
                         switch(error.code) {
                             case error.PERMISSION_DENIED:
-                                errorMessage = "📍 Permiso de ubicación denegado";
-                                showInstructions = true;
+                                errorMessage = "📍 Para crear la ruta, permite el acceso a tu ubicación";
                                 break;
                             case error.POSITION_UNAVAILABLE:
                                 errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
@@ -8683,41 +8648,10 @@ useEffect(() => {
                                 errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
                                 break;
                             default:
-                                errorMessage = "❌ No se pudo obtener la ubicación.";
+                                errorMessage = "❌ No se pudo obtener la ubicación. Intenta nuevamente.";
                         }
                         
                         showToast(errorMessage, "error");
-                        
-                        // Solo mostrar instrucciones si realmente se denegó el permiso
-                        if (showInstructions && navigator.permissions) {
-                            navigator.permissions.query({ name: 'geolocation' }).then(result => {
-                                if (result.state === 'denied') {
-                                    // Permisos bloqueados permanentemente
-                                    setTimeout(() => {
-                                        const userAgent = navigator.userAgent.toLowerCase();
-                                        if (userAgent.includes('chrome') || userAgent.includes('edge')) {
-                                            showToast("💡 Para habilitar ubicación: Haz clic en el candado junto a la URL → Ubicación → Permitir", "info", 8000);
-                                        } else if (userAgent.includes('firefox')) {
-                                            showToast("💡 Para habilitar ubicación: Haz clic en el ícono de ubicación en la barra de direcciones", "info", 8000);
-                                        } else if (userAgent.includes('safari')) {
-                                            showToast("💡 Para habilitar ubicación: Safari → Preferencias → Sitios web → Ubicación", "info", 8000);
-                                        } else {
-                                            showToast("💡 Habilita los permisos de ubicación en la configuración de tu navegador y recarga la página", "info", 8000);
-                                        }
-                                    }, 1500);
-                                } else {
-                                    // El usuario simplemente canceló el diálogo
-                                    setTimeout(() => {
-                                        showToast("💡 Para usar esta función, permite el acceso a tu ubicación cuando se solicite", "info", 6000);
-                                    }, 1500);
-                                }
-                            }).catch(() => {
-                                // Si no podemos verificar, dar instrucciones genéricas
-                                setTimeout(() => {
-                                    showToast("💡 Vuelve a intentar y permite el acceso a tu ubicación cuando aparezca la ventana", "info", 6000);
-                                }, 1500);
-                            });
-                        }
                     },
                     { 
                         enableHighAccuracy: true, 

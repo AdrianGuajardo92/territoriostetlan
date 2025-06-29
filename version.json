@@ -1,24 +1,20 @@
 {
-  "version": "2.5.2",
+  "version": "2.5.3",
   "releaseDate": "2025-06-29",
   "forceUpdate": false,
   "changes": {
     "all": [
       {
         "type": "fix",
-        "description": "¡Proceso de actualización mejorado! Ahora muestra el progreso claramente y se completa sin necesidad de reiniciar manualmente."
+        "description": "¡Ruta optimizada funcionando perfectamente! Se eliminó la verificación de permisos que causaba problemas en móviles."
       },
       {
         "type": "fix",
-        "description": "Solicitud de permisos de ubicación simplificada. Ahora aparece el diálogo nativo del navegador automáticamente."
+        "description": "Los permisos de ubicación ahora funcionan como en cualquier app normal - solo pide permiso cuando lo necesita."
       },
       {
         "type": "improvement",
-        "description": "Mensajes de error más claros con íconos y sugerencias específicas según el problema."
-      },
-      {
-        "type": "improvement",
-        "description": "El proceso de actualización ahora cierra automáticamente la ventana y muestra la versión correcta."
+        "description": "Mensajes más simples y directos sin instrucciones complicadas de configuración."
       },
       {
         "type": "improvement",
