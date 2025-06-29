@@ -7378,7 +7378,7 @@ const AppProvider = ({ children }) => {
     const [userNotificationsCount, setUserNotificationsCount] = useState(0);
     
     // Sistema de versiones y actualizaciones
-    const CURRENT_VERSION = '2.5.7'; // Versión actual de la app
+    const CURRENT_VERSION = '2.5.8'; // Versión actual de la app
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -8689,56 +8689,10 @@ useEffect(() => {
                 
                 updateSortState(territoryId, { isLocating: true });
                 
-                // TRUCO: Primero verificar el estado del permiso
-                if ('permissions' in navigator) {
-                    navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
-                        console.log('Estado del permiso:', permissionStatus.state);
-                        
-                        // Si está denegado, mostrar instrucciones directas
-                        if (permissionStatus.state === 'denied') {
-                            updateSortState(territoryId, { isLocating: false });
-                            
-                            // En móviles, sugerir recargar la página
-                            if (window.matchMedia('(max-width: 768px)').matches) {
-                                showToast("⚠️ Permisos de ubicación bloqueados", "error", 3000);
-                                setTimeout(() => {
-                                    showToast("💡 Solución: Recarga la página y cuando aparezca el aviso de ubicación, selecciona 'Permitir'", "info", 8000);
-                                }, 3500);
-                                
-                                // Botón para recargar
-                                setTimeout(() => {
-                                    if (confirm("¿Quieres recargar la página para intentar de nuevo?\n\nCuando aparezca el aviso, selecciona 'Permitir' para usar esta función.")) {
-                                        window.location.reload();
-                                    }
-                                }, 12000);
-                            } else {
-                                // Desktop
-                                showToast("📍 Haz clic en el candado de la URL → Ubicación → Permitir, luego recarga", "error", 10000);
-                            }
-                            return;
-                        }
-                        
-                        // Si no está denegado, proceder normalmente
-                        proceedWithGeolocation();
-                    }).catch(() => {
-                        // Si falla la verificación, proceder normalmente
-                        proceedWithGeolocation();
-                    });
-                } else {
-                    // Si no hay API de permisos, proceder normalmente
-                    proceedWithGeolocation();
-                }
+                // Intentar obtener ubicación directamente - sin verificación previa
+                showToast("📍 Permite el acceso a tu ubicación cuando aparezca el aviso", "info", 5000);
                 
-                function proceedWithGeolocation() {
-                    // Mostrar mensaje solo después de un pequeño delay para no interferir
-                    setTimeout(() => {
-                        const currentSortState = activeSortStates[territoryId] || {};
-                        if (currentSortState.isLocating) {
-                            showToast("📍 Permite el acceso a tu ubicación cuando aparezca el aviso", "info", 5000);
-                        }
-                    }, 100);
-                    
-                    navigator.geolocation.getCurrentPosition(
+                navigator.geolocation.getCurrentPosition(
                         (position) => {
                             const userLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
                             updateSortState(territoryId, { isLocating: false, sortOrder: 'distance', userLocation: userLoc });
@@ -8773,7 +8727,6 @@ useEffect(() => {
                             maximumAge: 0 
                         }
                     );
-                }
             };
 
             const handleOptimizedRoute = (territoryId) => {
@@ -8793,56 +8746,10 @@ useEffect(() => {
                 
                 updateSortState(territoryId, { isCalculatingRoute: true });
                 
-                // TRUCO: Primero verificar el estado del permiso
-                if ('permissions' in navigator) {
-                    navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
-                        console.log('Estado del permiso:', permissionStatus.state);
-                        
-                        // Si está denegado, mostrar instrucciones directas
-                        if (permissionStatus.state === 'denied') {
-                            updateSortState(territoryId, { isCalculatingRoute: false });
-                            
-                            // En móviles, sugerir recargar la página
-                            if (window.matchMedia('(max-width: 768px)').matches) {
-                                showToast("⚠️ Permisos de ubicación bloqueados", "error", 3000);
-                                setTimeout(() => {
-                                    showToast("💡 Solución: Recarga la página y cuando aparezca el aviso de ubicación, selecciona 'Permitir'", "info", 8000);
-                                }, 3500);
-                                
-                                // Botón para recargar
-                                setTimeout(() => {
-                                    if (confirm("¿Quieres recargar la página para intentar de nuevo?\n\nCuando aparezca el aviso, selecciona 'Permitir' para usar esta función.")) {
-                                        window.location.reload();
-                                    }
-                                }, 12000);
-                            } else {
-                                // Desktop
-                                showToast("📍 Haz clic en el candado de la URL → Ubicación → Permitir, luego recarga", "error", 10000);
-                            }
-                            return;
-                        }
-                        
-                        // Si no está denegado, proceder normalmente
-                        proceedWithGeolocation();
-                    }).catch(() => {
-                        // Si falla la verificación, proceder normalmente
-                        proceedWithGeolocation();
-                    });
-                } else {
-                    // Si no hay API de permisos, proceder normalmente
-                    proceedWithGeolocation();
-                }
+                // Intentar obtener ubicación directamente - sin verificación previa
+                showToast("📍 Permite el acceso a tu ubicación cuando aparezca el aviso", "info", 5000);
                 
-                function proceedWithGeolocation() {
-                    // Mostrar mensaje solo después de un pequeño delay para no interferir
-                    setTimeout(() => {
-                        const currentSortState = activeSortStates[territoryId] || {};
-                        if (currentSortState.isCalculatingRoute) {
-                            showToast("📍 Permite el acceso a tu ubicación cuando aparezca el aviso", "info", 5000);
-                        }
-                    }, 100);
-                    
-                    navigator.geolocation.getCurrentPosition(
+                navigator.geolocation.getCurrentPosition(
                         (position) => {
                             const currentLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
                             const territoryAddresses = addresses.filter(a => a.territoryId === territoryId);
@@ -8904,7 +8811,6 @@ useEffect(() => {
                             maximumAge: 0 
                         }
                     );
-                }
             };
             
             const handleResetSort = (territoryId) => {
