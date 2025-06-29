@@ -3421,7 +3421,8 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-800">{territory.name}</h2>
                                 <p className="text-xs text-gray-600">
-                                    {sortState.sortOrder === 'optimized' ? 'Ruta optimizada activa' : 'Haz clic en un marcador'}
+                                    {/* TEMPORALMENTE DESHABILITADO - {sortState.sortOrder === 'optimized' ? 'Ruta optimizada activa' : 'Haz clic en un marcador'} */}
+                                    Haz clic en un marcador
                                 </p>
                             </div>
                         </div>
@@ -3429,7 +3430,8 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors"><Icon name="x" size={20} className="text-gray-600" /></button>
                 </div>
                 <div className="flex items-center justify-end space-x-2">
-                    {sortState.sortOrder !== 'alpha' ? (
+                    {/* TEMPORALMENTE DESHABILITADO - Para reactivar, quitar el comentario y el false && 
+                    {false && sortState.sortOrder !== 'alpha' ? (
                         <button onClick={onResetSort} className="p-2.5 text-red-500 bg-white rounded-lg shadow-sm border border-red-200 hover:bg-red-50 transition-all" title="Restaurar orden original"><Icon name="x" size={18} /></button>
                     ) : (
                         <button onClick={onSortByDistance} disabled={sortState.isLocating} className="p-2.5 text-slate-500 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-slate-200 hover:border-blue-300 disabled:opacity-50 transition-all" title="Ordenar por proximidad">
@@ -3439,6 +3441,7 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                     <button onClick={onOptimizedRoute} disabled={sortState.isCalculatingRoute} className={`p-2.5 rounded-lg shadow-sm border transition-all ${sortState.sortOrder === 'optimized' ? 'bg-green-600 text-white border-green-700' : 'bg-white text-slate-500 hover:text-green-600 border-slate-200 hover:border-green-300'}`} title="Activar/Desactivar ruta optimizada">
                         {sortState.isCalculatingRoute ? <div className="animate-spin w-[18px] h-[18px] border-2 border-current border-t-transparent rounded-full"></div> : <Icon name="activity" size={18} />}
                     </button>
+                    */}
                 </div>
             </div>
             
@@ -6770,7 +6773,8 @@ const TerritoryDetailHeader = ({
                 </div>
 
                 <div className="flex items-center flex-shrink-0 space-x-2">
-                    {sortControls.sortOrder !== 'alpha' ? (
+                    {/* TEMPORALMENTE DESHABILITADO - Para reactivar, quitar el comentario y el false && 
+                    {false && sortControls.sortOrder !== 'alpha' ? (
                          <button 
                             onClick={sortControls.onResetSort} 
                             className="p-2.5 text-red-500 bg-white rounded-lg shadow-sm border border-red-200 hover:bg-red-50 transition-all"
@@ -6807,6 +6811,7 @@ const TerritoryDetailHeader = ({
                             : <Icon name="activity" size={18} />
                          }
                     </button>
+                    */}
                     
                     <div className="flex items-center space-x-1 p-1 rounded-lg bg-slate-200">
                          <button onClick={() => viewControls.setViewMode('grid-full')} className={`p-1.5 rounded-md ${viewControls.viewMode === 'grid-full' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'} transition-colors`}>
@@ -7006,7 +7011,8 @@ const TerritoryDetailView = ({ view, territory, onBack, onOpenModal, highlighted
                 />
                 
                 <main className="px-4 sm:px-6 mt-4">
-                    {sortState.sortOrder === 'optimized' && (
+                    {/* TEMPORALMENTE DESHABILITADO - Para reactivar, quitar el comentario y el false && 
+                    {false && sortState.sortOrder === 'optimized' && (
                         <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center">
                            <Icon name="activity" size={20} className="text-green-600 mr-3" />
                             <div className="flex-1">
@@ -7015,6 +7021,7 @@ const TerritoryDetailView = ({ view, territory, onBack, onOpenModal, highlighted
                             </div>
                         </div>
                     )}
+                    */}
                     <div className={`address-grid grid gap-4 ${viewMode === 'list' ? 'grid-cols-1' : 'grid-cols-1'}`}>
                         {territoryAddresses.map((address, index) => (
                             <AddressCard
@@ -7378,7 +7385,7 @@ const AppProvider = ({ children }) => {
     const [userNotificationsCount, setUserNotificationsCount] = useState(0);
     
     // Sistema de versiones y actualizaciones
-    const CURRENT_VERSION = '2.5.9'; // Versión actual de la app
+    const CURRENT_VERSION = '2.5.10'; // Versión actual de la app
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);

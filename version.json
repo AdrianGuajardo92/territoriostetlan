@@ -1,5 +1,5 @@
 {
-  "version": "2.5.9",
+  "version": "2.5.10",
   "date": "2025-01-29",
   "forceUpdate": false,
   "changes": {
@@ -71,6 +71,10 @@
       {
         "type": "fix",
         "description": "Los permisos de ubicación ahora se mantienen correctamente"
+      },
+      {
+        "type": "improvement",
+        "description": "Botones de ubicación temporalmente ocultos mientras se corrige el problema de permisos"
       }
     ],
     "admin": [],
@@ -94,6 +98,10 @@
       {
         "type": "fix",
         "description": "Ruta optimizada ahora funciona correctamente sin pedir permisos repetidamente"
+      },
+      {
+        "type": "fix",
+        "description": "Deshabilitados temporalmente: 'Ordenar por proximidad' y 'Ruta optimizada'"
       }
     ]
   },
