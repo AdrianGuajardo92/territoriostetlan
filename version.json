@@ -1,5 +1,5 @@
 {
-  "version": "2.5.6",
+  "version": "2.5.7",
   "date": "2025-01-29",
   "forceUpdate": false,
   "changes": {
@@ -51,14 +51,17 @@
       {
         "type": "improvement",
         "description": "Instrucciones paso a paso para activar ubicación manualmente"
-      }
-    ],
-    "admin": [
+      },
+      {
+        "type": "improvement",
+        "description": "Flujo simplificado para permisos de ubicación con recarga automática"
+      },
       {
         "type": "fix",
-        "description": "Solucionado un error que bloqueaba la aplicación al ver las propuestas de cambios pendientes."
+        "description": "Mejorado el diálogo de permisos para que siempre aparezca al recargar"
       }
     ],
+    "admin": [],
     "publisher": [
       {
         "type": "fix",
@@ -67,6 +70,10 @@
       {
         "type": "feature",
         "description": "Botón para abrir configuración de la app directamente"
+      },
+      {
+        "type": "improvement",
+        "description": "Instrucciones más claras cuando los permisos están bloqueados"
       }
     ]
   },

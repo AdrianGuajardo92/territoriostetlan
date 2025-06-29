@@ -1,6 +1,6 @@
 // Service Worker Agresivo para Gestor de Territorios LS
-const CACHE_NAME = 'territorio-ls-v2.5.6';
-const RUNTIME_CACHE = 'territorio-runtime-v2.5.6';
+const CACHE_NAME = 'territorio-ls-v2.5.7';
+const RUNTIME_CACHE = 'territorio-runtime-v2.5.7';
 
 // Recursos críticos que SIEMPRE deben estar en cache
 const CRITICAL_RESOURCES = [
@@ -315,4 +315,4 @@ self.addEventListener('message', event => {
   }
 });
 
-console.log('[SW] Service Worker Agresivo cargado - v2.5.6');
+console.log('[SW] Service Worker Agresivo cargado - v2.5.7');
