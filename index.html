@@ -877,6 +877,16 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "", ...prop
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
             </svg>
+        ),
+        settings: (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+                <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m4.22-10.22l1.42-1.42m-1.42 8.49l1.42 1.42M23 12h-6m-6 0H1m4.22 4.22l-1.42 1.42m1.42-8.49L3.8 6.73"/>
+            </svg>
+        ),
+        rotateCcw: (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+            </svg>
         )
     };
     
@@ -1323,6 +1333,133 @@ const MyProposalsModal = ({ isOpen, onClose, currentUser }) => {
                         </div>
                     </div>
                 </div>
+            );
+        };
+
+        // --- Componente: Modal de Permisos de Ubicación ---
+        const PermissionsModal = ({ isOpen, onClose, onRetry }) => {
+            const { showToast } = useToast();
+            const [isOpening, setIsOpening] = useState(false);
+            
+            const openAppSettings = async () => {
+                setIsOpening(true);
+                
+                try {
+                    // Detectar el sistema operativo
+                    const userAgent = navigator.userAgent.toLowerCase();
+                    const isAndroid = userAgent.includes('android');
+                    const isIOS = /iphone|ipad|ipod/.test(userAgent);
+                    
+                    if (isAndroid) {
+                        // Intentar abrir configuración de Android
+                        window.open('app-settings:', '_system');
+                        showToast("📱 Busca 'Permisos' y activa 'Ubicación'", "info", 10000);
+                    } else if (isIOS) {
+                        // Para iOS, no podemos abrir directamente la configuración
+                        showToast("📱 Ve a Configuración → Territorios → Ubicación → Permitir", "info", 10000);
+                    } else {
+                        // Para navegador de escritorio
+                        showToast("💻 Haz clic en el candado junto a la URL → Ubicación → Permitir", "info", 10000);
+                    }
+                    
+                    // Dar instrucciones adicionales después de un momento
+                    setTimeout(() => {
+                        showToast("✅ Cuando termines, regresa aquí y toca 'Intentar de nuevo'", "info", 8000);
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Error abriendo configuración:', error);
+                    showToast("⚠️ No se pudo abrir la configuración automáticamente", "warning");
+                }
+                
+                setIsOpening(false);
+            };
+            
+            return (
+                <Modal isOpen={isOpen} onClose={onClose} size="md" showCloseButton={false}>
+                    <div className="p-6">
+                        {/* Icono y título */}
+                        <div className="flex flex-col items-center text-center mb-6">
+                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                                <Icon name="navigation" size={32} className="text-blue-600" />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-900">Permiso de Ubicación Necesario</h2>
+                        </div>
+                        
+                        {/* Mensaje explicativo */}
+                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                            <p className="text-gray-700 text-sm leading-relaxed">
+                                Para crear rutas optimizadas, la aplicación necesita acceso a tu ubicación. 
+                                Los permisos están desactivados actualmente.
+                            </p>
+                        </div>
+                        
+                        {/* Instrucciones paso a paso */}
+                        <div className="space-y-3 mb-6">
+                            <h3 className="font-semibold text-gray-900">Pasos a seguir:</h3>
+                            <div className="space-y-2">
+                                <div className="flex items-start">
+                                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center mr-3">1</span>
+                                    <p className="text-sm text-gray-700">Toca el botón "Abrir Configuración"</p>
+                                </div>
+                                <div className="flex items-start">
+                                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center mr-3">2</span>
+                                    <p className="text-sm text-gray-700">Busca "Permisos" o "Permissions"</p>
+                                </div>
+                                <div className="flex items-start">
+                                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center mr-3">3</span>
+                                    <p className="text-sm text-gray-700">Activa "Ubicación" o "Location"</p>
+                                </div>
+                                <div className="flex items-start">
+                                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center mr-3">4</span>
+                                    <p className="text-sm text-gray-700">Regresa a la app y toca "Intentar de nuevo"</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Botones de acción */}
+                        <div className="flex flex-col space-y-3">
+                            <button
+                                onClick={openAppSettings}
+                                disabled={isOpening}
+                                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+                            >
+                                {isOpening ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                        </svg>
+                                        Abriendo...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Icon name="settings" size={20} className="mr-2" />
+                                        Abrir Configuración
+                                    </>
+                                )}
+                            </button>
+                            
+                            <button
+                                onClick={() => {
+                                    onClose();
+                                    if (onRetry) onRetry();
+                                }}
+                                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
+                            >
+                                <Icon name="rotateCcw" size={20} className="inline mr-2" />
+                                Intentar de nuevo
+                            </button>
+                            
+                            <button
+                                onClick={onClose}
+                                className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             );
         };
 
@@ -7241,7 +7378,7 @@ const AppProvider = ({ children }) => {
     const [userNotificationsCount, setUserNotificationsCount] = useState(0);
     
     // Sistema de versiones y actualizaciones
-    const CURRENT_VERSION = '2.5.5'; // Versión actual de la app
+    const CURRENT_VERSION = '2.5.6'; // Versión actual de la app
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -8441,6 +8578,8 @@ const handleLogout = () => {
             const [view, setView] = useState({ name: 'grid', territoryId: null, modal: null });
             const [viewHistory, setViewHistory] = useState([{ name: 'grid', territoryId: null, modal: null }]);
             const [activeSortStates, setActiveSortStates] = useState({});
+            const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+            const [pendingGeoAction, setPendingGeoAction] = useState(null); // Para guardar la acción pendiente
 
             const handleLogin = (user) => {
                 localStorage.setItem('currentUser', JSON.stringify(user));
@@ -8556,7 +8695,8 @@ useEffect(() => {
                 try {
                     // Mostrar mensaje solo después de un pequeño delay para no interferir
                     setTimeout(() => {
-                        if (sortState.isLocating) {
+                        const currentSortState = activeSortStates[territoryId] || {};
+                        if (currentSortState.isLocating) {
                             showToast("Obteniendo tu ubicación...", "info");
                         }
                     }, 500);
@@ -8570,29 +8710,21 @@ useEffect(() => {
                         (error) => {
                             updateSortState(territoryId, { isLocating: false });
                             
-                            let errorMessage = "";
-                            
                             switch(error.code) {
                                 case error.PERMISSION_DENIED:
-                                    errorMessage = "📍 Para usar esta función, permite el acceso a tu ubicación";
-                                    // En móviles, sugerir recargar si no apareció el diálogo
-                                    if (window.matchMedia('(max-width: 768px)').matches) {
-                                        setTimeout(() => {
-                                            showToast("💡 Si no apareció la ventana de permisos, recarga la página e intenta de nuevo", "info", 6000);
-                                        }, 1500);
-                                    }
+                                    // Mostrar el modal de permisos
+                                    setPendingGeoAction(() => () => handleSortByDistance(territoryId));
+                                    setShowPermissionsModal(true);
                                     break;
                                 case error.POSITION_UNAVAILABLE:
-                                    errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
+                                    showToast("📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.", "error");
                                     break;
                                 case error.TIMEOUT:
-                                    errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
+                                    showToast("⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.", "error");
                                     break;
                                 default:
-                                    errorMessage = "❌ No se pudo obtener la ubicación. Intenta nuevamente.";
+                                    showToast("❌ No se pudo obtener la ubicación. Intenta nuevamente.", "error");
                             }
-                            
-                            showToast(errorMessage, "error");
                         },
                         { 
                             enableHighAccuracy: false, // Cambiar a false para móviles
@@ -8628,7 +8760,8 @@ useEffect(() => {
                 try {
                     // Mostrar mensaje solo después de un pequeño delay para no interferir
                     setTimeout(() => {
-                        if (sortState.isCalculatingRoute) {
+                        const currentSortState = activeSortStates[territoryId] || {};
+                        if (currentSortState.isCalculatingRoute) {
                             showToast("Obteniendo tu ubicación...", "info");
                         }
                     }, 500);
@@ -8669,29 +8802,21 @@ useEffect(() => {
                         (error) => {
                             updateSortState(territoryId, { isCalculatingRoute: false });
                             
-                            let errorMessage = "";
-                            
                             switch(error.code) {
                                 case error.PERMISSION_DENIED:
-                                    errorMessage = "📍 Para crear la ruta, permite el acceso a tu ubicación";
-                                    // En móviles, sugerir recargar si no apareció el diálogo
-                                    if (window.matchMedia('(max-width: 768px)').matches) {
-                                        setTimeout(() => {
-                                            showToast("💡 Si no apareció la ventana de permisos, recarga la página e intenta de nuevo", "info", 6000);
-                                        }, 1500);
-                                    }
+                                    // Mostrar el modal de permisos
+                                    setPendingGeoAction(() => () => handleOptimizedRoute(territoryId));
+                                    setShowPermissionsModal(true);
                                     break;
                                 case error.POSITION_UNAVAILABLE:
-                                    errorMessage = "📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.";
+                                    showToast("📡 No se puede obtener la ubicación. Verifica que el GPS esté activado.", "error");
                                     break;
                                 case error.TIMEOUT:
-                                    errorMessage = "⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.";
+                                    showToast("⏱️ La búsqueda de ubicación tardó demasiado. Intenta en un lugar con mejor señal.", "error");
                                     break;
                                 default:
-                                    errorMessage = "❌ No se pudo obtener la ubicación. Intenta nuevamente.";
+                                    showToast("❌ No se pudo obtener la ubicación. Intenta nuevamente.", "error");
                             }
-                            
-                            showToast(errorMessage, "error");
                         },
                         { 
                             enableHighAccuracy: false, // Cambiar a false para móviles
@@ -8818,6 +8943,20 @@ const closeModal = () => {
                         isOpen={view.modal === 'changePassword'}
                         onClose={closeModal}
                         currentUser={currentUser}
+                    />
+                    
+                    <PermissionsModal
+                        isOpen={showPermissionsModal}
+                        onClose={() => {
+                            setShowPermissionsModal(false);
+                            setPendingGeoAction(null);
+                        }}
+                        onRetry={() => {
+                            setShowPermissionsModal(false);
+                            if (pendingGeoAction) {
+                                pendingGeoAction();
+                            }
+                        }}
                     />
 
                     <InstallPwaPrompt />

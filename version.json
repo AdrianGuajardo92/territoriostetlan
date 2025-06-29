@@ -1,7 +1,7 @@
 {
-  "version": "2.5.5",
-  "releaseDate": "2025-06-29",
-  "forceUpdate": true,
+  "version": "2.5.6",
+  "date": "2025-01-29",
+  "forceUpdate": false,
   "changes": {
     "all": [
       {
@@ -39,6 +39,18 @@
       {
         "type": "fix",
         "description": "Corregido un error crítico que impedía cerrar la sesión correctamente."
+      },
+      {
+        "type": "feature",
+        "description": "Modal de ayuda para activar permisos de ubicación sin reinstalar"
+      },
+      {
+        "type": "improvement",
+        "description": "Flujo alternativo para usuarios con permisos bloqueados"
+      },
+      {
+        "type": "improvement",
+        "description": "Instrucciones paso a paso para activar ubicación manualmente"
       }
     ],
     "admin": [
@@ -51,6 +63,10 @@
       {
         "type": "fix",
         "description": "Corregido un error que impedía visualizar el historial de propuestas en la sección 'Mis Propuestas'."
+      },
+      {
+        "type": "feature",
+        "description": "Botón para abrir configuración de la app directamente"
       }
     ]
   },
