@@ -270,4 +270,55 @@ export const calculateRouteStats = (addresses) => {
     estimatedTime: Math.ceil((totalDistance / 30) * 60), // Asumiendo 30 km/h promedio
     validSegments
   };
+};
+
+// Generar URL de Google Maps con ruta completa y múltiples waypoints
+export const generateGoogleMapsRouteUrl = (addresses, userLocation = null) => {
+  try {
+    // Filtrar direcciones con coordenadas válidas
+    const addressesWithCoords = addresses.filter(addr => getCoordinates(addr) !== null);
+    
+    if (addressesWithCoords.length === 0) {
+      throw new Error('No hay direcciones con coordenadas válidas');
+    }
+    
+    // Construir la URL base de Google Maps
+    let url = 'https://www.google.com/maps/dir/';
+    
+    // Si hay ubicación del usuario, usarla como punto de partida
+    if (userLocation) {
+      url += `${userLocation.lat},${userLocation.lng}/`;
+    }
+    
+    // Añadir todas las direcciones como waypoints
+    addressesWithCoords.forEach((address, index) => {
+      const coords = getCoordinates(address);
+      if (coords) {
+        // Usar coordenadas si están disponibles
+        url += `${coords.lat},${coords.lng}/`;
+      } else if (address.address) {
+        // Si no hay coordenadas, usar la dirección de texto
+        url += `${encodeURIComponent(address.address)}/`;
+      }
+    });
+    
+    // Añadir parámetros para optimizar la ruta
+    url += '?travelmode=driving&dir_action=navigate';
+    
+    return url;
+    
+  } catch (error) {
+    console.error('Error generando URL de Google Maps:', error);
+    return null;
+  }
+};
+
+// Función para abrir la ruta completa en Google Maps
+export const openCompleteRouteInGoogleMaps = (addresses, userLocation = null) => {
+  const url = generateGoogleMapsRouteUrl(addresses, userLocation);
+  if (url) {
+    window.open(url, '_blank');
+    return true;
+  }
+  return false;
 }; 

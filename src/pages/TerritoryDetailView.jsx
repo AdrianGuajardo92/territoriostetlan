@@ -8,7 +8,7 @@ import AssignTerritoryModal from '../components/modals/AssignTerritoryModal';
 import MapModal from '../components/modals/MapModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
-import { optimizeRoute, getCurrentLocation, calculateRouteStats } from '../utils/routeOptimizer';
+import { optimizeRoute, getCurrentLocation, calculateRouteStats, openCompleteRouteInGoogleMaps } from '../utils/routeOptimizer';
 
 const TerritoryDetailView = ({ territory, onBack }) => {
   const { 
@@ -284,6 +284,39 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     });
   };
 
+  // Función para abrir la ruta completa en Google Maps
+  const handleOpenCompleteRoute = async () => {
+    try {
+      // Determinar qué direcciones usar
+      const addressesToUse = sortState.sortOrder === 'optimized' && sortState.optimizedRoute 
+        ? sortState.optimizedRoute 
+        : territoryAddresses;
+
+      if (addressesToUse.length === 0) {
+        showToast('No hay direcciones disponibles para crear la ruta', 'warning');
+        return;
+      }
+
+      // Usar la ubicación del usuario si está disponible
+      const userLocation = sortState.userLocation || null;
+
+      // Abrir la ruta en Google Maps
+      const success = openCompleteRouteInGoogleMaps(addressesToUse, userLocation);
+      
+      if (success) {
+        const message = sortState.sortOrder === 'optimized' 
+          ? `🗺️ Abriendo ruta optimizada con ${addressesToUse.length} direcciones en Google Maps`
+          : `🗺️ Abriendo ruta con ${addressesToUse.length} direcciones en Google Maps`;
+        showToast(message, 'success', 4000);
+      } else {
+        showToast('No se pudo generar la ruta. Verifica que las direcciones tengan coordenadas válidas.', 'error');
+      }
+    } catch (error) {
+      console.error('Error abriendo ruta completa:', error);
+      showToast('Error al abrir la ruta en Google Maps', 'error');
+    }
+  };
+
   // Función personalizada para actualizar estado sin notificación
   const handleUpdateAddressSilent = async (addressId, updatedData) => {
     try {
@@ -326,6 +359,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           setViewMode
         }}
         onOpenMapModal={() => setIsMapModalOpen(true)}
+        onOpenCompleteRoute={handleOpenCompleteRoute}
       />
 
       {/* Lista de direcciones */}
