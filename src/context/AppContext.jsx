@@ -91,7 +91,7 @@ export const AppProvider = ({ children }) => {
   const [authLoading, setAuthLoading] = useState(true);
   const { showToast } = useToast();
 
-  const CURRENT_VERSION = '2.6.6';
+  const CURRENT_VERSION = '2.6.7';
 
   // Auth functions
   useEffect(() => {
@@ -107,25 +107,10 @@ export const AppProvider = ({ children }) => {
       }
     }
     
-    // Verificar si el usuario vuelve de Google Maps
+    // Limpiar cualquier estado de navegación anterior de Google Maps (ya no se usa)
     const navigationState = localStorage.getItem('appNavigationState');
     if (navigationState) {
-      try {
-        const state = JSON.parse(navigationState);
-        console.log('🔙 Usuario ha vuelto de Google Maps');
-        
-        // Mostrar mensaje de bienvenida
-        setTimeout(() => {
-          showToast('🔙 ¡Bienvenido de vuelta! Has regresado de Google Maps', 'success', 4000);
-        }, 1000);
-        
-        // Limpiar estado de navegación
-        localStorage.removeItem('appNavigationState');
-        
-      } catch (error) {
-        console.error('Error processing navigation state:', error);
-        localStorage.removeItem('appNavigationState');
-      }
+      localStorage.removeItem('appNavigationState');
     }
     
     setAuthLoading(false);

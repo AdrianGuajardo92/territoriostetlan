@@ -8,7 +8,7 @@ import AssignTerritoryModal from '../components/modals/AssignTerritoryModal';
 import MapModal from '../components/modals/MapModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
-import { optimizeRoute, getCurrentLocation, calculateRouteStats, openCompleteRouteInGoogleMaps } from '../utils/routeOptimizer';
+import { optimizeRoute, getCurrentLocation, calculateRouteStats } from '../utils/routeOptimizer';
 
 const TerritoryDetailView = ({ territory, onBack }) => {
   const { 
@@ -341,30 +341,18 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         return;
       }
 
-      // PASO 5: Generar y abrir la ruta en Google Maps
-      const success = openCompleteRouteInGoogleMaps(finalAddresses, userLocation);
+      // PASO 5: La función de Google Maps completa fue eliminada
+      // En su lugar, ahora usamos el modal de lista de ruta en el mapa
+      showToast('💡 Usa el mapa del territorio → botón "Ver Ruta" para navegar direcciones individuales', 'info', 5000);
       
-      if (success) {
-        // Mostrar mensaje de éxito con información detallada
-        const stats = calculateRouteStats(finalAddresses);
-        const locationInfo = userLocation ? '📍 desde tu ubicación' : '🗺️ optimizada';
-        const message = useExistingOptimization 
-          ? `🗺️ Ruta optimizada abierta ${locationInfo} (${addressesWithCoords.length} paradas)`
-          : `🚀 Ruta auto-optimizada ${locationInfo} (${addressesWithCoords.length} paradas, ~${stats.totalDistance}km)`;
-        
-        showToast(message, 'success', 5000);
-        
-        // Log para debugging
-        console.log('🎯 Ruta abierta exitosamente:', {
-          totalAddresses: finalAddresses.length,
-          addressesWithCoords: addressesWithCoords.length,
-          userLocation: !!userLocation,
-          wasOptimized: !useExistingOptimization,
-          estimatedDistance: stats.totalDistance
-        });
-      } else {
-        showToast('❌ Error al generar la URL de Google Maps', 'error');
-      }
+      // Log para debugging
+      console.log('🎯 Ruta preparada:', {
+        totalAddresses: finalAddresses.length,
+        addressesWithCoords: addressesWithCoords.length,
+        userLocation: !!userLocation,
+        wasOptimized: !useExistingOptimization,
+        note: 'Usar modal de lista en el mapa para navegación individual'
+      });
     } catch (error) {
       console.error('❌ Error abriendo ruta completa:', error);
       showToast('Error al calcular la ruta. Intenta de nuevo.', 'error');
