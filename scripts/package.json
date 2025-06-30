@@ -1,0 +1,13 @@
+{
+  "name": "correccion-datos-historicos",
+  "version": "1.0.0",
+  "description": "Script para corregir datos históricos usando territoryHistory de territorios completados",
+  "type": "module",
+  "scripts": {
+    "simular": "node corregir-datos-historicos.js simular",
+    "ejecutar": "node corregir-datos-historicos.js ejecutar"
+  },
+  "dependencies": {
+    "firebase": "^10.7.1"
+  }
+} 
