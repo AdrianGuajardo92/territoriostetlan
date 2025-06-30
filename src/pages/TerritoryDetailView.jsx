@@ -339,7 +339,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           showToast('Dirección actualizada.', 'success');
         } else {
           await handleProposeAddressChange(editingAddress.id, formData, changeReason);
-          showToast('Propuesta enviada para revisión.', 'info');
         }
       } else {
         // Para nuevas direcciones, mostrar feedback de geocodificación
@@ -349,10 +348,8 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         
         if (currentUser.role === 'admin' || isAssignedToMe) {
           await handleAddNewAddress(territory.id, formData);
-          // El mensaje de éxito se maneja en handleAddNewAddress
         } else {
           await handleProposeNewAddress(territory.id, formData, changeReason);
-          showToast('Propuesta de nueva dirección enviada.', 'info');
         }
       }
       setIsFormModalOpen(false);

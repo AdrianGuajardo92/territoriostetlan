@@ -826,7 +826,9 @@ export const AppProvider = ({ children }) => {
         proposedByName: currentUser.name,
         createdAt: serverTimestamp()
       });
-      showToast('Propuesta enviada para revisión', 'success');
+      
+      // 🎯 MENSAJE AMABLE Y CORDIAL - UNA SOLA NOTIFICACIÓN ⭐
+      showToast('¡Gracias por tu propuesta! 😊 Se ha enviado para revisión y te notificaremos cuando sea evaluada. Tu colaboración es muy valiosa.', 'success', 4000);
     } catch (error) {
       console.error('Error creating proposal:', error);
       showToast('Error al crear propuesta', 'error');
@@ -846,7 +848,9 @@ export const AppProvider = ({ children }) => {
         proposedByName: currentUser.name,
         createdAt: serverTimestamp()
       });
-      showToast('Propuesta de nueva dirección enviada', 'success');
+      
+      // 🎯 MENSAJE AMABLE Y CORDIAL - UNA SOLA NOTIFICACIÓN ⭐
+      showToast('¡Muchas gracias! 🙏 Tu propuesta de nueva dirección se ha enviado para revisión. La evaluaremos pronto y te informaremos del resultado.', 'success', 4000);
     } catch (error) {
       console.error('Error creating proposal:', error);
       showToast('Error al crear propuesta', 'error');
