@@ -7,7 +7,8 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
     open: true,
-    https: true
+    host: true  // Permite acceso desde la red local (celular)
+    // https: true  // Comentado temporalmente
   },
   build: {
     outDir: 'dist',
