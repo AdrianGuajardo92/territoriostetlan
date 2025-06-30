@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import Icon from '../common/Icon';
 
 const AddressCard = memo(({ 
     address, 
@@ -269,7 +270,11 @@ const AddressCard = memo(({
                         <div className="flex items-center space-x-3 flex-1 min-w-0">
                             {/* Icono de estado */}
                             <div className={`${config.iconBg} p-2 rounded-lg shadow-sm`}>
-                                <i className={`fas ${address.isVisited ? 'fa-house-circle-check' : 'fa-house'} text-lg ${config.iconColor}`}></i>
+                                {address.isVisited ? (
+                                    <Icon name="checkCircle" size={18} className={config.iconColor} />
+                                ) : (
+                                    <i className={`fas fa-house text-lg ${config.iconColor}`}></i>
+                                )}
                             </div>
                             
                             {/* Dirección y género */}
@@ -354,7 +359,11 @@ const AddressCard = memo(({
                     {/* Icono principal y dirección */}
                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                         <div className={`${config.iconBg} p-3 rounded-xl shadow-sm backdrop-blur-sm border border-white/20 group-hover:shadow-md transition-shadow`}>
-                            <i className={`fas ${address.isVisited ? 'fa-house-circle-check' : 'fa-house'} text-xl ${config.iconColor}`}></i>
+                            {address.isVisited ? (
+                                <Icon name="checkCircle" size={24} className={config.iconColor} />
+                            ) : (
+                                <i className={`fas fa-house text-xl ${config.iconColor}`}></i>
+                            )}
                         </div>
                         <div className="flex-1 min-w-0">
                             <h3 className={`text-lg font-bold truncate ${config.titleColor}`}>

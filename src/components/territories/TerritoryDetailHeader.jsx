@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { usePremiumFeedback } from '../../hooks/usePremiumFeedback';
 
 const TerritoryDetailHeader = ({
   territory,
@@ -21,6 +22,9 @@ const TerritoryDetailHeader = ({
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const adminMenuRef = useRef(null);
+  
+  // FASE 3: Premium feedback ⚡
+  const { tapFeedback, successFeedback } = usePremiumFeedback();
   
   // Normalizar el estado para manejar "Terminado" como "Completado"
   const normalizedStatus = territory.status === 'Terminado' ? 'Completado' : territory.status;
@@ -61,8 +65,11 @@ const TerritoryDetailHeader = ({
         {/* Lado izquierdo - Botón volver y título */}
         <div className="flex items-center space-x-3">
           <button 
-            onClick={onBack} 
-            className="p-2 rounded-xl shadow-md transition-all duration-200" 
+            onClick={(e) => {
+              tapFeedback(e.currentTarget);
+              onBack();
+            }} 
+            className="p-2 rounded-xl shadow-md transition-all duration-200 touch-feedback btn-premium" 
             style={{ 
               backgroundColor: '#34495e',
               minWidth: '36px',
@@ -222,9 +229,12 @@ const TerritoryDetailHeader = ({
 
           {/* Botón agregar dirección */}
           <button 
-            onClick={onAddAddress}
+            onClick={(e) => {
+              successFeedback(e.currentTarget);
+              onAddAddress();
+            }}
             disabled={isProcessing}
-            className="p-2 rounded-xl shadow-md transition-all duration-200" 
+            className="p-2 rounded-xl shadow-md transition-all duration-200 touch-feedback btn-premium" 
             style={{ 
               backgroundColor: '#546E7A',
               minWidth: '36px',

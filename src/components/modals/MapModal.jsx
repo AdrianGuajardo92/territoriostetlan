@@ -110,77 +110,8 @@ const TerritoryMapModal = ({
         return addressWithCoords?.coordinates || null;
     }, [addressesWithCoords]);
     
-
-    
-    // OPTIMIZACIÓN: HandleQuickToggleVisited sin re-renders innecesarios ⚡
-    const handleQuickToggleVisited = useCallback(async (address) => {
-        try {
-            const updatedAddress = {
-                ...address,
-                isVisited: !address.isVisited,
-                lastUpdated: new Date()
-            };
-            
-            await onToggleAddressStatus(address.id, updatedAddress);
-            
-            // Actualizar inmediatamente la dirección seleccionada
-            setSelectedAddress(updatedAddress);
-            setShowQuickAction(false);
-        } catch (error) {
-            console.error('Error al actualizar dirección:', error);
-            showToast('Error al actualizar la dirección', 'error');
-        }
-    }, [onToggleAddressStatus, showToast]);
-    
-    // OPTIMIZACIÓN: HandleNavigate memoizada ⚡
-    const handleNavigate = useCallback((address, mode = 'driving') => {
-        const coords = getCoordinates(address);
-        let url = '';
-        
-        if (coords) {
-            // Usar coordenadas con modo específico (sin auto-inicio)
-            switch (mode) {
-                case 'driving':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`;
-                    break;
-                case 'walking':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=walking`;
-                    break;
-                case 'transit':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=transit`;
-                    break;
-                default:
-                    url = `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}`;
-            }
-        } else {
-            // Fallback usando dirección en texto con modo específico (sin auto-inicio)
-            const encodedAddress = encodeURIComponent(address.address);
-            switch (mode) {
-                case 'driving':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
-                    break;
-                case 'walking':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=walking`;
-                    break;
-                case 'transit':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=transit`;
-                    break;
-                default:
-                    url = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-            }
-        }
-        
-        // Guardar el estado actual en sessionStorage antes de navegar
-        if (window.sessionStorage && territory) {
-            sessionStorage.setItem('lastTerritoryId', territory.id);
-            sessionStorage.setItem('navigationTimestamp', Date.now().toString());
-        }
-        
-        // Prevenir que el modal se cierre al regresar de Google Maps
-        window.open(url, '_blank', 'noopener,noreferrer');
-    }, [getCoordinates, territory]);
-    
     // OPTIMIZACIÓN: UpdateMapMarkers inteligente - Solo actualiza lo que ha cambiado ⚡
+    // MOVIDO ANTES DE handleQuickToggleVisited para resolver error de inicialización
     const updateMapMarkers = useCallback((addressesToShow, forceUpdate = false) => {
         if (!mapInstanceRef.current) return;
         
@@ -316,6 +247,164 @@ const TerritoryMapModal = ({
         }
     }, [getCoordinates, getAddressColor, sortState.sortOrder, sortState.userLocation, addresses]);
     
+    // OPTIMIZACIÓN: HandleQuickToggleVisited sin re-renders innecesarios ⚡
+    const handleQuickToggleVisited = useCallback(async (address) => {
+        try {
+            const updatedAddress = {
+                ...address,
+                isVisited: !address.isVisited,
+                lastUpdated: new Date()
+            };
+            
+            // ACTUALIZACIÓN INSTANTÁNEA DEL MARCADOR - ANTES DE ESPERAR LA RESPUESTA ⚡
+            if (markersRef.current[address.id] && mapInstanceRef.current) {
+                const coords = getCoordinates(address);
+                if (coords) {
+                    // Obtener el número del marcador actual
+                    const currentAddressIndex = addressesWithCoords.findIndex(a => a.id === address.id);
+                    const validMarkersCount = addressesWithCoords.slice(0, currentAddressIndex + 1).length;
+                    const displayNumber = sortState.sortOrder === 'optimized' && address.routeOrder 
+                        ? address.routeOrder 
+                        : validMarkersCount;
+                    
+                    // Color actualizado basado en el nuevo estado
+                    const newColor = updatedAddress.isVisited ? '#ef4444' : '#22c55e'; // Rojo: Visitada, Verde: Pendiente
+                    
+                    // Crear nuevo marcador con estado actualizado
+                    const markerHtml = `
+                        <div style="
+                            background-color: ${newColor}; 
+                            color: white; 
+                            width: 36px; 
+                            height: 36px; 
+                            border-radius: 50%; 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center; 
+                            font-weight: bold; 
+                            font-size: 16px; 
+                            border: 3px solid white; 
+                            box-shadow: 0 3px 8px rgba(0,0,0,0.4); 
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                            animation: markerUpdate 0.4s ease-out;
+                        " class="map-marker">
+                            ${displayNumber}
+                        </div>`;
+                    
+                    const customIcon = L.divIcon({ 
+                        html: markerHtml, 
+                        iconSize: [36, 36], 
+                        className: 'custom-marker-updated',
+                        iconAnchor: [18, 18]
+                    });
+                    
+                    // Remover marcador anterior
+                    mapInstanceRef.current.removeLayer(markersRef.current[address.id]);
+                    
+                    // Crear nuevo marcador con estado actualizado
+                    const newMarker = L.marker([coords.lat, coords.lng], { icon: customIcon });
+                    
+                    // Re-añadir event listener
+                    newMarker.on('click', () => {
+                        // Usar el estado actualizado optimísticamente
+                        setSelectedAddress(updatedAddress);
+                        const newIndex = addressesWithCoords.findIndex(a => a.id === address.id);
+                        setSelectedAddressIndex(newIndex);
+                        setShowQuickAction(true);
+                    });
+                    
+                    // Añadir al mapa y actualizar referencia
+                    newMarker.addTo(mapInstanceRef.current);
+                    markersRef.current[address.id] = newMarker;
+                }
+            }
+            
+            // Actualizar inmediatamente la dirección seleccionada con estado optimista
+            setSelectedAddress(updatedAddress);
+            
+            // CORRECCIÓN: Ejecutar la actualización del backend con parámetros correctos ⚡
+            // Solo pasar los campos que cambiaron para el toggle
+            const toggleData = {
+                isVisited: updatedAddress.isVisited,
+                lastUpdated: updatedAddress.lastUpdated
+            };
+            await onToggleAddressStatus(address.id, toggleData);
+            
+            // MEJORA UX: Mantener el panel abierto con feedback visual mejorado ⚡
+            // En lugar de cerrar inmediatamente, mantener abierto para más acciones
+            // setShowQuickAction(false); // ❌ Comentado - mantener abierto
+            
+            // ✅ Feedback visual temporal de éxito
+            showToast(
+                updatedAddress.isVisited ? 'Dirección marcada como visitada' : 'Dirección marcada como pendiente', 
+                'success',
+                2000 // Toast breve para no interferir
+            );
+            
+        } catch (error) {
+            console.error('Error al actualizar dirección:', error);
+            showToast('Error al actualizar la dirección', 'error');
+            
+            // En caso de error, revertir el estado optimista
+            if (markersRef.current[address.id] && mapInstanceRef.current) {
+                // Forzar actualización completa de marcadores para revertir cambio visual
+                updateMapMarkers(addressesWithCoords, true);
+            }
+            
+            // Revertir dirección seleccionada al estado original
+            setSelectedAddress(address);
+        }
+    }, [onToggleAddressStatus, showToast, getCoordinates, addressesWithCoords, sortState.sortOrder, updateMapMarkers]);
+    
+    // OPTIMIZACIÓN: HandleNavigate memoizada ⚡
+    const handleNavigate = useCallback((address, mode = 'driving') => {
+        const coords = getCoordinates(address);
+        let url = '';
+        
+        if (coords) {
+            // Usar coordenadas con modo específico (sin auto-inicio)
+            switch (mode) {
+                case 'driving':
+                    url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`;
+                    break;
+                case 'walking':
+                    url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=walking`;
+                    break;
+                case 'transit':
+                    url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=transit`;
+                    break;
+                default:
+                    url = `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}`;
+            }
+        } else {
+            // Fallback usando dirección en texto con modo específico (sin auto-inicio)
+            const encodedAddress = encodeURIComponent(address.address);
+            switch (mode) {
+                case 'driving':
+                    url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
+                    break;
+                case 'walking':
+                    url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=walking`;
+                    break;
+                case 'transit':
+                    url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=transit`;
+                    break;
+                default:
+                    url = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+            }
+        }
+        
+        // Guardar el estado actual en sessionStorage antes de navegar
+        if (window.sessionStorage && territory) {
+            sessionStorage.setItem('lastTerritoryId', territory.id);
+            sessionStorage.setItem('navigationTimestamp', Date.now().toString());
+        }
+        
+        // Prevenir que el modal se cierre al regresar de Google Maps
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }, [getCoordinates, territory]);
+    
     // OPTIMIZACIÓN: DrawRouteLine memoizada - Solo recalcula cuando cambia la ruta ⚡
     const routeCoordinates = useMemo(() => {
         if (sortState.sortOrder !== 'optimized') return null;
@@ -370,12 +459,29 @@ const TerritoryMapModal = ({
         if (!isOpen) return;
 
         const initializeMap = () => {
-            if (!mapRef.current || mapInstanceRef.current) return;
+            if (!mapRef.current) {
+                console.error('MapRef no está disponible');
+                setMapError(true);
+                return;
+            }
+            
+            if (mapInstanceRef.current) {
+                console.log('Mapa ya inicializado');
+                return;
+            }
             
             try {
                 if (addressesWithCoords.length === 0) {
+                    console.warn('No hay direcciones con coordenadas para mostrar en el mapa');
                     setMapError(true);
                     return;
+                }
+                
+                console.log(`Inicializando mapa con ${addressesWithCoords.length} direcciones`);
+                
+                // Verificar que L.map está disponible antes de usar
+                if (typeof L.map !== 'function') {
+                    throw new Error('L.map no es una función válida');
                 }
                 
                 // Configuración súper optimizada para móviles (máximo rendimiento)
@@ -401,8 +507,13 @@ const TerritoryMapModal = ({
                     bounceAtZoomLimits: false
                 });
                 
+                // Verificar que el mapa se creó correctamente
+                if (!map) {
+                    throw new Error('Failed to create Leaflet map instance');
+                }
+                
                 // Capa de tiles súper optimizada
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
                     attribution: '© OpenStreetMap', 
                     maxZoom: 19,
                     minZoom: 10,
@@ -412,13 +523,24 @@ const TerritoryMapModal = ({
                     keepBuffer: 4,
                     maxNativeZoom: 18,
                     detectRetina: true
-                }).addTo(map);
+                });
                 
+                tileLayer.addTo(map);
+                
+                // Verificar que todo se configuró correctamente
                 mapInstanceRef.current = map;
                 setIsMapReady(true);
+                console.log('Mapa inicializado exitosamente');
                 
             } catch (error) {
                 console.error('Error al inicializar el mapa:', error);
+                console.error('Detalles del error:', {
+                    message: error.message,
+                    stack: error.stack,
+                    mapRef: !!mapRef.current,
+                    leaflet: typeof L !== 'undefined',
+                    leafletMap: typeof L?.map === 'function'
+                });
                 setMapError(true);
             }
         };
@@ -428,20 +550,32 @@ const TerritoryMapModal = ({
                 // CORRECCIÓN: Lazy loading robusto de Leaflet ⚡
                 if (typeof L === 'undefined' || !window.leafletJSLoaded) {
                     console.log('Cargando Leaflet para el mapa...');
+                    
+                    // Verificar que las funciones de carga existen
+                    if (typeof window.loadLeafletCSS !== 'function' || typeof window.loadLeafletJS !== 'function') {
+                        throw new Error('Funciones de carga de Leaflet no están disponibles');
+                    }
+                    
                     await Promise.all([
                         window.loadLeafletCSS(),
                         window.loadLeafletJS()
                     ]);
                     
-                    // Esperar un poco para que Leaflet se inicialice completamente
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    // Esperar un poco más para que Leaflet se inicialice completamente
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
                 
-                if (typeof L !== 'undefined' && typeof L.map === 'function') {
+                // Verificación más robusta de Leaflet
+                if (typeof L !== 'undefined' && L.map && typeof L.map === 'function' && L.marker && L.divIcon) {
                     console.log('Leaflet cargado correctamente, inicializando mapa...');
                     initializeMap();
                 } else {
-                    console.error('Leaflet no se cargó correctamente');
+                    console.error('Leaflet no se cargó correctamente - funciones faltantes:', {
+                        L_exists: typeof L !== 'undefined',
+                        map_exists: typeof L?.map === 'function',
+                        marker_exists: typeof L?.marker === 'function',
+                        divIcon_exists: typeof L?.divIcon === 'function'
+                    });
                     setMapError(true);
                 }
             } catch (error) {

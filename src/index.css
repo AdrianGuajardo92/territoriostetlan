@@ -334,6 +334,110 @@ button, [role="button"], .clickable {
   100% { left: 100%; }
 }
 
+/* FASE 3: UX PREMIUM FINAL ⚡ */
+
+/* Toast messages premium */
+.toast-premium {
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Focus states premium */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* Premium micro-interactions */
+.micro-interact {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.micro-interact:hover {
+  transform: translateY(-1px);
+}
+
+.micro-interact:active {
+  transform: translateY(0);
+}
+
+/* Premium card stack effect */
+.card-stack {
+  position: relative;
+}
+
+.card-stack::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: inherit;
+  z-index: -1;
+}
+
+/* Success animation */
+@keyframes success-check {
+  0% { 
+    transform: scale(0) rotate(45deg);
+    opacity: 0;
+  }
+  50% { 
+    transform: scale(1.2) rotate(45deg);
+    opacity: 1;
+  }
+  100% { 
+    transform: scale(1) rotate(45deg);
+    opacity: 1;
+  }
+}
+
+.animate-success-check {
+  animation: success-check 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Error shake animation */
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-error-shake {
+  animation: error-shake 0.4s ease-in-out;
+}
+
+/* Premium glow effect */
+.glow-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-effect::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.glow-effect:hover::after {
+  opacity: 1;
+}
+
 /* OPTIMIZACIÓN FASE 2: Grid performance ⚡ */
 .grid {
   contain: layout style;
@@ -894,6 +998,22 @@ button, [role="button"], .clickable {
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+/* ANIMACIÓN OPTIMIZADA PARA ACTUALIZACIÓN INSTANTÁNEA DE MARCADORES ⚡ */
+@keyframes markerUpdate {
+  0% { 
+    transform: scale(1.15); 
+    opacity: 0.8; 
+  }
+  50% { 
+    transform: scale(0.9); 
+    opacity: 1; 
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 1; 
   }
 }
 

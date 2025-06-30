@@ -443,11 +443,13 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const handleUpdateAddressSilent = useCallback(async (addressId, updatedData) => {
     try {
       const address = addresses.find(a => a.id === addressId);
-      if (address && 'isVisited' in updatedData) {
-        // Para cambios de estado visitado, usar la función sin notificación
+      
+      // Si es solo un cambio de estado visitado (toggle), usar la función específica
+      if (address && 'isVisited' in updatedData && Object.keys(updatedData).length <= 2) { // <= 2 por isVisited y lastUpdated
+        // handleToggleAddressStatus espera el estado ACTUAL para togglearlo
         await handleToggleAddressStatus(addressId, address.isVisited);
       } else {
-        // Para otros cambios (edición de datos), usar la función normal con notificación
+        // Para otros cambios (edición completa de datos), usar la función de actualización completa
         await handleUpdateAddress(addressId, updatedData);
       }
     } catch (error) {
