@@ -91,7 +91,7 @@ export const AppProvider = ({ children }) => {
   const [authLoading, setAuthLoading] = useState(true);
   const { showToast } = useToast();
 
-  const CURRENT_VERSION = '2.6.3';
+  const CURRENT_VERSION = '2.6.4';
 
   // Auth functions
   useEffect(() => {

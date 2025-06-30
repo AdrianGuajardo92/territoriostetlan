@@ -475,21 +475,41 @@ export const openCompleteRouteInGoogleMaps = (addresses, userLocation = null) =>
       return false;
     }
     
-    // Abrir en nueva pestaña
-    console.log('🌐 Abriendo Google Maps en nueva pestaña...');
+    // Estrategia 1: Intentar abrir en nueva pestaña
+    console.log('🌐 Intentando abrir Google Maps en nueva pestaña...');
     try {
       const newWindow = window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
       
       if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-        // El popup fue bloqueado
-        console.warn('⚠️ Popup bloqueado, intentando redirigir en la misma pestaña');
-        window.location.href = googleMapsUrl;
+        // Estrategia 2: Copiar al portapapeles y mostrar instrucciones
+        console.warn('⚠️ Popup bloqueado - Copiando URL al portapapeles');
+        
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(googleMapsUrl).then(() => {
+            console.log('✅ URL copiada al portapapeles');
+            alert('🗺️ ¡Ruta copiada!\n\nLa URL de Google Maps se copió al portapapeles.\n\n📋 Pégala en una nueva pestaña para ver la ruta completa.\n\n💡 Tip: Abre una nueva pestaña y pega (Ctrl+V)');
+          }).catch(() => {
+            // Fallback: mostrar la URL para copiar manualmente
+            console.log('❌ No se pudo copiar automáticamente');
+            prompt('📋 Copia esta URL y pégala en una nueva pestaña:', googleMapsUrl);
+          });
+        } else {
+          // Fallback para navegadores sin clipboard API
+          console.log('📋 Mostrando URL para copiar manualmente');
+          prompt('📋 Copia esta URL y pégala en una nueva pestaña:', googleMapsUrl);
+        }
         return true;
       }
     } catch (error) {
       console.error('❌ Error al abrir ventana:', error);
-      // Intentar navegación directa como fallback
-      window.location.href = googleMapsUrl;
+      // Fallback: copiar al portapapeles
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(googleMapsUrl).then(() => {
+          alert('🗺️ Ruta copiada al portapapeles\n\nAbre una nueva pestaña y pega la URL');
+        });
+      } else {
+        prompt('📋 Copia esta URL:', googleMapsUrl);
+      }
       return true;
     }
 
