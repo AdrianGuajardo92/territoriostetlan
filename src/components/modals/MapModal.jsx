@@ -551,15 +551,27 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                         <button 
                             onClick={() => {
                                 console.log('🗺️ Iniciando apertura de ruta completa en Google Maps');
+                                console.log('📋 Datos a enviar:');
+                                console.log(`   - Direcciones: ${addresses?.length || 0}`);
+                                console.log(`   - Primera dirección: ${addresses?.[0]?.address || 'N/A'}`);
+                                console.log(`   - Ubicación usuario: ${sortState.userLocation ? 'Sí' : 'No'}`);
+                                
                                 try {
+                                    // Verificar que tenemos direcciones válidas
+                                    if (!addresses || addresses.length === 0) {
+                                        console.error('❌ No hay direcciones para mostrar');
+                                        return;
+                                    }
+                                    
                                     const success = openCompleteRouteInGoogleMaps(addresses, sortState.userLocation);
                                     if (success) {
-                                        console.log('✅ Ruta completa abierta exitosamente');
+                                        console.log('✅ Función retornó exitosamente');
                                     } else {
-                                        console.error('❌ Error al abrir la ruta completa');
+                                        console.error('❌ La función retornó false');
                                     }
                                 } catch (error) {
                                     console.error('❌ Error al ejecutar openCompleteRouteInGoogleMaps:', error);
+                                    console.error('Stack trace:', error.stack);
                                 }
                             }}
                             className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg shadow-sm border border-blue-700 hover:bg-blue-700 transition-all" 

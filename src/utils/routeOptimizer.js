@@ -420,9 +420,15 @@ export const generateGoogleMapsRouteUrl = (addresses, userLocation = null) => {
       console.log(`⚠️ NOTA: Solo se incluyeron las primeras 8 direcciones debido a limitaciones de URL`);
     }
 
-    // Para debugging: mostrar la URL (sin exponer datos sensibles en producción)
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🔗 URL generada: ${finalUrl.substring(0, 100)}...`);
+    // Para debugging: SIEMPRE mostrar la URL completa para diagnosticar el problema
+    console.log(`🔗 URL generada: ${finalUrl}`);
+    console.log(`🔍 URL comienza con https://? ${finalUrl.startsWith('https://')}`);
+    console.log(`📏 Longitud de URL: ${finalUrl.length} caracteres`);
+
+    // Verificación adicional de seguridad
+    if (!finalUrl.startsWith('https://')) {
+      console.error('❌ ERROR CRÍTICO: La URL no tiene el protocolo correcto');
+      return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
     }
 
     return finalUrl;
@@ -453,13 +459,36 @@ export const openCompleteRouteInGoogleMaps = (addresses, userLocation = null) =>
       return false;
     }
 
+    // Verificar que la URL es válida antes de abrir
+    console.log('🔍 Verificando URL antes de abrir:');
+    console.log(`   - URL completa: ${googleMapsUrl}`);
+    console.log(`   - Tipo de URL: ${typeof googleMapsUrl}`);
+    console.log(`   - URL válida: ${googleMapsUrl && googleMapsUrl.startsWith('https://')}`);
+    
+    // Validación adicional
+    if (!googleMapsUrl || typeof googleMapsUrl !== 'string' || !googleMapsUrl.startsWith('https://')) {
+      console.error('❌ URL inválida o malformada:', googleMapsUrl);
+      // Intentar con URL básica de Google Maps
+      const fallbackUrl = 'https://www.google.com/maps';
+      console.log('🔄 Usando URL de respaldo:', fallbackUrl);
+      window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+      return false;
+    }
+    
     // Abrir en nueva pestaña
     console.log('🌐 Abriendo Google Maps en nueva pestaña...');
-    const newWindow = window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
-    
-    if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-      // El popup fue bloqueado
-      console.warn('⚠️ Popup bloqueado, intentando redirigir en la misma pestaña');
+    try {
+      const newWindow = window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
+      
+      if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+        // El popup fue bloqueado
+        console.warn('⚠️ Popup bloqueado, intentando redirigir en la misma pestaña');
+        window.location.href = googleMapsUrl;
+        return true;
+      }
+    } catch (error) {
+      console.error('❌ Error al abrir ventana:', error);
+      // Intentar navegación directa como fallback
       window.location.href = googleMapsUrl;
       return true;
     }
