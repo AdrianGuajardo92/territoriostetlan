@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from './Icon';
+import { useModalHistory } from '../../hooks/useModalHistory';
 
 const ConfirmDialog = ({
   isOpen,
@@ -9,8 +10,12 @@ const ConfirmDialog = ({
   message,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
-  type = 'warning' // warning, danger, info
+  type = 'warning', // warning, danger, info, success
+  modalId = 'confirm-dialog' // ID único para el historial
 }) => {
+  // Hook para manejar historial del navegador consistentemente
+  const { closeModal } = useModalHistory(isOpen, onClose, modalId);
+
   if (!isOpen) return null;
 
   const typeConfig = {
@@ -31,22 +36,33 @@ const ConfirmDialog = ({
       iconColor: 'text-blue-500',
       iconBg: 'bg-blue-100',
       confirmButton: 'bg-blue-600 hover:bg-blue-700'
+    },
+    success: {
+      icon: 'checkCircle',
+      iconColor: 'text-green-500',
+      iconBg: 'bg-green-100',
+      confirmButton: 'bg-green-600 hover:bg-green-700'
     }
   };
 
   const config = typeConfig[type] || typeConfig.warning;
 
+  const handleConfirm = () => {
+    onConfirm();
+    closeModal();
+  };
+
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop con animación suave */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity"
-        onClick={onClose}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 modal-backdrop"
+        onClick={closeModal}
       />
       
-      {/* Dialog */}
+      {/* Dialog con animación Fade + Scale */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-bounce-in">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform pointer-events-auto modal-fade-scale">
           <div className="p-6">
             {/* Icon */}
             <div className={`w-12 h-12 ${config.iconBg} rounded-full flex items-center justify-center mx-auto mb-4`}>
@@ -64,16 +80,13 @@ const ConfirmDialog = ({
             {/* Actions */}
             <div className="flex space-x-3">
               <button
-                onClick={onClose}
+                onClick={closeModal}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
                 {cancelText}
               </button>
               <button
-                onClick={() => {
-                  onConfirm();
-                  onClose();
-                }}
+                onClick={handleConfirm}
                 className={`flex-1 px-4 py-2 ${config.confirmButton} text-white rounded-lg transition-colors font-medium shadow-sm`}
               >
                 {confirmText}

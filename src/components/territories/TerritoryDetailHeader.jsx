@@ -13,7 +13,9 @@ const TerritoryDetailHeader = ({
   isAssignedToMe,
   sortControls,
   viewControls,
-  onOpenMapModal
+  onOpenMapModal,
+  adminEditMode = false,
+  onToggleAdminMode
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
@@ -327,6 +329,32 @@ const TerritoryDetailHeader = ({
                     </button>
                   )}
                 </div>
+
+                {/* Modo Administrador - Solo para admins */}
+                {isAdmin && (
+                  <div className="px-3 py-2 border-t border-gray-100">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Modo Administrador</p>
+                    <button 
+                      onClick={() => {
+                        onToggleAdminMode?.();
+                        setIsMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-all ${
+                        adminEditMode 
+                          ? 'bg-orange-50 text-orange-700 border border-orange-200' 
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span>{adminEditMode ? 'Desactivar edición' : 'Activar edición'}</span>
+                      {adminEditMode && (
+                        <div className="ml-auto w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -349,11 +377,13 @@ const TerritoryDetailHeader = ({
               </span>
             </div>
             
-            {stats.pending > 0 && (
-              <div className="bg-white/20 px-2 py-1 rounded-lg">
-                <span className="text-white/90 text-xs font-medium">
-                  {stats.pending} pendientes
-                </span>
+            {/* Indicador de modo administrador activo */}
+            {isAdmin && adminEditMode && (
+              <div className="bg-orange-500/90 px-3 py-1 rounded-lg flex items-center space-x-2 animate-pulse">
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span className="text-white text-sm font-bold">MODO ADMIN</span>
               </div>
             )}
           </div>
@@ -370,14 +400,26 @@ const TerritoryDetailHeader = ({
                   // Si no está activa, crear ruta optimizada
                   sortControls.onOptimizedRoute();
                 }
-              }} 
+              }}
+              onDoubleClick={() => {
+                // Doble clic de emergencia para desbloquear si está atascado
+                if (sortControls.isCalculatingRoute && sortControls.forceReset) {
+                  sortControls.forceReset();
+                }
+              }}
               disabled={sortControls.isCalculatingRoute}
               className={`relative p-2 rounded-lg transition-all duration-200 ${
                 sortControls.sortOrder === 'optimized' 
                 ? 'bg-emerald-500/90 scale-105' 
                 : 'bg-white/20 hover:bg-white/30'
-              }`}
-              title={sortControls.sortOrder === 'optimized' ? 'Desactivar ruta optimizada' : 'Crear ruta optimizada'}
+              } ${sortControls.isCalculatingRoute ? 'cursor-wait' : ''}`}
+              title={
+                sortControls.isCalculatingRoute 
+                  ? 'Calculando ruta... (doble clic para resetear si está atascado)' 
+                  : sortControls.sortOrder === 'optimized' 
+                    ? 'Desactivar ruta optimizada' 
+                    : 'Crear ruta optimizada'
+              }
             >
               {sortControls.isCalculatingRoute ? (
                 <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>

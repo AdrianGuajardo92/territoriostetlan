@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import Icon from './Icon';
+import { useModalHistory } from '../../hooks/useModalHistory';
 
 const Modal = ({ 
   isOpen, 
@@ -9,21 +10,28 @@ const Modal = ({
   size = 'md', // sm, md, lg, xl, 2xl, full
   showCloseButton = true,
   closeOnBackdrop = true,
-  closeOnEscape = true 
+  closeOnEscape = true,
+  modalId = 'modal' // ID único para identificar el modal en el historial
 }) => {
+  // Hook para manejar historial del navegador consistentemente
+  const { closeModal } = useModalHistory(isOpen, onClose, modalId);
+
+  // Función que maneja el cierre (usa closeModal para consistencia pero mantiene onClose como fallback)
+  const handleClose = closeModal || onClose;
+
   // Manejar tecla Escape
   useEffect(() => {
     if (!isOpen || !closeOnEscape) return;
     
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
     
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose, closeOnEscape]);
+  }, [isOpen, handleClose, closeOnEscape]);
 
   // Prevenir scroll del body cuando el modal está abierto
   useEffect(() => {
@@ -54,16 +62,16 @@ const Modal = ({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop con animación suave */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity animate-fade-in"
-        onClick={closeOnBackdrop ? onClose : undefined}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity modal-backdrop"
+        onClick={closeOnBackdrop ? handleClose : undefined}
       />
       
-      {/* Modal */}
+      {/* Modal con animación Fade + Scale */}
       <div className={`fixed inset-0 z-50 ${isFullScreen ? '' : 'flex items-center justify-center p-4'} pointer-events-none`}>
         <div className={`
-          bg-white shadow-2xl w-full transform transition-all animate-bounce-in pointer-events-auto
+          bg-white shadow-2xl w-full transform pointer-events-auto modal-fade-scale
           ${isFullScreen 
             ? 'h-full w-full rounded-none' 
             : `${sizeClasses[size]} rounded-3xl max-h-[85vh] sm:max-h-[90vh]`
@@ -78,7 +86,7 @@ const Modal = ({
               )}
               {showCloseButton && (
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors ml-auto"
                   aria-label="Cerrar"
                 >

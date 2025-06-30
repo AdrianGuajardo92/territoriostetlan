@@ -22,7 +22,7 @@ import { db } from './config/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 
 function AppContent() {
-  const { currentUser, authLoading, proposals, logout, territories } = useApp();
+  const { currentUser, authLoading, proposals, logout, territories, adminEditMode, handleToggleAdminMode } = useApp();
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
@@ -53,6 +53,43 @@ function AppContent() {
       }
     }
   }, [currentUser, territories, selectedTerritory]);
+
+  // Manejar el botón físico de volver
+  useEffect(() => {
+    const handlePopState = (event) => {
+      // Para pantalla principal - solo cerrar componentes abiertos
+      if (selectedTerritory) {
+        // Si hay territorio seleccionado, volver a lista
+        setSelectedTerritory(null);
+        return;
+      }
+
+      if (activeModal) {
+        // Los modales ahora se manejan automáticamente con useModalHistory
+        // Solo resetear el estado local
+        setActiveModal(null);
+        return;
+      }
+
+      if (isMenuOpen) {
+        // Si hay menú abierto, cerrarlo
+        setIsMenuOpen(false);
+        return;
+      }
+
+      // Si está en pantalla principal sin nada abierto, mostrar confirmación de salida
+      const shouldExit = window.confirm('¿Quieres salir de la aplicación?');
+      if (shouldExit) {
+        window.close();
+      } else {
+        // Si no quiere salir, mantener en la misma página
+        window.history.pushState({ app: 'territorios', level: 'main' }, '', window.location.href);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeModal, isMenuOpen, selectedTerritory]);
 
   // Menu items configuration
   const menuItems = [
@@ -136,14 +173,49 @@ function AppContent() {
 
   const handleOpenModal = (modalId) => {
     setActiveModal(modalId);
-    const item = menuItems.find(i => i.id === modalId);
-    if (item?.modal) {
-      setIsMenuOpen(false);
-    }
+    // El historial ahora lo maneja automáticamente useModalHistory
   };
 
   const handleCloseModal = () => {
     setActiveModal(null);
+    // El historial ahora lo maneja automáticamente useModalHistory
+  };
+
+  const handleSelectTerritory = (territory) => {
+    setSelectedTerritory(territory);
+    // Agregar entrada específica al historial para el territorio
+    window.history.pushState({ 
+      app: 'territorios', 
+      level: 'territory', 
+      territory: territory.id 
+    }, '', window.location.href);
+  };
+
+  const handleBackFromTerritory = () => {
+    setSelectedTerritory(null);
+    // Si el estado actual es un territorio, navegar hacia atrás
+    if (window.history.state?.level === 'territory') {
+      window.history.back();
+    }
+  };
+
+  // Manejar apertura del menú con historial
+  const handleOpenMenu = () => {
+    setIsMenuOpen(true);
+    // Agregar entrada al historial para el menú
+    window.history.pushState({ 
+      app: 'territorios', 
+      level: 'menu' 
+    }, '', window.location.href);
+  };
+
+  // Manejar cierre del menú
+  const handleCloseMenu = () => {
+    setIsMenuOpen(false);
+    // Si el estado actual es menú, navegar hacia atrás
+    if (window.history.state?.level === 'menu') {
+      window.history.back();
+    }
   };
 
   // Función temporal para verificar usuarios
@@ -235,19 +307,19 @@ function AppContent() {
       {selectedTerritory ? (
         <TerritoryDetailView
           territory={selectedTerritory}
-          onBack={() => setSelectedTerritory(null)}
+          onBack={handleBackFromTerritory}
         />
       ) : (
         <TerritoriesView
-          onSelectTerritory={setSelectedTerritory}
-          onOpenMenu={() => setIsMenuOpen(true)}
+          onSelectTerritory={handleSelectTerritory}
+          onOpenMenu={handleOpenMenu}
         />
       )}
 
       {/* Menú móvil */}
       <MobileMenu
         isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
+        onClose={handleCloseMenu}
         menuItems={filteredMenuItems}
         activeItem={activeModal}
         onOpenModal={handleOpenModal}
@@ -255,30 +327,30 @@ function AppContent() {
       />
 
       {/* Modales */}
-      <Suspense fallback={<LoadingSpinner />}>
+      <Suspense fallback={<div>Cargando...</div>}>
         {activeModal === 'search' && (
-          <SearchModal isOpen onClose={handleCloseModal} />
+          <SearchModal isOpen onClose={handleCloseModal} modalId="search-modal" />
         )}
         {activeModal === 'stats' && (
-          <StatsModal isOpen onClose={handleCloseModal} />
+          <StatsModal isOpen onClose={handleCloseModal} modalId="stats-modal" />
         )}
         {activeModal === 'reports' && (
-          <ReportsModal isOpen onClose={handleCloseModal} />
+          <ReportsModal isOpen onClose={handleCloseModal} modalId="reports-modal" />
         )}
         {activeModal === 'admin' && currentUser?.role === 'admin' && (
-          <AdminModal isOpen onClose={handleCloseModal} />
+          <AdminModal isOpen onClose={handleCloseModal} modalId="admin-modal" />
         )}
         {activeModal === 'proposals' && currentUser?.role !== 'admin' && (
-          <ProposalsModal isOpen onClose={handleCloseModal} />
+          <ProposalsModal isOpen onClose={handleCloseModal} modalId="proposals-modal" />
         )}
         {activeModal === 'password' && (
-          <PasswordModal isOpen onClose={handleCloseModal} />
+          <PasswordModal isOpen onClose={handleCloseModal} modalId="password-modal" />
         )}
         {activeModal === 'updates' && (
-          <UpdatesModal isOpen onClose={handleCloseModal} />
+          <UpdatesModal isOpen onClose={handleCloseModal} modalId="updates-modal" />
         )}
         {activeModal === 'install' && (
-          <InstallModal isOpen onClose={handleCloseModal} />
+          <InstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
         )}
       </Suspense>
     </div>

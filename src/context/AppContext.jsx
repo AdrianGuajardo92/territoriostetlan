@@ -89,6 +89,7 @@ export const AppProvider = ({ children }) => {
   const [proposals, setProposals] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
+  const [adminEditMode, setAdminEditMode] = useState(false);
   const { showToast } = useToast();
 
   const CURRENT_VERSION = '2.7.1';
@@ -361,12 +362,20 @@ export const AppProvider = ({ children }) => {
 
   const handleReturnTerritory = async (territoryId) => {
     try {
-      // Actualizar el territorio
+      // Actualizar el territorio - LIMPIEZA COMPLETA del estado
       await updateDoc(doc(db, 'territories', territoryId), {
         status: 'Disponible',
         assignedTo: '',
         assignedAt: null,
-        returnedAt: serverTimestamp()
+        assignedDate: null, // Limpiar campo alternativo
+        returnedAt: serverTimestamp(),
+        // Limpiar TODOS los campos de completado para que vuelva al estado predeterminado
+        completedBy: null,
+        completedById: null,
+        completedDate: null,
+        terminadoPor: null, // Para compatibilidad con datos antiguos
+        terminadoDate: null, // Para compatibilidad con datos antiguos
+        lastWorked: null
       });
 
       // Resetear todas las direcciones del territorio
@@ -385,7 +394,7 @@ export const AppProvider = ({ children }) => {
       );
       await Promise.all(resetPromises);
 
-      showToast('Territorio devuelto correctamente', 'success');
+      showToast('Territorio devuelto y limpiado correctamente', 'success');
     } catch (error) {
       console.error('Error returning territory:', error);
       showToast('Error al devolver territorio', 'error');
@@ -428,11 +437,7 @@ export const AppProvider = ({ children }) => {
         lastUpdated: serverTimestamp()
       });
 
-      if (!newVisitedStatus) {
-        return;
-      }
-
-      // Obtener territoryId desde el estado local o desde Firebase
+      // Obtener territoryId SIEMPRE (tanto para marcar como para desmarcar)
       let territoryId;
       const addressDoc = addresses.find(a => a.id === addressId);
       
@@ -453,6 +458,19 @@ export const AppProvider = ({ children }) => {
         return;
       }
 
+      // ✅ SINCRONIZACIÓN AUTOMÁTICA: Verificar estado del territorio SIEMPRE
+      await syncTerritoryStatus(territoryId, newVisitedStatus);
+
+    } catch (error) {
+      console.error("Error en handleToggleAddressStatus:", error);
+      showToast('Error al actualizar estado de dirección.', 'error');
+      throw error;
+    }
+  };
+
+  // ✅ NUEVA FUNCIÓN: Sincronizar estado del territorio con sus direcciones
+  const syncTerritoryStatus = async (territoryId, triggeredByVisited) => {
+    try {
       // Consultar DIRECTAMENTE desde Firebase todas las direcciones del territorio
       const territoryAddressesQuery = query(
         collection(db, 'addresses'),
@@ -466,43 +484,94 @@ export const AppProvider = ({ children }) => {
         ...doc.data()
       }));
       
-      const allVisited = allAddresses.length > 0 && 
-                        allAddresses.every(addr => addr.isVisited === true);
+      if (allAddresses.length === 0) return; // No hay direcciones
+      
+      const allVisited = allAddresses.every(addr => addr.isVisited === true);
+      const hasUnvisited = allAddresses.some(addr => addr.isVisited === false);
+      
+      // Obtener estado actual del territorio
+      const territoryRef = doc(db, 'territories', territoryId);
+      const territoryDoc = await getDoc(territoryRef);
+      
+      if (!territoryDoc.exists()) return;
+      
+      const territoryData = territoryDoc.data();
+      const currentStatus = territoryData.status;
+      
+      // ✅ LÓGICA DE SINCRONIZACIÓN BIDIRECCIONAL
+      
+      if (allVisited && currentStatus === 'En uso') {
+        // CASO 1: Todas visitadas + territorio en uso → COMPLETAR
+        const completedBy = territoryData.assignedTo || currentUser.name;
 
-      if (allVisited) {
-        const territoryRef = doc(db, 'territories', territoryId);
-        const territoryDoc = await getDoc(territoryRef);
+        await updateDoc(territoryRef, {
+          status: 'Completado',
+          assignedTo: null,
+          assignedDate: null,
+          completedDate: serverTimestamp(),
+          completedBy: completedBy,
+          lastWorked: serverTimestamp()
+        });
+        
+        // Agregar registro al historial
+        await addDoc(collection(db, 'territoryHistory'), {
+          territoryId: territoryId,
+          territoryName: territoryData.name,
+          assignedTo: completedBy,
+          status: 'Completado Automáticamente',
+          completedDate: serverTimestamp(),
+          assignedDate: territoryData.assignedDate || serverTimestamp()
+        });
 
-        if (territoryDoc.exists() && territoryDoc.data().status === 'En uso') {
-          const territoryData = territoryDoc.data();
-          const completedBy = territoryData.assignedTo || currentUser.name;
-
-          await updateDoc(territoryRef, {
-            status: 'Completado',
-            assignedTo: null,
-            assignedDate: null,
-            completedDate: serverTimestamp(),
-            completedBy: completedBy,
-            lastWorked: serverTimestamp()
-          });
-          
-          // Agregar registro al historial
-          await addDoc(collection(db, 'territoryHistory'), {
-            territoryId: territoryId,
-            territoryName: territoryData.name,
-            assignedTo: completedBy,
-            status: 'Completado',
-            completedDate: serverTimestamp(),
-            assignedDate: territoryData.assignedDate || serverTimestamp()
-          });
-
-          // Sin notificación - solo feedback visual
+        showToast(`🎉 ${territoryData.name} completado automáticamente`, 'success', 3000);
+      } 
+      else if (hasUnvisited && (currentStatus === 'Completado' || currentStatus === 'Terminado')) {
+        // CASO 2: Hay pendientes + territorio completado → REACTIVAR
+        
+        // Determinar a quién asignar:
+        // - Si hay un assignedTo previo válido Y no es admin, mantenerlo
+        // - Si no hay assignedTo o es admin, asignar al usuario actual
+        let newAssignee = currentUser.name;
+        
+        if (territoryData.assignedTo && 
+            territoryData.assignedTo !== currentUser.name && 
+            currentUser.role === 'admin') {
+          // El admin está desmarcando pero había otro usuario asignado
+          // Mantener la asignación original
+          newAssignee = territoryData.assignedTo;
         }
+
+        await updateDoc(territoryRef, {
+          status: 'En uso',
+          assignedTo: newAssignee,
+          assignedDate: serverTimestamp(),
+          completedDate: null,
+          completedBy: null,
+          lastWorked: serverTimestamp()
+        });
+        
+        // Agregar registro al historial
+        await addDoc(collection(db, 'territoryHistory'), {
+          territoryId: territoryId,
+          territoryName: territoryData.name,
+          assignedTo: newAssignee,
+          status: newAssignee === currentUser.name ? 'Reactivado por desmarcación' : 'Reactivado - asignación mantenida',
+          assignedDate: serverTimestamp(),
+          previousStatus: currentStatus,
+          reactivatedBy: currentUser.name,
+          reason: `Dirección desmarcada por ${currentUser.name}`
+        });
+
+        const message = newAssignee === currentUser.name 
+          ? `📍 ${territoryData.name} reasignado a ${currentUser.name}`
+          : `📍 ${territoryData.name} reactivado - sigue asignado a ${newAssignee}`;
+        
+        showToast(message, 'info', 3000);
       }
+      
     } catch (error) {
-      console.error("Error en handleToggleAddressStatus:", error);
-      showToast('Error al actualizar estado de dirección.', 'error');
-      throw error;
+      console.error("Error en syncTerritoryStatus:", error);
+      showToast('Error al sincronizar estado del territorio', 'error');
     }
   };
 
@@ -806,6 +875,17 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Admin edit mode functions
+  const handleToggleAdminMode = useCallback(() => {
+    setAdminEditMode(prev => !prev);
+    // Sin notificaciones - el indicador visual es suficiente
+  }, []);
+
+  // Función para resetear modo admin sin notificaciones (para auto-reset)
+  const resetAdminModeQuietly = useCallback(() => {
+    setAdminEditMode(false);
+  }, []);
+
   const value = {
     // State
     currentUser,
@@ -817,6 +897,7 @@ export const AppProvider = ({ children }) => {
     isLoading,
     authLoading,
     CURRENT_VERSION,
+    adminEditMode,
     
     // Auth functions
     login,
@@ -842,7 +923,11 @@ export const AppProvider = ({ children }) => {
     handleProposeAddressChange,
     handleProposeNewAddress,
     handleApproveProposal,
-    handleRejectProposal
+    handleRejectProposal,
+
+    // Admin edit mode functions
+    handleToggleAdminMode,
+    resetAdminModeQuietly
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

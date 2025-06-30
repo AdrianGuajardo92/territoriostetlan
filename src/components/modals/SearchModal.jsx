@@ -3,7 +3,7 @@ import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 
-const SearchModal = ({ isOpen, onClose }) => {
+const SearchModal = ({ isOpen, onClose, modalId = 'search-modal' }) => {
   const { territories, addresses } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('all'); // all, territories, addresses
@@ -46,6 +46,7 @@ const SearchModal = ({ isOpen, onClose }) => {
       onClose={onClose}
       title="Buscar en Territorios"
       size="lg"
+      modalId={modalId}
     >
       <div className="p-6">
         {/* Barra de búsqueda */}

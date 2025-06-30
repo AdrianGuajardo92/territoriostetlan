@@ -6,11 +6,12 @@ import { useApp } from '../../context/AppContext';
 const AddressFormModal = ({ 
   isOpen, 
   onClose, 
-  address, 
+  address = null, 
   territoryId, 
   onSave, 
-  onDelete,
-  isProcessing 
+  onDelete = null,
+  isProcessing = false,
+  modalId = 'address-form-modal' // ID único para el historial
 }) => {
   const { currentUser, publishers } = useApp();
   const isEditing = !!address;
@@ -237,6 +238,7 @@ const AddressFormModal = ({
       showCloseButton={false}
       closeOnBackdrop={!isProcessing}
       closeOnEscape={!isProcessing}
+      modalId={modalId}
     >
       <div className="flex flex-col" style={{ height: '85vh' }}>
         {/* Header personalizado */}

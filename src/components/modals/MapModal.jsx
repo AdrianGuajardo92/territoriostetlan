@@ -1,8 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '../../hooks/useToast';
+import { useModalHistory } from '../../hooks/useModalHistory';
 import Icon from '../common/Icon';
 
-const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedToMe, isAdmin, onEditAddress, sortState, onOptimizedRoute, onResetSort, onToggleAddressStatus }) => {
+const TerritoryMapModal = ({ 
+  isOpen, 
+  onClose, 
+  territory, 
+  addresses, 
+  isAssignedToMe, 
+  isAdmin, 
+  onEditAddress, 
+  sortState, 
+  onOptimizedRoute, 
+  onResetSort, 
+  onToggleAddressStatus,
+  modalId = 'territory-map-modal' // ID único para el historial
+}) => {
+    // Hook para manejar historial del navegador consistentemente
+    const { closeModal } = useModalHistory(isOpen, onClose, modalId);
+    
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const [mapError, setMapError] = useState(false);
@@ -486,7 +503,7 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
                         <button 
-                            onClick={onClose} 
+                            onClick={closeModal} 
                             className="p-2 hover:bg-gray-200 rounded-full transition-colors mr-2" 
                             aria-label="Cerrar mapa"
                         >

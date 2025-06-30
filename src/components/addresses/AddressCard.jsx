@@ -1,34 +1,31 @@
-import React, { memo, useState, useRef, useEffect } from 'react';
+import React, { memo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
-import { HapticFeedback } from '../../utils/hapticFeedback';
-import { useProximity } from '../../hooks/useProximity';
 
 const AddressCard = memo(({ 
     address, 
     viewMode = 'grid-full', 
     isAdmin = false, 
     isAssignedToMe = false, 
+    adminEditMode = false,
     onEdit = null, 
     onNavigate = null, 
     isNavigating = false, 
     onUpdate = null,
     showToast = null,
-    onUnmark = null
+    onUnmark = null,
+    territories = []
 }) => {
     const { 
         handleToggleAddressStatus, 
         currentUser, 
-        territories 
+        territories: contextTerritories,
+        adminEditMode: globalAdminEditMode,
+        handleToggleAdminMode
     } = useApp();
     
     const [isProcessing, setIsProcessing] = useState(false);
     const [isNavigatingLocal, setIsNavigatingLocal] = useState(false);
-    const [justCompleted, setJustCompleted] = useState(false);
-    const cardRef = useRef(null);
-    
-    // Hook de proximidad en tiempo real
-    const { proximity, isNearby } = useProximity(address);
 
     // Configuración de colores según el estado (visitado/no visitado)
     const statusConfig = {
@@ -77,27 +74,10 @@ const AddressCard = memo(({
     const config = statusConfig[address.isVisited ? 'visited' : 'notVisited'];
     const isEditEnabled = isAdmin || isAssignedToMe;
     
-    // Clases combinadas para animaciones
+    // Permisos estrictos para marcar/desmarcar direcciones
+    const canToggleStatus = isAssignedToMe || (isAdmin && globalAdminEditMode);
+    
     const navigatingClass = (isNavigating || isNavigatingLocal) ? 'ring-4 ring-blue-400 ring-opacity-75 animate-pulse scale-105' : '';
-    const nearbyClass = isNearby ? 'ring-2 ring-yellow-400 ring-opacity-50' : '';
-    const completedClass = justCompleted ? 'animate-success-pulse' : '';
-
-    // Estilos CSS personalizados para animaciones
-    useEffect(() => {
-        const style = document.createElement('style');
-        style.textContent = `
-          @keyframes success-pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
-            100% { transform: scale(1); }
-          }
-          .animate-success-pulse {
-            animation: success-pulse 0.6s ease-out;
-          }
-        `;
-        document.head.appendChild(style);
-        return () => document.head.removeChild(style);
-    }, []);
 
     // Funciones de navegación inteligente
     const getNavigationUrl = (mode) => {
@@ -165,71 +145,42 @@ const AddressCard = memo(({
         return <i className={`fas ${config.icon} ${colorClass || config.color} text-lg`}></i>;
     };
 
-    // Componente para mostrar la distancia mejorado con proximidad en tiempo real
-    const ProximityTag = () => {
-        // Prioridad 1: Proximidad en tiempo real si está disponible
-        if (proximity) {
-            return (
-                <span className={`ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
-                    isNearby 
-                        ? 'bg-yellow-100 text-yellow-800 animate-pulse' 
-                        : 'bg-blue-100 text-blue-800'
-                }`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-                        <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
-                    </svg>
-                    {proximity.formatted.text} • {proximity.formatted.walkTime}
-                </span>
-            );
-        }
-        
-        // Prioridad 2: Distancia estática de la ruta optimizada
-        if (address.distance != null && address.distance !== Infinity) {
-            const formattedDistance = address.distance < 1 ? `${Math.round(address.distance * 1000)} m` : `${address.distance.toFixed(1)} km`;
-            return (
-                <span className="ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-                        <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
-                    </svg>
-                    {formattedDistance}
-                </span>
-            );
-        }
-        
-        return null;
+    // Componente para mostrar la distancia
+    const DistanceTag = ({ distance }) => {
+        if (distance == null || distance === Infinity) { return null; }
+        const formattedDistance = distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`;
+        return (
+            <span className="ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                    <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+                </svg>
+                {formattedDistance}
+            </span>
+        );
     };
 
-    // Componente de botones de navegación (usando FontAwesome) con feedback háptico
+    // Componente de botones de navegación (usando FontAwesome)
     const NavigationButtons = ({ a_styles, div_styles, button_styles }) => (
         <div className={`flex items-center rounded-xl p-1 ${a_styles}`}>
             <button
-                onClick={(e) => {
-                    HapticFeedback.tap();
-                    handleNavClick(e, drivingUrl);
-                }}
-                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105 active:scale-95`} 
+                onClick={(e) => handleNavClick(e, drivingUrl)}
+                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105`} 
                 title="Navegar en coche"
             >
                 <i className="fas fa-car text-lg"></i>
             </button>
             <div className={`w-px h-4 mx-1 ${div_styles}`}></div>
             <button
-                onClick={(e) => {
-                    HapticFeedback.tap();
-                    handleNavClick(e, walkingUrl);
-                }}
-                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105 active:scale-95`} 
+                onClick={(e) => handleNavClick(e, walkingUrl)}
+                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105`} 
                 title="Navegar a pie"
             >
                 <i className="fas fa-person-walking text-lg"></i>
             </button>
             <div className={`w-px h-4 mx-1 ${div_styles}`}></div>
             <button
-                onClick={(e) => {
-                    HapticFeedback.tap();
-                    handleNavClick(e, transitUrl);
-                }}
-                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105 active:scale-95`} 
+                onClick={(e) => handleNavClick(e, transitUrl)}
+                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105`} 
                 title="Navegar en transporte público"
             >
                 <i className="fas fa-bus text-lg"></i>
@@ -237,115 +188,12 @@ const AddressCard = memo(({
         </div>
     );
 
-    // Componente de botones de acción rápida mejorado
-    const QuickActionButtons = ({ isVisited }) => {
-        if (isVisited) {
-            return (
-                <div className="flex items-center space-x-2">
-                    {/* Botón principal de Desmarcar */}
-                    <button
-                        onClick={handleToggleStatus}
-                        disabled={isProcessing}
-                        className={`
-                            px-4 py-2 rounded-xl font-semibold text-sm
-                            ${config.primaryButton}
-                            disabled:opacity-50 disabled:cursor-not-allowed
-                            transition-all transform hover:scale-105 active:scale-95
-                            shadow-lg hover:shadow-xl
-                        `}
-                    >
-                        {isProcessing ? 'Procesando...' : 'Desmarcar'}
-                    </button>
-                    
-                    {/* Botones de acción secundarios */}
-                    <div className="flex items-center space-x-2">
-                        {isEditEnabled && (
-                            <button 
-                                onClick={handleEditClick} 
-                                className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" 
-                                title={isAdmin ? "Editar dirección" : "Proponer cambio"}
-                            >
-                                <i className="fas fa-pen-to-square text-sm"></i>
-                            </button>
-                        )}
-                        {onUnmark && (
-                            <button 
-                                onClick={handleUnmarkClick} 
-                                className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" 
-                                title="Liberar dirección"
-                            >
-                                <i className="fas fa-xmark text-lg"></i>
-                            </button>
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-            <div className="flex items-center space-x-2">
-                {/* Botón "No está" */}
-                <button
-                    onClick={handleNotHome}
-                    disabled={isProcessing}
-                    className={`
-                        px-3 py-2 rounded-lg font-medium text-sm
-                        bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300
-                        disabled:opacity-50 disabled:cursor-not-allowed
-                        transition-all transform hover:scale-105 active:scale-95
-                        shadow-sm hover:shadow-md
-                    `}
-                >
-                    <i className="fas fa-door-closed mr-1 text-xs"></i>
-                    No está
-                </button>
-
-                {/* Botón principal "Completado" */}
-                <button
-                    onClick={handleToggleStatus}
-                    disabled={isProcessing}
-                    className={`
-                        px-4 py-2 rounded-xl font-semibold text-sm
-                        ${config.primaryButton}
-                        disabled:opacity-50 disabled:cursor-not-allowed
-                        transition-all transform hover:scale-105 active:scale-95
-                        shadow-lg hover:shadow-xl
-                    `}
-                >
-                    {isProcessing ? 'Procesando...' : 'Completado'}
-                </button>
-                
-                {/* Botones de acción secundarios */}
-                <div className="flex items-center space-x-2">
-                    {isEditEnabled && (
-                        <button 
-                            onClick={handleEditClick} 
-                            className="p-2 rounded-full text-emerald-600 hover:bg-emerald-100 transition-colors" 
-                            title={isAdmin ? "Editar dirección" : "Proponer cambio"}
-                        >
-                            <i className="fas fa-pen-to-square text-sm"></i>
-                        </button>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
-    // Manejadores mejorados con feedback háptico
+    // Manejadores
     const handleToggleStatus = async () => {
         if (isProcessing) return;
         
-        // Feedback háptico inmediato
-        HapticFeedback.tap();
-        
         setIsProcessing(true);
         try {
-            // Animación de completado
-            if (!address.isVisited) {
-                setJustCompleted(true);
-                setTimeout(() => setJustCompleted(false), 600);
-            }
-
             // Usar la función onUpdate que viene como prop en lugar de la del contexto
             if (onUpdate) {
                 const updatedAddress = {
@@ -359,12 +207,9 @@ const AddressCard = memo(({
                 await handleToggleAddressStatus(address.id, !address.isVisited);
             }
             
-            // Feedback de éxito
-            HapticFeedback.success();
-            
+            // Sin notificación de éxito - solo feedback visual
         } catch (error) {
             console.error('Error al cambiar estado:', error);
-            HapticFeedback.error();
             if (showToast) {
                 showToast('Error al cambiar el estado de la dirección', 'error');
             }
@@ -373,67 +218,17 @@ const AddressCard = memo(({
         }
     };
 
-    // Nueva función para marcar como "No está"
-    const handleNotHome = async () => {
-        if (isProcessing) return;
-        
-        HapticFeedback.tap();
-        
-        try {
-            // Agregar nota automática de "No estaba" con timestamp
-            const timestamp = new Date().toLocaleString('es-ES', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            const existingNotes = address.notes || '';
-            const newNote = `No estaba (${timestamp})`;
-            const updatedNotes = existingNotes 
-                ? `${existingNotes}\n${newNote}` 
-                : newNote;
-
-            if (onUpdate) {
-                const updatedAddress = {
-                    ...address,
-                    notes: updatedNotes,
-                    lastUpdated: new Date()
-                };
-                await onUpdate(address.id, updatedAddress);
-            }
-            
-            HapticFeedback.success();
-            if (showToast) {
-                showToast('Marcado como "No estaba"', 'info');
-            }
-            
-        } catch (error) {
-            console.error('Error al marcar como no está:', error);
-            HapticFeedback.error();
-            if (showToast) {
-                showToast('Error al marcar como "No está"', 'error');
-            }
-        }
-    };
-
     const handleEditClick = () => {
-        HapticFeedback.tap();
         if (onEdit) onEdit(address);
     };
 
     const handleUnmarkClick = () => {
-        HapticFeedback.tap();
         if (onUnmark) onUnmark(address.id);
     };
 
     const handleNavClick = (e, url) => {
         // Prevenir comportamiento por defecto si existe
         if (e) e.preventDefault();
-        
-        // Feedback háptico para navegación
-        HapticFeedback.navigation();
         
         // Guardar el estado actual en sessionStorage antes de navegar
         // Esto permitirá restaurar la ubicación si la app se recarga
@@ -451,7 +246,7 @@ const AddressCard = memo(({
     };
 
     // Obtener nombre del territorio
-    const territory = territories.find(t => t.id === address.territoryId);
+    const territory = contextTerritories.find(t => t.id === address.territoryId);
     const territoryName = territory ? territory.name : `Territorio ${address.territoryId}`;
     
     // VISTA DE LISTA COMPACTA
@@ -465,7 +260,7 @@ const AddressCard = memo(({
                 shadow-md ${config.hoverShadow}
                 hover:shadow-xl hover:scale-[1.02]
                 transition-all duration-300 ease-out
-                ${navigatingClass} ${nearbyClass} ${completedClass}
+                ${navigatingClass}
             `}>
                 {/* Contenido principal */}
                 <div className="p-4">
@@ -484,7 +279,7 @@ const AddressCard = memo(({
                                         {address.address}
                                     </h3>
                                     <GenderTag gender={address.gender} />
-                                    <ProximityTag />
+                                    <DistanceTag distance={address.distance} />
                                 </div>
                                 
                                 {/* Badges en línea */}
@@ -513,7 +308,20 @@ const AddressCard = memo(({
                         />
 
                         {/* Botón de estado */}
-                        <QuickActionButtons isVisited={address.isVisited} />
+                        <button
+                            onClick={handleToggleStatus}
+                            disabled={isProcessing || !canToggleStatus}
+                            className={`
+                                px-4 py-2 rounded-lg font-medium text-sm
+                                ${canToggleStatus ? config.primaryButton : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                                transition-all transform hover:scale-105 active:scale-95
+                                shadow-lg hover:shadow-xl
+                            `}
+                            title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
+                        >
+                            {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
+                        </button>
                     </div>
                 </div>
 
@@ -538,7 +346,7 @@ const AddressCard = memo(({
             shadow-lg ${config.hoverShadow}
             hover:shadow-2xl hover:scale-[1.01]
             transition-all duration-300 ease-out
-            ${navigatingClass} ${nearbyClass} ${completedClass}
+            ${navigatingClass}
         `}>
             {/* Encabezado con gradiente */}
             <div className="relative px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-white/40">
@@ -554,7 +362,7 @@ const AddressCard = memo(({
                             </h3>
                             <div className="flex items-center space-x-2 mt-1">
                                 <GenderTag gender={address.gender} />
-                                <ProximityTag />
+                                <DistanceTag distance={address.distance} />
                             </div>
                         </div>
                     </div>
@@ -615,7 +423,45 @@ const AddressCard = memo(({
                                 button_styles="bg-red-600 text-white hover:bg-red-700 shadow-sm"
                             />
                             
-                            <QuickActionButtons isVisited={address.isVisited} />
+                            <div className="flex items-center space-x-2">
+                                {/* Botón principal de Desmarcar */}
+                                <button
+                                    onClick={handleToggleStatus}
+                                    disabled={isProcessing || !canToggleStatus}
+                                    className={`
+                                        px-4 py-2 rounded-xl font-semibold text-sm
+                                        ${canToggleStatus ? config.primaryButton : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+                                        disabled:opacity-50 disabled:cursor-not-allowed
+                                        transition-all transform hover:scale-105 active:scale-95
+                                        shadow-lg hover:shadow-xl
+                                    `}
+                                    title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
+                                >
+                                    {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
+                                </button>
+                                
+                                {/* Botones de acción secundarios */}
+                                <div className="flex items-center space-x-2">
+                                    {isEditEnabled && (
+                                        <button 
+                                            onClick={handleEditClick} 
+                                            className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" 
+                                            title={isAdmin ? "Editar dirección" : "Proponer cambio"}
+                                        >
+                                            <i className="fas fa-pen-to-square text-sm"></i>
+                                        </button>
+                                    )}
+                                    {onUnmark && (
+                                        <button 
+                                            onClick={handleUnmarkClick} 
+                                            className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" 
+                                            title="Liberar dirección"
+                                        >
+                                            <i className="fas fa-xmark text-lg"></i>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -659,7 +505,43 @@ const AddressCard = memo(({
                                 button_styles="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
                             />
                             
-                            <QuickActionButtons isVisited={address.isVisited} />
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={handleToggleStatus}
+                                    disabled={isProcessing || !canToggleStatus}
+                                    className={`
+                                        px-4 py-2 rounded-xl font-semibold text-sm
+                                        ${canToggleStatus ? config.primaryButton : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+                                        disabled:opacity-50 disabled:cursor-not-allowed
+                                        transition-all transform hover:scale-105 active:scale-95
+                                        shadow-lg hover:shadow-xl
+                                    `}
+                                    title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
+                                >
+                                    {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
+                                </button>
+                                
+                                <div className="flex items-center space-x-2">
+                                    {isEditEnabled && (
+                                        <button 
+                                            onClick={handleEditClick} 
+                                            className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors" 
+                                            title={isAdmin ? "Editar dirección" : "Proponer cambio"}
+                                        >
+                                            <i className="fas fa-pen-to-square text-sm"></i>
+                                        </button>
+                                    )}
+                                    {onUnmark && (
+                                        <button 
+                                            onClick={handleUnmarkClick} 
+                                            className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors" 
+                                            title="Liberar dirección"
+                                        >
+                                            <i className="fas fa-xmark text-lg"></i>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

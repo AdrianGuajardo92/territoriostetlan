@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../hooks/useToast';
 import TerritoryDetailHeader from '../components/territories/TerritoryDetailHeader';
@@ -14,18 +14,21 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const { 
     addresses, 
     currentUser, 
-    handleReturnTerritory, 
-    handleCompleteTerritory,
-    handleAssignTerritory, 
-    handleUpdateAddress, 
-    handleDeleteAddress, 
-    handleProposeAddressChange, 
-    handleProposeNewAddress, 
+    handleToggleAddressStatus,
+    handleUpdateAddress,
     handleAddNewAddress,
-    handleToggleAddressStatus
+    handleDeleteAddress,
+    handleAssignTerritory,
+    handleReturnTerritory,
+    handleCompleteTerritory,
+    handleProposeAddressChange,
+    handleProposeNewAddress,
+    adminEditMode,
+    handleToggleAdminMode,
+    resetAdminModeQuietly
   } = useApp();
   
-  const { showToast } = useToast();
+  const { showToast, toast } = useToast();
   
   // Estados
   const [navigatingAddressId, setNavigatingAddressId] = useState(null);
@@ -45,6 +48,56 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   });
 
   const highlightTimerRef = useRef(null);
+  const adminModeRef = useRef(adminEditMode);
+
+  // Asegurar que el estado de cálculos esté limpio al montar el componente
+  useEffect(() => {
+    setSortState(prev => ({
+      ...prev,
+      isCalculatingRoute: false
+    }));
+  }, []);
+
+  // Actualizar la referencia cuando cambie el modo admin
+  useEffect(() => {
+    adminModeRef.current = adminEditMode;
+  }, [adminEditMode]);
+
+  // Resetear modo admin al salir del territorio - SIN NOTIFICACIÓN ADICIONAL
+  useEffect(() => {
+    return () => {
+      // Solo resetear silenciosamente si el modo admin está activo al salir
+      if (adminModeRef.current && resetAdminModeQuietly) {
+        resetAdminModeQuietly();
+      }
+    };
+  }, [resetAdminModeQuietly]);
+
+  // Manejar el botón físico de volver dentro del territorio
+  useEffect(() => {
+    const handleTerritoryPopState = (event) => {
+      // Los modales ahora se manejan automáticamente con useModalHistory
+      // Solo resetear estados locales cuando sea necesario
+      if (isFormModalOpen) {
+        setIsFormModalOpen(false);
+        setEditingAddress(null);
+      } else if (isAssignModalOpen) {
+        setIsAssignModalOpen(false);
+      } else if (isMapModalOpen) {
+        setIsMapModalOpen(false);
+      } else if (showConfirmReturn) {
+        setShowConfirmReturn(false);
+      } else if (showConfirmComplete) {
+        setShowConfirmComplete(false);
+      }
+    };
+
+    window.addEventListener('popstate', handleTerritoryPopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handleTerritoryPopState);
+    };
+  }, [isFormModalOpen, isAssignModalOpen, isMapModalOpen, showConfirmReturn, showConfirmComplete]);
 
   // Obtener direcciones del territorio
   const territoryAddresses = useMemo(() => {
@@ -166,6 +219,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }
   };
 
+  // Funciones simplificadas para modales (el historial lo maneja useModalHistory automáticamente)
   const openEditModal = (address) => {
     setEditingAddress(address);
     setIsFormModalOpen(true);
@@ -174,6 +228,22 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const openAddModal = () => {
     setEditingAddress(null);
     setIsFormModalOpen(true);
+  };
+
+  const handleOpenAssignModal = () => {
+    setIsAssignModalOpen(true);
+  };
+
+  const handleOpenMapModal = () => {
+    setIsMapModalOpen(true);
+  };
+
+  const handleShowConfirmReturn = () => {
+    setShowConfirmReturn(true);
+  };
+
+  const handleShowConfirmComplete = () => {
+    setShowConfirmComplete(true);
   };
 
   const handleSaveAddress = async (formData, changeReason = '') => {
@@ -227,58 +297,71 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }
   };
 
-  const handleOptimizedRoute = async () => {
-    if (sortState.sortOrder === 'optimized') {
-      setSortState(prev => ({ ...prev, sortOrder: 'alpha', optimizedRoute: null }));
-      showToast('Ruta optimizada desactivada', 'info');
-    } else {
-      setSortState(prev => ({ ...prev, isCalculatingRoute: true }));
+  const handleOptimizedRoute = useCallback(async () => {
+    if (!navigator.geolocation) {
+      showToast('Geolocalización no disponible en este dispositivo', 'error');
+      return;
+    }
+
+    setSortState(prev => ({ ...prev, isCalculatingRoute: true }));
+
+    try {
+      const position = await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject({ code: 3, message: 'Timeout' });
+        }, 15000); // 15 segundos timeout
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            clearTimeout(timeoutId);
+            resolve(pos);
+          },
+          (err) => {
+            clearTimeout(timeoutId);
+            reject(err);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 12000,
+            maximumAge: 300000
+          }
+        );
+      });
+
+      const userLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+
+      const optimizedAddresses = await optimizeRoute(territoryAddresses, userLocation);
+
+      setSortState({
+        sortOrder: 'optimized',
+        optimizedRoute: optimizedAddresses,
+        isCalculatingRoute: false
+      });
+
+      showToast('Ruta optimizada creada exitosamente', 'success');
+    } catch (error) {
+      console.error('Error optimizando ruta:', error);
       
-      try {
-        // Intentar obtener ubicación del usuario
-        let userLocation = null;
-        try {
-          userLocation = await getCurrentLocation();
-          showToast('✅ Ubicación obtenida. La primera dirección será la más cercana a ti.', 'info', 4000);
-        } catch (error) {
-          console.log('No se pudo obtener ubicación, optimizando sin punto de partida');
-          showToast('⚠️ No se pudo obtener tu ubicación. Optimizando sin punto de partida específico.', 'warning', 4000);
-        }
-        
-        // Optimizar la ruta
-        const optimizedRoute = await optimizeRoute(territoryAddresses, userLocation);
-        
-        // Calcular estadísticas de la ruta
-        const stats = calculateRouteStats(optimizedRoute);
-        
-        setSortState(prev => ({ 
-          ...prev, 
-          sortOrder: 'optimized',
-          isCalculatingRoute: false,
-          optimizedRoute: optimizedRoute,
-          userLocation: userLocation
-        }));
-        
-        // Mostrar información de la ruta optimizada
-        let message = '';
-        if (stats.addressesWithCoords > 0) {
-          const locationText = userLocation 
-            ? `🎯 Ruta desde tu ubicación: ${stats.totalDistance} km, ~${stats.estimatedTime} min.`
-            : `🗺️ Ruta optimizada: ${stats.totalDistance} km, ~${stats.estimatedTime} min.`;
-          message = `${locationText} (${stats.addressesWithCoords} de ${stats.totalAddresses} direcciones con ubicación)`;
-        } else {
-          message = 'No hay suficientes direcciones con ubicación para optimizar la ruta.';
-        }
-          
-        showToast(message, stats.addressesWithCoords > 0 ? 'success' : 'warning', 6000);
-        
-      } catch (error) {
-        console.error('Error optimizando ruta:', error);
-        setSortState(prev => ({ ...prev, isCalculatingRoute: false }));
-        showToast('Error al optimizar la ruta', 'error');
+      // SIEMPRE resetear el estado, sin importar el tipo de error
+      setSortState(prev => ({ 
+        ...prev, 
+        isCalculatingRoute: false 
+      }));
+      
+      if (error.code === 1) {
+        showToast('Permisos de ubicación denegados. Revisa la configuración de tu navegador.', 'error');
+      } else if (error.code === 2) {
+        showToast('No se pudo obtener tu ubicación. Intenta nuevamente.', 'error');
+      } else if (error.code === 3) {
+        showToast('Tiempo de espera agotado obteniendo ubicación.', 'error');
+      } else {
+        showToast('Error al crear la ruta optimizada', 'error');
       }
     }
-  };
+  }, [territoryAddresses, showToast]);
 
   const handleResetSort = () => {
     setSortState({
@@ -287,6 +370,15 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       isCalculatingRoute: false
     });
   };
+
+  // Función de emergencia para desbloquear el botón si está atascado
+  const forceResetRouteState = useCallback(() => {
+    setSortState(prev => ({
+      ...prev,
+      isCalculatingRoute: false
+    }));
+    showToast('Estado de ruta reseteado', 'info');
+  }, [showToast]);
 
   // Función para abrir la ruta completa en Google Maps - VERSIÓN INTELIGENTE
   const handleOpenCompleteRoute = async () => {
@@ -387,24 +479,27 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         territory={territory}
         stats={stats}
         onBack={onBack}
-        isAdmin={isAdmin}
+        isAdmin={currentUser.role === 'admin'}
         isProcessing={isProcessing}
-        onAssign={() => setIsAssignModalOpen(true)}
-        onReturn={() => setShowConfirmReturn(true)}
-        onComplete={() => setShowConfirmComplete(true)}
+        onAssign={handleOpenAssignModal}
+        onReturn={handleShowConfirmReturn}
+        onComplete={handleShowConfirmComplete}
         onAddAddress={openAddModal}
         isAssignedToMe={isAssignedToMe}
         sortControls={{
           sortOrder: sortState.sortOrder,
           isCalculatingRoute: sortState.isCalculatingRoute,
           onOptimizedRoute: handleOptimizedRoute,
-          onResetSort: handleResetSort
+          onResetSort: handleResetSort,
+          forceReset: forceResetRouteState
         }}
         viewControls={{
           viewMode,
           setViewMode
         }}
-        onOpenMapModal={() => setIsMapModalOpen(true)}
+        onOpenMapModal={handleOpenMapModal}
+        adminEditMode={adminEditMode}
+        onToggleAdminMode={handleToggleAdminMode}
       />
 
       {/* Lista de direcciones */}
@@ -458,6 +553,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           onSave={handleSaveAddress}
           onDelete={isAdmin && editingAddress ? handleDeleteAddressAndClose : null}
           isProcessing={isProcessing}
+          modalId={editingAddress ? 'edit-address-modal' : 'add-address-modal'}
         />
       )}
 
@@ -468,6 +564,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           onAssign={handleAssignToPublisher}
           currentAssignee={territory.assignedTo}
           territoryName={territory.name}
+          modalId="assign-territory-modal"
         />
       )}
 
@@ -484,6 +581,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           onOptimizedRoute={handleOptimizedRoute}
           onResetSort={handleResetSort}
           onToggleAddressStatus={handleUpdateAddressSilent}
+          modalId="territory-map-modal"
         />
       )}
 
@@ -497,6 +595,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           confirmText="Sí, devolver"
           cancelText="Cancelar"
           type="warning"
+          modalId="confirm-return-territory"
         />
       )}
 
@@ -510,6 +609,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           confirmText="Sí, completar"
           cancelText="Cancelar"
           type="success"
+          modalId="confirm-complete-territory"
         />
       )}
     </div>

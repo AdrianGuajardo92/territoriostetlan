@@ -7,8 +7,9 @@ const AssignTerritoryModal = ({
   isOpen,
   onClose,
   onAssign,
-  currentAssignee,
-  territoryName
+  currentAssignee = '',
+  territoryName = '',
+  modalId = 'assign-territory-modal' // ID único para el historial
 }) => {
   const { publishers } = useApp();
   const { showToast } = useToast();
@@ -88,6 +89,7 @@ const AssignTerritoryModal = ({
       showCloseButton={false}
       closeOnBackdrop={!isProcessing}
       closeOnEscape={!isProcessing}
+      modalId={modalId}
     >
       <div className="flex flex-col h-full">
         {/* Header personalizado con botón cerrar */}
@@ -153,7 +155,6 @@ const AssignTerritoryModal = ({
               className="w-full pl-9 pr-9 py-2 bg-white/90 border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-white/50 transition-all placeholder-gray-500 text-gray-700 text-sm"
               placeholder="Buscar publicador..."
               disabled={isProcessing}
-              autoFocus
             />
             {searchTerm && (
               <button
