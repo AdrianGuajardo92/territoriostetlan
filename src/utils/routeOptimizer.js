@@ -439,103 +439,12 @@ export const generateGoogleMapsRouteUrl = (addresses, userLocation = null) => {
   }
 };
 
-// Función principal para abrir la ruta completa en Google Maps - VERSIÓN MEJORADA
-export const openCompleteRouteInGoogleMaps = (addresses, userLocation = null, routeInfo = null) => {
-  try {
-    console.log('🚀 Iniciando apertura de ruta completa en Google Maps');
-    console.log(`📍 Direcciones recibidas: ${addresses?.length || 0}`);
-    console.log(`🧭 Ubicación del usuario: ${userLocation ? 'Disponible' : 'No disponible'}`);
-    
-    if (!addresses || addresses.length === 0) {
-      console.error('❌ No se proporcionaron direcciones');
-      return false;
-    }
-
-    // Generar la URL optimizada
-    const googleMapsUrl = generateGoogleMapsRouteUrl(addresses, userLocation);
-    
-    if (!googleMapsUrl) {
-      console.error('❌ No se pudo generar la URL de Google Maps');
-      return false;
-    }
-
-    // Verificar que la URL es válida antes de abrir
-    console.log('🔍 Verificando URL antes de abrir:');
-    console.log(`   - URL completa: ${googleMapsUrl}`);
-    console.log(`   - Tipo de URL: ${typeof googleMapsUrl}`);
-    console.log(`   - URL válida: ${googleMapsUrl && googleMapsUrl.startsWith('https://')}`);
-    
-    // Validación adicional
-    if (!googleMapsUrl || typeof googleMapsUrl !== 'string' || !googleMapsUrl.startsWith('https://')) {
-      console.error('❌ URL inválida o malformada:', googleMapsUrl);
-      // Intentar con URL básica de Google Maps
-      const fallbackUrl = 'https://www.google.com/maps';
-      console.log('🔄 Usando URL de respaldo:', fallbackUrl);
-      window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
-      return false;
-    }
-    
-    // Abrir Google Maps en la misma pestaña con navegación fluida
-    console.log('🌐 Abriendo Google Maps en la misma pestaña...');
-    
-    try {
-      // Guardar estado de la aplicación antes de navegar
-      const appState = {
-        currentUrl: window.location.href,
-        timestamp: Date.now(),
-        fromApp: 'territoriostetlan',
-        territoryId: window.location.hash.split('/')[2] || null
-      };
-      
-      // Guardar en localStorage para recuperar al volver
-      localStorage.setItem('appNavigationState', JSON.stringify(appState));
-      console.log('💾 Estado de aplicación guardado');
-      
-      // Mostrar confirmación antes de navegar con detalles específicos
-      const routeDetails = routeInfo ? 
-        `📊 Ruta: ${routeInfo.totalAddresses} direcciones\n` +
-        `🎯 Primera parada: ${routeInfo.firstAddress}\n` +
-        `📍 Origen: ${routeInfo.hasUserLocation ? 'Tu ubicación actual' : 'Primera dirección'}\n` 
-        : '';
-      
-      const userConfirmed = confirm(
-        '🗺️ Abrir ruta optimizada en Google Maps\n\n' +
-        routeDetails +
-        '✅ Se abrirá la ruta completa optimizada\n' +
-        '🔙 Usa el botón "Atrás" del navegador para volver\n\n' +
-        '¿Continuar?'
-      );
-      
-      if (userConfirmed) {
-        console.log('✅ Usuario confirmó navegación a Google Maps');
-        // Navegar a Google Maps en la misma pestaña
-        window.location.href = googleMapsUrl;
-        return true;
-      } else {
-        console.log('❌ Usuario canceló navegación');
-        localStorage.removeItem('appNavigationState');
-        return false;
-      }
-      
-    } catch (error) {
-      console.error('❌ Error al navegar a Google Maps:', error);
-      return false;
-    }
-
-    console.log('✅ Google Maps abierto exitosamente');
-    
-    // Log final con resumen
-    const validAddresses = addresses.filter(addr => getCoordinates(addr) !== null);
-    console.log('📊 Resumen final:');
-    console.log(`   🎯 Direcciones totales: ${addresses.length}`);
-    console.log(`   📍 Direcciones con coordenadas: ${validAddresses.length}`);
-    console.log(`   🗺️ Ubicación del usuario: ${userLocation ? 'Incluida como origen' : 'No disponible'}`);
-    console.log(`   🔗 Optimización Google Maps: Habilitada`);
-    
-    return true;
-
-  } catch (error) {
-    console.error('❌ Error abriendo ruta en Google Maps:', error);
-    return false;
+// Función para generar URL de navegación individual a una dirección
+export const generateIndividualDirectionUrl = (address, mode = 'driving') => {
+  const coords = getCoordinates(address);
+  if (!coords) {
+    return null;
   }
+  
+  return `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=${mode}`;
 }; 
