@@ -659,17 +659,23 @@ export const AppProvider = ({ children }) => {
         lastUpdated: serverTimestamp()
       };
 
-      // Si no tiene coordenadas y tiene dirección, intentar geocodificar automáticamente
-      if (!addressData.latitude && !addressData.longitude && addressData.address) {
+      // Priorizar coordenadas exactas proporcionadas por el usuario
+      if (addressData.latitude && addressData.longitude) {
+        // Ya tenemos coordenadas exactas - usarlas directamente
+        newAddressData.latitude = addressData.latitude;
+        newAddressData.longitude = addressData.longitude;
+        console.log(`✅ Usando coordenadas exactas proporcionadas: ${addressData.latitude}, ${addressData.longitude}`);
+      } else if (addressData.address) {
+        // Solo geocodificar si NO hay coordenadas exactas proporcionadas
         try {
           const coords = await geocodeAddress(addressData.address);
           if (coords) {
             newAddressData.latitude = coords.lat;
             newAddressData.longitude = coords.lng;
-            console.log(`✅ Coordenadas obtenidas automáticamente para: ${addressData.address}`);
+            console.log(`✅ Coordenadas obtenidas por geocodificación para: ${addressData.address}`);
           }
         } catch (error) {
-          console.warn('No se pudieron obtener coordenadas automáticamente:', error);
+          console.warn('No se pudieron obtener coordenadas por geocodificación:', error);
           // Continuar sin coordenadas - la dirección se agregará de todas formas
         }
       }

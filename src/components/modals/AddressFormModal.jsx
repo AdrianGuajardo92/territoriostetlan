@@ -297,24 +297,6 @@ const AddressFormModal = ({
                     required
                     disabled={isProcessing}
                   />
-                  
-                  {/* Nota informativa sobre geocodificación automática */}
-                  {!isEditing && (
-                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-start space-x-2">
-                        <i className="fas fa-map-marker-alt text-blue-500 text-sm mt-0.5"></i>
-                        <div>
-                          <p className="text-blue-800 text-xs font-medium mb-1">
-                            🗺️ Ubicación automática
-                          </p>
-                          <p className="text-blue-700 text-xs leading-relaxed">
-                            La dirección aparecerá automáticamente en el mapa del territorio con su marcador numerado. 
-                            El sistema buscará las coordenadas automáticamente para ubicarla en Guadalajara.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
