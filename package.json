@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "lint": "eslint .",
+    "clean": "rm -rf .vite node_modules/.vite dist && npm run build",
+    "fresh": "npm run clean && npm run dev",
     "format": "prettier --write ."
   },
   "dependencies": {
