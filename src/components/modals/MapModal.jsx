@@ -544,6 +544,35 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                             </>
                         )}
                     </button>
+                    
+                    {/* Botón para abrir ruta completa en Google Maps - solo visible cuando hay ruta optimizada */}
+                    {sortState.sortOrder === 'optimized' && (
+                        <button 
+                            onClick={() => {
+                                console.log('🗺️ Iniciando apertura de ruta completa en Google Maps');
+                                try {
+                                    // Importar las funciones desde routeOptimizer
+                                    import('../../utils/routeOptimizer').then(({ openCompleteRouteInGoogleMaps }) => {
+                                        const success = openCompleteRouteInGoogleMaps(addresses, sortState.userLocation);
+                                        if (success) {
+                                            console.log('✅ Ruta completa abierta exitosamente');
+                                        } else {
+                                            console.error('❌ Error al abrir la ruta completa');
+                                        }
+                                    }).catch(error => {
+                                        console.error('❌ Error al importar routeOptimizer:', error);
+                                    });
+                                } catch (error) {
+                                    console.error('❌ Error al ejecutar openCompleteRouteInGoogleMaps:', error);
+                                }
+                            }}
+                            className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg shadow-sm border border-blue-700 hover:bg-blue-700 transition-all" 
+                            title="Abrir ruta completa en Google Maps"
+                        >
+                            <Icon name="map" size={14} className="mr-1" />
+                            Google Maps
+                        </button>
+                    )}
                 </div>
             </div>
             
