@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: true,
-    open: true
+    open: true,
+    https: true
   },
   build: {
     outDir: 'dist',
