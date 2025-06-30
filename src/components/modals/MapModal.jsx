@@ -563,7 +563,14 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                                         return;
                                     }
                                     
-                                    const success = openCompleteRouteInGoogleMaps(addresses, sortState.userLocation);
+                                    // Información específica de la ruta para el usuario
+                                    const routeInfo = {
+                                        totalAddresses: addresses.length,
+                                        firstAddress: addresses[0]?.address || 'N/A',
+                                        hasUserLocation: !!sortState.userLocation
+                                    };
+                                    
+                                    const success = openCompleteRouteInGoogleMaps(addresses, sortState.userLocation, routeInfo);
                                     if (success) {
                                         console.log('✅ Función retornó exitosamente');
                                     } else {

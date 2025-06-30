@@ -440,7 +440,7 @@ export const generateGoogleMapsRouteUrl = (addresses, userLocation = null) => {
 };
 
 // Función principal para abrir la ruta completa en Google Maps - VERSIÓN MEJORADA
-export const openCompleteRouteInGoogleMaps = (addresses, userLocation = null) => {
+export const openCompleteRouteInGoogleMaps = (addresses, userLocation = null, routeInfo = null) => {
   try {
     console.log('🚀 Iniciando apertura de ruta completa en Google Maps');
     console.log(`📍 Direcciones recibidas: ${addresses?.length || 0}`);
@@ -475,42 +475,51 @@ export const openCompleteRouteInGoogleMaps = (addresses, userLocation = null) =>
       return false;
     }
     
-    // Estrategia 1: Intentar abrir en nueva pestaña
-    console.log('🌐 Intentando abrir Google Maps en nueva pestaña...');
+    // Abrir Google Maps en la misma pestaña con navegación fluida
+    console.log('🌐 Abriendo Google Maps en la misma pestaña...');
+    
     try {
-      const newWindow = window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
+      // Guardar estado de la aplicación antes de navegar
+      const appState = {
+        currentUrl: window.location.href,
+        timestamp: Date.now(),
+        fromApp: 'territoriostetlan',
+        territoryId: window.location.hash.split('/')[2] || null
+      };
       
-      if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-        // Estrategia 2: Copiar al portapapeles y mostrar instrucciones
-        console.warn('⚠️ Popup bloqueado - Copiando URL al portapapeles');
-        
-        if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(googleMapsUrl).then(() => {
-            console.log('✅ URL copiada al portapapeles');
-            alert('🗺️ ¡Ruta copiada!\n\nLa URL de Google Maps se copió al portapapeles.\n\n📋 Pégala en una nueva pestaña para ver la ruta completa.\n\n💡 Tip: Abre una nueva pestaña y pega (Ctrl+V)');
-          }).catch(() => {
-            // Fallback: mostrar la URL para copiar manualmente
-            console.log('❌ No se pudo copiar automáticamente');
-            prompt('📋 Copia esta URL y pégala en una nueva pestaña:', googleMapsUrl);
-          });
-        } else {
-          // Fallback para navegadores sin clipboard API
-          console.log('📋 Mostrando URL para copiar manualmente');
-          prompt('📋 Copia esta URL y pégala en una nueva pestaña:', googleMapsUrl);
-        }
+      // Guardar en localStorage para recuperar al volver
+      localStorage.setItem('appNavigationState', JSON.stringify(appState));
+      console.log('💾 Estado de aplicación guardado');
+      
+      // Mostrar confirmación antes de navegar con detalles específicos
+      const routeDetails = routeInfo ? 
+        `📊 Ruta: ${routeInfo.totalAddresses} direcciones\n` +
+        `🎯 Primera parada: ${routeInfo.firstAddress}\n` +
+        `📍 Origen: ${routeInfo.hasUserLocation ? 'Tu ubicación actual' : 'Primera dirección'}\n` 
+        : '';
+      
+      const userConfirmed = confirm(
+        '🗺️ Abrir ruta optimizada en Google Maps\n\n' +
+        routeDetails +
+        '✅ Se abrirá la ruta completa optimizada\n' +
+        '🔙 Usa el botón "Atrás" del navegador para volver\n\n' +
+        '¿Continuar?'
+      );
+      
+      if (userConfirmed) {
+        console.log('✅ Usuario confirmó navegación a Google Maps');
+        // Navegar a Google Maps en la misma pestaña
+        window.location.href = googleMapsUrl;
         return true;
-      }
-    } catch (error) {
-      console.error('❌ Error al abrir ventana:', error);
-      // Fallback: copiar al portapapeles
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(googleMapsUrl).then(() => {
-          alert('🗺️ Ruta copiada al portapapeles\n\nAbre una nueva pestaña y pega la URL');
-        });
       } else {
-        prompt('📋 Copia esta URL:', googleMapsUrl);
+        console.log('❌ Usuario canceló navegación');
+        localStorage.removeItem('appNavigationState');
+        return false;
       }
-      return true;
+      
+    } catch (error) {
+      console.error('❌ Error al navegar a Google Maps:', error);
+      return false;
     }
 
     console.log('✅ Google Maps abierto exitosamente');
