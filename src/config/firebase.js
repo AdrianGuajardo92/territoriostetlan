@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 
 // Configuración de Firebase - Usando variables de entorno con fallback
 const firebaseConfig = {
@@ -26,14 +26,5 @@ export const auth = getAuth(app);
 
 // Inicializar Firestore
 export const db = getFirestore(app);
-
-// Habilitar persistencia offline
-enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-        console.warn('Persistencia offline no disponible: múltiples tabs abiertas');
-    } else if (err.code === 'unimplemented') {
-        console.warn('Persistencia offline no soportada en este navegador');
-    }
-});
 
 export default app; 

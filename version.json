@@ -1,9 +1,29 @@
 {
-  "version": "1.0.1",
+  "version": "2.7.1",
   "releaseDate": "2024-12-26",
   "forceUpdate": false,
   "changes": {
-    "all": [
+        "all": [
+      {
+        "type": "fix",
+        "description": "Corregido error 400 de Firebase Firestore - configuración de cache simplificada."
+      },
+      {
+        "type": "improvement",  
+        "description": "Eliminadas advertencias de la consola: meta tag PWA actualizado."
+      },
+      {
+        "type": "fix",
+        "description": "Corregido error 'setShowRouteListModal is not defined' en el modal del mapa."
+      },
+      {
+        "type": "removed",
+        "description": "Eliminado modal de lista de ruta redundante - la funcionalidad ya existe en las tarjetas principales."
+      },
+      {
+        "type": "improvement",
+        "description": "Código optimizado y limpio tras eliminar funcionalidad duplicada."
+      },
       {
         "type": "new",
         "description": "Aplicación reestructurada con componentes modulares para facilitar futuras actualizaciones."

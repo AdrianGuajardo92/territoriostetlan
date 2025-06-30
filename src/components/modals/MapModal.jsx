@@ -10,7 +10,6 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [selectedAddressIndex, setSelectedAddressIndex] = useState(null);
     const [showQuickAction, setShowQuickAction] = useState(false);
-    const [showRouteListModal, setShowRouteListModal] = useState(false);
     const { showToast } = useToast();
     const markersRef = useRef({});
     const routeLineRef = useRef(null);
@@ -104,19 +103,7 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
         }
     };
     
-    // Función para navegar a una dirección individual
-    const handleNavigateToAddress = (address, mode = 'driving') => {
-        const coords = getCoordinates(address);
-        if (!coords) {
-            showToast('No hay coordenadas disponibles para esta dirección', 'warning');
-            return;
-        }
-        
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=${mode}`;
-        window.open(url, '_blank', 'noopener,noreferrer');
-    };
-
-    // Función para navegación integrada (mantener para el panel de acción rápida)
+    // Función para navegación integrada
     const handleNavigate = (address, mode = 'driving') => {
         const coords = getCoordinates(address);
         let url = '';
@@ -404,7 +391,6 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
             setMapError(false);
             setSelectedAddress(null);
             setShowQuickAction(false);
-            setShowRouteListModal(false);
         };
     }, [isOpen]);
     
@@ -558,18 +544,6 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                             </>
                         )}
                     </button>
-                    
-                    {/* Botón para ver lista de ruta - solo visible cuando hay ruta optimizada */}
-                    {sortState.sortOrder === 'optimized' && (
-                        <button 
-                            onClick={() => setShowRouteListModal(true)}
-                            className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg shadow-sm border border-blue-700 hover:bg-blue-700 transition-all" 
-                            title="Ver lista de ruta optimizada"
-                        >
-                            <Icon name="list" size={14} className="mr-1" />
-                            Ver Ruta
-                        </button>
-                    )}
                 </div>
             </div>
             
@@ -724,135 +698,6 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                     )}
                 </div>
             </div>
-            
-            {/* Modal de Lista de Ruta */}
-            {showRouteListModal && (
-                <div 
-                    className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            setShowRouteListModal(false);
-                        }
-                    }}
-                >
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden">
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <Icon name="route" size={20} className="mr-2" />
-                                    <div>
-                                        <h3 className="font-semibold">Ruta Optimizada</h3>
-                                        <p className="text-xs opacity-90">
-                                            {addresses.length} direcciones ordenadas
-                                        </p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setShowRouteListModal(false)}
-                                    className="p-1 hover:bg-white/20 rounded-full transition-colors"
-                                >
-                                    <Icon name="x" size={18} />
-                                </button>
-                            </div>
-                        </div>
-                        
-                        {/* Lista de direcciones */}
-                        <div className="overflow-y-auto max-h-[calc(80vh-120px)]">
-                            {/* Punto de partida */}
-                            {sortState.userLocation && (
-                                <div className="p-3 border-b border-gray-100 bg-green-50">
-                                    <div className="flex items-center">
-                                        <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center mr-3 font-bold text-sm">
-                                            📍
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-medium text-green-800">Punto de partida</p>
-                                            <p className="text-xs text-green-600">Tu ubicación actual</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            
-                            {/* Direcciones ordenadas */}
-                            {addresses.map((address, index) => {
-                                const coords = getCoordinates(address);
-                                const routeNumber = sortState.sortOrder === 'optimized' && address.routeOrder ? 
-                                    address.routeOrder : index + 1;
-                                
-                                return (
-                                    <div key={address.id} className="p-3 border-b border-gray-100 hover:bg-gray-50">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center flex-1">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 font-bold text-sm text-white ${
-                                                    address.isVisited ? 'bg-red-500' : 'bg-blue-600'
-                                                }`}>
-                                                    {routeNumber}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-gray-900 truncate">
-                                                        {address.address}
-                                                    </p>
-                                                    <div className="flex items-center space-x-2 text-xs text-gray-500">
-                                                        <span className={
-                                                            address.isVisited ? 'text-red-600' : 'text-green-600'
-                                                        }>
-                                                            {address.isVisited ? 'Visitada' : 'Pendiente'}
-                                                        </span>
-                                                        {address.gender && address.gender !== 'Desconocido' && (
-                                                            <span>• {address.gender}</span>
-                                                        )}
-                                                    </div>
-                                                    {address.notes && (
-                                                        <p className="text-xs text-blue-600 mt-1 truncate">
-                                                            💬 {address.notes}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Botones de navegación */}
-                                            <div className="flex space-x-1 ml-2">
-                                                {coords && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleNavigateToAddress(address, 'driving')}
-                                                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                                            title="Navegar en carro"
-                                                        >
-                                                            <i className="fas fa-car text-xs"></i>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleNavigateToAddress(address, 'walking')}
-                                                            className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                                            title="Navegar caminando"
-                                                        >
-                                                            <i className="fas fa-person-walking text-xs"></i>
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        
-                        {/* Footer con estadísticas */}
-                        <div className="p-4 bg-gray-50 border-t">
-                            <div className="flex justify-between items-center text-sm text-gray-600">
-                                <span>Total: {addresses.length} direcciones</span>
-                                <span className="flex items-center">
-                                    <span className="w-2 h-2 bg-blue-600 rounded-full mr-1"></span>
-                                    {addresses.filter(a => !a.isVisited).length} pendientes
-                                    <span className="w-2 h-2 bg-red-500 rounded-full ml-3 mr-1"></span>
-                                    {addresses.filter(a => a.isVisited).length} visitadas
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

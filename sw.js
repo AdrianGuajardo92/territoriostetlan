@@ -1,6 +1,6 @@
 // Service Worker Agresivo para Gestor de Territorios LS
-const CACHE_NAME = 'territorio-ls-v2.5.0';
-const RUNTIME_CACHE = 'territorio-runtime-v2.5.0';
+const CACHE_NAME = 'territorio-ls-v2.7.1';
+const RUNTIME_CACHE = 'territorio-runtime-v2.7.1';
 
 // Recursos críticos que SIEMPRE deben estar en cache
 const CRITICAL_RESOURCES = [
@@ -16,14 +16,8 @@ const NEVER_CACHE = [
   'version.json'
 ];
 
-// URLs externas importantes para cachear
+// URLs externas importantes para cachear (solo las que funcionan con CORS)
 const EXTERNAL_RESOURCES = [
-  'https://unpkg.com/react@18/umd/react.production.min.js',
-  'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
-  'https://unpkg.com/@babel/standalone/babel.min.js',
-  'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js',
-  'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap',
   'https://rsms.me/inter/inter.css',
@@ -307,4 +301,4 @@ self.addEventListener('message', event => {
   }
 });
 
-console.log('[SW] Service Worker Agresivo cargado - v2.5.0');
+console.log('[SW] Service Worker Agresivo cargado - v2.7.1');
