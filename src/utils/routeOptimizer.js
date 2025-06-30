@@ -254,18 +254,9 @@ export const optimizeRoute = async (addresses, userLocation = null) => {
       const address = validAddresses[idx];
       let distance = null;
       
-      // Calcular distancia desde la ubicación del usuario o desde la dirección anterior
-      if (address.coords) {
-        if (order === 0 && userLocation) {
-          // Primera dirección: distancia desde el usuario
-          distance = calculateDistance(userLocation, address.coords);
-        } else if (order > 0) {
-          // Direcciones siguientes: distancia desde la dirección anterior
-          const prevAddress = validAddresses[optimizedIndices[order - 1]];
-          if (prevAddress.coords) {
-            distance = calculateDistance(prevAddress.coords, address.coords);
-          }
-        }
+      // Calcular distancia SIEMPRE desde la ubicación del usuario
+      if (address.coords && userLocation) {
+        distance = calculateDistance(userLocation, address.coords);
       }
       
       return { 
