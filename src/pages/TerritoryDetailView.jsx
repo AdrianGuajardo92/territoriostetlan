@@ -73,33 +73,99 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     };
   }, [resetAdminModeQuietly]);
 
-  // Manejar el botón físico de volver dentro del territorio
+  // Referencias para event handlers - EVITA RE-SUSCRIPCIONES
+  const modalStatesRef = useRef();
+  const navigationStateRef = useRef();
+  
+  // Actualizar refs sin causar re-renders
+  modalStatesRef.current = {
+    isFormModalOpen,
+    isAssignModalOpen, 
+    isMapModalOpen,
+    showConfirmReturn,
+    showConfirmComplete,
+    setIsFormModalOpen,
+    setIsAssignModalOpen,
+    setIsMapModalOpen,
+    setShowConfirmReturn,
+    setShowConfirmComplete,
+    setEditingAddress
+  };
+  
+  navigationStateRef.current = {
+    navigatingAddressId,
+    setIsNavigatingHighlightActive,
+    setNavigatingAddressId
+  };
+
+  // EVENT LISTENERS CONSOLIDADOS - OPTIMIZADO ⚡
   useEffect(() => {
+    // Handler para botón físico de volver - USA REF para evitar re-suscripciones
     const handleTerritoryPopState = (event) => {
+      const modalStates = modalStatesRef.current;
+      if (!modalStates) return;
+      
       // Los modales ahora se manejan automáticamente con useModalHistory
       // Solo resetear estados locales cuando sea necesario
-      if (isFormModalOpen) {
-        setIsFormModalOpen(false);
-        setEditingAddress(null);
-      } else if (isAssignModalOpen) {
-        setIsAssignModalOpen(false);
-      } else if (isMapModalOpen) {
-        setIsMapModalOpen(false);
-      } else if (showConfirmReturn) {
-        setShowConfirmReturn(false);
-      } else if (showConfirmComplete) {
-        setShowConfirmComplete(false);
+      if (modalStates.isFormModalOpen) {
+        modalStates.setIsFormModalOpen(false);
+        modalStates.setEditingAddress(null);
+      } else if (modalStates.isAssignModalOpen) {
+        modalStates.setIsAssignModalOpen(false);
+      } else if (modalStates.isMapModalOpen) {
+        modalStates.setIsMapModalOpen(false);
+      } else if (modalStates.showConfirmReturn) {
+        modalStates.setShowConfirmReturn(false);
+      } else if (modalStates.showConfirmComplete) {
+        modalStates.setShowConfirmComplete(false);
       }
     };
 
+    // Handler para cambio de visibilidad - USA REF para evitar re-suscripciones  
+    const handleVisibilityChange = () => {
+      const navState = navigationStateRef.current;
+      if (!navState) return;
+      
+      if (document.visibilityState === 'visible' && navState.navigatingAddressId) {
+        navState.setIsNavigatingHighlightActive(true);
+        // Usar timeout actualizado del scope global
+        if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+        highlightTimerRef.current = setTimeout(() => {
+          navState.setIsNavigatingHighlightActive(false);
+          navState.setNavigatingAddressId(null);
+        }, 20000);
+      } else {
+        if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+      }
+    };
+
+    // SUSCRIPCIÓN ÚNICA - No se re-suscribe a menos que el componente se desmonte
     window.addEventListener('popstate', handleTerritoryPopState);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
+    // CLEANUP CENTRALIZADO
     return () => {
       window.removeEventListener('popstate', handleTerritoryPopState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Limpiar timer si existe
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+        highlightTimerRef.current = null;
+      }
     };
-  }, [isFormModalOpen, isAssignModalOpen, isMapModalOpen, showConfirmReturn, showConfirmComplete]);
+  }, []); // ✅ Sin dependencias - solo se ejecuta al montar/desmontar
 
-  // Obtener direcciones del territorio
+  // Hash simple y confiable para direcciones del territorio - PREVIENE BUGS
+  const territoryAddressesHash = useMemo(() => {
+    const territoryAddrs = addresses.filter(a => a.territoryId === territory.id);
+    // Crear hash simple y estable: count + IDs ordenados + estados visitados
+    const idsHash = territoryAddrs.map(a => a.id).sort().join(',');
+    const visitedHash = territoryAddrs.map(a => `${a.id}:${a.isVisited ? '1' : '0'}`).sort().join(',');
+    const addressHash = territoryAddrs.map(a => `${a.id}:${a.address}`).sort().join(',');
+    return `${territoryAddrs.length}|${idsHash}|${visitedHash}|${addressHash}`;
+  }, [addresses, territory.id]);
+
+  // Obtener direcciones del territorio - OPTIMIZADO Y SEGURO
   const territoryAddresses = useMemo(() => {
     const allTerritoryAddresses = addresses.filter(a => a.territoryId === territory.id);
 
@@ -128,9 +194,14 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     return [...allTerritoryAddresses].sort((a, b) => 
       a.address.localeCompare(b.address, undefined, { numeric: true })
     );
-  }, [addresses, territory.id, sortState]);
+  }, [
+    // ✅ Dependencias seguras - no se ejecutan filtros en cada render
+    territoryAddressesHash,
+    sortState.sortOrder,
+    sortState.optimizedRoute
+  ]);
 
-  // Estadísticas
+  // Estadísticas - OPTIMIZADO Y SEGURO
   const stats = useMemo(() => {
     const allAddresses = addresses.filter(a => a.territoryId === territory.id);
     const visitedCount = allAddresses.filter(a => a.isVisited).length;
@@ -140,41 +211,22 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       total: totalCount, 
       pending: totalCount - visitedCount 
     };
-  }, [addresses, territory.id]);
+  }, [
+    // ✅ Reutiliza el hash ya calculado - más eficiente y seguro
+    territoryAddressesHash
+  ]);
 
   const isAssignedToMe = territory.status === 'En uso' && territory.assignedTo === currentUser.name;
   const isAdmin = currentUser.role === 'admin';
 
-  // Manejo de navegación
-  const handleNavigationStart = (addressId) => {
-    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-    setNavigatingAddressId(addressId);
-  };
-
-  const stopNavigatingHighlight = () => {
+  // Manejo de navegación - MOVIDO ARRIBA CON MEMOIZACIÓN
+  const stopNavigatingHighlight = useCallback(() => {
     if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
     setIsNavigatingHighlightActive(false);
     setNavigatingAddressId(null);
-  };
+  }, []);
 
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && navigatingAddressId) {
-        setIsNavigatingHighlightActive(true);
-        highlightTimerRef.current = setTimeout(() => {
-          setIsNavigatingHighlightActive(false);
-          setNavigatingAddressId(null);
-        }, 20000);
-      } else {
-        if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-    };
-  }, [navigatingAddressId]);
+
 
   // Funciones auxiliares
 
@@ -219,32 +271,37 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }
   };
 
-  // Funciones simplificadas para modales (el historial lo maneja useModalHistory automáticamente)
-  const openEditModal = (address) => {
+  // OPTIMIZACIÓN: Funciones memoizadas para evitar re-renders de AddressCard ⚡
+  const openEditModal = useCallback((address) => {
     setEditingAddress(address);
     setIsFormModalOpen(true);
-  };
+  }, []);
 
-  const openAddModal = () => {
+  const openAddModal = useCallback(() => {
     setEditingAddress(null);
     setIsFormModalOpen(true);
-  };
+  }, []);
 
-  const handleOpenAssignModal = () => {
+  const handleNavigationStart = useCallback((addressId) => {
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    setNavigatingAddressId(addressId);
+  }, []);
+
+  const handleOpenAssignModal = useCallback(() => {
     setIsAssignModalOpen(true);
-  };
+  }, []);
 
-  const handleOpenMapModal = () => {
+  const handleOpenMapModal = useCallback(() => {
     setIsMapModalOpen(true);
-  };
+  }, []);
 
-  const handleShowConfirmReturn = () => {
+  const handleShowConfirmReturn = useCallback(() => {
     setShowConfirmReturn(true);
-  };
+  }, []);
 
-  const handleShowConfirmComplete = () => {
+  const handleShowConfirmComplete = useCallback(() => {
     setShowConfirmComplete(true);
-  };
+  }, []);
 
   const handleSaveAddress = async (formData, changeReason = '') => {
     setIsProcessing(true);
@@ -380,83 +437,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     showToast('Estado de ruta reseteado', 'info');
   }, [showToast]);
 
-  // Función para abrir la ruta completa en Google Maps - VERSIÓN INTELIGENTE
-  const handleOpenCompleteRoute = async () => {
-    try {
-      showToast('🔍 Calculando la ruta más eficiente...', 'info', 3000);
 
-      // PASO 1: Siempre intentar obtener la ubicación del usuario
-      let userLocation = null;
-      try {
-        userLocation = await getCurrentLocation();
-        showToast('📍 Ubicación obtenida. Calculando ruta desde tu posición...', 'info', 2000);
-      } catch (error) {
-        console.log('No se pudo obtener ubicación del usuario');
-        showToast('⚠️ Sin ubicación GPS. Optimizando ruta sin punto de partida...', 'warning', 2000);
-      }
 
-      // PASO 2: Decidir qué direcciones usar
-      let addressesToOptimize;
-      let useExistingOptimization = false;
-
-      if (sortState.sortOrder === 'optimized' && sortState.optimizedRoute && sortState.optimizedRoute.length > 0) {
-        // Ya hay una ruta optimizada activa - usarla
-        addressesToOptimize = sortState.optimizedRoute;
-        useExistingOptimization = true;
-        console.log('🔄 Usando ruta optimizada existente');
-      } else {
-        // No hay ruta optimizada - usar direcciones originales y optimizar automáticamente
-        addressesToOptimize = territoryAddresses;
-        useExistingOptimization = false;
-        console.log('🧮 Calculando nueva ruta optimizada para Google Maps');
-      }
-
-      if (addressesToOptimize.length === 0) {
-        showToast('❌ No hay direcciones disponibles para crear la ruta', 'warning');
-        return;
-      }
-
-      // PASO 3: Si no hay optimización existente, calcular la mejor ruta automáticamente
-      let finalAddresses;
-      if (!useExistingOptimization) {
-        // Calcular ruta optimizada específicamente para Google Maps
-        finalAddresses = await optimizeRoute(addressesToOptimize, userLocation);
-        console.log('✅ Ruta optimizada calculada automáticamente');
-      } else {
-        finalAddresses = addressesToOptimize;
-      }
-
-      // PASO 4: Verificar que tengamos direcciones válidas
-      const addressesWithCoords = finalAddresses.filter(addr => {
-        return (addr.latitude && addr.longitude) || 
-               (addr.mapUrl && addr.mapUrl.includes('google.com/maps'));
-      });
-
-      if (addressesWithCoords.length === 0) {
-        showToast('❌ No hay direcciones con coordenadas válidas para crear la ruta', 'error');
-        return;
-      }
-
-      // PASO 5: La función de Google Maps completa fue eliminada
-      // En su lugar, ahora usamos el modal de lista de ruta en el mapa
-      showToast('💡 Usa el mapa del territorio → botón "Ver Ruta" para navegar direcciones individuales', 'info', 5000);
-      
-      // Log para debugging
-      console.log('🎯 Ruta preparada:', {
-        totalAddresses: finalAddresses.length,
-        addressesWithCoords: addressesWithCoords.length,
-        userLocation: !!userLocation,
-        wasOptimized: !useExistingOptimization,
-        note: 'Usar modal de lista en el mapa para navegación individual'
-      });
-    } catch (error) {
-      console.error('❌ Error abriendo ruta completa:', error);
-      showToast('Error al calcular la ruta. Intenta de nuevo.', 'error');
-    }
-  };
-
-  // Función personalizada para actualizar estado sin notificación
-  const handleUpdateAddressSilent = async (addressId, updatedData) => {
+  // OPTIMIZACIÓN: handleUpdateAddressSilent memoizada - Clave para MapModal ⚡
+  const handleUpdateAddressSilent = useCallback(async (addressId, updatedData) => {
     try {
       const address = addresses.find(a => a.id === addressId);
       if (address && 'isVisited' in updatedData) {
@@ -471,7 +455,11 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       showToast('Error al actualizar dirección', 'error');
       throw error;
     }
-  };
+  }, [addresses, handleToggleAddressStatus, handleUpdateAddress, showToast]);
+
+  // OPTIMIZACIÓN: Handlers específicos memoizados ⚡
+  const createEditHandler = useCallback((address) => () => openEditModal(address), [openEditModal]);
+  const createNavigateHandler = useCallback((addressId) => () => handleNavigationStart(addressId), [handleNavigationStart]);
 
   return (
     <div className="min-h-screen bg-slate-100 pb-4">
@@ -529,8 +517,8 @@ const TerritoryDetailView = ({ territory, onBack }) => {
                 viewMode={viewMode}
                 isAdmin={isAdmin}
                 isAssignedToMe={isAssignedToMe}
-                onEdit={() => openEditModal(address)}
-                onNavigate={() => handleNavigationStart(address.id)}
+                onEdit={createEditHandler(address)}
+                onNavigate={createNavigateHandler(address.id)}
                 isNavigating={navigatingAddressId === address.id && isNavigatingHighlightActive}
                 onUpdate={handleUpdateAddressSilent}
                 showToast={showToast}

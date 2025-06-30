@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useToast } from '../../hooks/useToast';
 import { useModalHistory } from '../../hooks/useModalHistory';
 import Icon from '../common/Icon';
@@ -31,6 +31,62 @@ const TerritoryMapModal = ({
     const markersRef = useRef({});
     const routeLineRef = useRef(null);
     
+    // OPTIMIZACIÓN: Memoizar coordenadas para evitar recálculos ⚡
+    const addressesWithCoords = useMemo(() => {
+        const extractCoordinatesFromUrl = (url) => {
+            if (!url) return null;
+            const patterns = [
+                /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+                /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+                /q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+                /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) {
+                    return {
+                        lat: parseFloat(match[1]),
+                        lng: parseFloat(match[2])
+                    };
+                }
+            }
+            return null;
+        };
+
+        const getCoordinates = (address) => {
+            // Prioridad 1: latitude/longitude directo
+            if (address.latitude && address.longitude) {
+                return { lat: address.latitude, lng: address.longitude };
+            }
+            
+            // Prioridad 2: extraer de mapUrl
+            if (address.mapUrl) {
+                const coords = extractCoordinatesFromUrl(address.mapUrl);
+                if (coords) return coords;
+            }
+            
+            // Prioridad 3: array coords
+            if (address.coords && Array.isArray(address.coords) && address.coords.length >= 2) {
+                return { lat: address.coords[0], lng: address.coords[1] };
+            }
+            
+            return null;
+        };
+
+        return addresses.map(address => ({
+            ...address,
+            coordinates: getCoordinates(address)
+        })).filter(addr => addr.coordinates);
+    }, [addresses]);
+
+    // Hash para detectar cambios reales en marcadores - PREVIENE RE-RENDERS
+    const markersHash = useMemo(() => {
+        return addressesWithCoords.map(addr => 
+            `${addr.id}-${addr.isVisited}-${addr.coordinates.lat}-${addr.coordinates.lng}-${sortState.sortOrder === 'optimized' ? addr.routeOrder || 0 : 0}`
+        ).join('|');
+    }, [addressesWithCoords, sortState.sortOrder, sortState.optimizedRoute]);
+
     // Sincronizar dirección seleccionada con cambios en la lista
     useEffect(() => {
         if (selectedAddress) {
@@ -42,55 +98,22 @@ const TerritoryMapModal = ({
     }, [addresses, selectedAddress?.id]);
     
     // Función para obtener el color basado en el estado de la dirección (igual que las tarjetas)
-    const getAddressColor = (address) => {
+    const getAddressColor = useCallback((address) => {
         if (address.isVisited) return '#ef4444'; // Rojo - Visitada
         return '#22c55e'; // Verde - Pendiente
-    };
+    }, []);
     
-    // Función para obtener coordenadas robusta
-    const getCoordinates = (address) => {
-        // Prioridad 1: latitude/longitude directo
-        if (address.latitude && address.longitude) {
-            return { lat: address.latitude, lng: address.longitude };
-        }
-        
-        // Prioridad 2: extraer de mapUrl
-        if (address.mapUrl) {
-            const coords = extractCoordinatesFromUrl(address.mapUrl);
-            if (coords) return coords;
-        }
-        
-        // Prioridad 3: array coords
-        if (address.coords && Array.isArray(address.coords) && address.coords.length >= 2) {
-            return { lat: address.coords[0], lng: address.coords[1] };
-        }
-        
-        return null;
-    };
+    // Función para obtener coordenadas - OPTIMIZADA
+    const getCoordinates = useCallback((address) => {
+        // Buscar en el array memoizado
+        const addressWithCoords = addressesWithCoords.find(a => a.id === address.id);
+        return addressWithCoords?.coordinates || null;
+    }, [addressesWithCoords]);
     
-    const extractCoordinatesFromUrl = (url) => {
-        if (!url) return null;
-        const patterns = [
-            /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-            /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-            /q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-            /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/
-        ];
-        
-        for (const pattern of patterns) {
-            const match = url.match(pattern);
-            if (match) {
-                return {
-                    lat: parseFloat(match[1]),
-                    lng: parseFloat(match[2])
-                };
-            }
-        }
-        return null;
-    };
+
     
-    // Función para marcar como visitado desde el mapa
-    const handleQuickToggleVisited = async (address) => {
+    // OPTIMIZACIÓN: HandleQuickToggleVisited sin re-renders innecesarios ⚡
+    const handleQuickToggleVisited = useCallback(async (address) => {
         try {
             const updatedAddress = {
                 ...address,
@@ -102,26 +125,15 @@ const TerritoryMapModal = ({
             
             // Actualizar inmediatamente la dirección seleccionada
             setSelectedAddress(updatedAddress);
-            
-            // Forzar actualización de marcadores
-            setTimeout(() => {
-                if (mapInstanceRef.current && isMapReady) {
-                    const updatedAddresses = addresses.map(addr => 
-                        addr.id === address.id ? updatedAddress : addr
-                    );
-                    updateMapMarkers(updatedAddresses);
-                }
-            }, 100);
-            
             setShowQuickAction(false);
         } catch (error) {
             console.error('Error al actualizar dirección:', error);
             showToast('Error al actualizar la dirección', 'error');
         }
-    };
+    }, [onToggleAddressStatus, showToast]);
     
-    // Función para navegación integrada
-    const handleNavigate = (address, mode = 'driving') => {
+    // OPTIMIZACIÓN: HandleNavigate memoizada ⚡
+    const handleNavigate = useCallback((address, mode = 'driving') => {
         const coords = getCoordinates(address);
         let url = '';
         
@@ -166,19 +178,26 @@ const TerritoryMapModal = ({
         
         // Prevenir que el modal se cierre al regresar de Google Maps
         window.open(url, '_blank', 'noopener,noreferrer');
-    };
+    }, [getCoordinates, territory]);
     
-    const updateMapMarkers = (addressesToShow) => {
+    // OPTIMIZACIÓN: UpdateMapMarkers inteligente - Solo actualiza lo que ha cambiado ⚡
+    const updateMapMarkers = useCallback((addressesToShow, forceUpdate = false) => {
         if (!mapInstanceRef.current) return;
         
-        // Limpiar marcadores existentes
-        Object.values(markersRef.current).forEach(marker => {
-            mapInstanceRef.current.removeLayer(marker);
+        const currentAddressIds = new Set(addressesToShow.map(a => a.id));
+        const existingMarkerIds = new Set(Object.keys(markersRef.current));
+        
+        // Eliminar marcadores que ya no existen
+        existingMarkerIds.forEach(id => {
+            if (!currentAddressIds.has(id)) {
+                mapInstanceRef.current.removeLayer(markersRef.current[id]);
+                delete markersRef.current[id];
+            }
         });
-        markersRef.current = {};
         
         const markersGroup = L.featureGroup();
         let validMarkersCount = 0;
+        let needsFitBounds = false;
         
         addressesToShow.forEach((address, index) => {
             const coords = getCoordinates(address);
@@ -188,68 +207,81 @@ const TerritoryMapModal = ({
             const displayNumber = sortState.sortOrder === 'optimized' && address.routeOrder ? address.routeOrder : validMarkersCount;
             const color = getAddressColor(address);
             
-            // Marcador circular con número siempre visible
-            const markerHtml = `
-                <div style="
-                    background-color: ${color}; 
-                    color: white; 
-                    width: 36px; 
-                    height: 36px; 
-                    border-radius: 50%; 
-                    display: flex; 
-                    align-items: center; 
-                    justify-content: center; 
-                    font-weight: bold; 
-                    font-size: 16px; 
-                    border: 3px solid white; 
-                    box-shadow: 0 3px 8px rgba(0,0,0,0.4); 
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    animation: markerPulse 0.6s ease-out;
-                " class="map-marker">
-                    ${displayNumber}
-                </div>`;
+            const existingMarker = markersRef.current[address.id];
             
-            const customIcon = L.divIcon({ 
-                html: markerHtml, 
-                iconSize: [36, 36], 
-                className: 'custom-marker-new',
-                iconAnchor: [18, 18]
-            });
+            // Solo recrear marcador si no existe o ha cambiado
+            if (!existingMarker || forceUpdate) {
+                // Eliminar marcador existente si existe
+                if (existingMarker) {
+                    mapInstanceRef.current.removeLayer(existingMarker);
+                }
+                
+                // Marcador circular con número siempre visible
+                const markerHtml = `
+                    <div style="
+                        background-color: ${color}; 
+                        color: white; 
+                        width: 36px; 
+                        height: 36px; 
+                        border-radius: 50%; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        font-weight: bold; 
+                        font-size: 16px; 
+                        border: 3px solid white; 
+                        box-shadow: 0 3px 8px rgba(0,0,0,0.4); 
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        animation: markerPulse 0.6s ease-out;
+                    " class="map-marker">
+                        ${displayNumber}
+                    </div>`;
+                
+                const customIcon = L.divIcon({ 
+                    html: markerHtml, 
+                    iconSize: [36, 36], 
+                    className: 'custom-marker-new',
+                    iconAnchor: [18, 18]
+                });
+                
+                const marker = L.marker([coords.lat, coords.lng], { icon: customIcon });
+                
+                // Click en marcador - Mostrar panel de acción rápida
+                marker.on('click', () => {
+                    const currentAddressState = addresses.find(a => a.id === address.id);
+                    setSelectedAddress(currentAddressState || address);
+                    setSelectedAddressIndex(index);
+                    setShowQuickAction(true);
+                });
+                
+                markersRef.current[address.id] = marker;
+                marker.addTo(mapInstanceRef.current);
+                needsFitBounds = true;
+            }
             
-            const marker = L.marker([coords.lat, coords.lng], { icon: customIcon });
-            
-            // Click en marcador - Mostrar panel de acción rápida
-            marker.on('click', () => {
-                const currentAddressState = addresses.find(a => a.id === address.id);
-                setSelectedAddress(currentAddressState || address);
-                setSelectedAddressIndex(index);
-                setShowQuickAction(true);
-            });
-            
-            markersRef.current[address.id] = marker;
-            markersGroup.addLayer(marker);
+            markersGroup.addLayer(markersRef.current[address.id]);
         });
         
-        if(Object.keys(markersRef.current).length > 0) {
-            markersGroup.addTo(mapInstanceRef.current);
-            
-            // Auto-ajustar vista para incluir todos los marcadores
-            try {
-                const markerBounds = markersGroup.getBounds();
-                if (markerBounds.isValid()) {
-                    mapInstanceRef.current.fitBounds(markerBounds, { 
-                        padding: [20, 20],
-                        maxZoom: 17 // Evitar zoom excesivo para una sola dirección
-                    });
+        // Solo ajustar vista si hay nuevos marcadores o se fuerza
+        if (needsFitBounds || forceUpdate) {
+            if(Object.keys(markersRef.current).length > 0) {
+                try {
+                    const markerBounds = markersGroup.getBounds();
+                    if (markerBounds.isValid()) {
+                        mapInstanceRef.current.fitBounds(markerBounds, { 
+                            padding: [20, 20],
+                            maxZoom: 17 // Evitar zoom excesivo para una sola dirección
+                        });
+                    }
+                } catch (error) {
+                    console.warn('Error ajustando vista del mapa:', error);
                 }
-            } catch (error) {
-                console.warn('Error ajustando vista del mapa:', error);
             }
         }
 
-        // Marcador de ubicación del usuario si existe
-        if (sortState.userLocation && mapInstanceRef.current) {
+        // Marcador de ubicación del usuario si existe - Solo crear una vez
+        if (sortState.userLocation && mapInstanceRef.current && !mapInstanceRef.current._userLocationMarker) {
             const userIcon = L.divIcon({
                 html: `<div style="
                     background-color: #3b82f6; 
@@ -275,20 +307,18 @@ const TerritoryMapModal = ({
                 className: 'user-location-marker'
             });
             
-            L.marker([sortState.userLocation.lat, sortState.userLocation.lng], { icon: userIcon })
+            const userMarker = L.marker([sortState.userLocation.lat, sortState.userLocation.lng], { icon: userIcon })
                 .addTo(mapInstanceRef.current)
                 .bindPopup('Tu ubicación');
+            
+            // Marcar para no recrear
+            mapInstanceRef.current._userLocationMarker = userMarker;
         }
-    };
+    }, [getCoordinates, getAddressColor, sortState.sortOrder, sortState.userLocation, addresses]);
     
-    const drawRouteLine = (orderedList) => {
-        if (!mapInstanceRef.current) return;
-
-        // Limpiar línea de ruta anterior
-        if (routeLineRef.current) {
-            mapInstanceRef.current.removeLayer(routeLineRef.current);
-            routeLineRef.current = null;
-        }
+    // OPTIMIZACIÓN: DrawRouteLine memoizada - Solo recalcula cuando cambia la ruta ⚡
+    const routeCoordinates = useMemo(() => {
+        if (sortState.sortOrder !== 'optimized') return null;
         
         const routeCoords = [];
         
@@ -298,16 +328,27 @@ const TerritoryMapModal = ({
         }
         
         // Añadir coordenadas de las direcciones en orden
-        orderedList.forEach(address => {
-            const coords = getCoordinates(address);
-            if (coords) {
-                routeCoords.push([coords.lat, coords.lng]);
+        addressesWithCoords.forEach(address => {
+            if (address.coordinates) {
+                routeCoords.push([address.coordinates.lat, address.coordinates.lng]);
             }
         });
         
-        // Dibujar línea de ruta si hay al menos 2 puntos
-        if (routeCoords.length > 1) {
-            routeLineRef.current = L.polyline(routeCoords, { 
+        return routeCoords.length > 1 ? routeCoords : null;
+    }, [sortState.sortOrder, sortState.userLocation, addressesWithCoords]);
+
+    const drawRouteLine = useCallback(() => {
+        if (!mapInstanceRef.current) return;
+
+        // Limpiar línea de ruta anterior
+        if (routeLineRef.current) {
+            mapInstanceRef.current.removeLayer(routeLineRef.current);
+            routeLineRef.current = null;
+        }
+        
+        // Dibujar línea de ruta si hay coordenadas
+        if (routeCoordinates) {
+            routeLineRef.current = L.polyline(routeCoordinates, { 
                 color: '#4f46e5', 
                 weight: 3, 
                 opacity: 0.7, 
@@ -317,13 +358,13 @@ const TerritoryMapModal = ({
             }).addTo(mapInstanceRef.current);
             
             // Añadir tooltip con información de la ruta
-            const addressCount = orderedList.filter(addr => getCoordinates(addr)).length;
+            const addressCount = routeCoordinates.length - (sortState.userLocation ? 1 : 0);
             routeLineRef.current.bindTooltip(
                 `Ruta optimizada: ${addressCount} direcciones`, 
                 { permanent: false, direction: 'center' }
             );
         }
-    };
+    }, [routeCoordinates, sortState.userLocation]);
     
     useEffect(() => {
         if (!isOpen) return;
@@ -332,7 +373,6 @@ const TerritoryMapModal = ({
             if (!mapRef.current || mapInstanceRef.current) return;
             
             try {
-                const addressesWithCoords = addresses.filter(addr => getCoordinates(addr));
                 if (addressesWithCoords.length === 0) {
                     setMapError(true);
                     return;
@@ -383,11 +423,30 @@ const TerritoryMapModal = ({
             }
         };
 
-        const checkLeaflet = () => {
-            if (typeof L !== 'undefined') {
-                initializeMap();
-            } else {
-                setTimeout(() => typeof L !== 'undefined' ? initializeMap() : setMapError(true), 1000);
+        const checkLeaflet = async () => {
+            try {
+                // CORRECCIÓN: Lazy loading robusto de Leaflet ⚡
+                if (typeof L === 'undefined' || !window.leafletJSLoaded) {
+                    console.log('Cargando Leaflet para el mapa...');
+                    await Promise.all([
+                        window.loadLeafletCSS(),
+                        window.loadLeafletJS()
+                    ]);
+                    
+                    // Esperar un poco para que Leaflet se inicialice completamente
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                if (typeof L !== 'undefined' && typeof L.map === 'function') {
+                    console.log('Leaflet cargado correctamente, inicializando mapa...');
+                    initializeMap();
+                } else {
+                    console.error('Leaflet no se cargó correctamente');
+                    setMapError(true);
+                }
+            } catch (error) {
+                console.error('Error cargando Leaflet:', error);
+                setMapError(true);
             }
         };
         
@@ -411,34 +470,30 @@ const TerritoryMapModal = ({
         };
     }, [isOpen]);
     
+    // OPTIMIZACIÓN: UseEffect inteligente - Solo cuando realmente cambien los marcadores ⚡
     useEffect(() => {
         if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
         
-        updateMapMarkers(addresses);
+        updateMapMarkers(addressesWithCoords);
 
+        // Invalidar tamaño para garantizar renderizado correcto - OPTIMIZADO
+        setTimeout(() => mapInstanceRef.current && mapInstanceRef.current.invalidateSize(), 100);
+
+    }, [isOpen, isMapReady, markersHash, updateMapMarkers, addressesWithCoords]);
+
+    // UseEffect separado para la línea de ruta - más eficiente
+    useEffect(() => {
+        if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
+        
         if (sortState.sortOrder === 'optimized') {
-            drawRouteLine(addresses);
+            drawRouteLine();
         } else {
             if (routeLineRef.current) {
                 mapInstanceRef.current.removeLayer(routeLineRef.current);
                 routeLineRef.current = null;
             }
         }
-        
-        const addressesWithCoords = addresses.filter(addr => getCoordinates(addr));
-        if (addressesWithCoords.length > 0) {
-             const markerBounds = L.featureGroup(Object.values(markersRef.current)).getBounds();
-             if(markerBounds.isValid()) {
-                // Padding optimizado para móvil
-                const padding = window.innerWidth < 640 ? [30, 30] : [50, 50];
-                mapInstanceRef.current.fitBounds(markerBounds, { padding });
-             }
-        }
-
-        // Invalidar tamaño para garantizar renderizado correcto - OPTIMIZADO
-        setTimeout(() => mapInstanceRef.current && mapInstanceRef.current.invalidateSize(), 100);
-
-    }, [isOpen, isMapReady, addresses, sortState]);
+    }, [isOpen, isMapReady, sortState.sortOrder, drawRouteLine]);
     
     // Listener para mantener el modal abierto al regresar de Google Maps
     useEffect(() => {

@@ -2,6 +2,200 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CRITICAL: Optimizaciones móviles CSS ⚡ */
+
+/* Font loading optimizado - fallback system fonts */
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Cuando Inter cargue, aplicar automáticamente */
+.font-inter,
+.font-inter * {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+}
+
+/* CRITICAL: Prevenir FOUC (Flash of Unstyled Content) */
+html {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* CRITICAL: Scroll suave en toda la app */
+* {
+  scroll-behavior: smooth;
+}
+
+/* CRITICAL: Optimización touch móvil */
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* CRITICAL: Prevenir zoom accidental en inputs móviles */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+textarea,
+select {
+  font-size: 16px; /* Previene zoom en iOS */
+  background-color: white !important; /* CORRECCIÓN: Fondo blanco forzado */
+  color: #374151 !important; /* CORRECCIÓN: Texto gris oscuro legible */
+}
+
+/* CRITICAL: Optimización de animaciones móviles */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+  
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+/* CRITICAL: Respeta configuración de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* CRITICAL: Optimización de mapas para móviles */
+.map-modal-open {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+}
+
+/* CRITICAL: FontAwesome iconos fix ⚡ */
+.fas, .far, .fab, .fal, .fad, .fa {
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", FontAwesome !important;
+  font-weight: 900;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+}
+
+/* CRITICAL: Iconos específicos problemas conocidos */
+.fa-person:before { content: "\f183"; }
+.fa-person-dress:before { content: "\f182"; }
+.fa-user-group:before { content: "\f500"; }
+.fa-house-circle-check:before { content: "\e515"; }
+.fa-house:before { content: "\f015"; }
+.fa-bookmark:before { content: "\f02e"; }
+.fa-book-open:before { content: "\f518"; }
+.fa-map:before { content: "\f279"; }
+.fa-info-circle:before { content: "\f05a"; }
+.fa-car:before { content: "\f1b9"; }
+.fa-person-walking:before { content: "\f554"; }
+.fa-bus:before { content: "\f207"; }
+.fa-pen-to-square:before { content: "\f044"; }
+.fa-xmark:before { content: "\f00d"; }
+
+/* CRITICAL: Marcadores de mapa optimizados */
+.custom-marker-new {
+  background: transparent !important;
+  border: none !important;
+}
+
+.map-marker:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+}
+
+@keyframes markerPulse {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* CRITICAL: Skeleton loading optimizado */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* CRITICAL: Mejoras de contraste para accesibilidad */
+@media (prefers-contrast: high) {
+  .bg-indigo-600 { background-color: #312e81 !important; }
+  .text-gray-500 { color: #374151 !important; }
+  .border-gray-300 { border-color: #6b7280 !important; }
+}
+
+/* CRITICAL: Modo oscuro support básico - SIN AFECTAR INPUTS */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light; /* CORRECCIÓN: Mantener light para evitar inputs oscuros */
+  }
+  
+  /* Solo aplicar modo oscuro a elementos específicos que lo necesiten */
+  .dark-mode-element {
+    color-scheme: dark;
+  }
+}
+
+/* CRITICAL: Optimización de performance en listas grandes */
+.territory-list {
+  contain: content;  /* Aislamiento de layout */
+  will-change: scroll-position;
+  /* OPTIMIZACIÓN FASE 2: Scroll súper suave ⚡ */
+  overflow-anchor: auto;
+  overscroll-behavior: contain;
+}
+
+.territory-card {
+  contain: layout;   /* Optimización de re-layouts */
+  /* OPTIMIZACIÓN FASE 2: GPU acceleration ⚡ */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* OPTIMIZACIÓN FASE 2: Smooth scrolling global ⚡ */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  /* OPTIMIZACIÓN: Scroll performance móvil ⚡ */
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  text-rendering: optimizeSpeed;
+}
+
+/* OPTIMIZACIÓN FASE 2: Event listeners optimization ⚡ */
+button, [role="button"], .clickable {
+  /* Optimizar touch events */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* OPTIMIZACIÓN FASE 2: Transitions con GPU ⚡ */
+.transition-all {
+  will-change: transform, opacity;
+}
+
+/* OPTIMIZACIÓN FASE 2: Grid performance ⚡ */
+.grid {
+  contain: layout style;
+}
+
 /* Leaflet Map Styles - Ya se carga desde CDN en index.html */
 /* @import 'leaflet/dist/leaflet.css'; */
 

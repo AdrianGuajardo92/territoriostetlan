@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider } from './hooks/useToast';
 import LoginView from './components/auth/LoginView';
@@ -7,15 +7,19 @@ import TerritoriesView from './pages/TerritoriesView';
 import TerritoryDetailView from './pages/TerritoryDetailView';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
-// Lazy load de componentes pesados
-const SearchModal = lazy(() => import('./components/modals/SearchModal'));
-const StatsModal = lazy(() => import('./components/modals/StatsModal'));
-const ReportsModal = lazy(() => import('./components/modals/ReportsModal'));
-const AdminModal = lazy(() => import('./components/modals/AdminModal'));
-const ProposalsModal = lazy(() => import('./components/modals/ProposalsModal'));
-const PasswordModal = lazy(() => import('./components/modals/PasswordModal'));
-const UpdatesModal = lazy(() => import('./components/modals/UpdatesModal'));
-const InstallModal = lazy(() => import('./components/modals/InstallModal'));
+// CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
+import SearchModal from './components/modals/SearchModal';
+import PasswordModal from './components/modals/PasswordModal';
+import UpdatesModal from './components/modals/UpdatesModal';
+import InstallModal from './components/modals/InstallModal';
+
+// Importar modales lazy optimizados
+import { 
+  LazyStatsModal, 
+  LazyAdminModal, 
+  LazyReportsModal, 
+  LazyProposalsModal 
+} from './components/modals/LazyModals';
 
 // Importar Firestore temporalmente para debug
 import { db } from './config/firebase';
@@ -27,6 +31,45 @@ function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  
+  // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  // OPTIMIZACIÓN: Detectar cuando Inter font se carga para aplicar clase
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const checkInterFont = () => {
+        if (document.fonts && document.fonts.check('1em Inter')) {
+          setFontsLoaded(true);
+          // Aplicar clase font-inter al body cuando esté cargada
+          document.body.classList.add('font-inter');
+        } else {
+          // Reintentar en 100ms
+          setTimeout(checkInterFont, 100);
+        }
+      };
+      
+      // Iniciar verificación cuando el documento esté listo
+      if (document.readyState === 'complete') {
+        checkInterFont();
+      } else {
+        window.addEventListener('load', checkInterFont);
+      }
+      
+      // Timeout de seguridad - aplicar clase después de 3 segundos
+      const fallbackTimeout = setTimeout(() => {
+        if (!fontsLoaded) {
+          setFontsLoaded(true);
+          document.body.classList.add('font-inter');
+        }
+      }, 3000);
+      
+      return () => {
+        window.removeEventListener('load', checkInterFont);
+        clearTimeout(fallbackTimeout);
+      };
+    }
+  }, [fontsLoaded]);
 
   // Restaurar territorio desde sessionStorage si la app se recargó
   useEffect(() => {
@@ -251,7 +294,7 @@ function AppContent() {
     if (!confirm('¿Crear un usuario de prueba admin1/admin123?')) return;
     
     try {
-      const { addDoc } = await import('firebase/firestore');
+      // CORRECCIÓN: addDoc ya está importado estáticamente arriba ⚡
       const userRef = await addDoc(collection(db, 'users'), {
         name: 'Administrador',
         accessCode: 'admin1',
@@ -326,33 +369,31 @@ function AppContent() {
         handleLogout={logout}
       />
 
-      {/* Modales */}
-      <Suspense fallback={<div>Cargando...</div>}>
-        {activeModal === 'search' && (
-          <SearchModal isOpen onClose={handleCloseModal} modalId="search-modal" />
-        )}
-        {activeModal === 'stats' && (
-          <StatsModal isOpen onClose={handleCloseModal} modalId="stats-modal" />
-        )}
-        {activeModal === 'reports' && (
-          <ReportsModal isOpen onClose={handleCloseModal} modalId="reports-modal" />
-        )}
-        {activeModal === 'admin' && currentUser?.role === 'admin' && (
-          <AdminModal isOpen onClose={handleCloseModal} modalId="admin-modal" />
-        )}
-        {activeModal === 'proposals' && currentUser?.role !== 'admin' && (
-          <ProposalsModal isOpen onClose={handleCloseModal} modalId="proposals-modal" />
-        )}
-        {activeModal === 'password' && (
-          <PasswordModal isOpen onClose={handleCloseModal} modalId="password-modal" />
-        )}
-        {activeModal === 'updates' && (
-          <UpdatesModal isOpen onClose={handleCloseModal} modalId="updates-modal" />
-        )}
-        {activeModal === 'install' && (
-          <InstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
-        )}
-      </Suspense>
+      {/* CORRECCIÓN: Modales sin Suspense - Ya optimizados ⚡ */}
+      {activeModal === 'search' && (
+        <SearchModal isOpen onClose={handleCloseModal} modalId="search-modal" />
+      )}
+      {activeModal === 'stats' && (
+        <LazyStatsModal isOpen onClose={handleCloseModal} modalId="stats-modal" />
+      )}
+      {activeModal === 'reports' && (
+        <LazyReportsModal isOpen onClose={handleCloseModal} modalId="reports-modal" />
+      )}
+      {activeModal === 'admin' && currentUser?.role === 'admin' && (
+        <LazyAdminModal isOpen onClose={handleCloseModal} modalId="admin-modal" />
+      )}
+      {activeModal === 'proposals' && currentUser?.role !== 'admin' && (
+        <LazyProposalsModal isOpen onClose={handleCloseModal} modalId="proposals-modal" />
+      )}
+      {activeModal === 'password' && (
+        <PasswordModal isOpen onClose={handleCloseModal} modalId="password-modal" />
+      )}
+      {activeModal === 'updates' && (
+        <UpdatesModal isOpen onClose={handleCloseModal} modalId="updates-modal" />
+      )}
+      {activeModal === 'install' && (
+        <InstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
+      )}
     </div>
   );
 }

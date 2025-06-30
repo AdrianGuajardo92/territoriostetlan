@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import { db } from '../config/firebase';
 import { 
   collection, 
@@ -91,8 +91,17 @@ export const AppProvider = ({ children }) => {
   const [authLoading, setAuthLoading] = useState(true);
   const [adminEditMode, setAdminEditMode] = useState(false);
   const { showToast } = useToast();
+  
+  // OPTIMIZACIÓN FASE 2: Refs para evitar re-renders ⚡
+  const unsubscribersRef = useRef([]);
+  const currentUserRef = useRef(currentUser);
 
   const CURRENT_VERSION = '2.7.1';
+  
+  // OPTIMIZACIÓN: Actualizar ref cuando cambie currentUser ⚡
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
 
   // Auth functions
   useEffect(() => {
@@ -117,7 +126,8 @@ export const AppProvider = ({ children }) => {
     setAuthLoading(false);
   }, []);
 
-  const login = async (accessCode, password) => {
+  // OPTIMIZACIÓN: Memoizar funciones críticas ⚡
+  const login = useCallback(async (accessCode, password) => {
     try {
       // Buscar usuario por código de acceso
       const usersRef = collection(db, 'users');
@@ -157,9 +167,9 @@ export const AppProvider = ({ children }) => {
       console.error('Login error:', error);
       return { success: false, error: 'Error al conectar con el servidor' };
     }
-  };
+  }, []); // No dependencies needed
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       // Limpiar usuario de localStorage
       localStorage.removeItem('currentUser');
@@ -179,7 +189,7 @@ export const AppProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     }
-  };
+  }, []); // No dependencies needed
 
   const updatePassword = async (newPassword) => {
     try {
@@ -200,9 +210,12 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Load data
+  // OPTIMIZACIÓN FASE 2: Event listeners consolidados ⚡
   useEffect(() => {
     if (!currentUser) {
+      // Limpiar unsubscribers anteriores si hay
+      unsubscribersRef.current.forEach(unsub => unsub());
+      unsubscribersRef.current = [];
       return;
     }
 
@@ -296,14 +309,21 @@ export const AppProvider = ({ children }) => {
           }
         );
 
+        // OPTIMIZACIÓN: Almacenar unsubscribers en ref ⚡
+        unsubscribersRef.current = [
+          unsubscribeTerritories,
+          unsubscribeAddresses,
+          unsubscribePublishers,
+          ...(unsubscribeUsers ? [unsubscribeUsers] : []),
+          unsubscribeProposals
+        ];
+
         setIsLoading(false);
 
         return () => {
-          unsubscribeTerritories();
-          unsubscribeAddresses();
-          unsubscribePublishers();
-          if (unsubscribeUsers) unsubscribeUsers();
-          unsubscribeProposals();
+          // Usar ref para cleanup más eficiente
+          unsubscribersRef.current.forEach(unsub => unsub());
+          unsubscribersRef.current = [];
         };
       } catch (error) {
         console.error('Error loading data:', error);
@@ -426,8 +446,8 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Advanced Address functions - Sistema completo de direcciones
-  const handleToggleAddressStatus = async (addressId, currentStatus) => {
+  // OPTIMIZACIÓN: Advanced Address functions memoizadas ⚡
+  const handleToggleAddressStatus = useCallback(async (addressId, currentStatus) => {
     const newVisitedStatus = !currentStatus;
     
     try {
@@ -466,7 +486,7 @@ export const AppProvider = ({ children }) => {
       showToast('Error al actualizar estado de dirección.', 'error');
       throw error;
     }
-  };
+  }, [addresses, currentUser, showToast]); // Dependencies para useCallback
 
   // ✅ NUEVA FUNCIÓN: Sincronizar estado del territorio con sus direcciones
   const syncTerritoryStatus = async (territoryId, triggeredByVisited) => {

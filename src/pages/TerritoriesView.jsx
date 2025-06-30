@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import TerritoryCard from '../components/territories/TerritoryCard';
 import TerritoryFilters from '../components/territories/TerritoryFilters';
@@ -10,6 +10,10 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  
+  // OPTIMIZACIÓN FASE 2: Refs para scroll performance ⚡
+  const containerRef = useRef(null);
+  const [visibleCards, setVisibleCards] = useState(new Set());
 
   // Calcular contadores
   const pendingProposalsCount = useMemo(() => {
@@ -75,6 +79,50 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const userHasAssignedTerritories = useMemo(() => {
     return territories.some(t => t.status === 'En uso' && t.assignedTo === currentUser?.name);
   }, [territories, currentUser?.name]);
+  
+  // OPTIMIZACIÓN: Memoizar handlers para evitar re-renders ⚡
+  const handleFilterChange = useCallback((newFilter) => {
+    setFilterStatus(newFilter);
+  }, []);
+  
+  const handleSortChange = useCallback((newSort) => {
+    setSortBy(newSort);
+  }, []);
+  
+  const handleClearFilters = useCallback(() => {
+    setFilterStatus('all');
+  }, []);
+  
+  // OPTIMIZACIÓN: Crear handlers memoizados para territorios ⚡
+  const createTerritorySelectHandler = useCallback((territory) => {
+    return () => onSelectTerritory(territory);
+  }, [onSelectTerritory]);
+
+  // OPTIMIZACIÓN: Intersection Observer para lazy loading ⚡
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          const cardId = entry.target.dataset.territoryId;
+          if (entry.isIntersecting) {
+            setVisibleCards(prev => new Set([...prev, cardId]));
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: '50px', // Precargar 50px antes de que sea visible
+        threshold: 0.1
+      }
+    );
+    
+    const cards = containerRef.current.querySelectorAll('[data-territory-id]');
+    cards.forEach(card => observer.observe(card));
+    
+    return () => observer.disconnect();
+  }, [filteredAndSortedTerritories]);
 
   return (
     <div className="min-h-screen pb-24 sm:pb-8" style={{ backgroundColor: '#F5F5F5' }}>
@@ -115,7 +163,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
         {/* Filtros */}
         <TerritoryFilters
           filterStatus={filterStatus}
-          setFilterStatus={setFilterStatus}
+          setFilterStatus={handleFilterChange}
           stats={stats}
           userHasAssignedTerritories={userHasAssignedTerritories}
         />
@@ -130,13 +178,32 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             {[...Array(10)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : filteredAndSortedTerritories.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div 
+            ref={containerRef}
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 territory-list"
+            style={{
+              // OPTIMIZACIÓN: CSS para scroll performance ⚡
+              contain: 'layout style paint',
+              willChange: 'scroll-position',
+              transform: 'translateZ(0)' // Forza GPU acceleration
+            }}
+          >
             {filteredAndSortedTerritories.map(t => (
-              <TerritoryCard 
-                key={t.id} 
-                territory={t} 
-                onSelect={onSelectTerritory} 
-              />
+              <div
+                key={t.id}
+                data-territory-id={t.id}
+                className="territory-card"
+                style={{
+                  // OPTIMIZACIÓN: Cada tarjeta optimizada ⚡
+                  contain: 'layout',
+                  willChange: 'transform'
+                }}
+              >
+                <TerritoryCard 
+                  territory={t} 
+                  onSelect={createTerritorySelectHandler(t)} 
+                />
+              </div>
             ))}
           </div>
         ) : (
@@ -149,7 +216,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             </p>
             {filterStatus !== 'all' && (
               <button 
-                onClick={() => setFilterStatus('all')} 
+                onClick={handleClearFilters} 
                 className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium"
               >
                 Limpiar filtros

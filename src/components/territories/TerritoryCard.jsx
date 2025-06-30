@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import Icon from '../common/Icon';
 import { formatRelativeTime } from '../../utils/helpers';
 
-const TerritoryCard = ({ territory, onSelect }) => {
-  // Normalizar el estado para manejar "Terminado" como "Completado"
-  const normalizedStatus = territory.status === 'Terminado' ? 'Completado' : territory.status;
+// OPTIMIZACIÓN FASE 2: TerritoryCard memoizada para evitar re-renders ⚡
+const TerritoryCard = memo(({ territory, onSelect }) => {
+  // OPTIMIZACIÓN: Memoizar normalización de estado ⚡
+  const normalizedStatus = useMemo(() => 
+    territory.status === 'Terminado' ? 'Completado' : territory.status, 
+    [territory.status]
+  );
   
-  const statusConfig = {
+  // OPTIMIZACIÓN: Memoizar configuración de estado (estático) ⚡
+  const statusConfig = useMemo(() => ({
     'Disponible': {
       // Colores principales
       bgGradient: 'from-emerald-50 to-green-50',
@@ -68,36 +73,42 @@ const TerritoryCard = ({ territory, onSelect }) => {
       iconBg: 'bg-rose-100',
       iconColor: 'text-rose-600'
     }
-  };
+  }), []); // Configuración estática, sin dependencias
 
-  const config = statusConfig[normalizedStatus] || statusConfig['Disponible'];
+  // OPTIMIZACIÓN: Memoizar configuración actual ⚡
+  const config = useMemo(() => 
+    statusConfig[normalizedStatus] || statusConfig['Disponible'], 
+    [statusConfig, normalizedStatus]
+  );
 
-  // Función para obtener el responsable del territorio
-  const getResponsiblePerson = () => {
+  // OPTIMIZACIÓN: Memoizar persona responsable ⚡
+  const responsiblePerson = useMemo(() => {
     if (normalizedStatus === 'Completado') {
       return territory.completedBy || territory.terminadoPor || territory.assignedTo || 'No especificado';
     } else if (normalizedStatus === 'En uso') {
       return territory.assignedTo;
     }
     return null;
-  };
+  }, [normalizedStatus, territory.completedBy, territory.terminadoPor, territory.assignedTo]);
 
-  // Función para obtener la fecha relevante
-  const getRelevantDate = () => {
+  // OPTIMIZACIÓN: Memoizar fecha relevante ⚡
+  const relevantDate = useMemo(() => {
     if (normalizedStatus === 'Completado') {
       return territory.completedDate || territory.terminadoDate || territory.lastWorked;
     } else if (normalizedStatus === 'En uso') {
       return territory.assignedDate;
     }
     return territory.lastWorked;
-  };
+  }, [normalizedStatus, territory.completedDate, territory.terminadoDate, territory.lastWorked, territory.assignedDate]);
 
-  const responsiblePerson = getResponsiblePerson();
-  const relevantDate = getRelevantDate();
+  // OPTIMIZACIÓN: Memoizar handler de click ⚡
+  const handleClick = useCallback(() => {
+    onSelect(territory);
+  }, [onSelect, territory]);
 
   return (
     <div
-      onClick={() => onSelect(territory)}
+      onClick={handleClick}
       className={`
         relative group cursor-pointer
         bg-gradient-to-br ${config.bgGradient}
@@ -238,6 +249,9 @@ const TerritoryCard = ({ territory, onSelect }) => {
       </div>
     </div>
   );
-};
+});
+
+// OPTIMIZACIÓN: Display name para React DevTools ⚡
+TerritoryCard.displayName = 'TerritoryCard';
 
 export default TerritoryCard; 
