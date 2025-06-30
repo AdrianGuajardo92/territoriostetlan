@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useToast } from '../../hooks/useToast';
 import Icon from '../common/Icon';
+import { openCompleteRouteInGoogleMaps } from '../../utils/routeOptimizer';
 
 const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedToMe, isAdmin, onEditAddress, sortState, onOptimizedRoute, onResetSort, onToggleAddressStatus }) => {
     const mapRef = useRef(null);
@@ -551,17 +552,12 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                             onClick={() => {
                                 console.log('🗺️ Iniciando apertura de ruta completa en Google Maps');
                                 try {
-                                    // Importar las funciones desde routeOptimizer
-                                    import('../../utils/routeOptimizer').then(({ openCompleteRouteInGoogleMaps }) => {
-                                        const success = openCompleteRouteInGoogleMaps(addresses, sortState.userLocation);
-                                        if (success) {
-                                            console.log('✅ Ruta completa abierta exitosamente');
-                                        } else {
-                                            console.error('❌ Error al abrir la ruta completa');
-                                        }
-                                    }).catch(error => {
-                                        console.error('❌ Error al importar routeOptimizer:', error);
-                                    });
+                                    const success = openCompleteRouteInGoogleMaps(addresses, sortState.userLocation);
+                                    if (success) {
+                                        console.log('✅ Ruta completa abierta exitosamente');
+                                    } else {
+                                        console.error('❌ Error al abrir la ruta completa');
+                                    }
                                 } catch (error) {
                                     console.error('❌ Error al ejecutar openCompleteRouteInGoogleMaps:', error);
                                 }
