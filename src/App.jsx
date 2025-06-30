@@ -100,30 +100,69 @@ function AppContent() {
   // Manejar el botón físico de volver
   useEffect(() => {
     const handlePopState = (event) => {
-      // Para pantalla principal - solo cerrar componentes abiertos
+      console.log('🔄 PopState detectado:', {
+        selectedTerritory: !!selectedTerritory,
+        activeModal,
+        isMenuOpen,
+        state: event.state
+      });
+
+      // PRIORIDAD 1: Si hay territorio seleccionado, volver a lista
       if (selectedTerritory) {
-        // Si hay territorio seleccionado, volver a lista
+        console.log('✅ Cerrando territorio, volviendo a lista');
         setSelectedTerritory(null);
+        event.preventDefault();
         return;
       }
 
+      // PRIORIDAD 2: Si hay modal activo, cerrarlo
       if (activeModal) {
-        // Los modales ahora se manejan automáticamente con useModalHistory
-        // Solo resetear el estado local
+        console.log('✅ Cerrando modal:', activeModal);
         setActiveModal(null);
+        event.preventDefault();
         return;
       }
 
+      // PRIORIDAD 3: Si hay menú abierto, cerrarlo
       if (isMenuOpen) {
-        // Si hay menú abierto, cerrarlo
+        console.log('✅ Cerrando menú');
         setIsMenuOpen(false);
+        event.preventDefault();
         return;
       }
 
-      // Si está en pantalla principal sin nada abierto, mostrar confirmación de salida
+      // PRIORIDAD 4: Verificar el estado del historial para determinar acción
+      const currentState = event.state;
+      
+      // Si tenemos un estado específico de la app, manejarlo
+      if (currentState && currentState.app === 'territorios') {
+        if (currentState.level === 'territory') {
+          console.log('✅ Estado del historial: volviendo de territorio');
+          return; // Permitir navegación normal
+        }
+        if (currentState.level === 'menu') {
+          console.log('✅ Estado del historial: volviendo de menú');
+          return; // Permitir navegación normal
+        }
+        if (currentState.level === 'main') {
+          console.log('✅ Estado del historial: en pantalla principal');
+          return; // Permitir navegación normal
+        }
+      }
+
+      // PRIORIDAD 5: Solo mostrar confirmación si realmente estamos en la pantalla principal
+      // y no hay nada abierto y el usuario está tratando de salir de la app
+      console.log('⚠️ Usuario intentando salir de la app');
+      event.preventDefault();
+      
       const shouldExit = window.confirm('¿Quieres salir de la aplicación?');
       if (shouldExit) {
-        window.close();
+        // Cerrar ventana o ir a la página anterior del navegador
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.close();
+        }
       } else {
         // Si no quiere salir, mantener en la misma página
         window.history.pushState({ app: 'territorios', level: 'main' }, '', window.location.href);

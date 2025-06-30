@@ -105,8 +105,32 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       const modalStates = modalStatesRef.current;
       if (!modalStates) return;
       
-      // Los modales ahora se manejan automáticamente con useModalHistory
-      // Solo resetear estados locales cuando sea necesario
+      console.log('🏠 TerritoryDetailView - PopState detectado:', {
+        hasFormModal: modalStates.isFormModalOpen,
+        hasAssignModal: modalStates.isAssignModalOpen,
+        hasMapModal: modalStates.isMapModalOpen,
+        hasConfirmReturn: modalStates.showConfirmReturn,
+        hasConfirmComplete: modalStates.showConfirmComplete
+      });
+      
+      // Solo manejar si hay modales abiertos en el territorio
+      // Si no hay modales, dejar que el listener de App.jsx maneje la navegación
+      const hasAnyModalOpen = modalStates.isFormModalOpen || 
+                              modalStates.isAssignModalOpen || 
+                              modalStates.isMapModalOpen || 
+                              modalStates.showConfirmReturn || 
+                              modalStates.showConfirmComplete;
+      
+      if (!hasAnyModalOpen) {
+        console.log('✅ TerritoryDetailView - No hay modales abiertos, dejando que App.jsx maneje la navegación');
+        return; // Permitir que App.jsx maneje la navegación hacia la lista de territorios
+      }
+      
+      // Si hay modales abiertos, cerrarlos y prevenir navegación adicional
+      console.log('✅ TerritoryDetailView - Cerrando modales locales');
+      event.preventDefault();
+      event.stopPropagation();
+      
       if (modalStates.isFormModalOpen) {
         modalStates.setIsFormModalOpen(false);
         modalStates.setEditingAddress(null);
