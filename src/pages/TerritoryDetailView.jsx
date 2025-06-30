@@ -284,36 +284,90 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     });
   };
 
-  // Función para abrir la ruta completa en Google Maps
+  // Función para abrir la ruta completa en Google Maps - VERSIÓN INTELIGENTE
   const handleOpenCompleteRoute = async () => {
     try {
-      // Determinar qué direcciones usar
-      const addressesToUse = sortState.sortOrder === 'optimized' && sortState.optimizedRoute 
-        ? sortState.optimizedRoute 
-        : territoryAddresses;
+      showToast('🔍 Calculando la ruta más eficiente...', 'info', 3000);
 
-      if (addressesToUse.length === 0) {
-        showToast('No hay direcciones disponibles para crear la ruta', 'warning');
+      // PASO 1: Siempre intentar obtener la ubicación del usuario
+      let userLocation = null;
+      try {
+        userLocation = await getCurrentLocation();
+        showToast('📍 Ubicación obtenida. Calculando ruta desde tu posición...', 'info', 2000);
+      } catch (error) {
+        console.log('No se pudo obtener ubicación del usuario');
+        showToast('⚠️ Sin ubicación GPS. Optimizando ruta sin punto de partida...', 'warning', 2000);
+      }
+
+      // PASO 2: Decidir qué direcciones usar
+      let addressesToOptimize;
+      let useExistingOptimization = false;
+
+      if (sortState.sortOrder === 'optimized' && sortState.optimizedRoute && sortState.optimizedRoute.length > 0) {
+        // Ya hay una ruta optimizada activa - usarla
+        addressesToOptimize = sortState.optimizedRoute;
+        useExistingOptimization = true;
+        console.log('🔄 Usando ruta optimizada existente');
+      } else {
+        // No hay ruta optimizada - usar direcciones originales y optimizar automáticamente
+        addressesToOptimize = territoryAddresses;
+        useExistingOptimization = false;
+        console.log('🧮 Calculando nueva ruta optimizada para Google Maps');
+      }
+
+      if (addressesToOptimize.length === 0) {
+        showToast('❌ No hay direcciones disponibles para crear la ruta', 'warning');
         return;
       }
 
-      // Usar la ubicación del usuario si está disponible
-      const userLocation = sortState.userLocation || null;
+      // PASO 3: Si no hay optimización existente, calcular la mejor ruta automáticamente
+      let finalAddresses;
+      if (!useExistingOptimization) {
+        // Calcular ruta optimizada específicamente para Google Maps
+        finalAddresses = await optimizeRoute(addressesToOptimize, userLocation);
+        console.log('✅ Ruta optimizada calculada automáticamente');
+      } else {
+        finalAddresses = addressesToOptimize;
+      }
 
-      // Abrir la ruta en Google Maps
-      const success = openCompleteRouteInGoogleMaps(addressesToUse, userLocation);
+      // PASO 4: Verificar que tengamos direcciones válidas
+      const addressesWithCoords = finalAddresses.filter(addr => {
+        return (addr.latitude && addr.longitude) || 
+               (addr.mapUrl && addr.mapUrl.includes('google.com/maps'));
+      });
+
+      if (addressesWithCoords.length === 0) {
+        showToast('❌ No hay direcciones con coordenadas válidas para crear la ruta', 'error');
+        return;
+      }
+
+      // PASO 5: Generar y abrir la ruta en Google Maps
+      const success = openCompleteRouteInGoogleMaps(finalAddresses, userLocation);
       
       if (success) {
-        const message = sortState.sortOrder === 'optimized' 
-          ? `🗺️ Abriendo ruta optimizada con ${addressesToUse.length} direcciones en Google Maps`
-          : `🗺️ Abriendo ruta con ${addressesToUse.length} direcciones en Google Maps`;
-        showToast(message, 'success', 4000);
+        // Mostrar mensaje de éxito con información detallada
+        const stats = calculateRouteStats(finalAddresses);
+        const locationInfo = userLocation ? '📍 desde tu ubicación' : '🗺️ optimizada';
+        const message = useExistingOptimization 
+          ? `🗺️ Ruta optimizada abierta ${locationInfo} (${addressesWithCoords.length} paradas)`
+          : `🚀 Ruta auto-optimizada ${locationInfo} (${addressesWithCoords.length} paradas, ~${stats.totalDistance}km)`;
+        
+        showToast(message, 'success', 5000);
+        
+        // Log para debugging
+        console.log('🎯 Ruta abierta exitosamente:', {
+          totalAddresses: finalAddresses.length,
+          addressesWithCoords: addressesWithCoords.length,
+          userLocation: !!userLocation,
+          wasOptimized: !useExistingOptimization,
+          estimatedDistance: stats.totalDistance
+        });
       } else {
-        showToast('No se pudo generar la ruta. Verifica que las direcciones tengan coordenadas válidas.', 'error');
+        showToast('❌ Error al generar la URL de Google Maps', 'error');
       }
     } catch (error) {
-      console.error('Error abriendo ruta completa:', error);
-      showToast('Error al abrir la ruta en Google Maps', 'error');
+      console.error('❌ Error abriendo ruta completa:', error);
+      showToast('Error al calcular la ruta. Intenta de nuevo.', 'error');
     }
   };
 
@@ -359,7 +413,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           setViewMode
         }}
         onOpenMapModal={() => setIsMapModalOpen(true)}
-        onOpenCompleteRoute={handleOpenCompleteRoute}
       />
 
       {/* Lista de direcciones */}

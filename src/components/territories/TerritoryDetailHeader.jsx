@@ -13,8 +13,7 @@ const TerritoryDetailHeader = ({
   isAssignedToMe,
   sortControls,
   viewControls,
-  onOpenMapModal,
-  onOpenCompleteRoute
+  onOpenMapModal
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
@@ -361,16 +360,24 @@ const TerritoryDetailHeader = ({
 
           {/* Solo funciones útiles visibles */}
           <div className="flex items-center space-x-2">
-            {/* Ruta optimizada */}
+            {/* Ruta optimizada - BOTÓN INTELIGENTE TOGGLE */}
             <button 
-              onClick={sortControls.onOptimizedRoute} 
+              onClick={() => {
+                if (sortControls.sortOrder === 'optimized') {
+                  // Si ya está activa, desactivar (resetear)
+                  sortControls.onResetSort();
+                } else {
+                  // Si no está activa, crear ruta optimizada
+                  sortControls.onOptimizedRoute();
+                }
+              }} 
               disabled={sortControls.isCalculatingRoute}
               className={`relative p-2 rounded-lg transition-all duration-200 ${
                 sortControls.sortOrder === 'optimized' 
                 ? 'bg-emerald-500/90 scale-105' 
                 : 'bg-white/20 hover:bg-white/30'
               }`}
-              title={sortControls.sortOrder === 'optimized' ? 'Desactivar ruta optimizada' : 'Activar ruta optimizada'}
+              title={sortControls.sortOrder === 'optimized' ? 'Desactivar ruta optimizada' : 'Crear ruta optimizada'}
             >
               {sortControls.isCalculatingRoute ? (
                 <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
@@ -382,19 +389,6 @@ const TerritoryDetailHeader = ({
               {sortControls.sortOrder === 'optimized' && !sortControls.isCalculatingRoute && (
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></span>
               )}
-            </button>
-
-            {/* Ruta completa en Google Maps */}
-            <button 
-              onClick={onOpenCompleteRoute}
-              disabled={sortControls.isCalculatingRoute}
-              className="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-200 disabled:opacity-50"
-              title="Abrir ruta completa en Google Maps"
-            >
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3" />
-              </svg>
             </button>
             
             {/* Ver mapa */}

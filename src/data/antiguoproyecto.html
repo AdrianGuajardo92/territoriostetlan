@@ -3289,16 +3289,61 @@ const TerritoryMapModal = ({ isOpen, onClose, territory, addresses, isAssignedTo
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors"><Icon name="x" size={20} className="text-gray-600" /></button>
                 </div>
                 <div className="flex items-center justify-end space-x-2">
-                    {sortState.sortOrder !== 'alpha' ? (
-                        <button onClick={onResetSort} className="p-2.5 text-red-500 bg-white rounded-lg shadow-sm border border-red-200 hover:bg-red-50 transition-all" title="Restaurar orden original"><Icon name="x" size={18} /></button>
-                    ) : (
+                    {/* Botón para ordenar por proximidad - solo visible en orden alfabético */}
+                    {sortState.sortOrder === 'alpha' && (
                         <button onClick={onSortByDistance} disabled={sortState.isLocating} className="p-2.5 text-slate-500 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-slate-200 hover:border-blue-300 disabled:opacity-50 transition-all" title="Ordenar por proximidad">
                             {sortState.isLocating ? <div className="animate-spin w-[18px] h-[18px] border-2 border-slate-400 border-t-transparent rounded-full"></div> : <Icon name="navigation" size={18} />}
                         </button>
                     )}
-                    <button onClick={onOptimizedRoute} disabled={sortState.isCalculatingRoute} className={`p-2.5 rounded-lg shadow-sm border transition-all ${sortState.sortOrder === 'optimized' ? 'bg-green-600 text-white border-green-700' : 'bg-white text-slate-500 hover:text-green-600 border-slate-200 hover:border-green-300'}`} title="Activar/Desactivar ruta optimizada">
-                        {sortState.isCalculatingRoute ? <div className="animate-spin w-[18px] h-[18px] border-2 border-current border-t-transparent rounded-full"></div> : <Icon name="activity" size={18} />}
+                    
+                    {/* Botón para reset - solo visible cuando hay orden por distancia */}
+                    {sortState.sortOrder === 'distance' && (
+                        <button onClick={onResetSort} className="p-2.5 text-red-500 bg-white rounded-lg shadow-sm border border-red-200 hover:bg-red-50 transition-all" title="Restaurar orden original">
+                            <Icon name="x" size={18} />
+                        </button>
+                    )}
+                    
+                    {/* Botón toggle único para ruta optimizada */}
+                    <button 
+                        onClick={sortState.sortOrder === 'optimized' ? onResetSort : onOptimizedRoute} 
+                        disabled={sortState.isCalculatingRoute} 
+                        className={`p-2.5 rounded-lg shadow-sm border transition-all ${
+                            sortState.sortOrder === 'optimized' 
+                            ? 'bg-green-600 text-white border-green-700' 
+                            : 'bg-white text-slate-500 hover:text-green-600 border-slate-200 hover:border-green-300'
+                        }`} 
+                        title={sortState.sortOrder === 'optimized' ? 'Desactivar ruta optimizada' : 'Activar ruta optimizada'}
+                    >
+                        {sortState.isCalculatingRoute ? (
+                            <div className="animate-spin w-[18px] h-[18px] border-2 border-current border-t-transparent rounded-full"></div>
+                        ) : (
+                            <Icon name="activity" size={18} />
+                        )}
                     </button>
+                    
+                    {/* Botón para abrir ruta completa en Google Maps - solo visible cuando hay ruta optimizada */}
+                    {sortState.sortOrder === 'optimized' && (
+                        <button 
+                            onClick={() => {
+                                console.log('🗺️ Iniciando apertura de ruta completa en Google Maps');
+                                try {
+                                    // Usar las funciones que ya están disponibles globalmente
+                                    const success = openCompleteRouteInGoogleMaps(addresses, sortState.userLocation);
+                                    if (success) {
+                                        console.log('✅ Ruta completa abierta exitosamente');
+                                    } else {
+                                        console.error('❌ Error al abrir la ruta completa');
+                                    }
+                                } catch (error) {
+                                    console.error('❌ Error al ejecutar openCompleteRouteInGoogleMaps:', error);
+                                }
+                            }}
+                            className="p-2.5 bg-blue-600 text-white rounded-lg shadow-sm border border-blue-700 hover:bg-blue-700 transition-all" 
+                            title="Abrir ruta completa en Google Maps"
+                        >
+                            <Icon name="map" size={18} />
+                        </button>
+                    )}
                 </div>
             </div>
             
@@ -8448,6 +8493,104 @@ useEffect(() => {
 
             const getDistance = (lat1, lon1, lat2, lon2) => { const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180; const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2); const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); return R * c; };
             const extractCoordinatesFromMapUrl = (mapUrl) => { if (!mapUrl) return null; const patterns = [/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/, /[@!](-?\d+\.?\d*),(-?\d+\.?\d*)/, /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/, /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/, /@(-?\d+\.\d+),(-?\d+\.\d+)/]; for (const pattern of patterns) { const match = mapUrl.match(pattern); if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) }; } return null; };
+
+            // === FUNCIONES MEJORADAS DE GOOGLE MAPS ===
+            const generateGoogleMapsRouteUrl = (addresses, userLocation = null) => {
+                try {
+                    console.log('🗺️ Generando URL de Google Maps...');
+                    
+                    if (!addresses || addresses.length === 0) {
+                        console.error('❌ No hay direcciones para generar la ruta');
+                        return null;
+                    }
+
+                    // Filtrar direcciones con coordenadas válidas
+                    const validAddresses = addresses.filter(address => {
+                        const coords = (address.latitude && address.longitude) ? 
+                            { lat: address.latitude, lng: address.longitude } : 
+                            extractCoordinatesFromMapUrl(address.mapUrl);
+                        return coords !== null;
+                    });
+
+                    if (validAddresses.length === 0) {
+                        console.error('❌ No hay direcciones con coordenadas válidas');
+                        return null;
+                    }
+
+                    console.log(`📍 Direcciones válidas encontradas: ${validAddresses.length}`);
+
+                    // Base URL de Google Maps
+                    let googleMapsUrl = 'https://www.google.com/maps/dir/';
+                    
+                    // Si hay ubicación del usuario, usarla como origen
+                    if (userLocation) {
+                        googleMapsUrl += `${userLocation.lat},${userLocation.lng}/`;
+                        console.log(`🎯 Punto de partida: ${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`);
+                    }
+
+                    // Agregar todas las direcciones como waypoints
+                    validAddresses.forEach((address, index) => {
+                        const coords = (address.latitude && address.longitude) ? 
+                            { lat: address.latitude, lng: address.longitude } : 
+                            extractCoordinatesFromMapUrl(address.mapUrl);
+                        
+                        if (coords) {
+                            googleMapsUrl += `${coords.lat},${coords.lng}/`;
+                            console.log(`📍 Parada ${index + 1}: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)} - ${address.address || 'Sin dirección'}`);
+                        }
+                    });
+
+                    // Parámetros adicionales para optimización
+                    googleMapsUrl += `?travelmode=driving&optimize=true`;
+                    
+                    console.log('✅ URL de Google Maps generada exitosamente');
+                    console.log(`🔗 URL: ${googleMapsUrl.substring(0, 100)}...`);
+                    
+                    return googleMapsUrl;
+                } catch (error) {
+                    console.error('❌ Error al generar URL de Google Maps:', error);
+                    return null;
+                }
+            };
+
+            const openCompleteRouteInGoogleMaps = (addresses, userLocation = null) => {
+                try {
+                    console.log('🚀 Iniciando apertura de ruta completa en Google Maps');
+                    console.log(`📍 Direcciones recibidas: ${addresses?.length || 0}`);
+                    console.log(`🧭 Ubicación del usuario: ${userLocation ? 'Disponible' : 'No disponible'}`);
+                    
+                    if (!addresses || addresses.length === 0) {
+                        console.error('❌ No se proporcionaron direcciones');
+                        return false;
+                    }
+
+                    // Generar la URL optimizada
+                    const googleMapsUrl = generateGoogleMapsRouteUrl(addresses, userLocation);
+                    
+                    if (!googleMapsUrl) {
+                        console.error('❌ No se pudo generar la URL de Google Maps');
+                        return false;
+                    }
+
+                    console.log('🌐 Abriendo Google Maps en nueva pestaña...');
+                    
+                    // Abrir en nueva pestaña/ventana
+                    const newWindow = window.open(googleMapsUrl, '_blank');
+                    
+                    if (newWindow) {
+                        console.log('✅ Google Maps abierto exitosamente');
+                        return true;
+                    } else {
+                        console.warn('⚠️ Bloqueador de ventanas emergentes detectado');
+                        // Fallback: intentar navegación directa
+                        window.location.href = googleMapsUrl;
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('❌ Error al abrir ruta en Google Maps:', error);
+                    return false;
+                }
+            };
 
             const updateSortState = (territoryId, newSortState) => {
                 setActiveSortStates(prev => ({

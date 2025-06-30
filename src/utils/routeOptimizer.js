@@ -50,10 +50,12 @@ const getCoordinates = (address) => {
   return extractCoordinatesFromMapUrl(address.mapUrl);
 };
 
-// Algoritmo del vecino más cercano (Nearest Neighbor)
+// Algoritmo del vecino más cercano (Nearest Neighbor) - VERSIÓN MEJORADA
 const nearestNeighborTSP = (addresses, startCoord) => {
   const n = addresses.length;
   if (n === 0) return [];
+  
+  console.log(`🚀 Iniciando optimización de ruta para ${n} direcciones`);
   
   const visited = new Array(n).fill(false);
   const route = [];
@@ -62,35 +64,61 @@ const nearestNeighborTSP = (addresses, startCoord) => {
   // Si hay coordenada inicial, encontrar el punto más cercano
   if (startCoord) {
     let minDist = Infinity;
-    console.log('🗺️ Buscando dirección más cercana a tu ubicación:', startCoord);
+    let closestAddresses = []; // Para debugging
+    
+    console.log('📍 Ubicación de partida:', `${startCoord.lat.toFixed(6)}, ${startCoord.lng.toFixed(6)}`);
+    console.log('🔍 Analizando distancias a todas las direcciones:');
     
     for (let i = 0; i < n; i++) {
       const coord = getCoordinates(addresses[i]);
       if (coord) {
         const dist = calculateDistance(startCoord, coord);
-        console.log(`📍 Dirección ${i}: "${addresses[i].address}" - Distancia: ${dist.toFixed(3)} km`);
+        
+        // Log detallado para debugging
+        console.log(`   ${i + 1}. "${addresses[i].address}" → ${dist.toFixed(3)} km`);
+        
+        closestAddresses.push({ index: i, address: addresses[i].address, distance: dist });
         
         if (dist < minDist) {
           minDist = dist;
           currentIdx = i;
         }
+      } else {
+        console.log(`   ${i + 1}. "${addresses[i].address}" → SIN COORDENADAS`);
       }
     }
     
-    console.log(`✅ Dirección más cercana seleccionada: "${addresses[currentIdx].address}" (${minDist.toFixed(3)} km)`);
+    // Mostrar las 3 direcciones más cercanas para verificación
+    closestAddresses.sort((a, b) => a.distance - b.distance);
+    console.log('🎯 Top 3 direcciones más cercanas:');
+    closestAddresses.slice(0, 3).forEach((item, idx) => {
+      const emoji = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
+      console.log(`   ${emoji} "${item.address}" → ${item.distance.toFixed(3)} km`);
+    });
+    
+    console.log(`✅ PRIMERA PARADA SELECCIONADA: "${addresses[currentIdx].address}" (${minDist.toFixed(3)} km)`);
+  } else {
+    console.log('⚠️ Sin ubicación de partida - usando primera dirección disponible');
   }
   
-  // Construir la ruta
+  // Construir la ruta usando el algoritmo del vecino más cercano
   route.push(currentIdx);
   visited[currentIdx] = true;
   
+  console.log('🔄 Construyendo ruta optimizada:');
+  console.log(`   1. ${addresses[currentIdx].address} (INICIO)`);
+  
   for (let i = 1; i < n; i++) {
     const currentCoord = getCoordinates(addresses[currentIdx]);
-    if (!currentCoord) break;
+    if (!currentCoord) {
+      console.log(`   ⚠️ Dirección ${currentIdx + 1} no tiene coordenadas, saltando optimización`);
+      break;
+    }
     
     let nearestIdx = -1;
     let minDist = Infinity;
     
+    // Buscar la dirección más cercana no visitada
     for (let j = 0; j < n; j++) {
       if (!visited[j]) {
         const coord = getCoordinates(addresses[j]);
@@ -104,21 +132,36 @@ const nearestNeighborTSP = (addresses, startCoord) => {
       }
     }
     
-    if (nearestIdx === -1) break;
+    if (nearestIdx === -1) {
+      console.log(`   ⚠️ No se encontraron más direcciones con coordenadas`);
+      break;
+    }
     
     route.push(nearestIdx);
     visited[nearestIdx] = true;
     currentIdx = nearestIdx;
+    
+    console.log(`   ${i + 1}. ${addresses[nearestIdx].address} (+${minDist.toFixed(3)} km)`);
   }
   
   // Agregar direcciones sin coordenadas al final
+  const addressesWithoutCoords = [];
   for (let i = 0; i < n; i++) {
     if (!visited[i]) {
       route.push(i);
+      addressesWithoutCoords.push(addresses[i].address);
     }
   }
   
-  console.log('🔄 Orden de ruta final:', route.map(idx => `${idx + 1}. ${addresses[idx].address}`));
+  if (addressesWithoutCoords.length > 0) {
+    console.log('📌 Direcciones sin coordenadas añadidas al final:');
+    addressesWithoutCoords.forEach((addr, idx) => {
+      console.log(`   ${route.length - addressesWithoutCoords.length + idx + 1}. ${addr}`);
+    });
+  }
+  
+  console.log('✅ Ruta optimizada completada');
+  console.log('📊 Orden final:', route.map((idx, order) => `${order + 1}. ${addresses[idx].address}`));
   
   return route;
 };
@@ -272,53 +315,169 @@ export const calculateRouteStats = (addresses) => {
   };
 };
 
-// Generar URL de Google Maps con ruta completa y múltiples waypoints
+// Generar URL de Google Maps con ruta completa - VERSIÓN MEJORADA
 export const generateGoogleMapsRouteUrl = (addresses, userLocation = null) => {
   try {
+    console.log('🗺️ Generando URL de Google Maps...');
+    
+    if (!addresses || addresses.length === 0) {
+      console.error('❌ No hay direcciones para generar la ruta');
+      return null;
+    }
+
     // Filtrar direcciones con coordenadas válidas
-    const addressesWithCoords = addresses.filter(addr => getCoordinates(addr) !== null);
-    
-    if (addressesWithCoords.length === 0) {
-      throw new Error('No hay direcciones con coordenadas válidas');
+    const validAddresses = addresses.filter(address => {
+      const coords = getCoordinates(address);
+      return coords !== null;
+    });
+
+    if (validAddresses.length === 0) {
+      console.error('❌ No hay direcciones con coordenadas válidas');
+      return null;
     }
+
+    console.log(`📍 Procesando ${validAddresses.length} direcciones válidas de ${addresses.length} totales`);
+
+    const baseUrl = 'https://www.google.com/maps/dir';
+    const params = new URLSearchParams();
     
-    // Construir la URL base de Google Maps
-    let url = 'https://www.google.com/maps/dir/';
+    // Configurar API para uso driving y optimización
+    params.append('api', '1');
+    params.append('travelmode', 'driving');
     
-    // Si hay ubicación del usuario, usarla como punto de partida
+    // MEJORA: Si tenemos más de 8 direcciones, dividir la ruta
+    let addressesToUse = validAddresses;
+    let showWarning = false;
+    
+    if (validAddresses.length > 8) {
+      // Google Maps tiene un límite de ~8-10 waypoints en URLs directas
+      addressesToUse = validAddresses.slice(0, 8);
+      showWarning = true;
+      console.log(`⚠️ Limitando a las primeras 8 direcciones (Google Maps URL limit)`);
+    }
+
+    // PASO 1: Configurar origen (punto de partida)
+    let origin = '';
     if (userLocation) {
-      url += `${userLocation.lat},${userLocation.lng}/`;
+      origin = `${userLocation.lat},${userLocation.lng}`;
+      params.append('origin', origin);
+      console.log(`🚀 Origen configurado: Tu ubicación (${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)})`);
+    } else {
+      // Si no hay ubicación del usuario, usar la primera dirección como origen
+      const firstCoords = getCoordinates(addressesToUse[0]);
+      if (firstCoords) {
+        origin = `${firstCoords.lat},${firstCoords.lng}`;
+        params.append('origin', origin);
+        addressesToUse = addressesToUse.slice(1); // Remover la primera dirección de los waypoints
+        console.log(`🚀 Origen configurado: Primera dirección "${addressesToUse[0]?.address || 'Dirección'}"`);
+      }
     }
-    
-    // Añadir todas las direcciones como waypoints
-    addressesWithCoords.forEach((address, index) => {
+
+    // PASO 2: Configurar destino (última dirección)
+    let destination = '';
+    if (addressesToUse.length > 0) {
+      const lastAddress = addressesToUse[addressesToUse.length - 1];
+      const lastCoords = getCoordinates(lastAddress);
+      if (lastCoords) {
+        destination = `${lastCoords.lat},${lastCoords.lng}`;
+        params.append('destination', destination);
+        addressesToUse = addressesToUse.slice(0, -1); // Remover la última dirección de los waypoints
+        console.log(`🏁 Destino configurado: "${lastAddress.address}"`);
+      }
+    }
+
+    // PASO 3: Configurar waypoints (direcciones intermedias)
+    const waypoints = [];
+    addressesToUse.forEach((address, index) => {
       const coords = getCoordinates(address);
       if (coords) {
-        // Usar coordenadas si están disponibles
-        url += `${coords.lat},${coords.lng}/`;
-      } else if (address.address) {
-        // Si no hay coordenadas, usar la dirección de texto
-        url += `${encodeURIComponent(address.address)}/`;
+        waypoints.push(`${coords.lat},${coords.lng}`);
+        console.log(`   ${index + 1}. Waypoint: "${address.address}" (${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)})`);
       }
     });
+
+    if (waypoints.length > 0) {
+      // MEJORA: Usar optimización automática de Google Maps para waypoints
+      const waypointString = waypoints.join('|');
+      params.append('waypoints', `optimize:true|${waypointString}`);
+      console.log(`🛣️ Configurados ${waypoints.length} waypoints con optimización automática`);
+    }
+
+    // PASO 4: Configuraciones adicionales para mejor experiencia
+    params.append('avoid', 'tolls'); // Evitar peajes por defecto
     
-    // Añadir parámetros para optimizar la ruta
-    url += '?travelmode=driving&dir_action=navigate';
+    // PASO 5: Generar URL final
+    const finalUrl = `${baseUrl}?${params.toString()}`;
     
-    return url;
+    console.log('✅ URL de Google Maps generada exitosamente');
+    console.log(`📊 Resumen de la ruta:`);
+    console.log(`   - Origen: ${userLocation ? 'Tu ubicación' : 'Primera dirección'}`);
+    console.log(`   - Waypoints: ${waypoints.length} paradas intermedias`);
+    console.log(`   - Destino: Última dirección`);
+    console.log(`   - Optimización: ${waypoints.length > 0 ? 'Habilitada en Google Maps' : 'No aplicable'}`);
     
+    if (showWarning) {
+      console.log(`⚠️ NOTA: Solo se incluyeron las primeras 8 direcciones debido a limitaciones de URL`);
+    }
+
+    // Para debugging: mostrar la URL (sin exponer datos sensibles en producción)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔗 URL generada: ${finalUrl.substring(0, 100)}...`);
+    }
+
+    return finalUrl;
+
   } catch (error) {
-    console.error('Error generando URL de Google Maps:', error);
+    console.error('❌ Error generando URL de Google Maps:', error);
     return null;
   }
 };
 
-// Función para abrir la ruta completa en Google Maps
+// Función principal para abrir la ruta completa en Google Maps - VERSIÓN MEJORADA
 export const openCompleteRouteInGoogleMaps = (addresses, userLocation = null) => {
-  const url = generateGoogleMapsRouteUrl(addresses, userLocation);
-  if (url) {
-    window.open(url, '_blank');
+  try {
+    console.log('🚀 Iniciando apertura de ruta completa en Google Maps');
+    console.log(`📍 Direcciones recibidas: ${addresses?.length || 0}`);
+    console.log(`🧭 Ubicación del usuario: ${userLocation ? 'Disponible' : 'No disponible'}`);
+    
+    if (!addresses || addresses.length === 0) {
+      console.error('❌ No se proporcionaron direcciones');
+      return false;
+    }
+
+    // Generar la URL optimizada
+    const googleMapsUrl = generateGoogleMapsRouteUrl(addresses, userLocation);
+    
+    if (!googleMapsUrl) {
+      console.error('❌ No se pudo generar la URL de Google Maps');
+      return false;
+    }
+
+    // Abrir en nueva pestaña
+    console.log('🌐 Abriendo Google Maps en nueva pestaña...');
+    const newWindow = window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
+    
+    if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+      // El popup fue bloqueado
+      console.warn('⚠️ Popup bloqueado, intentando redirigir en la misma pestaña');
+      window.location.href = googleMapsUrl;
+      return true;
+    }
+
+    console.log('✅ Google Maps abierto exitosamente');
+    
+    // Log final con resumen
+    const validAddresses = addresses.filter(addr => getCoordinates(addr) !== null);
+    console.log('📊 Resumen final:');
+    console.log(`   🎯 Direcciones totales: ${addresses.length}`);
+    console.log(`   📍 Direcciones con coordenadas: ${validAddresses.length}`);
+    console.log(`   🗺️ Ubicación del usuario: ${userLocation ? 'Incluida como origen' : 'No disponible'}`);
+    console.log(`   🔗 Optimización Google Maps: Habilitada`);
+    
     return true;
+
+  } catch (error) {
+    console.error('❌ Error abriendo ruta en Google Maps:', error);
+    return false;
   }
-  return false;
 }; 
