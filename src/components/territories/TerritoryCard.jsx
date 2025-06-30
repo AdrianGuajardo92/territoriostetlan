@@ -118,6 +118,7 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
         hover:shadow-2xl hover:scale-[1.01] 
         active:scale-[0.99]
         transition-all duration-300 ease-out
+        touch-feedback btn-premium animate-premium-fade-scale
         p-0
       `}
     >

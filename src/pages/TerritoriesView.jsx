@@ -4,6 +4,8 @@ import TerritoryCard from '../components/territories/TerritoryCard';
 import TerritoryFilters from '../components/territories/TerritoryFilters';
 import SkeletonCard from '../components/common/SkeletonCard';
 import Icon from '../components/common/Icon';
+import { useSwipeNavigation } from '../hooks/useTouchGestures';
+import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
 
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const { territories, currentUser, proposals, isLoading, publishers } = useApp();
@@ -14,6 +16,9 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   // OPTIMIZACIÓN FASE 2: Refs para scroll performance ⚡
   const containerRef = useRef(null);
   const [visibleCards, setVisibleCards] = useState(new Set());
+  
+  // FASE 3: Premium feedback y gestures ⚡
+  const { swipeFeedback } = usePremiumFeedback();
 
   // Calcular contadores
   const pendingProposalsCount = useMemo(() => {
@@ -98,6 +103,28 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     return () => onSelectTerritory(territory);
   }, [onSelectTerritory]);
 
+  // FASE 3: Swipe navigation para filtros ⚡
+  const handleSwipeLeft = useCallback(() => {
+    swipeFeedback();
+    const filters = ['all', 'disponible', 'en uso', 'completado'];
+    const currentIndex = filters.indexOf(filterStatus);
+    const nextIndex = (currentIndex + 1) % filters.length;
+    handleFilterChange(filters[nextIndex]);
+  }, [filterStatus, handleFilterChange, swipeFeedback]);
+
+  const handleSwipeRight = useCallback(() => {
+    swipeFeedback();
+    const filters = ['all', 'disponible', 'en uso', 'completado'];
+    const currentIndex = filters.indexOf(filterStatus);
+    const nextIndex = currentIndex === 0 ? filters.length - 1 : currentIndex - 1;
+    handleFilterChange(filters[nextIndex]);
+  }, [filterStatus, handleFilterChange, swipeFeedback]);
+
+  // Aplicar swipe navigation al container principal
+  const swipeNavRef = useSwipeNavigation(handleSwipeLeft, handleSwipeRight, {
+    swipeThreshold: 80 // Más alto para evitar conflictos con scroll
+  });
+
   // OPTIMIZACIÓN: Intersection Observer para lazy loading ⚡
   useEffect(() => {
     if (!containerRef.current) return;
@@ -125,7 +152,11 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   }, [filteredAndSortedTerritories]);
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-8" style={{ backgroundColor: '#F5F5F5' }}>
+    <div 
+      ref={swipeNavRef}
+      className="min-h-screen pb-24 sm:pb-8" 
+      style={{ backgroundColor: '#F5F5F5' }}
+    >
       {/* Header */}
       <header className="shadow-md sticky top-0 z-30">
         <div className="px-4 pt-2 pb-2 flex justify-between items-center" style={{ backgroundColor: '#2C3E50' }}>
@@ -161,12 +192,23 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
         </div>
         
         {/* Filtros */}
-        <TerritoryFilters
-          filterStatus={filterStatus}
-          setFilterStatus={handleFilterChange}
-          stats={stats}
-          userHasAssignedTerritories={userHasAssignedTerritories}
-        />
+        <div className="relative">
+          <TerritoryFilters
+            filterStatus={filterStatus}
+            setFilterStatus={handleFilterChange}
+            stats={stats}
+            userHasAssignedTerritories={userHasAssignedTerritories}
+          />
+          
+          {/* FASE 3: Indicador sutil de swipe navigation */}
+          <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 opacity-30">
+            <div className="flex items-center space-x-1 text-xs text-gray-500">
+              <Icon name="chevronLeft" size={12} />
+              <span className="hidden sm:inline">Desliza</span>
+              <Icon name="chevronRight" size={12} />
+            </div>
+          </div>
+        </div>
       </header>
 
 

@@ -191,6 +191,149 @@ button, [role="button"], .clickable {
   will-change: transform, opacity;
 }
 
+/* FASE 3: ANIMACIONES PREMIUM CON GPU ⚡ */
+
+/* Micro-animaciones suaves */
+@keyframes micro-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes micro-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes smooth-slide-up {
+  0% { 
+    transform: translateY(20px); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+@keyframes smooth-slide-down {
+  0% { 
+    transform: translateY(-20px); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+@keyframes premium-fade-scale {
+  0% { 
+    transform: scale(0.95); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+}
+
+/* Clases de animación premium */
+.animate-micro-bounce {
+  animation: micro-bounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-micro-pulse {
+  animation: micro-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-smooth-slide-up {
+  animation: smooth-slide-up 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.animate-smooth-slide-down {
+  animation: smooth-slide-down 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.animate-premium-fade-scale {
+  animation: premium-fade-scale 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Touch feedback premium */
+.touch-feedback {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.touch-feedback:active {
+  transform: scale(0.98);
+  transition-duration: 0.05s;
+}
+
+/* Premium button effects */
+.btn-premium {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.btn-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.btn-premium:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Ripple effect */
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+  z-index: 1;
+}
+
+.btn-premium:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Loading states premium */
+.loading-premium {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-premium::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.4),
+    transparent
+  );
+  animation: loading-shine 1.5s infinite;
+}
+
+@keyframes loading-shine {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
 /* OPTIMIZACIÓN FASE 2: Grid performance ⚡ */
 .grid {
   contain: layout style;
