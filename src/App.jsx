@@ -22,11 +22,37 @@ import { db } from './config/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 
 function AppContent() {
-  const { currentUser, authLoading, proposals, logout } = useApp();
+  const { currentUser, authLoading, proposals, logout, territories } = useApp();
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  // Restaurar territorio desde sessionStorage si la app se recargó
+  useEffect(() => {
+    if (currentUser && territories.length > 0 && !selectedTerritory) {
+      const lastTerritoryId = sessionStorage.getItem('lastTerritoryId');
+      const navigationTimestamp = sessionStorage.getItem('navigationTimestamp');
+      
+      if (lastTerritoryId && navigationTimestamp) {
+        const timeDiff = Date.now() - parseInt(navigationTimestamp);
+        // Si han pasado menos de 5 minutos, restaurar el territorio
+        if (timeDiff < 5 * 60 * 1000) {
+          const territory = territories.find(t => t.id === lastTerritoryId);
+          if (territory) {
+            setSelectedTerritory(territory);
+            // Limpiar sessionStorage después de restaurar
+            sessionStorage.removeItem('lastTerritoryId');
+            sessionStorage.removeItem('navigationTimestamp');
+          }
+        } else {
+          // Si ha pasado mucho tiempo, limpiar sessionStorage
+          sessionStorage.removeItem('lastTerritoryId');
+          sessionStorage.removeItem('navigationTimestamp');
+        }
+      }
+    }
+  }, [currentUser, territories, selectedTerritory]);
 
   // Menu items configuration
   const menuItems = [

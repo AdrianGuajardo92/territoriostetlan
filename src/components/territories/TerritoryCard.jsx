@@ -1,127 +1,238 @@
 import React from 'react';
 import Icon from '../common/Icon';
+import { formatRelativeTime } from '../../utils/helpers';
 
 const TerritoryCard = ({ territory, onSelect }) => {
+  // Normalizar el estado para manejar "Terminado" como "Completado"
+  const normalizedStatus = territory.status === 'Terminado' ? 'Completado' : territory.status;
+  
   const statusConfig = {
     'Disponible': {
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
-      textColor: 'text-green-700',
-      iconColor: 'text-green-500',
-      hoverBg: 'hover:bg-green-100',
-      shadowHover: 'hover:shadow-green-200/50'
+      // Colores principales
+      bgGradient: 'from-emerald-50 to-green-50',
+      borderColor: 'border-emerald-300',
+      accentColor: '#10b981', // emerald-500
+      statusBg: 'bg-emerald-100',
+      statusText: 'text-emerald-700',
+      statusDot: 'bg-emerald-500',
+      // Badge para nombres
+      badgeBg: 'bg-emerald-500',
+      badgeText: 'text-white',
+      // Badge de direcciones
+      addressBadgeBg: 'bg-emerald-100/90',
+      addressBadgeIcon: 'text-emerald-600',
+      addressBadgeText: 'text-emerald-700',
+      // Hover
+      hoverBorder: 'hover:border-emerald-400',
+      hoverShadow: 'hover:shadow-emerald-200/30',
+      // Icono principal
+      mainIcon: 'mapPin',
+      iconBg: 'bg-emerald-100',
+      iconColor: 'text-emerald-600'
     },
     'En uso': {
-      bgColor: 'bg-yellow-50',
-      borderColor: 'border-yellow-200',
-      textColor: 'text-yellow-700',
-      iconColor: 'text-yellow-500',
-      hoverBg: 'hover:bg-yellow-100',
-      shadowHover: 'hover:shadow-yellow-200/50'
+      bgGradient: 'from-amber-50 to-yellow-50',
+      borderColor: 'border-amber-300',
+      accentColor: '#f59e0b', // amber-500
+      statusBg: 'bg-amber-100',
+      statusText: 'text-amber-700',
+      statusDot: 'bg-amber-500',
+      badgeBg: 'bg-amber-500',
+      badgeText: 'text-white',
+      // Badge de direcciones
+      addressBadgeBg: 'bg-amber-100/90',
+      addressBadgeIcon: 'text-amber-600',
+      addressBadgeText: 'text-amber-700',
+      hoverBorder: 'hover:border-amber-400',
+      hoverShadow: 'hover:shadow-amber-200/30',
+      mainIcon: 'clock',
+      iconBg: 'bg-amber-100',
+      iconColor: 'text-amber-600'
     },
-    'Terminado': {
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      textColor: 'text-red-700',
-      iconColor: 'text-red-500',
-      hoverBg: 'hover:bg-red-100',
-      shadowHover: 'hover:shadow-red-200/50'
+    'Completado': {
+      bgGradient: 'from-rose-50 to-pink-50',
+      borderColor: 'border-rose-300',
+      accentColor: '#f43f5e', // rose-500
+      statusBg: 'bg-rose-100',
+      statusText: 'text-rose-700',
+      statusDot: 'bg-rose-500',
+      badgeBg: 'bg-rose-500',
+      badgeText: 'text-white',
+      // Badge de direcciones
+      addressBadgeBg: 'bg-rose-100/90',
+      addressBadgeIcon: 'text-rose-600',
+      addressBadgeText: 'text-rose-700',
+      hoverBorder: 'hover:border-rose-400',
+      hoverShadow: 'hover:shadow-rose-200/30',
+      mainIcon: 'checkCircle',
+      iconBg: 'bg-rose-100',
+      iconColor: 'text-rose-600'
     }
   };
 
-  const config = statusConfig[territory.status] || statusConfig['Disponible'];
+  const config = statusConfig[normalizedStatus] || statusConfig['Disponible'];
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'Disponible':
-        return 'mapPin';
-      case 'En uso':
-        return 'user';
-      case 'Terminado':
-        return 'check';
-      default:
-        return 'help';
+  // Función para obtener el responsable del territorio
+  const getResponsiblePerson = () => {
+    if (normalizedStatus === 'Completado') {
+      return territory.completedBy || territory.terminadoPor || territory.assignedTo || 'No especificado';
+    } else if (normalizedStatus === 'En uso') {
+      return territory.assignedTo;
     }
+    return null;
   };
+
+  // Función para obtener la fecha relevante
+  const getRelevantDate = () => {
+    if (normalizedStatus === 'Completado') {
+      return territory.completedDate || territory.terminadoDate || territory.lastWorked;
+    } else if (normalizedStatus === 'En uso') {
+      return territory.assignedDate;
+    }
+    return territory.lastWorked;
+  };
+
+  const responsiblePerson = getResponsiblePerson();
+  const relevantDate = getRelevantDate();
 
   return (
     <div
       onClick={() => onSelect(territory)}
       className={`
-        group relative overflow-hidden rounded-2xl border-2 p-6 
-        transition-all duration-300 cursor-pointer
-        ${config.bgColor} ${config.borderColor} ${config.hoverBg}
-        shadow-md hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]
-        ${config.shadowHover}
+        relative group cursor-pointer
+        bg-gradient-to-br ${config.bgGradient}
+        border-2 ${config.borderColor} ${config.hoverBorder}
+        rounded-2xl overflow-hidden
+        shadow-lg ${config.hoverShadow}
+        hover:shadow-2xl hover:scale-[1.01] 
+        active:scale-[0.99]
+        transition-all duration-300 ease-out
+        p-0
       `}
     >
-      {/* Efecto de gradiente en hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-      
-      {/* Contenido de la tarjeta */}
-      <div className="relative z-10">
-        <div className="flex items-start justify-between mb-4">
-          <h3 className="text-2xl font-bold text-gray-800 group-hover:text-gray-900 transition-colors">
-            {territory.name}
-          </h3>
-          <div className={`p-2 rounded-lg ${config.bgColor} group-hover:scale-110 transition-transform`}>
-            <Icon 
-              name={getStatusIcon(territory.status)} 
-              size={20} 
-              className={config.iconColor}
-            />
+      {/* Encabezado con gradiente */}
+      <div className="relative px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-gray-100">
+        <div className="flex items-center justify-between gap-2">
+          {/* Nombre del territorio con icono */}
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <div className={`${config.iconBg} p-2 rounded-xl shadow-sm group-hover:shadow-md transition-shadow`}>
+              <Icon 
+                name={config.mainIcon} 
+                size={20} 
+                className={config.iconColor}
+              />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 truncate flex-1">
+              {territory.name}
+            </h3>
           </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Estado:</span>
-            <span className={`font-semibold ${config.textColor}`}>
-              {territory.status}
-            </span>
-          </div>
-
-          {territory.status === 'En uso' && territory.assignedTo && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Asignado a:</span>
-              <span className="font-medium text-gray-800 truncate max-w-[150px]">
-                {territory.assignedTo}
+          
+          {/* Badge de direcciones */}
+          {territory.addressCount !== undefined && territory.addressCount > 0 && (
+            <div className={`${config.addressBadgeBg} px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-sm`}>
+              <Icon 
+                name="home" 
+                size={14} 
+                className={config.addressBadgeIcon}
+              />
+              <span className={`text-xs font-medium ${config.addressBadgeText}`}>
+                {territory.addressCount}
               </span>
             </div>
           )}
+          
+          {/* Estado badge compacto */}
+          <div className={`${config.statusBg} px-3 py-1 rounded-full flex items-center space-x-1.5 shadow-sm`}>
+            <div className={`w-2 h-2 rounded-full ${config.statusDot} ${normalizedStatus === 'En uso' ? 'animate-pulse' : ''}`}></div>
+            <span className={`text-xs font-medium ${config.statusText}`}>
+              {normalizedStatus === 'En uso' ? 'Predicando' : normalizedStatus}
+            </span>
+          </div>
+        </div>
+      </div>
 
-          {territory.lastWorked && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Última vez:</span>
-              <span className="text-sm text-gray-700">
+      {/* Contenido principal */}
+      <div className="px-4 py-3 space-y-2">
+        {/* Persona responsable */}
+        {responsiblePerson && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              <Icon 
+                name="user" 
+                size={16} 
+                className="text-gray-400 flex-shrink-0"
+              />
+              <span className="text-sm text-gray-600 truncate">
+                {normalizedStatus === 'Completado' ? 'Completado por' : 'Asignado a'}:
+              </span>
+            </div>
+            <span className={`${config.badgeBg} ${config.badgeText} px-3 py-1 rounded-full text-sm font-medium ml-2 shadow-sm`}>
+              {responsiblePerson}
+            </span>
+          </div>
+        )}
+
+        {/* Fecha relevante */}
+        {relevantDate && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Icon 
+                name="calendar" 
+                size={16} 
+                className="text-gray-400"
+              />
+              <span className="text-sm text-gray-600">
+                {normalizedStatus === 'Completado' ? 'Completado' : 
+                 normalizedStatus === 'En uso' ? 'Asignado' : 
+                 'Última vez'}:
+              </span>
+            </div>
+            <span className="text-sm font-medium text-gray-700">
+              {formatRelativeTime(relevantDate)}
+            </span>
+          </div>
+        )}
+
+        {/* Si está disponible, mostrar última vez trabajado si existe */}
+        {normalizedStatus === 'Disponible' && territory.lastWorked && (
+          <div className="pt-2 mt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Última predicación:</span>
+              <span className="text-gray-600 font-medium">
                 {new Date(territory.lastWorked.seconds * 1000).toLocaleDateString('es-MX')}
               </span>
             </div>
-          )}
-        </div>
-
-        {/* Indicador visual del estado */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center space-x-2">
-            <div className={`w-3 h-3 rounded-full ${
-              territory.status === 'Disponible' ? 'bg-green-500' :
-              territory.status === 'En uso' ? 'bg-yellow-500 animate-pulse' :
-              'bg-red-500'
-            }`}></div>
-            <span className="text-xs text-gray-500">
-              {territory.status === 'Disponible' ? 'Listo para trabajar' :
-               territory.status === 'En uso' ? 'En progreso' :
-               'Completado'}
-            </span>
           </div>
-        </div>
+        )}
 
-        {/* Flecha indicadora */}
-        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+        {/* Call to action para territorio disponible */}
+        {normalizedStatus === 'Disponible' && !territory.lastWorked && (
+          <div className="pt-2 mt-2 border-t border-gray-100">
+            <p className="text-xs text-center text-emerald-600 font-medium">
+              ¡Listo para asignar!
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Barra de acento inferior con animación */}
+      <div 
+        className="h-1 w-full bg-gradient-to-r opacity-75 group-hover:opacity-100 transition-opacity"
+        style={{
+          backgroundImage: `linear-gradient(to right, ${config.accentColor}, ${config.accentColor}dd)`
+        }}
+      />
+
+      {/* Overlay sutil en hover */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+      {/* Icono de flecha en hover (más sutil) */}
+      <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-70 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+        <div className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md">
           <Icon 
-            name="arrowRight" 
-            size={24} 
-            className="text-gray-400"
+            name="chevronRight" 
+            size={16} 
+            className="text-gray-600"
           />
         </div>
       </div>

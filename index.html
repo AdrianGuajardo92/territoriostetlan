@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="es">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,30 +12,37 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="apple-touch-icon" href="/icon-192.png">
-    
+
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
     
     <title>Territorios LS - Gestión de Territorios</title>
     
     <style>
-      body {
+        body { 
         font-family: 'Inter', sans-serif;
-      }
-      
+        }
+        
       /* Splash screen */
       #splash-screen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
         z-index: 9999;
         transition: opacity 0.5s;
       }
@@ -54,40 +61,40 @@
         width: 80px;
         height: 80px;
         margin: 0 auto 20px;
-        background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.2);
         border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
       }
       
       .splash-title {
-        font-size: 28px;
-        font-weight: 700;
+            font-size: 28px;
+            font-weight: 700;
         margin-bottom: 8px;
       }
-      
+        
       .splash-subtitle {
-        font-size: 16px;
+            font-size: 16px;
         opacity: 0.9;
         margin-bottom: 30px;
       }
       
       .splash-loader {
-        width: 40px;
-        height: 40px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-top-color: white;
-        border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
         animation: spin 0.8s linear infinite;
-        margin: 0 auto;
+            margin: 0 auto;
       }
-      
-      @keyframes spin {
+
+    @keyframes spin {
         to { transform: rotate(360deg); }
-      }
-    </style>
+    }
+</style>
   </head>
   <body>
     <!-- Splash Screen -->
@@ -97,30 +104,30 @@
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
             <circle cx="12" cy="10" r="3"></circle>
-          </svg>
-        </div>
+            </svg>
+                    </div>
         <h1 class="splash-title">Territorios LS</h1>
         <p class="splash-subtitle">Gestión de territorios</p>
         <div class="splash-loader"></div>
-      </div>
-    </div>
-    
+                </div>
+            </div>
+            
     <!-- App Root -->
     <div id="root"></div>
     
     <script>
       // Hide splash screen when app loads
       window.addEventListener('load', () => {
-        setTimeout(() => {
-          const splash = document.getElementById('splash-screen');
-          if (splash) {
+            setTimeout(() => {
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
             splash.classList.add('hide');
             setTimeout(() => splash.remove(), 500);
-          }
+            }
         }, 1000);
-      });
+    });
     </script>
     
     <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html> 
+</body>
+</html>

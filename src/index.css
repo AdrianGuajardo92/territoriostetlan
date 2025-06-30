@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet Map Styles - Ya se carga desde CDN en index.html */
+/* @import 'leaflet/dist/leaflet.css'; */
+
 /* Animaciones personalizadas */
 @keyframes fade-in {
   from {
@@ -135,4 +138,465 @@
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-500;
+}
+
+/* Animaciones personalizadas para las notificaciones */
+@keyframes slide-in-from-right {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-from-right {
+  animation: slide-in-from-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-in-out;
+}
+
+@keyframes slide-up {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Clase para el borde grueso del spinner */
+.border-3 {
+  border-width: 3px;
+}
+
+/* Estilos adicionales para mejorar la experiencia móvil */
+@media (max-width: 640px) {
+  /* Ajustar las notificaciones en móvil */
+  .fixed.top-4.right-4 {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+  }
+  
+  /* Hacer que las notificaciones ocupen todo el ancho en móvil */
+  .animate-slide-in-from-right {
+    min-width: auto;
+    width: 100%;
+  }
+}
+
+/* Hover effects mejorados */
+.hover\:scale-105:hover {
+  transform: scale(1.05);
+}
+
+.hover\:scale-95:hover {
+  transform: scale(0.95);
+}
+
+/* Transiciones suaves para todos los elementos interactivos */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* ===== ESTILOS LEAFLET PERSONALIZADOS ===== */
+
+/* Custom marker styles - Mobile First optimizados */
+.custom-marker {
+  background-color: #2C3E50;
+  border: 2px solid white;
+  border-radius: 50%;
+  color: white;
+  font-weight: bold;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  transition: all 0.2s ease;
+  min-width: 24px;
+  min-height: 24px;
+  cursor: pointer;
+}
+
+/* Marcadores nuevos optimizados para móvil */
+.custom-marker-new {
+  /* Sin estilos base para permitir estilos inline */
+}
+
+.map-marker {
+  transform-origin: center;
+  will-change: transform;
+}
+
+.map-marker:hover {
+  transform: scale(1.15) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+  z-index: 1000 !important;
+}
+
+.map-marker:active {
+  transform: scale(1.05) !important;
+}
+
+/* Tamaños más grandes para desktop */
+@media (min-width: 768px) {
+  .custom-marker {
+    min-width: 28px;
+    min-height: 28px;
+    font-size: 12px;
+    border-width: 3px;
+  }
+}
+
+.custom-marker:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+  z-index: 1000;
+}
+
+.custom-marker.optimized {
+  background-color: #e74c3c;
+  border-color: #fff;
+  font-weight: 900;
+}
+
+/* Leaflet popup customization - Mobile optimized */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-width: 280px !important;
+}
+
+@media (max-width: 640px) {
+  .leaflet-popup-content-wrapper {
+    max-width: 250px !important;
+  }
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+  line-height: 1.4;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .leaflet-popup-content {
+    margin: 6px 8px;
+    font-size: 13px;
+  }
+}
+
+/* Route line styles - Más visible en móvil */
+.route-line {
+  stroke: #e74c3c;
+  stroke-width: 4;
+  stroke-dasharray: 8,8;
+  animation: dash 1.5s linear infinite;
+  opacity: 0.9;
+}
+
+@media (max-width: 640px) {
+  .route-line {
+    stroke-width: 3;
+    stroke-dasharray: 6,6;
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+/* Leaflet controls mobile optimization */
+.leaflet-control-container {
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .leaflet-control-container {
+    font-size: 12px;
+  }
+  
+  .leaflet-control-zoom {
+    margin-left: 5px !important;
+    margin-top: 5px !important;
+  }
+  
+  .leaflet-control-zoom a {
+    width: 35px !important;
+    height: 35px !important;
+    line-height: 35px !important;
+    font-size: 16px !important;
+  }
+  
+  .leaflet-control-attribution {
+    font-size: 10px !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+  }
+}
+
+/* Leaflet popup mobile optimization */
+@media (max-width: 640px) {
+  .leaflet-popup-close-button {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 14px !important;
+    line-height: 18px !important;
+  }
+  
+  .leaflet-popup-tip {
+    width: 12px !important;
+    height: 12px !important;
+  }
+}
+
+/* Hacer que el mapa sea más responsive y fluido */
+.leaflet-container {
+  font-family: inherit;
+  background: #f8f9fa;
+  /* Optimizaciones de rendimiento críticas */
+  backface-visibility: hidden;
+  perspective: 1000px;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Optimizar performance en móvil - MUY IMPORTANTE */
+@media (max-width: 640px) {
+  .leaflet-container {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* Aceleración de hardware MÁXIMA */
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    -o-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Optimizaciones adicionales */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
+    /* NUEVAS optimizaciones para máxima fluidez */
+    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
+    position: relative;
+    /* Optimización de composición */
+    will-change: transform;
+    contain: layout style paint;
+  }
+  
+  /* Optimizar interacciones táctiles */
+  .leaflet-container * {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  
+  /* Optimizar panning y zooming */
+  .leaflet-pane {
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  
+  /* Optimizar marcadores para mejor rendimiento */
+  .leaflet-marker-icon {
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  
+  /* Optimización específica para pantallas táctiles */
+  .leaflet-container.leaflet-touch-zoom {
+    touch-action: pan-x pan-y;
+  }
+  
+  .leaflet-container.leaflet-touch-drag {
+    touch-action: none;
+  }
+}
+
+/* Optimización de tiles para carga súper rápida */
+.leaflet-tile {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  /* Optimización de imagen */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.leaflet-tile-loaded {
+  opacity: 1 !important;
+  transition: opacity 0.15s ease !important;
+}
+
+/* Optimización de controles para móvil */
+.leaflet-control-zoom a {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Optimización del panel de acción rápida */
+.animate-slide-up {
+  animation: slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Estilos para el modal del mapa - Mobile First */
+.map-modal-container {
+  height: 100vh;
+  height: 100dvh; /* Para mejor soporte móvil */
+}
+
+@media (max-width: 640px) {
+  .map-modal-container {
+    height: 100vh;
+    height: 100svh; /* Safe area viewport height */
+  }
+}
+
+/* ===== CONTROL DE SCROLL DEL MAPA ===== */
+/* Evitar que el scroll del mapa se propague al contenido de atrás */
+.map-container {
+  touch-action: manipulation;
+  overflow: hidden;
+  position: relative;
+  /* Aislar el scroll del mapa */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevenir scroll del body cuando el modal del mapa está abierto */
+.map-modal-open {
+  overflow: hidden !important;
+  touch-action: none !important;
+  position: fixed !important;
+  width: 100% !important;
+}
+
+/* Contenedor del mapa con control total de scroll */
+.leaflet-container {
+  /* Control específico de touch y scroll */
+  touch-action: manipulation !important;
+  overscroll-behavior: contain !important;
+  /* Prevenir bounce scrolling */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Optimización adicional para eventos touch en el mapa */
+.leaflet-container .leaflet-control-container {
+  pointer-events: auto !important;
+}
+
+.leaflet-container .leaflet-map-pane {
+  touch-action: none !important;
+  overscroll-behavior: none !important;
+}
+
+/* Animaciones para marcadores del mapa */
+@keyframes markerPulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Efectos hover para marcadores del mapa */
+.map-marker:hover {
+  transform: scale(1.1) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+}
+
+/* Marcador de usuario con pulsación suave */
+@keyframes userLocationPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.user-location-marker {
+  animation: userLocationPulse 2s infinite;
+}
+
+/* Mejorar contraste de los marcadores */
+.custom-marker-new {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+/* Asegurar que el mapa se vea bien en móviles */
+.leaflet-container {
+  font-size: 14px;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+  line-height: 1.4;
 } 

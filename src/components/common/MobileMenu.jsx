@@ -6,17 +6,17 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
   const { currentUser, CURRENT_VERSION } = useApp();
   const [hoveredItem, setHoveredItem] = useState(null);
   
-  // Iconos específicos para cada item con colores sutiles
+  // Iconos específicos para cada item - todos en escala de grises
   const menuIcons = {
-    search: { icon: 'search', color: 'text-gray-600' },
-    stats: { icon: 'barChart', color: 'text-gray-600' },
-    reports: { icon: 'fileText', color: 'text-gray-600' },
-    myProposals: { icon: 'edit', color: 'text-gray-600' },
-    admin: { icon: 'settings', color: 'text-gray-600' },
-    password: { icon: 'key', color: 'text-gray-600' },
-    install: { icon: 'smartphone', color: 'text-gray-600' },
-    updates: { icon: 'download', color: 'text-gray-600' },
-    logout: { icon: 'logOut', color: 'text-red-600' }
+    search: { icon: 'search' },
+    stats: { icon: 'barChart' },
+    reports: { icon: 'fileText' },
+    myProposals: { icon: 'edit' },
+    admin: { icon: 'settings' },
+    password: { icon: 'key' },
+    install: { icon: 'smartphone' },
+    updates: { icon: 'download' },
+    logout: { icon: 'logOut' }
   };
   
   return (
@@ -37,26 +37,30 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
       
       <div 
         data-menu-panel="true"
-        className={`fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-2xl z-50 transition-all duration-300 ease-out transform ${
+        className={`fixed inset-y-0 right-0 w-full max-w-sm shadow-2xl z-50 transition-all duration-300 ease-out transform ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
+        style={{ backgroundColor: '#2C2C2C' }}
       >
         <div className="h-full flex flex-col" style={{ touchAction: 'pan-y' }}>
-          {/* Header minimalista */}
-          <div className="bg-gray-900 p-6 flex-shrink-0">
+          {/* Header minimalista con escala de grises */}
+          <div className="p-6 flex-shrink-0" style={{ backgroundColor: '#1F1F1F' }}>
             <button 
               onClick={onClose} 
-              className="absolute top-6 right-6 p-2 text-gray-400 hover:text-white transition-colors duration-200"
+              className="absolute top-6 right-6 p-2 transition-colors duration-200"
+              style={{ color: '#B0B0B0' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#FFFFFF'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#B0B0B0'}
             >
               <Icon name="x" size={24} />
             </button>
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center">
-                <Icon name="user" size={28} className="text-gray-300" />
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#353535' }}>
+                <Icon name="user" size={28} style={{ color: '#D0D0D0' }} />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">{currentUser ? currentUser.name : 'Usuario'}</h3>
-                <span className="inline-flex items-center text-sm text-gray-400">
+                <h3 className="text-lg font-semibold" style={{ color: '#FFFFFF' }}>{currentUser ? currentUser.name : 'Usuario'}</h3>
+                <span className="inline-flex items-center text-sm" style={{ color: '#A0A0A0' }}>
                   <Icon name={currentUser?.role === 'admin' ? 'shield' : 'users'} size={14} className="mr-1.5" />
                   {currentUser?.role === 'admin' ? 'Administrador' : 'Publicador'}
                 </span>
@@ -65,7 +69,7 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
           </div>
           
           {/* Contenido del menú */}
-          <div className="flex-1 overflow-y-auto bg-gray-50" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#2C2C2C', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
             <div className="p-4">
               <nav>
                 <ul className="space-y-2">
@@ -97,56 +101,61 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                           }} 
                           onMouseEnter={() => setHoveredItem(item.id)}
                           onMouseLeave={() => setHoveredItem(null)}
-                          className={`group flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
-                            isActive 
-                              ? 'bg-gray-900 text-white' 
-                              : isHovered
-                                ? 'bg-gray-100'
-                                : 'hover:bg-gray-100'
-                          }`}
+                          className="group flex items-center px-4 py-4 rounded-xl transition-all duration-200 relative"
+                          style={{
+                            backgroundColor: isActive ? '#4A4A4A' : (isHovered ? '#3A3A3A' : 'transparent'),
+                            minHeight: '60px' // Área táctil más grande para móvil
+                          }}
                         >
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 transition-colors duration-200 ${
-                            isActive
-                              ? 'bg-gray-800' 
-                              : 'bg-white'
-                          }`}>
+                          {/* Indicador de página activa */}
+                          {isActive && (
+                            <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full" style={{ backgroundColor: '#EAEAEA' }}></div>
+                          )}
+                          
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center mr-3 transition-colors duration-200"
+                            style={{
+                              backgroundColor: isActive ? '#595959' : '#3A3A3A'
+                            }}
+                          >
                             <Icon 
                               name={iconConfig.icon} 
                               size={20} 
-                              className={`transition-colors duration-200 ${
-                                isActive 
-                                  ? 'text-gray-300' 
-                                  : isLogout
-                                    ? 'text-red-600'
-                                    : iconConfig.color
-                              }`}
+                              style={{ 
+                                color: isActive ? '#FFFFFF' : (isLogout ? '#F87171' : '#D0D0D0')
+                              }}
                             />
                             {item.hasBadge && (item.badgeCount > 0 || item.badgeText) && (
-                              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium min-w-[20px] h-5 px-1 shadow-sm">
+                              <span className="absolute -top-1 -right-1 text-xs rounded-full flex items-center justify-center font-medium min-w-[20px] h-5 px-1 shadow-sm"
+                                style={{ backgroundColor: '#DC2626', color: '#FFFFFF' }}
+                              >
                                 {item.badgeCount || item.badgeText}
                               </span>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`font-medium text-sm transition-colors duration-200 ${
-                              isActive ? 'text-white' : isLogout ? 'text-red-600' : 'text-gray-900'
-                            }`}>
+                            <p className="font-medium text-sm transition-colors duration-200"
+                              style={{ 
+                                color: isActive ? '#FFFFFF' : (isLogout ? '#F87171' : '#EAEAEA')
+                              }}
+                            >
                               {item.text}
                             </p>
                             {item.description && (
-                              <p className={`text-xs mt-0.5 transition-colors duration-200 ${
-                                isActive ? 'text-gray-300' : 'text-gray-500'
-                              }`}>{item.description}</p>
+                              <p className="text-xs mt-0.5 transition-colors duration-200"
+                                style={{ 
+                                  color: isActive ? '#D0D0D0' : '#A0A0A0'
+                                }}
+                              >{item.description}</p>
                             )}
                           </div>
                           <Icon 
                             name="chevronRight" 
                             size={16} 
-                            className={`flex-shrink-0 transition-all duration-200 ${
-                              isActive 
-                                ? 'text-gray-400 transform translate-x-0.5' 
-                                : 'text-gray-300'
-                            }`} 
+                            className="flex-shrink-0 transition-all duration-200"
+                            style={{ 
+                              color: isActive ? '#FFFFFF' : '#808080',
+                              transform: isActive ? 'translateX(2px)' : 'none'
+                            }}
                           />
                         </a>
                       </li>
@@ -156,14 +165,14 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
               </nav>
               
               {/* Separador */}
-              <div className="my-6 h-px bg-gray-200"></div>
+              <div className="my-6 h-px" style={{ backgroundColor: '#404040' }}></div>
               
               {/* Footer del menú */}
               <div className="px-4 pb-6">
-                <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
-                  <Icon name="mapPin" size={24} className="text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-700">Gestor de Territorios</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Versión {CURRENT_VERSION}</p>
+                <div className="rounded-xl p-4 text-center" style={{ backgroundColor: '#3A3A3A', border: '1px solid #4A4A4A' }}>
+                  <Icon name="mapPin" size={24} style={{ color: '#A0A0A0' }} className="mx-auto mb-2" />
+                  <p className="text-sm font-medium" style={{ color: '#D0D0D0' }}>Gestor de Territorios</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#808080' }}>Versión {CURRENT_VERSION}</p>
                 </div>
               </div>
             </div>

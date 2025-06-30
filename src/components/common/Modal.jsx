@@ -6,7 +6,7 @@ const Modal = ({
   onClose, 
   title, 
   children, 
-  size = 'md', // sm, md, lg, xl, 2xl
+  size = 'md', // sm, md, lg, xl, 2xl, full
   showCloseButton = true,
   closeOnBackdrop = true,
   closeOnEscape = true 
@@ -45,8 +45,12 @@ const Modal = ({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
-    '2xl': 'max-w-6xl'
+    '2xl': 'max-w-6xl',
+    full: 'w-full h-full max-w-none'
   };
+
+  // Configuración especial para modal full screen
+  const isFullScreen = size === 'full';
 
   return (
     <>
@@ -57,14 +61,17 @@ const Modal = ({
       />
       
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      <div className={`fixed inset-0 z-50 ${isFullScreen ? '' : 'flex items-center justify-center p-4'} pointer-events-none`}>
         <div className={`
-          bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} 
-          transform transition-all animate-bounce-in pointer-events-auto
-          max-h-[90vh] flex flex-col
+          bg-white shadow-2xl w-full transform transition-all animate-bounce-in pointer-events-auto
+          ${isFullScreen 
+            ? 'h-full w-full rounded-none' 
+            : `${sizeClasses[size]} rounded-3xl max-h-[85vh] sm:max-h-[90vh]`
+          } 
+          flex flex-col
         `}>
-          {/* Header */}
-          {(title || showCloseButton) && (
+          {/* Header - Solo para modales no full screen o con título explícito */}
+          {(title || showCloseButton) && !isFullScreen && (
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               {title && (
                 <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
@@ -82,7 +89,7 @@ const Modal = ({
           )}
           
           {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className={`flex-1 ${isFullScreen ? 'h-full' : 'overflow-hidden'}`}>
             {children}
           </div>
         </div>

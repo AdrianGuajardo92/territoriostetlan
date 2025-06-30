@@ -8,19 +8,21 @@ import AssignTerritoryModal from '../components/modals/AssignTerritoryModal';
 import MapModal from '../components/modals/MapModal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
-import { optimizeRoute, getCurrentLocation, calculateRouteStats, extractCoordinatesFromMapUrl } from '../utils/routeOptimizer';
+import { optimizeRoute, getCurrentLocation, calculateRouteStats } from '../utils/routeOptimizer';
 
 const TerritoryDetailView = ({ territory, onBack }) => {
   const { 
     addresses, 
     currentUser, 
     handleReturnTerritory, 
+    handleCompleteTerritory,
     handleAssignTerritory, 
     handleUpdateAddress, 
     handleDeleteAddress, 
     handleProposeAddressChange, 
     handleProposeNewAddress, 
-    handleAddNewAddress 
+    handleAddNewAddress,
+    handleToggleAddressStatus
   } = useApp();
   
   const { showToast } = useToast();
@@ -29,6 +31,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const [navigatingAddressId, setNavigatingAddressId] = useState(null);
   const [isNavigatingHighlightActive, setIsNavigatingHighlightActive] = useState(false);
   const [showConfirmReturn, setShowConfirmReturn] = useState(false);
+  const [showConfirmComplete, setShowConfirmComplete] = useState(false);
   const [viewMode, setViewMode] = useState('grid-full');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -37,8 +40,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [sortState, setSortState] = useState({
     sortOrder: 'alpha',
-    userLocation: null,
-    isLocating: false,
     optimizedRoute: null,
     isCalculatingRoute: false
   });
@@ -65,20 +66,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
 
       const remainingAddresses = Array.from(liveAddressesMap.values());
       return [...orderedAddresses, ...remainingAddresses];
-    }
-    
-    if (sortState.sortOrder === 'distance' && sortState.userLocation) {
-      return allTerritoryAddresses.map(address => { 
-        const coords = address.latitude && address.longitude 
-          ? { lat: address.latitude, lng: address.longitude } 
-          : extractCoordinatesFromMapUrl(address.mapUrl);
-        const distance = coords ? getDistance(sortState.userLocation.lat, sortState.userLocation.lng, coords.lat, coords.lng) : Infinity;
-        return { ...address, distance, hasCoordinates: !!coords };
-      }).sort((a, b) => { 
-        if(a.hasCoordinates && !b.hasCoordinates) return -1;
-        if(!a.hasCoordinates && b.hasCoordinates) return 1;
-        return a.distance - b.distance;
-      });
     }
     
     return [...allTerritoryAddresses].sort((a, b) => 
@@ -134,17 +121,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
 
   // Funciones auxiliares
 
-  const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
   // Manejadores
   const handleReturn = async () => {
     setIsProcessing(true);
@@ -156,6 +132,20 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     } finally {
       setIsProcessing(false);
       setShowConfirmReturn(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    setIsProcessing(true);
+    try {
+      await handleCompleteTerritory(territory.id);
+      showToast('Territorio marcado como completado', 'success');
+      onBack();
+    } catch (error) {
+      showToast('Error al completar territorio', 'error');
+    } finally {
+      setIsProcessing(false);
+      setShowConfirmComplete(false);
     }
   };
 
@@ -197,9 +187,14 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           showToast('Propuesta enviada para revisión.', 'info');
         }
       } else {
+        // Para nuevas direcciones, mostrar feedback de geocodificación
+        if (!formData.latitude && !formData.longitude && formData.address) {
+          showToast('Obteniendo coordenadas automáticamente...', 'info', 3000);
+        }
+        
         if (currentUser.role === 'admin' || isAssignedToMe) {
           await handleAddNewAddress(territory.id, formData);
-          showToast('Dirección agregada correctamente.', 'success');
+          // El mensaje de éxito se maneja en handleAddNewAddress
         } else {
           await handleProposeNewAddress(territory.id, formData, changeReason);
           showToast('Propuesta de nueva dirección enviada.', 'info');
@@ -228,34 +223,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }
   };
 
-  const handleSortByDistance = async () => {
-    setSortState(prev => ({ ...prev, isLocating: true }));
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
-      });
-      
-      setSortState(prev => ({
-        ...prev,
-        sortOrder: 'distance',
-        userLocation: {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        },
-        isLocating: false,
-        optimizedRoute: null
-      }));
-      showToast('Direcciones ordenadas por distancia', 'success');
-    } catch (error) {
-      showToast('No se pudo obtener tu ubicación', 'error');
-      setSortState(prev => ({ ...prev, isLocating: false }));
-    }
-  };
-
   const handleOptimizedRoute = async () => {
     if (sortState.sortOrder === 'optimized') {
       setSortState(prev => ({ ...prev, sortOrder: 'alpha', optimizedRoute: null }));
@@ -268,9 +235,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         let userLocation = null;
         try {
           userLocation = await getCurrentLocation();
-          showToast('Usando tu ubicación actual como punto de partida', 'info');
+          showToast('✅ Ubicación obtenida. La primera dirección será la más cercana a ti.', 'info', 4000);
         } catch (error) {
           console.log('No se pudo obtener ubicación, optimizando sin punto de partida');
+          showToast('⚠️ No se pudo obtener tu ubicación. Optimizando sin punto de partida específico.', 'warning', 4000);
         }
         
         // Optimizar la ruta
@@ -288,11 +256,17 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         }));
         
         // Mostrar información de la ruta optimizada
-        const message = stats.addressesWithCoords > 0 
-          ? `Ruta optimizada: ${stats.totalDistance} km, ~${stats.estimatedTime} minutos. ${stats.addressesWithCoords} de ${stats.totalAddresses} direcciones con ubicación.`
-          : 'No hay suficientes direcciones con ubicación para optimizar la ruta.';
+        let message = '';
+        if (stats.addressesWithCoords > 0) {
+          const locationText = userLocation 
+            ? `🎯 Ruta desde tu ubicación: ${stats.totalDistance} km, ~${stats.estimatedTime} min.`
+            : `🗺️ Ruta optimizada: ${stats.totalDistance} km, ~${stats.estimatedTime} min.`;
+          message = `${locationText} (${stats.addressesWithCoords} de ${stats.totalAddresses} direcciones con ubicación)`;
+        } else {
+          message = 'No hay suficientes direcciones con ubicación para optimizar la ruta.';
+        }
           
-        showToast(message, stats.addressesWithCoords > 0 ? 'success' : 'warning');
+        showToast(message, stats.addressesWithCoords > 0 ? 'success' : 'warning', 6000);
         
       } catch (error) {
         console.error('Error optimizando ruta:', error);
@@ -305,11 +279,27 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const handleResetSort = () => {
     setSortState({
       sortOrder: 'alpha',
-      userLocation: null,
-      isLocating: false,
       optimizedRoute: null,
       isCalculatingRoute: false
     });
+  };
+
+  // Función personalizada para actualizar estado sin notificación
+  const handleUpdateAddressSilent = async (addressId, updatedData) => {
+    try {
+      const address = addresses.find(a => a.id === addressId);
+      if (address && 'isVisited' in updatedData) {
+        // Para cambios de estado visitado, usar la función sin notificación
+        await handleToggleAddressStatus(addressId, address.isVisited);
+      } else {
+        // Para otros cambios (edición de datos), usar la función normal con notificación
+        await handleUpdateAddress(addressId, updatedData);
+      }
+    } catch (error) {
+      console.error('Error updating address:', error);
+      showToast('Error al actualizar dirección', 'error');
+      throw error;
+    }
   };
 
   return (
@@ -322,13 +312,12 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         isProcessing={isProcessing}
         onAssign={() => setIsAssignModalOpen(true)}
         onReturn={() => setShowConfirmReturn(true)}
+        onComplete={() => setShowConfirmComplete(true)}
         onAddAddress={openAddModal}
         isAssignedToMe={isAssignedToMe}
         sortControls={{
           sortOrder: sortState.sortOrder,
-          isLocating: sortState.isLocating,
           isCalculatingRoute: sortState.isCalculatingRoute,
-          onSortByDistance: handleSortByDistance,
           onOptimizedRoute: handleOptimizedRoute,
           onResetSort: handleResetSort
         }}
@@ -369,7 +358,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
                 onEdit={() => openEditModal(address)}
                 onNavigate={() => handleNavigationStart(address.id)}
                 isNavigating={navigatingAddressId === address.id && isNavigatingHighlightActive}
-                onUpdate={handleUpdateAddress}
+                onUpdate={handleUpdateAddressSilent}
                 showToast={showToast}
               />
             ))}
@@ -407,8 +396,15 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         <MapModal
           isOpen={isMapModalOpen}
           onClose={() => setIsMapModalOpen(false)}
-          territoryName={territory.name}
+          territory={territory}
           addresses={territoryAddresses}
+          isAssignedToMe={isAssignedToMe}
+          isAdmin={isAdmin}
+          onEditAddress={openEditModal}
+          sortState={sortState}
+          onOptimizedRoute={handleOptimizedRoute}
+          onResetSort={handleResetSort}
+          onToggleAddressStatus={handleUpdateAddressSilent}
         />
       )}
 
@@ -422,6 +418,19 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           confirmText="Sí, devolver"
           cancelText="Cancelar"
           type="warning"
+        />
+      )}
+
+      {showConfirmComplete && (
+        <ConfirmDialog
+          isOpen={showConfirmComplete}
+          onClose={() => setShowConfirmComplete(false)}
+          onConfirm={handleComplete}
+          title="¿Marcar como completado?"
+          message={`¿Estás seguro de que quieres marcar el territorio "${territory.name}" como completado?`}
+          confirmText="Sí, completar"
+          cancelText="Cancelar"
+          type="success"
         />
       )}
     </div>

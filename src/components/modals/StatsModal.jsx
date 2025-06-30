@@ -18,7 +18,7 @@ const StatsModal = ({ isOpen, onClose }) => {
       totalTerritories: territories.length,
       availableTerritories: territories.filter(t => t.status === 'Disponible').length,
       inUseTerritories: territories.filter(t => t.status === 'En uso').length,
-      completedTerritories: territories.filter(t => t.status === 'Terminado').length,
+      completedTerritories: territories.filter(t => t.status === 'Completado' || t.status === 'Terminado').length,
       totalAddresses: addresses.length,
       visitedAddresses: addresses.filter(a => a.isVisited).length,
       pendingAddresses: addresses.filter(a => !a.isVisited).length
@@ -202,7 +202,7 @@ const StatsModal = ({ isOpen, onClose }) => {
                     </div>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-32 text-sm text-gray-600">Terminados</div>
+                    <div className="w-32 text-sm text-gray-600">Completados</div>
                     <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
                       <div 
                         className="absolute left-0 top-0 h-full bg-gray-600 flex items-center justify-end pr-2"
@@ -280,7 +280,7 @@ const StatsModal = ({ isOpen, onClose }) => {
                 <StatCard
                   title="Completados Último Mes"
                   value={stats.completionsLastMonth}
-                  subtitle="Territorios terminados"
+                  subtitle="Territorios completados"
                   icon="checkCircle"
                 />
               </div>

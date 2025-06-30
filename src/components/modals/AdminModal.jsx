@@ -300,8 +300,8 @@ const AdminModal = ({ isOpen, onClose }) => {
                   <span className="font-medium">{territories.filter(t => t.status === 'En uso').length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Terminados</span>
-                  <span className="font-medium">{territories.filter(t => t.status === 'Terminado').length}</span>
+                                      <span className="text-sm text-gray-600">Completados</span>
+                    <span className="font-medium">{territories.filter(t => t.status === 'Completado' || t.status === 'Terminado').length}</span>
                 </div>
               </div>
             </div>

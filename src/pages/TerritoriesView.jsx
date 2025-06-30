@@ -6,7 +6,7 @@ import SkeletonCard from '../components/common/SkeletonCard';
 import Icon from '../components/common/Icon';
 
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
-  const { territories, currentUser, proposals, isLoading } = useApp();
+  const { territories, currentUser, proposals, isLoading, publishers } = useApp();
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -35,7 +35,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       filtered = territories.filter(t => {
         if (filterStatus === 'disponible') return t.status === 'Disponible';
         if (filterStatus === 'en uso') return t.status === 'En uso';
-        if (filterStatus === 'terminado') return t.status === 'Terminado';
+        if (filterStatus === 'completado') return t.status === 'Completado' || t.status === 'Terminado';
         return true;
       });
     }
@@ -55,7 +55,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
         return a.name.localeCompare(b.name, undefined, { numeric: true });
       }
       if (sortBy === 'status') {
-        const statusOrder = { 'En uso': 1, 'Disponible': 2, 'Terminado': 3 };
+        const statusOrder = { 'En uso': 1, 'Disponible': 2, 'Completado': 3 };
         return (statusOrder[a.status] || 4) - (statusOrder[b.status] || 4);
       }
       return 0;
@@ -69,7 +69,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     total: territories.length,
     available: territories.filter(t => t.status === 'Disponible').length,
     inUse: territories.filter(t => t.status === 'En uso').length,
-    completed: territories.filter(t => t.status === 'Terminado').length,
+    completed: territories.filter(t => t.status === 'Completado' || t.status === 'Terminado').length,
   }), [territories]);
 
   const userHasAssignedTerritories = useMemo(() => {
@@ -77,20 +77,27 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   }, [territories, currentUser?.name]);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 sm:pb-8">
+    <div className="min-h-screen pb-24 sm:pb-8" style={{ backgroundColor: '#F5F5F5' }}>
       {/* Header */}
-      <header className="bg-white text-gray-800 shadow-md sticky top-0 z-30 border-b border-gray-200">
-        <div className="px-4 pt-4 pb-3 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">
+      <header className="shadow-md sticky top-0 z-30">
+        <div className="px-4 pt-2 pb-2 flex justify-between items-center" style={{ backgroundColor: '#2C3E50' }}>
+          <h1 className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>
             Territorios
           </h1>
           <button 
             onClick={onOpenMenu} 
-            className="relative p-3 bg-gray-900 text-white rounded-xl shadow-md hover:shadow-lg hover:bg-gray-800 transition-all duration-200" 
+            className="relative p-3 rounded-xl shadow-md transition-all duration-200" 
+            style={{ 
+              backgroundColor: '#34495e',
+              minWidth: '40px',
+              minHeight: '40px'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
             aria-label="Abrir menú"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <svg className="w-5 h-5" fill="none" stroke="#FFFFFF" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
             {((currentUser?.role === 'admin' && pendingProposalsCount > 0) || 
               (currentUser?.role !== 'admin' && userNotificationsCount > 0) || 
@@ -114,14 +121,16 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
         />
       </header>
 
+
+
       {/* Contenido principal */}
-      <main className="px-4 sm:px-6 lg:px-8 mt-6">
+      <main className="px-4 sm:px-6 lg:px-8 mt-3">
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {[...Array(10)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : filteredAndSortedTerritories.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredAndSortedTerritories.map(t => (
               <TerritoryCard 
                 key={t.id} 

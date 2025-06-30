@@ -62,16 +62,22 @@ const nearestNeighborTSP = (addresses, startCoord) => {
   // Si hay coordenada inicial, encontrar el punto más cercano
   if (startCoord) {
     let minDist = Infinity;
+    console.log('🗺️ Buscando dirección más cercana a tu ubicación:', startCoord);
+    
     for (let i = 0; i < n; i++) {
       const coord = getCoordinates(addresses[i]);
       if (coord) {
         const dist = calculateDistance(startCoord, coord);
+        console.log(`📍 Dirección ${i}: "${addresses[i].address}" - Distancia: ${dist.toFixed(3)} km`);
+        
         if (dist < minDist) {
           minDist = dist;
           currentIdx = i;
         }
       }
     }
+    
+    console.log(`✅ Dirección más cercana seleccionada: "${addresses[currentIdx].address}" (${minDist.toFixed(3)} km)`);
   }
   
   // Construir la ruta
@@ -112,11 +118,13 @@ const nearestNeighborTSP = (addresses, startCoord) => {
     }
   }
   
+  console.log('🔄 Orden de ruta final:', route.map(idx => `${idx + 1}. ${addresses[idx].address}`));
+  
   return route;
 };
 
-// Optimización 2-opt para mejorar la ruta
-const twoOpt = (route, addresses) => {
+// Optimización 2-opt para mejorar la ruta (manteniendo fijo el primer punto)
+const twoOpt = (route, addresses, keepFirstFixed = true) => {
   const n = route.length;
   if (n < 4) return route; // No se puede optimizar rutas muy cortas
   
@@ -139,7 +147,10 @@ const twoOpt = (route, addresses) => {
     improved = false;
     const currentDistance = calculateTotalDistance(bestRoute);
     
-    for (let i = 1; i < n - 2; i++) {
+    // Si mantenemos el primer punto fijo, empezar desde índice 1
+    const startIdx = keepFirstFixed ? 1 : 0;
+    
+    for (let i = startIdx; i < n - 2; i++) {
       for (let j = i + 1; j < n - 1; j++) {
         // Crear nueva ruta con segmento invertido
         const newRoute = [...bestRoute];
@@ -190,8 +201,9 @@ export const optimizeRoute = async (addresses, userLocation = null) => {
     const routeIndices = nearestNeighborTSP(validAddresses, userLocation);
     
     // Optimizar con 2-opt si hay suficientes direcciones
+    // Si hay userLocation, mantener fijo el primer punto (el más cercano al usuario)
     const optimizedIndices = validAddresses.length > 3 
-      ? twoOpt(routeIndices, validAddresses)
+      ? twoOpt(routeIndices, validAddresses, !!userLocation)
       : routeIndices;
     
     // Reconstruir la lista completa de direcciones

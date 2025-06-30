@@ -1,235 +1,553 @@
-import React, { useState } from 'react';
-import Icon from '../common/Icon';
+import React, { memo, useState } from 'react';
+import { useApp } from '../../context/AppContext';
+import { useToast } from '../../hooks/useToast';
 
-const AddressCard = ({
-  address,
-  viewMode,
-  isAdmin,
-  isAssignedToMe,
-  onEdit,
-  onNavigate,
-  isNavigating,
-  onUpdate,
-  showToast
+const AddressCard = memo(({ 
+    address, 
+    viewMode = 'grid-full', 
+    isAdmin = false, 
+    isAssignedToMe = false, 
+    onEdit = null, 
+    onNavigate = null, 
+    isNavigating = false, 
+    onUpdate = null,
+    showToast = null,
+    onUnmark = null
 }) => {
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  const handleToggleVisited = async () => {
-    if (!isAdmin && !isAssignedToMe) return;
+    const { 
+        handleToggleAddressStatus, 
+        currentUser, 
+        territories 
+    } = useApp();
     
-    setIsUpdating(true);
-    try {
-      await onUpdate(address.id, { isVisited: !address.isVisited });
-      showToast(
-        address.isVisited ? 'Marcada como no visitada' : 'Marcada como visitada',
-        'success'
-      );
-    } catch (error) {
-      showToast('Error al actualizar', 'error');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isNavigatingLocal, setIsNavigatingLocal] = useState(false);
 
-  const handleNavigate = () => {
-    if (address.mapUrl) {
-      window.open(address.mapUrl, '_blank');
-      onNavigate();
-    } else {
-      showToast('No hay ubicación disponible', 'warning');
-    }
-  };
+    // Configuración de colores según el estado (visitado/no visitado)
+    const statusConfig = {
+        visited: {
+            // Gradientes principales  
+            bgGradient: 'from-rose-50 to-pink-50',
+            headerGradient: 'from-rose-500 via-pink-500 to-red-500',
+            borderColor: 'border-rose-300',
+            accentColor: '#f43f5e', // rose-500
+            // Botones y elementos
+            primaryButton: 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200',
+            secondaryButton: 'bg-rose-100 text-rose-700 hover:bg-rose-200 border-rose-200',
+            // Iconos y badges
+            iconColor: 'text-rose-600',
+            iconBg: 'bg-rose-100',
+            badgeBg: 'bg-rose-100 text-rose-700 border-rose-200',
+            // Textos
+            titleColor: 'text-rose-800',
+            subtitleColor: 'text-rose-600',
+            // Efectos
+            hoverBorder: 'hover:border-rose-400',
+            hoverShadow: 'hover:shadow-rose-200/30',
+            // Navegación
+            navButtons: 'bg-rose-50 border-rose-200',
+            navActive: 'bg-rose-600 text-white hover:bg-rose-700'
+        },
+        notVisited: {
+            bgGradient: 'from-emerald-50 to-green-50',
+            headerGradient: 'from-emerald-500 via-green-500 to-teal-500',
+            borderColor: 'border-emerald-300',
+            accentColor: '#10b981', // emerald-500
+            primaryButton: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200',
+            secondaryButton: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200',
+            iconColor: 'text-emerald-600',
+            iconBg: 'bg-emerald-100',
+            badgeBg: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+            titleColor: 'text-emerald-800',
+            subtitleColor: 'text-emerald-600',
+            hoverBorder: 'hover:border-emerald-400',
+            hoverShadow: 'hover:shadow-emerald-200/30',
+            navButtons: 'bg-emerald-50 border-emerald-200',
+            navActive: 'bg-emerald-600 text-white hover:bg-emerald-700'
+        }
+    };
 
-  const getStatusColor = () => {
-    if (address.isVisited) return 'bg-green-100 border-green-300';
-    if (address.isRevisita) return 'bg-yellow-100 border-yellow-300';
-    if (address.isEstudio) return 'bg-blue-100 border-blue-300';
-    return 'bg-white border-gray-200';
-  };
+    const config = statusConfig[address.isVisited ? 'visited' : 'notVisited'];
+    const isEditEnabled = isAdmin || isAssignedToMe;
+    const navigatingClass = (isNavigating || isNavigatingLocal) ? 'ring-4 ring-blue-400 ring-opacity-75 animate-pulse scale-105' : '';
 
-  const getStatusIcon = () => {
-    if (address.isVisited) return { name: 'check', color: 'text-green-600' };
-    if (address.isRevisita) return { name: 'refresh', color: 'text-yellow-600' };
-    if (address.isEstudio) return { name: 'book', color: 'text-blue-600' };
-    return { name: 'home', color: 'text-gray-400' };
-  };
-
-  const statusIcon = getStatusIcon();
-
-  if (viewMode === 'list') {
-    return (
-      <div className={`
-        flex items-center p-3 rounded-lg border transition-all
-        ${getStatusColor()}
-        ${isNavigating ? 'ring-4 ring-blue-400 animate-pulse' : ''}
-        ${(isAdmin || isAssignedToMe) ? 'hover:shadow-md cursor-pointer' : ''}
-      `}>
-        <button
-          onClick={handleToggleVisited}
-          disabled={!isAdmin && !isAssignedToMe || isUpdating}
-          className={`
-            mr-3 p-2 rounded-lg transition-all
-            ${address.isVisited 
-              ? 'bg-green-500 text-white' 
-              : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+    // Funciones de navegación inteligente
+    const getNavigationUrl = (mode) => {
+        let lat, lng;
+        
+        // Prioridad 1: Coordenadas latitude/longitude
+        if (address.latitude && address.longitude) {
+            lat = address.latitude;
+            lng = address.longitude;
+        }
+        // Prioridad 2: Array coords
+        else if (address.coords && Array.isArray(address.coords) && address.coords.length >= 2) {
+            [lat, lng] = address.coords;
+        }
+        // Prioridad 3: Intentar extraer coordenadas del mapUrl
+        else if (address.mapUrl && address.mapUrl.trim() !== '') {
+            const mapUrlMatch = address.mapUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (mapUrlMatch) {
+                lat = parseFloat(mapUrlMatch[1]);
+                lng = parseFloat(mapUrlMatch[2]);
             }
-            ${(!isAdmin && !isAssignedToMe) ? 'cursor-not-allowed opacity-50' : ''}
-          `}
-        >
-          <Icon name="check" size={16} />
-        </button>
+        }
+        
+        // Si tenemos coordenadas, usar navegación con modo específico (sin auto-inicio)
+        if (lat && lng) {
+            switch (mode) {
+                case 'driving':
+                    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+                case 'walking':
+                    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
+                case 'transit':
+                    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=transit`;
+                default:
+                    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            }
+        }
+        
+        // Fallback: Usar dirección de texto con modo específico (sin auto-inicio)
+        const encodedAddress = encodeURIComponent(address.address);
+        switch (mode) {
+            case 'driving':
+                return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
+            case 'walking':
+                return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=walking`;
+            case 'transit':
+                return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=transit`;
+            default:
+                return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+        }
+    };
 
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-gray-900 truncate">{address.address}</p>
-          <div className="flex items-center space-x-4 text-xs text-gray-500">
-            {address.referencia && (
-              <span className="truncate">{address.referencia}</span>
-            )}
-            {address.phone && (
-              <span className="flex items-center">
-                <Icon name="phone" size={12} className="mr-1" />
-                {address.phone}
-              </span>
-            )}
-          </div>
-        </div>
+    const drivingUrl = getNavigationUrl('driving');
+    const walkingUrl = getNavigationUrl('walking');
+    const transitUrl = getNavigationUrl('transit');
 
-        <div className="flex items-center space-x-2 ml-2">
-          {address.mapUrl && (
+    // Componente para mostrar el icono de género (usando FontAwesome)
+    const GenderTag = ({ gender, colorClass = '' }) => {
+        const styleConfig = {
+            'Hombre':      { icon: 'fa-person', color: 'text-blue-600' },
+            'Mujer':       { icon: 'fa-person-dress', color: 'text-pink-600' }, 
+            'Pareja':      { icon: 'fa-user-group', color: 'text-purple-600' },
+            'Desconocido': { icon: 'fa-ban', color: 'text-gray-500' }
+        };
+        const config = styleConfig[gender] || styleConfig['Desconocido'];
+        return <i className={`fas ${config.icon} ${colorClass || config.color} text-lg`}></i>;
+    };
+
+    // Componente para mostrar la distancia
+    const DistanceTag = ({ distance }) => {
+        if (distance == null || distance === Infinity) { return null; }
+        const formattedDistance = distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`;
+        return (
+            <span className="ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                    <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+                </svg>
+                {formattedDistance}
+            </span>
+        );
+    };
+
+    // Componente de botones de navegación (usando FontAwesome)
+    const NavigationButtons = ({ a_styles, div_styles, button_styles }) => (
+        <div className={`flex items-center rounded-xl p-1 ${a_styles}`}>
             <button
-              onClick={handleNavigate}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              title="Navegar"
+                onClick={(e) => handleNavClick(e, drivingUrl)}
+                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105`} 
+                title="Navegar en coche"
             >
-              <Icon name="navigation" size={16} />
+                <i className="fas fa-car text-lg"></i>
             </button>
-          )}
-          {(isAdmin || isAssignedToMe) && (
+            <div className={`w-px h-4 mx-1 ${div_styles}`}></div>
             <button
-              onClick={onEdit}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Editar"
+                onClick={(e) => handleNavClick(e, walkingUrl)}
+                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105`} 
+                title="Navegar a pie"
             >
-              <Icon name="edit" size={16} />
+                <i className="fas fa-person-walking text-lg"></i>
             </button>
-          )}
+            <div className={`w-px h-4 mx-1 ${div_styles}`}></div>
+            <button
+                onClick={(e) => handleNavClick(e, transitUrl)}
+                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105`} 
+                title="Navegar en transporte público"
+            >
+                <i className="fas fa-bus text-lg"></i>
+            </button>
         </div>
-      </div>
     );
-  }
 
-  // Vista de tarjeta (grid)
-  return (
-    <div className={`
-      relative overflow-hidden rounded-xl border-2 p-4 transition-all
-      ${getStatusColor()}
-      ${isNavigating ? 'ring-4 ring-blue-400 animate-pulse shadow-xl' : 'shadow-sm hover:shadow-lg'}
-      ${(isAdmin || isAssignedToMe) ? 'cursor-pointer' : ''}
-    `}>
-      {/* Indicador de ruta optimizada */}
-      {address.routeOrder && (
-        <div className="absolute top-2 left-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
-          {address.routeOrder}
-        </div>
-      )}
-
-      {/* Header de la tarjeta */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0 pr-2">
-          <h3 className="font-semibold text-gray-900 text-base leading-tight">
-            {address.address}
-          </h3>
-          {address.referencia && (
-            <p className="text-sm text-gray-600 mt-1">{address.referencia}</p>
-          )}
-        </div>
-        <Icon 
-          name={statusIcon.name} 
-          size={24} 
-          className={`flex-shrink-0 ${statusIcon.color}`} 
-        />
-      </div>
-
-      {/* Información de contacto */}
-      <div className="space-y-2 mb-3">
-        {address.phone && (
-          <div className="flex items-center text-sm text-gray-600">
-            <Icon name="phone" size={14} className="mr-2 text-gray-400" />
-            <span>{address.phone}</span>
-          </div>
-        )}
-        {address.notes && (
-          <div className="flex items-start text-sm text-gray-600">
-            <Icon name="messageSquare" size={14} className="mr-2 mt-0.5 text-gray-400 flex-shrink-0" />
-            <span className="line-clamp-2">{address.notes}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Estados especiales */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {address.isRevisita && (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-200 text-yellow-800">
-            <Icon name="refresh" size={12} className="mr-1" />
-            Revisita{address.revisitaBy && `: ${address.revisitaBy}`}
-          </span>
-        )}
-        {address.isEstudio && (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-200 text-blue-800">
-            <Icon name="book" size={12} className="mr-1" />
-            Estudio{address.estudioBy && `: ${address.estudioBy}`}
-          </span>
-        )}
-        {address.isPhoneOnly && (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-200 text-purple-800">
-            <Icon name="phone" size={12} className="mr-1" />
-            Solo teléfono
-          </span>
-        )}
-      </div>
-
-      {/* Acciones */}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-        <button
-          onClick={handleToggleVisited}
-          disabled={(!isAdmin && !isAssignedToMe) || isUpdating}
-          className={`
-            flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-            ${address.isVisited 
-              ? 'bg-green-500 text-white hover:bg-green-600' 
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+    // Manejadores
+    const handleToggleStatus = async () => {
+        if (isProcessing) return;
+        
+        setIsProcessing(true);
+        try {
+            // Usar la función onUpdate que viene como prop en lugar de la del contexto
+            if (onUpdate) {
+                const updatedAddress = {
+                    ...address,
+                    isVisited: !address.isVisited,
+                    lastUpdated: new Date()
+                };
+                await onUpdate(address.id, updatedAddress);
+            } else {
+                // Fallback a la función del contexto si no se proporciona onUpdate
+                await handleToggleAddressStatus(address.id, !address.isVisited);
             }
-            ${(!isAdmin && !isAssignedToMe) ? 'cursor-not-allowed opacity-50' : ''}
-            ${isUpdating ? 'opacity-50' : ''}
-          `}
-        >
-          <Icon name="check" size={14} className="mr-1.5" />
-          {address.isVisited ? 'Visitada' : 'Marcar visitada'}
-        </button>
+            
+            // Sin notificación de éxito - solo feedback visual
+        } catch (error) {
+            console.error('Error al cambiar estado:', error);
+            if (showToast) {
+                showToast('Error al cambiar el estado de la dirección', 'error');
+            }
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
-        <div className="flex items-center space-x-2">
-          {address.mapUrl && (
-            <button
-              onClick={handleNavigate}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              title="Navegar a dirección"
-            >
-              <Icon name="navigation" size={18} />
-            </button>
-          )}
-          {(isAdmin || isAssignedToMe) && (
-            <button
-              onClick={onEdit}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Editar dirección"
-            >
-              <Icon name="edit" size={18} />
-            </button>
-          )}
+    const handleEditClick = () => {
+        if (onEdit) onEdit(address);
+    };
+
+    const handleUnmarkClick = () => {
+        if (onUnmark) onUnmark(address.id);
+    };
+
+    const handleNavClick = (e, url) => {
+        // Prevenir comportamiento por defecto si existe
+        if (e) e.preventDefault();
+        
+        // Guardar el estado actual en sessionStorage antes de navegar
+        // Esto permitirá restaurar la ubicación si la app se recarga
+        if (window.sessionStorage) {
+            sessionStorage.setItem('lastTerritoryId', address.territoryId);
+            sessionStorage.setItem('navigationTimestamp', Date.now().toString());
+        }
+        
+        // Abrir en nueva ventana/pestaña
+        window.open(url, '_blank', 'noopener,noreferrer');
+        
+        // Solo activar el estado local de navegación para feedback visual
+        setIsNavigatingLocal(true);
+        setTimeout(() => setIsNavigatingLocal(false), 3000);
+    };
+
+    // Obtener nombre del territorio
+    const territory = territories.find(t => t.id === address.territoryId);
+    const territoryName = territory ? territory.name : `Territorio ${address.territoryId}`;
+    
+    // VISTA DE LISTA COMPACTA
+    if (viewMode === 'list') {
+        return (
+            <div className={`
+                group relative
+                bg-gradient-to-r ${config.bgGradient}
+                border-2 ${config.borderColor} ${config.hoverBorder}
+                rounded-xl overflow-hidden
+                shadow-md ${config.hoverShadow}
+                hover:shadow-xl hover:scale-[1.02]
+                transition-all duration-300 ease-out
+                ${navigatingClass}
+            `}>
+                {/* Contenido principal */}
+                <div className="p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        {/* Información principal */}
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            {/* Icono de estado */}
+                            <div className={`${config.iconBg} p-2 rounded-lg shadow-sm`}>
+                                <i className={`fas ${address.isVisited ? 'fa-house-circle-check' : 'fa-house'} text-lg ${config.iconColor}`}></i>
+                            </div>
+                            
+                            {/* Dirección y género */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-2">
+                                    <h3 className={`font-bold text-base truncate ${config.titleColor}`}>
+                                        {address.address}
+                                    </h3>
+                                    <GenderTag gender={address.gender} />
+                                    <DistanceTag distance={address.distance} />
+                                </div>
+                                
+                                {/* Badges en línea */}
+                                <div className="flex gap-2 mt-1 flex-wrap">
+                                    {address.isRevisita && address.revisitaBy && (
+                                        <span className="text-xs font-bold text-purple-600">
+                                            <i className="fas fa-bookmark mr-1"></i>
+                                            Revisita: {address.revisitaBy}
+                                        </span>
+                                    )}
+                                    {address.isEstudio && address.estudioBy && (
+                                        <span className="text-xs font-bold text-blue-600">
+                                            <i className="fas fa-book-open mr-1"></i>
+                                            Estudio: {address.estudioBy}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Botones de navegación compactos */}
+                        <NavigationButtons 
+                            a_styles={`${config.navButtons} border shadow-sm backdrop-blur-sm`}
+                            div_styles="bg-gray-300"
+                            button_styles={`${config.navActive} shadow-sm`}
+                        />
+
+                        {/* Botón de estado */}
+                        <button
+                            onClick={handleToggleStatus}
+                            disabled={isProcessing}
+                            className={`
+                                px-4 py-2 rounded-lg font-medium text-sm
+                                ${config.primaryButton}
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                                transition-all transform hover:scale-105 active:scale-95
+                                shadow-lg hover:shadow-xl
+                            `}
+                        >
+                            {address.isVisited ? 'Desmarcar' : 'Completado'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Barra de acento inferior */}
+                <div 
+                    className="h-1 w-full bg-gradient-to-r opacity-75 group-hover:opacity-100 transition-opacity"
+                    style={{
+                        backgroundImage: `linear-gradient(to right, ${config.accentColor}, ${config.accentColor}dd)`
+                    }}
+                />
+            </div>
+        );
+    }
+
+    // VISTA DE TARJETA COMPLETA
+    return (
+        <div className={`
+            group relative cursor-default
+            bg-gradient-to-br ${config.bgGradient}
+            border-2 ${config.borderColor} ${config.hoverBorder}
+            rounded-2xl overflow-hidden
+            shadow-lg ${config.hoverShadow}
+            hover:shadow-2xl hover:scale-[1.01]
+            transition-all duration-300 ease-out
+            ${navigatingClass}
+        `}>
+            {/* Encabezado con gradiente */}
+            <div className="relative px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-white/40">
+                <div className="flex items-center justify-between gap-3">
+                    {/* Icono principal y dirección */}
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className={`${config.iconBg} p-3 rounded-xl shadow-sm backdrop-blur-sm border border-white/20 group-hover:shadow-md transition-shadow`}>
+                            <i className={`fas ${address.isVisited ? 'fa-house-circle-check' : 'fa-house'} text-xl ${config.iconColor}`}></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className={`text-lg font-bold truncate ${config.titleColor}`}>
+                                {address.address}
+                            </h3>
+                            <div className="flex items-center space-x-2 mt-1">
+                                <GenderTag gender={address.gender} />
+                                <DistanceTag distance={address.distance} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Estado badge */}
+                    <div className={`${config.badgeBg} px-3 py-1.5 rounded-full flex items-center space-x-2 shadow-sm border`}>
+                        <div 
+                            className={`w-2 h-2 rounded-full ${address.isVisited ? '' : 'animate-pulse'}`}
+                            style={{backgroundColor: config.accentColor}}
+                        ></div>
+                        <span className="text-sm font-medium">
+                            {address.isVisited ? 'Visitada' : 'Pendiente'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Contenido principal */}
+            <div className="px-4 py-4 space-y-4">
+                {address.isVisited ? (
+                    // VISTA VISITADA
+                    <div className="space-y-4">
+                        {/* Badges de estado */}
+                        <div className="space-y-2 mb-2">
+                            {address.isRevisita && address.revisitaBy && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                                    <i className="fas fa-bookmark mr-1.5"></i>
+                                    Revisita: {address.revisitaBy}
+                                </span>
+                            )}
+                            {address.isEstudio && address.estudioBy && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                    <i className="fas fa-book-open mr-1.5"></i>
+                                    Estudio: {address.estudioBy}
+                                </span>
+                            )}
+                            {address.territoryName && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-800">
+                                    <i className="fas fa-map mr-1.5"></i>
+                                    {address.territoryName}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Notas */}
+                        {address.notes && (
+                            <div className="flex items-start p-3 bg-red-50 rounded-lg text-sm italic">
+                                <i className="fas fa-info-circle text-red-400 mr-2 mt-0.5"></i>
+                                <p className="text-red-800">{address.notes}</p>
+                            </div>
+                        )}
+
+                        {/* Navegación y acciones */}
+                        <div className="flex items-center justify-between">
+                            <NavigationButtons 
+                                a_styles="bg-red-50 border-red-200 border shadow-sm"
+                                div_styles="bg-red-300"
+                                button_styles="bg-red-600 text-white hover:bg-red-700 shadow-sm"
+                            />
+                            
+                            <div className="flex items-center space-x-2">
+                                {/* Botón principal de Desmarcar */}
+                                <button
+                                    onClick={handleToggleStatus}
+                                    disabled={isProcessing}
+                                    className={`
+                                        px-4 py-2 rounded-xl font-semibold text-sm
+                                        ${config.primaryButton}
+                                        disabled:opacity-50 disabled:cursor-not-allowed
+                                        transition-all transform hover:scale-105 active:scale-95
+                                        shadow-lg hover:shadow-xl
+                                    `}
+                                >
+                                    {isProcessing ? 'Procesando...' : 'Desmarcar'}
+                                </button>
+                                
+                                {/* Botones de acción secundarios */}
+                                <div className="flex items-center space-x-2">
+                                    {isEditEnabled && (
+                                        <button 
+                                            onClick={handleEditClick} 
+                                            className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" 
+                                            title={isAdmin ? "Editar dirección" : "Proponer cambio"}
+                                        >
+                                            <i className="fas fa-pen-to-square text-sm"></i>
+                                        </button>
+                                    )}
+                                    {onUnmark && (
+                                        <button 
+                                            onClick={handleUnmarkClick} 
+                                            className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" 
+                                            title="Liberar dirección"
+                                        >
+                                            <i className="fas fa-xmark text-lg"></i>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    // VISTA NO VISITADA
+                    <div className="space-y-4">
+                        {/* Badges de estado */}
+                        <div className="space-y-2 mb-2">
+                            {address.isRevisita && address.revisitaBy && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                                    <i className="fas fa-bookmark mr-1.5"></i>
+                                    Revisita: {address.revisitaBy}
+                                </span>
+                            )}
+                            {address.isEstudio && address.estudioBy && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                    <i className="fas fa-book-open mr-1.5"></i>
+                                    Estudio: {address.estudioBy}
+                                </span>
+                            )}
+                            {address.territoryName && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-800">
+                                    <i className="fas fa-map mr-1.5"></i>
+                                    {address.territoryName}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Notas */}
+                        {address.notes && (
+                            <div className="flex items-start p-3 bg-green-50 rounded-lg text-sm italic">
+                                <i className="fas fa-info-circle text-green-400 mr-2 mt-0.5"></i>
+                                <p className="text-green-800">{address.notes}</p>
+                            </div>
+                        )}
+
+                        {/* Navegación y acciones */}
+                        <div className="flex items-center justify-between">
+                            <NavigationButtons 
+                                a_styles="bg-emerald-50 border-emerald-200 border shadow-sm"
+                                div_styles="bg-emerald-300"
+                                button_styles="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
+                            />
+                            
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={handleToggleStatus}
+                                    disabled={isProcessing}
+                                    className={`
+                                        px-4 py-2 rounded-xl font-semibold text-sm
+                                        ${config.primaryButton}
+                                        disabled:opacity-50 disabled:cursor-not-allowed
+                                        transition-all transform hover:scale-105 active:scale-95
+                                        shadow-lg hover:shadow-xl
+                                    `}
+                                >
+                                    {isProcessing ? 'Procesando...' : 'Completado'}
+                                </button>
+                                
+                                <div className="flex items-center space-x-2">
+                                    {isEditEnabled && (
+                                        <button 
+                                            onClick={handleEditClick} 
+                                            className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors" 
+                                            title={isAdmin ? "Editar dirección" : "Proponer cambio"}
+                                        >
+                                            <i className="fas fa-pen-to-square text-sm"></i>
+                                        </button>
+                                    )}
+                                    {onUnmark && (
+                                        <button 
+                                            onClick={handleUnmarkClick} 
+                                            className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors" 
+                                            title="Liberar dirección"
+                                        >
+                                            <i className="fas fa-xmark text-lg"></i>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Barra de acento inferior con animación */}
+            <div 
+                className="h-1 w-full bg-gradient-to-r opacity-75 group-hover:opacity-100 transition-opacity"
+                style={{
+                    backgroundImage: `linear-gradient(to right, ${config.accentColor}, ${config.accentColor}dd)`
+                }}
+            />
+
+            {/* Overlay sutil en hover */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
         </div>
-      </div>
-    </div>
-  );
-};
+    );
+});
 
 export default AddressCard; 
