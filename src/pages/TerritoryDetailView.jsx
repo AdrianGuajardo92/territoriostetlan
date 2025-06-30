@@ -59,7 +59,11 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         const liveAddress = liveAddressesMap.get(staleRouteAddress.id);
         if (liveAddress) {
           liveAddressesMap.delete(staleRouteAddress.id);
-          return { ...liveAddress, routeOrder: index + 1 };
+          return { 
+            ...liveAddress, 
+            routeOrder: index + 1,
+            distance: staleRouteAddress.distance // Preservar la distancia calculada
+          };
         }
         return null;
       }).filter(Boolean);

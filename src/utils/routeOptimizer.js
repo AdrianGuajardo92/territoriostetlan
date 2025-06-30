@@ -249,14 +249,44 @@ export const optimizeRoute = async (addresses, userLocation = null) => {
       ? twoOpt(routeIndices, validAddresses, !!userLocation)
       : routeIndices;
     
-    // Reconstruir la lista completa de direcciones
-    const optimizedRoute = optimizedIndices.map(idx => validAddresses[idx]);
+    // Reconstruir la lista completa de direcciones CON DISTANCIAS
+    const optimizedRoute = optimizedIndices.map((idx, order) => {
+      const address = validAddresses[idx];
+      let distance = null;
+      
+      // Calcular distancia desde la ubicación del usuario o desde la dirección anterior
+      if (address.coords) {
+        if (order === 0 && userLocation) {
+          // Primera dirección: distancia desde el usuario
+          distance = calculateDistance(userLocation, address.coords);
+        } else if (order > 0) {
+          // Direcciones siguientes: distancia desde la dirección anterior
+          const prevAddress = validAddresses[optimizedIndices[order - 1]];
+          if (prevAddress.coords) {
+            distance = calculateDistance(prevAddress.coords, address.coords);
+          }
+        }
+      }
+      
+      return { 
+        ...address, 
+        distance: distance,
+        routeOrder: order + 1 
+      };
+    });
     
-    // Agregar direcciones sin coordenadas al final
-    const finalRoute = [...optimizedRoute, ...invalidAddresses];
+    // Agregar direcciones sin coordenadas al final (sin distancia)
+    const finalRoute = [...optimizedRoute, ...invalidAddresses.map(addr => ({ ...addr, distance: null }))];
     
-    // Devolver las direcciones originales en el orden optimizado
-    return finalRoute.map(addr => addresses[addr.originalIndex]);
+    // Devolver las direcciones originales en el orden optimizado con distancias
+    return finalRoute.map(addr => {
+      const originalAddress = addresses[addr.originalIndex];
+      return { 
+        ...originalAddress, 
+        distance: addr.distance,
+        routeOrder: addr.routeOrder 
+      };
+    });
     
   } catch (error) {
     console.error('Error optimizando ruta:', error);
