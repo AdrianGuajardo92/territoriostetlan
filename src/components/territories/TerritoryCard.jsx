@@ -184,8 +184,8 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
           </div>
         )}
 
-        {/* Fecha relevante */}
-        {relevantDate && (
+        {/* Fecha relevante - SOLO para territorios NO disponibles */}
+        {relevantDate && normalizedStatus !== 'Disponible' && (
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Icon 
@@ -205,20 +205,10 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
           </div>
         )}
 
-        {/* Si está disponible, mostrar última vez trabajado si existe */}
-        {normalizedStatus === 'Disponible' && territory.lastWorked && (
-          <div className="pt-2 mt-2 border-t border-gray-100">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">Última predicación:</span>
-              <span className="text-gray-600 font-medium">
-                {new Date(territory.lastWorked.seconds * 1000).toLocaleDateString('es-MX')}
-              </span>
-            </div>
-          </div>
-        )}
 
-        {/* Call to action para territorio disponible */}
-        {normalizedStatus === 'Disponible' && !territory.lastWorked && (
+
+        {/* Call to action para territorio disponible - TODOS los disponibles */}
+        {normalizedStatus === 'Disponible' && (
           <div className="pt-2 mt-2 border-t border-gray-100">
             <p className="text-xs text-center text-emerald-600 font-medium">
               ¡Listo para asignar!

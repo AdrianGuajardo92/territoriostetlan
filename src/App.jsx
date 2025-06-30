@@ -21,9 +21,7 @@ import {
   LazyProposalsModal 
 } from './components/modals/LazyModals';
 
-// Importar Firestore temporalmente para debug
-import { db } from './config/firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+
 
 function AppContent() {
   const { currentUser, authLoading, proposals, logout, territories, adminEditMode, handleToggleAdminMode } = useApp();
@@ -300,80 +298,14 @@ function AppContent() {
     }
   };
 
-  // Función temporal para verificar usuarios
-  const checkUsers = async () => {
-    try {
-      console.log('Verificando usuarios en la base de datos...');
-      const usersSnapshot = await getDocs(collection(db, 'users'));
-      console.log('Total de usuarios:', usersSnapshot.size);
-      
-      if (usersSnapshot.empty) {
-        console.log('⚠️ No hay usuarios en la base de datos');
-        alert('No hay usuarios en la base de datos. Necesitas crear usuarios en Firebase.');
-      } else {
-        usersSnapshot.forEach(doc => {
-          const data = doc.data();
-          console.log('Usuario encontrado:', {
-            id: doc.id,
-            name: data.name,
-            accessCode: data.accessCode,
-            role: data.role,
-            hasPassword: !!data.password
-          });
-        });
-      }
-    } catch (error) {
-      console.error('Error al verificar usuarios:', error);
-      alert('Error al conectar con Firebase. Verifica la consola.');
-    }
-  };
 
-  // Función para crear usuario de prueba
-  const createTestUser = async () => {
-    if (!confirm('¿Crear un usuario de prueba admin1/admin123?')) return;
-    
-    try {
-      // CORRECCIÓN: addDoc ya está importado estáticamente arriba ⚡
-      const userRef = await addDoc(collection(db, 'users'), {
-        name: 'Administrador',
-        accessCode: 'admin1',
-        password: 'admin123',
-        role: 'admin',
-        createdAt: new Date().toISOString()
-      });
-      
-      console.log('Usuario de prueba creado con ID:', userRef.id);
-      alert('Usuario de prueba creado!\n\nCódigo: admin1\nContraseña: admin123');
-    } catch (error) {
-      console.error('Error al crear usuario:', error);
-      alert('Error al crear usuario. Verifica la consola.');
-    }
-  };
 
   if (authLoading) {
     return <LoadingSpinner fullScreen />;
   }
 
   if (!currentUser) {
-    return (
-      <>
-        <LoginView />
-        <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
-          <button
-            onClick={checkUsers}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-red-700"
-          >
-            🔍 Verificar Usuarios en DB
-          </button>
-          <button
-            onClick={createTestUser}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-green-700"
-          >
-            ➕ Crear Usuario de Prueba
-          </button>
-        </div>
-      </>
-    );
+    return <LoginView />;
   }
 
   return (

@@ -74,11 +74,29 @@ const TerritoryMapModal = ({
             return null;
         };
 
-        return addresses.map(address => ({
+        // Paso 1: Obtener direcciones con coordenadas válidas
+        let addressesWithValidCoords = addresses.map(address => ({
             ...address,
             coordinates: getCoordinates(address)
         })).filter(addr => addr.coordinates);
-    }, [addresses]);
+
+        // Paso 2: REORDENAR SI LA RUTA ESTÁ OPTIMIZADA
+        if (sortState.sortOrder === 'optimized' && sortState.optimizedRoute) {
+            // Crear un mapa para acceso rápido por ID
+            const addressMap = new Map(addressesWithValidCoords.map(addr => [addr.id, addr]));
+            
+            // Reordenar según la ruta optimizada y añadir routeOrder
+            addressesWithValidCoords = sortState.optimizedRoute
+                .map(routeItem => addressMap.get(routeItem.id))
+                .filter(Boolean) // Filtrar items no encontrados
+                .map((address, index) => ({
+                    ...address,
+                    routeOrder: index + 1 // Añadir número de orden para los marcadores
+                }));
+        }
+
+        return addressesWithValidCoords;
+    }, [addresses, sortState.sortOrder, sortState.optimizedRoute]);
 
     // Hash para detectar cambios reales en marcadores - PREVIENE RE-RENDERS
     const markersHash = useMemo(() => {
@@ -357,43 +375,59 @@ const TerritoryMapModal = ({
         }
     }, [onToggleAddressStatus, showToast, getCoordinates, addressesWithCoords, sortState.sortOrder, updateMapMarkers]);
     
-    // OPTIMIZACIÓN: HandleNavigate memoizada ⚡
-    const handleNavigate = useCallback((address, mode = 'driving') => {
-        const coords = getCoordinates(address);
-        let url = '';
+    // OPTIMIZACIÓN: HandleNavigate SÚPER MEJORADA - Igual que AddressCard ⚡
+    const getNavigationUrl = useCallback((address, mode) => {
+        let lat, lng;
         
-        if (coords) {
-            // Usar coordenadas con modo específico (sin auto-inicio)
-            switch (mode) {
-                case 'driving':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`;
-                    break;
-                case 'walking':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=walking`;
-                    break;
-                case 'transit':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=transit`;
-                    break;
-                default:
-                    url = `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}`;
-            }
-        } else {
-            // Fallback usando dirección en texto con modo específico (sin auto-inicio)
-            const encodedAddress = encodeURIComponent(address.address);
-            switch (mode) {
-                case 'driving':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
-                    break;
-                case 'walking':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=walking`;
-                    break;
-                case 'transit':
-                    url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=transit`;
-                    break;
-                default:
-                    url = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+        // Prioridad 1: Coordenadas latitude/longitude
+        if (address.latitude && address.longitude) {
+            lat = address.latitude;
+            lng = address.longitude;
+        }
+        // Prioridad 2: Array coords
+        else if (address.coords && Array.isArray(address.coords) && address.coords.length >= 2) {
+            [lat, lng] = address.coords;
+        }
+        // Prioridad 3: Intentar extraer coordenadas del mapUrl
+        else if (address.mapUrl && address.mapUrl.trim() !== '') {
+            const mapUrlMatch = address.mapUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (mapUrlMatch) {
+                lat = parseFloat(mapUrlMatch[1]);
+                lng = parseFloat(mapUrlMatch[2]);
             }
         }
+        
+        // Si tenemos coordenadas, usar navegación con modo específico (sin auto-inicio)
+        if (lat && lng) {
+            switch (mode) {
+                case 'driving':
+                    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+                case 'walking':
+                    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
+                case 'transit':
+                    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=transit`;
+                default:
+                    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            }
+        }
+        
+        // Fallback: Usar dirección de texto con modo específico (sin auto-inicio)
+        const encodedAddress = encodeURIComponent(address.address);
+        switch (mode) {
+            case 'driving':
+                return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
+            case 'walking':
+                return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=walking`;
+            case 'transit':
+                return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=transit`;
+            default:
+                return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+        }
+    }, []);
+
+    const handleNavigate = useCallback((address, mode = 'driving') => {
+        // Generar URL optimizada
+        const url = getNavigationUrl(address, mode);
         
         // Guardar el estado actual en sessionStorage antes de navegar
         if (window.sessionStorage && territory) {
@@ -401,9 +435,18 @@ const TerritoryMapModal = ({
             sessionStorage.setItem('navigationTimestamp', Date.now().toString());
         }
         
-        // Prevenir que el modal se cierre al regresar de Google Maps
+        // Abrir en nueva ventana/pestaña
         window.open(url, '_blank', 'noopener,noreferrer');
-    }, [getCoordinates, territory]);
+        
+        // Feedback visual en toast
+        const modeText = {
+            'driving': 'en coche',
+            'walking': 'a pie', 
+            'transit': 'en transporte público'
+        };
+        
+        showToast(`Navegando ${modeText[mode] || 'al destino'}`, 'success', 2000);
+    }, [getNavigationUrl, territory, showToast]);
     
     // OPTIMIZACIÓN: DrawRouteLine memoizada - Solo recalcula cuando cambia la ruta ⚡
     const routeCoordinates = useMemo(() => {
@@ -613,21 +656,200 @@ const TerritoryMapModal = ({
         // Invalidar tamaño para garantizar renderizado correcto - OPTIMIZADO
         setTimeout(() => mapInstanceRef.current && mapInstanceRef.current.invalidateSize(), 100);
 
-    }, [isOpen, isMapReady, markersHash, updateMapMarkers, addressesWithCoords]);
+    }, [isOpen, isMapReady, markersHash, updateMapMarkers, addressesWithCoords, sortState.sortOrder]);
 
     // UseEffect separado para la línea de ruta - más eficiente
     useEffect(() => {
         if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
         
-        if (sortState.sortOrder === 'optimized') {
-            drawRouteLine();
-        } else {
-            if (routeLineRef.current) {
-                mapInstanceRef.current.removeLayer(routeLineRef.current);
-                routeLineRef.current = null;
+        // Pequeño delay para asegurar que los marcadores se actualicen primero
+        const updateTimer = setTimeout(() => {
+            if (sortState.sortOrder === 'optimized') {
+                // Limpiar línea anterior primero
+                if (routeLineRef.current) {
+                    mapInstanceRef.current.removeLayer(routeLineRef.current);
+                    routeLineRef.current = null;
+                }
+                // Dibujar nueva línea
+                drawRouteLine();
+            } else {
+                if (routeLineRef.current) {
+                    mapInstanceRef.current.removeLayer(routeLineRef.current);
+                    routeLineRef.current = null;
+                }
             }
-        }
-    }, [isOpen, isMapReady, sortState.sortOrder, drawRouteLine]);
+        }, 100);
+        
+        return () => clearTimeout(updateTimer);
+    }, [isOpen, isMapReady, sortState.sortOrder, drawRouteLine, routeCoordinates]);
+
+    // NUEVO: UseEffect específico para actualizar marcadores cuando cambia la ruta - SOLUCIÓN DEFINITIVA
+    useEffect(() => {
+        if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
+        
+        console.log('🔄 MAPA - UseEffect detectó cambio:', {
+            sortOrder: sortState.sortOrder,
+            hasOptimizedRoute: !!sortState.optimizedRoute,
+            optimizedRouteLength: sortState.optimizedRoute?.length || 0
+        });
+        
+        const forceUpdateMarkers = () => {
+            if (sortState.sortOrder === 'optimized' && sortState.optimizedRoute && sortState.optimizedRoute.length > 0) {
+                console.log('✅ MAPA - Actualizando con ruta optimizada:', sortState.optimizedRoute.length, 'direcciones');
+                
+                // Limpiar todos los marcadores existentes PRIMERO
+                Object.values(markersRef.current).forEach(marker => {
+                    if (mapInstanceRef.current) {
+                        mapInstanceRef.current.removeLayer(marker);
+                    }
+                });
+                markersRef.current = {};
+                
+                // Crear marcadores con orden optimizado
+                const addressMap = new Map(addresses.map(addr => [addr.id, addr]));
+                const reorderedAddresses = sortState.optimizedRoute
+                    .map(routeItem => addressMap.get(routeItem.id))
+                    .filter(Boolean)
+                    .map((address, index) => ({
+                        ...address,
+                        routeOrder: index + 1,
+                        coordinates: address.latitude && address.longitude 
+                            ? { lat: address.latitude, lng: address.longitude }
+                            : address.coords && Array.isArray(address.coords) && address.coords.length >= 2
+                                ? { lat: address.coords[0], lng: address.coords[1] }
+                                : null
+                    })).filter(addr => addr.coordinates);
+                
+                console.log('🎯 MAPA - Recreando', reorderedAddresses.length, 'marcadores con orden optimizado');
+                
+                // SOLUCIÓN DIRECTA: Crear marcadores manualmente uno por uno
+                reorderedAddresses.forEach((address, index) => {
+                    const coords = address.coordinates;
+                    if (!coords) return;
+                    
+                    const displayNumber = address.routeOrder || (index + 1);
+                    const color = address.isVisited ? '#ef4444' : '#22c55e';
+                    
+                    console.log(`📍 Creando marcador ${displayNumber}: ${address.address}`);
+                    
+                    const markerHtml = `
+                        <div style="
+                            background-color: ${color}; 
+                            color: white; 
+                            width: 36px; 
+                            height: 36px; 
+                            border-radius: 50%; 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center; 
+                            font-weight: bold; 
+                            font-size: 16px; 
+                            border: 3px solid white; 
+                            box-shadow: 0 3px 8px rgba(0,0,0,0.4); 
+                            cursor: pointer;
+                            animation: markerPulse 0.6s ease-out;
+                        ">
+                            ${displayNumber}
+                        </div>`;
+                    
+                    const customIcon = L.divIcon({ 
+                        html: markerHtml, 
+                        iconSize: [36, 36], 
+                        className: 'custom-marker-optimized',
+                        iconAnchor: [18, 18]
+                    });
+                    
+                    const marker = L.marker([coords.lat, coords.lng], { icon: customIcon });
+                    
+                    marker.on('click', () => {
+                        setSelectedAddress(address);
+                        setSelectedAddressIndex(index);
+                        setShowQuickAction(true);
+                    });
+                    
+                    marker.addTo(mapInstanceRef.current);
+                    markersRef.current[address.id] = marker;
+                });
+                
+                console.log('✅ MAPA - Marcadores creados directamente. Total en mapa:', Object.keys(markersRef.current).length);
+                
+            } else if (sortState.sortOrder === 'alpha') {
+                console.log('🔄 MAPA - Volviendo a orden original');
+                
+                // Limpiar todos los marcadores existentes PRIMERO
+                Object.values(markersRef.current).forEach(marker => {
+                    if (mapInstanceRef.current) {
+                        mapInstanceRef.current.removeLayer(marker);
+                    }
+                });
+                markersRef.current = {};
+                
+                // Orden original - recrear marcadores sin routeOrder
+                const originalAddresses = addresses.map(address => ({
+                    ...address,
+                    coordinates: address.latitude && address.longitude 
+                        ? { lat: address.latitude, lng: address.longitude }
+                        : address.coords && Array.isArray(address.coords) && address.coords.length >= 2
+                            ? { lat: address.coords[0], lng: address.coords[1] }
+                            : null
+                })).filter(addr => addr.coordinates);
+                
+                // SOLUCIÓN DIRECTA: Crear marcadores manualmente uno por uno  
+                originalAddresses.forEach((address, index) => {
+                    const coords = address.coordinates;
+                    if (!coords) return;
+                    
+                    const displayNumber = index + 1; // Orden secuencial original
+                    const color = address.isVisited ? '#ef4444' : '#22c55e';
+                    
+                    console.log(`📍 Recreando marcador original ${displayNumber}: ${address.address}`);
+                    
+                    const markerHtml = `
+                        <div style="
+                            background-color: ${color}; 
+                            color: white; 
+                            width: 36px; 
+                            height: 36px; 
+                            border-radius: 50%; 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center; 
+                            font-weight: bold; 
+                            font-size: 16px; 
+                            border: 3px solid white; 
+                            box-shadow: 0 3px 8px rgba(0,0,0,0.4); 
+                            cursor: pointer;
+                        ">
+                            ${displayNumber}
+                        </div>`;
+                    
+                    const customIcon = L.divIcon({ 
+                        html: markerHtml, 
+                        iconSize: [36, 36], 
+                        className: 'custom-marker-original',
+                        iconAnchor: [18, 18]
+                    });
+                    
+                    const marker = L.marker([coords.lat, coords.lng], { icon: customIcon });
+                    
+                    marker.on('click', () => {
+                        setSelectedAddress(address);
+                        setSelectedAddressIndex(index);
+                        setShowQuickAction(true);
+                    });
+                    
+                    marker.addTo(mapInstanceRef.current);
+                    markersRef.current[address.id] = marker;
+                });
+                
+                console.log('✅ MAPA - Marcadores originales recreados. Total en mapa:', Object.keys(markersRef.current).length);
+            }
+        };
+
+        // Ejecutar inmediatamente
+        forceUpdateMarkers();
+        
+    }, [isOpen, isMapReady, sortState.sortOrder, sortState.optimizedRoute, addresses, updateMapMarkers]);
     
     // Listener para mantener el modal abierto al regresar de Google Maps
     useEffect(() => {
@@ -732,14 +954,44 @@ const TerritoryMapModal = ({
                     )}
                     
                     <button 
-                        onClick={onOptimizedRoute} 
+                        onClick={() => {
+                            console.log('🔍 DEBUG MAPA - Botón presionado. Estado actual:', {
+                                sortOrder: sortState.sortOrder,
+                                optimizedRoute: sortState.optimizedRoute,
+                                addressesCount: addresses.length,
+                                markersCount: Object.keys(markersRef.current).length
+                            });
+                            
+                            if (sortState.sortOrder === 'optimized') {
+                                // Si ya está activa, desactivar (resetear)
+                                console.log('🔄 MAPA - Desactivando ruta optimizada');
+                                onResetSort();
+                            } else {
+                                // Si no está activa, crear ruta optimizada
+                                console.log('🚀 MAPA - Activando ruta optimizada');
+                                onOptimizedRoute();
+                            }
+                            // El useEffect se encargará del resto automáticamente
+                        }}
+                        onDoubleClick={() => {
+                            // Doble clic de emergencia para desbloquear si está atascado
+                            if (sortState.isCalculatingRoute && sortState.forceReset) {
+                                sortState.forceReset();
+                            }
+                        }}
                         disabled={sortState.isCalculatingRoute} 
-                        className={`px-3 py-1.5 text-xs rounded-lg shadow-sm border transition-all ${
+                        className={`relative px-3 py-1.5 text-xs rounded-lg shadow-sm border transition-all ${
                             sortState.sortOrder === 'optimized' 
-                                ? 'bg-green-600 text-white border-green-700' 
+                                ? 'bg-green-600 text-white border-green-700 scale-105' 
                                 : 'bg-white text-green-600 border-green-200 hover:bg-green-50'
-                        }`}
-                        title="Ruta optimizada"
+                        } ${sortState.isCalculatingRoute ? 'cursor-wait' : ''}`}
+                        title={
+                            sortState.isCalculatingRoute 
+                                ? 'Calculando ruta... (doble clic para resetear si está atascado)' 
+                                : sortState.sortOrder === 'optimized' 
+                                    ? 'Desactivar ruta optimizada' 
+                                    : 'Crear ruta optimizada'
+                        }
                     >
                         {sortState.isCalculatingRoute ? (
                             <div className="animate-spin w-3 h-3 border border-current border-t-transparent rounded-full"></div>
@@ -748,6 +1000,9 @@ const TerritoryMapModal = ({
                                 <Icon name="activity" size={14} className="mr-1" />
                                 Ruta
                             </>
+                        )}
+                        {sortState.sortOrder === 'optimized' && !sortState.isCalculatingRoute && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
                         )}
                     </button>
                 </div>

@@ -52,9 +52,9 @@ const LoginView = () => {
             <Icon name="mapPin" size={40} className="text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900">
-            Territorios LS
+            Territorios
           </h1>
-          <p className="text-gray-600 mt-2">Ingresa con tu código y contraseña</p>
+          <p className="text-gray-600 mt-2">Ingresa con tu usuario y contraseña</p>
         </div>
 
         {/* Formulario */}
@@ -69,18 +69,20 @@ const LoginView = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Código de Acceso
+                Usuario
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Icon name="user" size={20} className="text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <div className="bg-gray-100 rounded-full p-1.5 flex items-center justify-center">
+                    <Icon name="user" size={16} className="text-gray-700" />
+                  </div>
                 </div>
                 <input
                   ref={accessCodeRef}
                   type="text"
                   value={formData.accessCode}
                   onChange={(e) => setFormData({ ...formData, accessCode: e.target.value })}
-                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all placeholder:text-gray-400 bg-white"
                   placeholder="Ej: juan1"
                   autoComplete="username"
                   autoCapitalize="off"
@@ -96,15 +98,17 @@ const LoginView = () => {
                 Contraseña
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Icon name="lock" size={20} className="text-gray-400" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <div className="bg-gray-100 rounded-full p-1.5 flex items-center justify-center">
+                    <Icon name="lock" size={16} className="text-gray-700" />
+                  </div>
                 </div>
                 <input
                   ref={passwordRef}
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all placeholder:text-gray-400 bg-white"
                   placeholder="Ingresa tu contraseña..."
                   autoComplete="current-password"
                   disabled={isLoading}
@@ -112,13 +116,15 @@ const LoginView = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center hover:bg-gray-50 rounded-r-xl transition-colors z-10"
                 >
-                  <Icon 
-                    name={showPassword ? 'eyeOff' : 'eye'} 
-                    size={20} 
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  />
+                  <div className="bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 flex items-center justify-center transition-colors">
+                    <Icon 
+                      name={showPassword ? 'eyeOff' : 'eye'} 
+                      size={16} 
+                      className="text-gray-700 hover:text-gray-900 transition-colors"
+                    />
+                  </div>
                 </button>
               </div>
             </div>
@@ -148,7 +154,7 @@ const LoginView = () => {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>© 2024 Gestor de Territorios LS</p>
+          <p>© 2025 Estación Tetlán Señas</p>
         </div>
       </div>
 
