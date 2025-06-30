@@ -341,10 +341,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           await handleProposeAddressChange(editingAddress.id, formData, changeReason);
         }
       } else {
-        // Para nuevas direcciones, mostrar feedback de geocodificación
-        if (!formData.latitude && !formData.longitude && formData.address) {
-          showToast('Obteniendo coordenadas automáticamente...', 'info', 3000);
-        }
+        // ❌ ELIMINADO: Notificación innecesaria de coordenadas (los admins ya saben que se obtienen automáticamente)
+        // if (!formData.latitude && !formData.longitude && formData.address) {
+        //   showToast('Obteniendo coordenadas automáticamente...', 'info', 3000);
+        // }
         
         if (currentUser.role === 'admin' || isAssignedToMe) {
           await handleAddNewAddress(territory.id, formData);
