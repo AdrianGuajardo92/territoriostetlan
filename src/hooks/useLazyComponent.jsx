@@ -14,24 +14,35 @@ export const useLazyComponent = (importFunction, dependencies = []) => {
   }, []);
 
   const loadComponent = async () => {
-    if (Component || isLoading) return;
+    console.log('🔍 [DEBUG] loadComponent called:', { hasComponent: !!Component, isLoading });
+    if (Component || isLoading) {
+      console.log('🔍 [DEBUG] loadComponent early return - already loaded or loading');
+      return;
+    }
 
+    console.log('🔍 [DEBUG] Starting component load...');
     setIsLoading(true);
     setError(null);
 
     try {
+      console.log('🔍 [DEBUG] Calling importFunction...');
       const module = await importFunction();
+      console.log('🔍 [DEBUG] Import successful:', { module, default: !!module.default });
       
       if (isMountedRef.current) {
+        console.log('🔍 [DEBUG] Setting component (mounted)');
         setComponent(() => module.default || module);
+      } else {
+        console.log('🔍 [DEBUG] Component unmounted, not setting');
       }
     } catch (err) {
-      console.error('Error loading component:', err);
+      console.error('🔍 [DEBUG] Error loading component:', err);
       if (isMountedRef.current) {
         setError(err);
       }
     } finally {
       if (isMountedRef.current) {
+        console.log('🔍 [DEBUG] Setting isLoading to false');
         setIsLoading(false);
       }
     }
@@ -39,8 +50,11 @@ export const useLazyComponent = (importFunction, dependencies = []) => {
 
   // Auto-cargar cuando se necesiten las dependencias
   useEffect(() => {
+    console.log('🔍 [DEBUG] useLazyComponent useEffect:', { dependencies });
     const shouldLoad = dependencies.some(dep => Boolean(dep)); // Cualquier valor truthy
+    console.log('🔍 [DEBUG] shouldLoad:', shouldLoad);
     if (shouldLoad) {
+      console.log('🔍 [DEBUG] Calling loadComponent from useEffect');
       loadComponent();
     }
   }, dependencies);

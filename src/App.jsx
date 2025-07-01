@@ -177,14 +177,7 @@ function AppContent() {
       modal: 'search',
       description: 'Buscar en todos los territorios'
     },
-    {
-      id: 'stats',
-      text: 'Estadísticas',
-      icon: 'barChart',
-      modal: 'stats',
-      description: 'Ver progreso y métricas completas',
-      adminOnly: true  // Solo para administradores
-    },
+
     {
       id: 'reports',
       text: 'Reportes',
@@ -354,9 +347,7 @@ function AppContent() {
           modalId="search-modal" 
         />
       )}
-      {activeModal === 'stats' && (
-        <LazyStatsModal isOpen onClose={handleCloseModal} modalId="stats-modal" />
-      )}
+
       {activeModal === 'reports' && (
         <LazyReportsModal isOpen onClose={handleCloseModal} modalId="reports-modal" />
       )}
