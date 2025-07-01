@@ -102,7 +102,8 @@ function AppContent() {
         selectedTerritory: !!selectedTerritory,
         activeModal,
         isMenuOpen,
-        state: event.state
+        state: event.state,
+        currentURL: window.location.href
       });
 
       // PRIORIDAD 1: Si hay territorio seleccionado, volver a lista
@@ -115,7 +116,7 @@ function AppContent() {
 
       // PRIORIDAD 2: Si hay modal activo, cerrarlo
       if (activeModal) {
-        console.log('✅ Cerrando modal:', activeModal);
+        console.log(`🔙 Botón físico de volver - Cerrando modal: ${activeModal}`);
         setActiveModal(null);
         event.preventDefault();
         return;
@@ -135,32 +136,28 @@ function AppContent() {
       // Si tenemos un estado específico de la app, manejarlo
       if (currentState && currentState.app === 'territorios') {
         if (currentState.level === 'territory') {
-          console.log('✅ Estado del historial: volviendo de territorio');
           return; // Permitir navegación normal
         }
         if (currentState.level === 'menu') {
-          console.log('✅ Estado del historial: volviendo de menú');
           return; // Permitir navegación normal
         }
         if (currentState.level === 'main') {
-          console.log('✅ Estado del historial: en pantalla principal');
           return; // Permitir navegación normal
         }
       }
 
-      // PRIORIDAD 5: Solo mostrar confirmación si realmente estamos en la pantalla principal
-      // y no hay nada abierto y el usuario está tratando de salir de la app
-      console.log('⚠️ Usuario intentando salir de la app');
+      // PRIORIDAD 5: Si hay historial disponible, permitir navegación normal  
+      if (window.history.length > 1) {
+        return; // Permitir navegación normal hacia atrás
+      }
+
+      // PRIORIDAD 6: Solo mostrar confirmación si realmente no hay a dónde volver
       event.preventDefault();
       
       const shouldExit = window.confirm('¿Quieres salir de la aplicación?');
       if (shouldExit) {
-        // Cerrar ventana o ir a la página anterior del navegador
-        if (window.history.length > 1) {
-          window.history.back();
-        } else {
-          window.close();
-        }
+        // Cerrar ventana
+        window.close();
       } else {
         // Si no quiere salir, mantener en la misma página
         window.history.pushState({ app: 'territorios', level: 'main' }, '', window.location.href);
@@ -252,6 +249,11 @@ function AppContent() {
   });
 
   const handleOpenModal = (modalId) => {
+    // CERRAR EL MENÚ cuando se abre cualquier modal
+    if (isMenuOpen) {
+      setIsMenuOpen(false);
+    }
+    
     setActiveModal(modalId);
     // El historial ahora lo maneja automáticamente useModalHistory
   };

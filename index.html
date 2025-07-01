@@ -13,9 +13,8 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="dns-prefetch" href="https://unpkg.com">
     
-    <!-- OPTIMIZACIÓN: Prefetch crítico de fuentes FontAwesome ⚡ -->
-    <link rel="prefetch" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="prefetch" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/webfonts/fa-regular-400.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- OPTIMIZACIÓN: Prefetch de FontAwesome CSS solamente ⚡ -->
+    <link rel="prefetch" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <!-- SOLUCIÓN #3: Preload recursos críticos de la app ⚡ -->
     <link rel="modulepreload" href="/src/main.jsx">
@@ -29,13 +28,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="apple-touch-icon" href="/icon-192.png">
 
-    <!-- SOLUCIÓN #3: Font loading CRÍTICO - Carga inmediata ⚡ -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" rel="stylesheet"></noscript>
-    
-    <!-- CRÍTICO: Preload de fuentes Inter principales -->
-    <link rel="preload" href="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hiA.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- SOLUCIÓN OPTIMIZADA: Font loading SIN preloads redundantes ⚡ -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 
     <!-- SOLUCIÓN #3: JSX preload habilitado para estabilidad ⚡ -->
     

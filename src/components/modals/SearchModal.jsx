@@ -259,14 +259,13 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
   // Navegar al territorio y destacar la dirección - CORREGIDO
   const handleNavigateToAddress = useCallback((address) => {
     if (onNavigateToTerritory && address.territory) {
-      // Cerrar el modal INMEDIATAMENTE
-      onClose();
+      // PRIMERO: Navegar al territorio directamente
+      onNavigateToTerritory(address.territory, address.id);
       
-      // PREVENIR que se abra el menú con mejor timing
+      // SEGUNDO: Cerrar el modal SIN interferir con el historial
       setTimeout(() => {
-        // Navegar al territorio con la dirección destacada
-        onNavigateToTerritory(address.territory, address.id);
-      }, 200); // Aumentado el delay para evitar conflictos
+        onClose();
+      }, 50); // Delay mínimo para evitar conflictos de estado
     }
   }, [onNavigateToTerritory, onClose]);
 
@@ -281,19 +280,19 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
       onClose={onClose}
       title=""
       size="full" // Pantalla completa
-      modalId={modalId}
+      modalId={null} // Deshabilitar useModalHistory para evitar conflictos
     >
       <div className="h-full flex flex-col bg-gradient-to-br from-indigo-50 via-white to-blue-50">
         {/* Header del buscador mejorado */}
         <div className="bg-white/95 backdrop-blur-xl shadow-lg border-b border-indigo-100 px-4 py-6 flex-shrink-0">
           <div className="flex items-center gap-4">
-            {/* Botón cerrar elegante */}
+            {/* Botón de volver - Flechita hacia atrás */}
             <button
               onClick={onClose}
-              className="p-3 rounded-xl hover:bg-slate-100 transition-colors group"
-              title="Cerrar búsqueda"
+              className="p-3 rounded-xl hover:bg-slate-100 transition-colors group flex-shrink-0"
+              title="Volver"
             >
-              <Icon name="x" size={24} className="text-slate-600 group-hover:text-slate-800 transition-colors" />
+              <Icon name="arrowLeft" size={24} className="text-slate-600 group-hover:text-slate-800 transition-colors" />
             </button>
 
             {/* Barra de búsqueda rediseñada - SIN ICONO */}
