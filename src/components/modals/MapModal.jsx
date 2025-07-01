@@ -10,6 +10,7 @@ const TerritoryMapModal = ({
   addresses, 
   isAssignedToMe, 
   isAdmin, 
+  adminEditMode = false, // ✅ NUEVA PROP PARA MODO ADMINISTRADOR
   onEditAddress, 
   sortState, 
   onOptimizedRoute, 
@@ -1078,22 +1079,29 @@ const TerritoryMapModal = ({
                         
                         {/* Botones de acción - Rediseño con mejores proporciones */}
                         <div className="flex gap-2 mb-1.5">
-                            {/* Botón principal - Marcar completado/pendiente */}
-                            <button
-                                onClick={() => handleQuickToggleVisited(selectedAddress)}
-                                className={`flex-1 p-3 rounded-lg font-medium text-sm transition-all flex items-center justify-center ${
-                                    selectedAddress.isVisited
-                                        ? 'bg-slate-600 hover:bg-slate-700 text-white'
-                                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                }`}
-                            >
-                                <Icon 
-                                    name={selectedAddress.isVisited ? 'refresh' : 'checkCircle'} 
-                                    size={18} 
-                                    className="mr-2" 
-                                />
-                                {selectedAddress.isVisited ? 'Desmarcar' : 'Completado'}
-                            </button>
+                            {/* Botón principal - Marcar completado/pendiente - SOLO SI TIENE PERMISOS */}
+                            {(isAssignedToMe || (isAdmin && adminEditMode)) ? (
+                                <button
+                                    onClick={() => handleQuickToggleVisited(selectedAddress)}
+                                    className={`flex-1 p-3 rounded-lg font-medium text-sm transition-all flex items-center justify-center ${
+                                        selectedAddress.isVisited
+                                            ? 'bg-slate-600 hover:bg-slate-700 text-white'
+                                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                    }`}
+                                >
+                                    <Icon 
+                                        name={selectedAddress.isVisited ? 'refresh' : 'checkCircle'} 
+                                        size={18} 
+                                        className="mr-2" 
+                                    />
+                                    {selectedAddress.isVisited ? 'Desmarcar' : 'Completado'}
+                                </button>
+                            ) : (
+                                <div className="flex-1 p-3 rounded-lg font-medium text-sm bg-gray-100 text-gray-500 flex items-center justify-center border border-gray-200">
+                                    <Icon name="lock" size={18} className="mr-2" />
+                                    {isAdmin ? 'Activa el modo administrador para marcar' : 'Solo el asignado puede marcar'}
+                                </div>
+                            )}
                             
                             {/* Navegación - Color gris temático unificado */}
                             <div className="flex gap-2">
@@ -1122,7 +1130,7 @@ const TerritoryMapModal = ({
                         </div>
                         
                         {/* Botón para editar dirección - Más sutil */}
-                        {(isAssignedToMe || isAdmin) && (
+                        {(isAssignedToMe || (isAdmin && adminEditMode)) && (
                             <button
                                 onClick={() => {
                                     onEditAddress(selectedAddress);

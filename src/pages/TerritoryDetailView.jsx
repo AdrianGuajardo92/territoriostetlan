@@ -44,6 +44,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const [sortState, setSortState] = useState({
     sortOrder: 'alpha',
     optimizedRoute: null,
+    userLocation: null, // ✅ INCLUIR UBICACIÓN DEL USUARIO EN ESTADO INICIAL
     isCalculatingRoute: false
   });
 
@@ -416,6 +417,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       setSortState({
         sortOrder: 'optimized',
         optimizedRoute: optimizedAddresses,
+        userLocation: userLocation, // ✅ GUARDAR UBICACIÓN DEL USUARIO
         isCalculatingRoute: false
       });
 
@@ -445,6 +447,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     setSortState({
       sortOrder: 'alpha',
       optimizedRoute: null,
+      userLocation: null, // ✅ LIMPIAR UBICACIÓN DEL USUARIO
       isCalculatingRoute: false
     });
   };
@@ -587,6 +590,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           addresses={territoryAddresses}
           isAssignedToMe={isAssignedToMe}
           isAdmin={isAdmin}
+          adminEditMode={adminEditMode} // ✅ PASAR MODO ADMINISTRADOR AL MAPA
           onEditAddress={openEditModal}
           sortState={sortState}
           onOptimizedRoute={handleOptimizedRoute}
