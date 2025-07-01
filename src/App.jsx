@@ -29,9 +29,7 @@ function AppContent() {
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
   const [showMyProposals, setShowMyProposals] = useState(false);
-  const [updateVersion, setUpdateVersion] = useState(null);
   
   // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -62,42 +60,14 @@ function AppContent() {
     }).length;
   };
 
-  // Sistema de Service Worker y actualizaciones automáticas MEJORADO
+  // Sistema de Service Worker simplificado
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       const registerSW = async () => {
         try {
           console.log('🔧 Registrando Service Worker...');
           const registration = await navigator.serviceWorker.register('/sw.js');
-          
           console.log('✅ Service Worker registrado:', registration);
-
-          // Escuchar mensajes del service worker
-          const handleSWMessage = (event) => {
-            if (event.data?.type === 'UPDATE_AVAILABLE') {
-              console.log('🎉 Nueva versión disponible:', event.data.version);
-              setUpdateAvailable(true);
-              setUpdateVersion(event.data.version);
-              
-              // Toast notification inmediata y elegante
-              showUpdateNotification(event.data.version);
-            }
-            
-            if (event.data?.type === 'FORCE_RELOAD') {
-              console.log('🔄 Recarga forzada solicitada por SW');
-              window.location.reload();
-            }
-          };
-
-          navigator.serviceWorker.addEventListener('message', handleSWMessage);
-          
-          // ✨ VERIFICACIÓN INMEDIATA al cargar la app
-          console.log('🔍 Verificando actualizaciones al iniciar...');
-          setTimeout(() => checkForUpdates(), 2000);
-
-          // ✨ VERIFICACIÓN más frecuente cada 2 minutos (en lugar de 10)
-          setInterval(checkForUpdates, 2 * 60 * 1000);
-          
         } catch (error) {
           console.error('❌ Error registrando Service Worker:', error);
         }
@@ -107,143 +77,17 @@ function AppContent() {
     }
   }, []);
 
-  // ✨ Función para mostrar notificación de actualización elegante
-  const showUpdateNotification = (version) => {
-    // Crear toast personalizado más prominente
-    const toast = document.createElement('div');
-    toast.className = 'fixed top-4 left-4 right-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl shadow-2xl z-50 transform transition-all duration-500 translate-y-[-100px]';
-    toast.innerHTML = `
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-            <i class="fas fa-download text-white"></i>
-          </div>
-          <div>
-            <div class="font-bold text-lg">¡Nueva versión disponible!</div>
-            <div class="text-blue-100 text-sm">Versión ${version} - Actualiza para obtener las mejoras</div>
-          </div>
-        </div>
-        <button onclick="this.parentElement.parentElement.remove()" class="text-white/80 hover:text-white">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="mt-3 flex gap-2">
-        <button onclick="window.updateApp()" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors">
-          Actualizar Ahora
-        </button>
-        <button onclick="this.parentElement.parentElement.remove()" class="bg-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors">
-          Más Tarde
-        </button>
-      </div>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Animación de entrada
-    setTimeout(() => {
-      toast.style.transform = 'translateY(0)';
-    }, 100);
-    
-    // Auto-quitar después de 10 segundos si no interactúa
-    setTimeout(() => {
-      if (toast.parentElement) {
-        toast.style.transform = 'translateY(-100px)';
-        setTimeout(() => toast.remove(), 500);
-      }
-    }, 10000);
-    
-    // Hacer función global para el botón
-    window.updateApp = handleForceUpdate;
-  };
-
-  // ✨ Función mejorada para verificar actualizaciones con feedback
-  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
-  
-  const checkForUpdates = async (showFeedback = false) => {
-    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
-      if (showFeedback) {
-        showToast('Service Worker no disponible', 'error');
-      }
-      return false;
-    }
-
-    if (showFeedback) {
-      setIsCheckingUpdates(true);
-      showToast('🔍 Buscando actualizaciones...', 'info');
-    }
-
-    try {
-      const channel = new MessageChannel();
-      
-      const updatePromise = new Promise((resolve) => {
-        channel.port1.onmessage = (event) => {
-          if (event.data.hasUpdate) {
-            console.log('🎉 Actualización detectada:', event.data.currentVersion);
-            setUpdateAvailable(true);
-            setUpdateVersion(event.data.currentVersion);
-            
-            if (showFeedback) {
-              showUpdateNotification(event.data.currentVersion);
-            }
-            resolve(true);
-          } else {
-            if (showFeedback) {
-              showToast('✅ Ya tienes la versión más reciente', 'success');
-            }
-            resolve(false);
-          }
-        };
+  // Función simplificada para limpiar cache
+  const handleClearCache = () => {
+    if ('caches' in window) {
+      caches.keys().then(cacheNames => {
+        Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)))
+          .then(() => {
+            showToast('Cache limpiado correctamente', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+          });
       });
-      
-      navigator.serviceWorker.controller.postMessage(
-        { type: 'CHECK_UPDATE' }, 
-        [channel.port2]
-      );
-
-      // Timeout de 10 segundos
-      const timeoutPromise = new Promise((resolve) => {
-        setTimeout(() => {
-          if (showFeedback) {
-            showToast('⏰ Verificación tardó demasiado, intenta más tarde', 'warning');
-          }
-          resolve(false);
-        }, 10000);
-      });
-
-      const result = await Promise.race([updatePromise, timeoutPromise]);
-      return result;
-      
-    } catch (error) {
-      console.error('Error verificando actualizaciones:', error);
-      if (showFeedback) {
-        showToast('❌ Error verificando actualizaciones', 'error');
-      }
-      return false;
-    } finally {
-      if (showFeedback) {
-        setIsCheckingUpdates(false);
-      }
-    }
-  };
-
-  // Función para forzar actualización
-  const handleForceUpdate = () => {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      const channel = new MessageChannel();
-      
-      channel.port1.onmessage = (event) => {
-        if (event.data.success) {
-          console.log('🔄 Cache limpiado, recargando...');
-          window.location.reload();
-        }
-      };
-      
-      navigator.serviceWorker.controller.postMessage(
-        { type: 'FORCE_UPDATE' }, 
-        [channel.port2]
-      );
     } else {
-      // Fallback si no hay service worker
       window.location.reload();
     }
   };
@@ -431,19 +275,10 @@ function AppContent() {
     },
     {
       id: 'updates',
-      text: updateAvailable ? `¡Actualizar a v${updateVersion}!` : 'Buscar Actualizaciones',
-      icon: updateAvailable ? 'download' : 'sync-alt',
-      modal: updateAvailable ? null : 'updates',
-      hasBadge: updateAvailable,
-      badgeText: updateAvailable ? '!' : null,
-      description: updateAvailable 
-        ? `Nueva versión ${updateVersion} lista para instalar` 
-        : isCheckingUpdates 
-          ? 'Verificando actualizaciones...' 
-          : 'Buscar nuevas versiones disponibles',
-      action: updateAvailable ? handleForceUpdate : (() => checkForUpdates(true)),
-      isLoading: isCheckingUpdates,
-      isUpdateAction: updateAvailable
+      text: 'Limpiar Cache',
+      icon: 'sync-alt',
+      description: 'Limpiar cache y recargar aplicación',
+      action: handleClearCache
     },
     {
       id: 'install',

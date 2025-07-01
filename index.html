@@ -364,67 +364,9 @@
     });
     </script>
     
-    <!-- 🧹 LIMPIEZA INTELIGENTE: Solo cuando detecta Service Workers viejos -->
+    <!-- Cache busting simplificado -->
     <script>
-      // CLEANUP OPTIMIZADO: Solo cuando sea necesario
-      const cleanupKey = 'sw_cleanup_v2_15_3_done';
-      // Limpiar keys antiguas
-      localStorage.removeItem('sw_cleanup_v2_15_1_done');
-      localStorage.removeItem('sw_cleanup_v2_15_1_force_done');
-      localStorage.removeItem('sw_cleanup_v2_15_2_debug_done');
-      const hasCleanedUp = localStorage.getItem(cleanupKey);
-      
-      if (!hasCleanedUp && 'serviceWorker' in navigator) {
-        // Solo mostrar log si hay algo que limpiar
-        let needsCleanup = false;
-        
-        // Marcar inmediatamente para evitar múltiples ejecuciones
-        localStorage.setItem(cleanupKey, 'true');
-        
-        // Función async más simple para evitar problemas de scope
-        async function cleanupAndReload() {
-          try {
-            let needsReload = false;
-            
-            // Desregistrar Service Workers silenciosamente
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            if (registrations.length > 0) {
-              for(let registration of registrations) {
-                await registration.unregister();
-              }
-              needsReload = true;
-            }
-            
-            // Limpiar caches silenciosamente
-            if ('caches' in window) {
-              const cacheNames = await caches.keys();
-              if (cacheNames.length > 0) {
-                await Promise.all(
-                  cacheNames.map(cacheName => caches.delete(cacheName))
-                );
-                needsReload = true;
-              }
-            }
-            
-            // Recargar solo si había algo que limpiar
-            if (needsReload) {
-              setTimeout(() => {
-                window.location.reload(true);
-              }, 500);
-            }
-            
-          } catch (error) {
-            // Si hay error, recargar silenciosamente
-            setTimeout(() => {
-              window.location.reload(true);
-            }, 1000);
-          }
-        }
-        
-                 cleanupAndReload();
-      }
-      
-      // Cache busting timestamp
+      // Cache busting timestamp simple
       window.CACHE_BUSTER = Date.now();
     </script>
     
