@@ -1,13 +1,13 @@
 {
-  "version": "2.7.4",
+  "version": "2.7.5",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
       {
-        "type": "fix",
-        "description": "Corregido error que impedía cargar el modal de estadísticas y administración"
+        "type": "fix", 
+        "description": "Solucionado definitivamente el problema de carga infinita en modales de estadísticas y administración"
       },
       {
         "type": "new",

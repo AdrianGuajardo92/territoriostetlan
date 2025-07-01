@@ -39,7 +39,7 @@ export const useLazyComponent = (importFunction, dependencies = []) => {
 
   // Auto-cargar cuando se necesiten las dependencias
   useEffect(() => {
-    const shouldLoad = dependencies.some(dep => dep === true);
+    const shouldLoad = dependencies.some(dep => Boolean(dep)); // Cualquier valor truthy
     if (shouldLoad) {
       loadComponent();
     }
