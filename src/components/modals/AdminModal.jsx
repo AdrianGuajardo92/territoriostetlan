@@ -4,6 +4,7 @@ import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import StatsModal from './StatsModal'; // Importar el componente completo de estadísticas
+import { LazyReportsModal } from './LazyModals'; // Importar el componente de reportes
 
 const AdminModal = (props = {}) => {
   const { isOpen = false, onClose = () => {} } = props;
@@ -24,6 +25,7 @@ const AdminModal = (props = {}) => {
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showStatsModal, setShowStatsModal] = useState(false); // Estado para las estadísticas completas
+  const [showReportsModal, setShowReportsModal] = useState(false); // Estado para el modal de reportes
   const [proposalFilter, setProposalFilter] = useState('pending'); // Filtro para propuestas: all, pending, approved, rejected
   
   useEffect(() => {
@@ -58,6 +60,14 @@ const AdminModal = (props = {}) => {
       icon: 'fas fa-map-marked-alt', 
       color: 'green',
       action: () => setView('territories') 
+    },
+    { 
+      id: 'reports', 
+      title: 'Reportes del Sistema', 
+      description: 'Generar informes detallados y exportaciones', 
+      icon: 'fas fa-file-alt', 
+      color: 'indigo',
+      action: () => setShowReportsModal(true) 
     },
     { 
       id: 'stats', 
@@ -156,6 +166,13 @@ const AdminModal = (props = {}) => {
             accent: 'border-green-200',
             hover: 'hover:shadow-green-100/50'
           },
+          indigo: { 
+            bg: 'from-indigo-50 to-blue-100', 
+            iconBg: 'bg-indigo-500', 
+            text: 'text-indigo-600',
+            accent: 'border-indigo-200',
+            hover: 'hover:shadow-indigo-100/50'
+          },
           purple: { 
             bg: 'from-purple-50 to-violet-100', 
             iconBg: 'bg-purple-500', 
@@ -177,14 +194,14 @@ const AdminModal = (props = {}) => {
             </div>
 
             {/* Grid de opciones elegantes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {adminOptions.map(option => {
                 const config = colorConfig[option.color] || colorConfig.blue;
                 
                 return (
-                  <button 
-                    key={option.id} 
-                    onClick={option.action} 
+                <button 
+                  key={option.id} 
+                  onClick={option.action} 
                     className={`
                       relative p-6 bg-gradient-to-br ${config.bg} 
                       border-2 ${config.accent} rounded-3xl text-left 
@@ -194,13 +211,13 @@ const AdminModal = (props = {}) => {
                     `}
                   >
                     {/* Badge de notificación elegante */}
-                    {option.badge > 0 && (
+                  {option.badge > 0 && (
                       <div className="absolute -top-3 -right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white text-sm rounded-2xl w-8 h-8 flex items-center justify-center font-bold animate-pulse shadow-lg">
-                        {option.badge}
+                      {option.badge}
                       </div>
-                    )}
+                  )}
                     
-                    <div className="flex items-start">
+                  <div className="flex items-start">
                       {/* Ícono elegante */}
                       <div className={`w-16 h-16 ${config.iconBg} rounded-2xl flex items-center justify-center mr-4 shadow-lg transform group-hover:scale-110 transition-transform`}>
                         <i className={`${option.icon} text-2xl text-white`}></i>
@@ -231,8 +248,8 @@ const AdminModal = (props = {}) => {
                 <div>
                   <h4 className="font-semibold text-slate-800 mb-1">Acceso Exclusivo</h4>
                   <p className="text-sm text-slate-600">Solo los administradores pueden acceder a estas funciones avanzadas</p>
-                </div>
-              </div>
+                    </div>
+                  </div>
             </div>
           </div>
         );
@@ -337,7 +354,7 @@ const AdminModal = (props = {}) => {
                     }`}>
                       {filter.count || 0}
                     </span>
-                  </button>
+              </button>
                 ))}
               </div>
             </div>
@@ -388,10 +405,10 @@ const AdminModal = (props = {}) => {
                           <div className="w-12 h-12 bg-gradient-to-r from-orange-400 to-amber-500 rounded-xl flex items-center justify-center shadow-md">
                             <i className={`fas ${proposal.type === 'new' ? 'fa-plus' : 'fa-edit'} text-white`}></i>
                           </div>
-                          <div>
+                        <div>
                             <h4 className="text-xl font-bold text-gray-900 mb-1">
-                              {proposal.type === 'new' ? 'Nueva Dirección' : 'Editar Dirección'}
-                            </h4>
+                            {proposal.type === 'new' ? 'Nueva Dirección' : 'Editar Dirección'}
+                          </h4>
                             <p className="text-sm text-gray-600 flex items-center">
                               <i className="fas fa-user mr-2 text-gray-400"></i>
                               Propuesta por <span className="font-medium ml-1">{proposal.proposedByName}</span>
@@ -424,10 +441,10 @@ const AdminModal = (props = {}) => {
                             {proposal.status === 'pending' ? 'Pendiente' :
                              proposal.status === 'approved' ? 'Aprobada' :
                              'Rechazada'}
-                          </span>
+                        </span>
                         </div>
                       </div>
-
+                      
                       {/* Información del territorio */}
                       <div className="bg-blue-50/50 rounded-xl p-4 mb-4 border border-blue-200/50">
                         <p className="text-sm font-semibold text-blue-800 flex items-center">
@@ -573,7 +590,7 @@ const AdminModal = (props = {}) => {
                       )}
 
                       {/* Razón del publicador */}
-                      {proposal.reason && (
+                        {proposal.reason && (
                         <div className="bg-amber-50/70 rounded-xl p-4 border border-amber-200/50 mt-4">
                           <h6 className="font-semibold text-amber-800 mb-2 flex items-center">
                             <i className="fas fa-comment-alt mr-2"></i>
@@ -631,29 +648,29 @@ const AdminModal = (props = {}) => {
                                   "{proposal.rejectionReason}"
                                 </p>
                               </div>
-                            )}
-                          </div>
+                        )}
+                      </div>
                         </div>
                       )}
                       
                       {/* Botones de acción solo para propuestas pendientes */}
                       {proposal.status === 'pending' && (
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-orange-200">
-                          <button
-                            onClick={() => setSelectedProposal(proposal)}
+                        <button
+                          onClick={() => setSelectedProposal(proposal)}
                             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 rounded-xl hover:from-red-200 hover:to-pink-200 transition-all transform hover:scale-105 font-medium shadow-md border border-red-200"
-                          >
+                        >
                             <i className="fas fa-times"></i>
-                            Rechazar
-                          </button>
-                          <button
-                            onClick={() => handleApprove(proposal)}
+                          Rechazar
+                        </button>
+                        <button
+                          onClick={() => handleApprove(proposal)}
                             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-md"
-                          >
+                        >
                             <i className="fas fa-check"></i>
-                            Aprobar
-                          </button>
-                        </div>
+                          Aprobar
+                        </button>
+                      </div>
                       )}
                     </div>
                   );
@@ -705,12 +722,12 @@ const AdminModal = (props = {}) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                   {adminUsers.map(user => (
                     <div key={user.id} className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl shadow-lg p-6 border-2 border-purple-200 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-                      <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg">
                             <i className="fas fa-user-shield text-white text-xl"></i>
                           </div>
-                          <div>
+                    <div>
                             <h4 className="text-lg font-bold text-gray-900">{user.name}</h4>
                             <p className="text-sm text-purple-700 font-medium flex items-center">
                               <i className="fas fa-key mr-2"></i>
@@ -777,9 +794,9 @@ const AdminModal = (props = {}) => {
                           <i className="fas fa-edit"></i>
                           Editar
                         </button>
-                      </div>
-                    </div>
-                  ))}
+                  </div>
+                </div>
+              ))}
                 </div>
               )}
             </div>
@@ -828,7 +845,7 @@ const AdminModal = (props = {}) => {
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
                   <i className="fas fa-map-marked-alt text-white text-xl"></i>
-                </div>
+            </div>
                 <div>
                   <h3 className="text-2xl font-bold text-gray-800">Gestión de Territorios</h3>
                   <p className="text-gray-600 text-sm">
@@ -842,7 +859,7 @@ const AdminModal = (props = {}) => {
                 <span className="font-bold text-lg">{territories.length}</span>
               </div>
             </div>
-
+            
             {/* Estadísticas rápidas */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-4 border-2 border-green-200">
@@ -1074,6 +1091,15 @@ const AdminModal = (props = {}) => {
         <StatsModal 
           isOpen={showStatsModal} 
           onClose={() => setShowStatsModal(false)} 
+        />
+      )}
+      
+      {/* Modal de Reportes */}
+      {showReportsModal && (
+        <LazyReportsModal 
+          isOpen={showReportsModal} 
+          onClose={() => setShowReportsModal(false)} 
+          modalId="admin-reports-modal"
         />
       )}
     </>

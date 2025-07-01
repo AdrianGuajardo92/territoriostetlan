@@ -1,5 +1,5 @@
 {
-  "version": "2.15.3",
+  "version": "2.16.0",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
@@ -212,6 +212,22 @@
       {
         "type": "change",
         "description": "Movidas las estadísticas del menú principal al panel de administración exclusivamente"
+      },
+      {
+        "type": "major",
+        "description": "🔒 REPORTES EXCLUSIVOS PARA ADMINISTRADORES: Sección de reportes movida del menú público al panel de administración"
+      },
+      {
+        "type": "improvement",
+        "description": "Solo administradores pueden acceder a reportes del sistema - mayor control y seguridad"
+      },
+      {
+        "type": "improvement",
+        "description": "Panel de administración expandido con nueva opción 'Reportes del Sistema' con ícono y colores temáticos"
+      },
+      {
+        "type": "improvement",
+        "description": "Grid adaptativo mejorado (1x1 móvil, 2x2 tablet, 3x3 desktop) para acomodar las 5 opciones de administración"
       },
       {
         "type": "new",
@@ -440,6 +456,18 @@
       {
         "type": "new",
         "description": "Vista de estadísticas avanzadas para administradores."
+      },
+      {
+        "type": "major",
+        "description": "🔒 REPORTES EXCLUSIVOS: Acceso a reportes del sistema movido al panel de administración para mayor control"
+      },
+      {
+        "type": "improvement",
+        "description": "Panel expandido con 5 opciones principales: Propuestas, Usuarios, Territorios, Reportes y Estadísticas"
+      },
+      {
+        "type": "improvement",
+        "description": "Reportes ahora con diseño temático índigo y acceso directo desde el centro de administración"
       }
     ],
     "publisher": [
@@ -450,11 +478,30 @@
       {
         "type": "improvement",
         "description": "Búsqueda mejorada con filtros por tipo (territorios/direcciones)."
+      },
+      {
+        "type": "change",
+        "description": "🔒 MENÚ SIMPLIFICADO: Opción 'Reportes' ya no visible - solo administradores tienen acceso a esta función"
+      },
+      {
+        "type": "improvement",
+        "description": "Interfaz más limpia con menos opciones innecesarias para publicadores"
       }
     ]
   },
   "lastUpdated": "2024-12-27",
   "changelog": [
+    {
+      "version": "2.16.0",
+      "date": "2025-01-29",
+      "changes": [
+        "🔒 REPORTES EXCLUSIVOS PARA ADMINISTRADORES: Sección de reportes movida del menú público al panel de administración",
+        "🛡️ MAYOR SEGURIDAD: Solo administradores pueden acceder a reportes del sistema",
+        "🎨 PANEL EXPANDIDO: Nueva opción 'Reportes del Sistema' con diseño temático índigo",
+        "📱 GRID ADAPTATIVO: Layout mejorado (1x1 móvil, 2x2 tablet, 3x3 desktop) para 5 opciones",
+        "🧹 MENÚ SIMPLIFICADO: Publicadores ven interfaz más limpia sin opciones administrativas"
+      ]
+    },
     {
       "version": "2.15.3",
       "date": "2025-01-29",

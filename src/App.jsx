@@ -403,14 +403,6 @@ function AppContent() {
       modal: 'search',
       description: 'Buscar en todos los territorios'
     },
-
-    {
-      id: 'reports',
-      text: 'Reportes',
-      icon: 'fileText',
-      modal: 'reports',
-      description: 'Generar informes detallados'
-    },
     {
       id: 'myProposals',
       text: 'Mis Propuestas',
@@ -617,9 +609,6 @@ function AppContent() {
         />
       )}
 
-      {activeModal === 'reports' && (
-        <LazyReportsModal isOpen onClose={handleCloseModal} modalId="reports-modal" />
-      )}
       {activeModal === 'admin' && currentUser?.role === 'admin' && (
         <LazyAdminModal isOpen onClose={handleCloseModal} modalId="admin-modal" />
       )}

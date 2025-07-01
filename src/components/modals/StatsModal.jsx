@@ -404,12 +404,12 @@ const StatsModal = ({ isOpen, onClose }) => {
         hover:scale-[1.02] transition-all duration-300 ease-out
         backdrop-blur-sm border-white/20
       `}>
-        <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-600 mb-2 truncate">{title}</p>
             <p className="text-3xl font-bold text-gray-900 mb-1">{value}</p>
-            {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
-            {trend !== undefined && (
+          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+          {trend !== undefined && (
               <div className={`flex items-center mt-3 text-xs px-2 py-1 rounded-full ${
                 trend > 0 
                   ? 'bg-green-100 text-green-700' 
@@ -419,15 +419,15 @@ const StatsModal = ({ isOpen, onClose }) => {
               }`}>
                 <i className={`fas ${trend > 0 ? 'fa-arrow-up' : trend < 0 ? 'fa-arrow-down' : 'fa-minus'} mr-1.5`}></i>
                 <span className="font-medium">{Math.abs(trend)}% vs mes anterior</span>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
           <div className={`w-14 h-14 ${config.iconBg} rounded-2xl flex items-center justify-center ml-4 shadow-lg transform hover:scale-110 transition-transform`}>
             <i className={`fas fa-${icon} text-xl text-white`}></i>
           </div>
-        </div>
       </div>
-    );
+    </div>
+  );
   };
   
   return (
@@ -465,15 +465,15 @@ const StatsModal = ({ isOpen, onClose }) => {
                 <i className="fas fa-file-excel"></i>
                 <span className="hidden sm:inline">Excel</span>
               </button>
-              <button 
-                onClick={onClose}
+            <button 
+              onClick={onClose}
                 className="p-3 rounded-xl transition-all transform hover:scale-105 group"
                 style={{ backgroundColor: '#34495e' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
-              >
+            >
                 <Icon name="x" size={20} className="text-white group-hover:rotate-90 transition-transform" />
-              </button>
+            </button>
             </div>
           </div>
           
@@ -518,16 +518,16 @@ const StatsModal = ({ isOpen, onClose }) => {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <StatCard
-                    title="Total de Territorios"
-                    value={stats.totalTerritories}
+                <StatCard
+                  title="Total de Territorios"
+                  value={stats.totalTerritories}
                     icon="map"
                     color="blue"
-                  />
-                  <StatCard
-                    title="Total de Direcciones"
-                    value={stats.totalAddresses}
-                    icon="home"
+                />
+                <StatCard
+                  title="Total de Direcciones"
+                  value={stats.totalAddresses}
+                  icon="home"
                     color="green"
                   />
                   <StatCard
@@ -565,12 +565,12 @@ const StatsModal = ({ isOpen, onClose }) => {
                     value={stats.availableTerritories}
                     icon="check-circle"
                     color="green"
-                  />
-                  <StatCard
+                />
+                <StatCard
                     title="En Uso"
                     value={stats.inUseTerritories}
                     subtitle={`Por ${stats.activePublishers} publicadores`}
-                    icon="users"
+                  icon="users"
                     color="blue"
                   />
                   <StatCard
@@ -602,8 +602,8 @@ const StatsModal = ({ isOpen, onClose }) => {
                     subtitle="Sin territorios asignados"
                     icon="user-slash"
                     color="gray"
-                  />
-                  <StatCard
+                />
+                <StatCard
                     title="Direcciones Agregadas"
                     value={stats.addressesAddedThisMonth}
                     subtitle="Este mes"
