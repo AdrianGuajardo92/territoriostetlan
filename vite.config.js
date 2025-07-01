@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // CORRECCIÓN: Configurar directorio público para archivos estáticos
+  publicDir: 'public',
   esbuild: {
     // Forzar que todos los archivos JSX se transpilen a JS
     loader: 'jsx',
@@ -19,8 +21,14 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    // CORRECCIÓN: Copiar archivos adicionales necesarios
+    copyPublicDir: true,
     // OPTIMIZACIÓN: Splitting agresivo para móviles ⚡
     rollupOptions: {
+      // CORRECCIÓN: Copiar sw.js desde el root
+      input: {
+        main: './index.html'
+      },
       output: {
         // Forzar extensión .js para todos los archivos
         format: 'es',
