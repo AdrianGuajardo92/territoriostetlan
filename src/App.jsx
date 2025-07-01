@@ -182,7 +182,8 @@ function AppContent() {
       text: 'Estadísticas',
       icon: 'barChart',
       modal: 'stats',
-      description: 'Ver progreso y métricas'
+      description: 'Ver progreso y métricas completas',
+      adminOnly: true  // Solo para administradores
     },
     {
       id: 'reports',
@@ -245,6 +246,7 @@ function AppContent() {
   const filteredMenuItems = menuItems.filter(item => {
     if (item.id === 'admin' && currentUser?.role !== 'admin') return false;
     if (item.id === 'myProposals' && currentUser?.role === 'admin') return false;
+    if (item.adminOnly && currentUser?.role !== 'admin') return false; // Filtrar items solo para admin
     return true;
   });
 

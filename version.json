@@ -1,10 +1,14 @@
 {
-  "version": "2.7.2",
+  "version": "2.7.3",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
-        "all": [
+    "all": [
+      {
+        "type": "new",
+        "description": "Sistema de versiones dinámico - las actualizaciones ahora se leen automáticamente desde version.json"
+      },
       {
         "type": "fix",
         "description": "Corregido error 400 de Firebase Firestore - configuración de cache simplificada."
@@ -43,6 +47,18 @@
       }
     ],
     "admin": [
+      {
+        "type": "new",
+        "description": "Estadísticas exclusivas para administradores con exportación a PDF y Excel"
+      },
+      {
+        "type": "new",
+        "description": "Métricas completas: cobertura, territorios por período, publicadores inactivos y estimaciones"
+      },
+      {
+        "type": "new",
+        "description": "Filtros por fecha y gráficas de progreso mensual/anual"
+      },
       {
         "type": "new",
         "description": "Panel de administración completo con gestión de propuestas, usuarios y territorios."
