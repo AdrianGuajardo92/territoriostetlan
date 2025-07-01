@@ -4,34 +4,35 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   
-  # Headers de seguridad básicos con Clear-Site-Data AGRESIVO
+  # Headers de seguridad básicos sin Clear-Site-Data global
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache", "storage"
 
-# FORZAR limpieza completa en página principal
+# SOLO aplicar Clear-Site-Data a páginas principales (navegación)
 /
   Content-Type: text/html; charset=utf-8
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache", "storage", "executionContexts"
+  Clear-Site-Data: "cache", "storage"
 
 /index.html
   Content-Type: text/html; charset=utf-8
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache", "storage", "executionContexts"
+  Clear-Site-Data: "cache", "storage"
 
+# Service Worker - Clear-Site-Data apropiado
 /sw.js
   Content-Type: application/javascript; charset=utf-8
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache", "storage"
+  Clear-Site-Data: "cache"
 
+# Version check - Clear-Site-Data apropiado
 /version.json
   Content-Type: application/json; charset=utf-8
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
@@ -39,28 +40,33 @@
   Expires: 0
   Clear-Site-Data: "cache"
 
-# Assets JavaScript - FORZAR recarga sin cache
+# Assets JavaScript - SIN Clear-Site-Data para evitar advertencias
 /assets/*.js
   Content-Type: application/javascript; charset=utf-8
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache"
   
 /assets/*.css
   Content-Type: text/css; charset=utf-8
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache"
 
-# Source maps - Sin cache
+# Source maps - Sin Clear-Site-Data
 /assets/*.map
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
 
-# Imágenes y recursos estáticos - Cache corto
+# Manifest y archivos estáticos - SIN Clear-Site-Data
+/assets/*.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+# Imágenes y recursos estáticos - Cache corto, sin Clear-Site-Data
 /assets/*.png
   Cache-Control: public, max-age=300
 
@@ -73,7 +79,7 @@
 /*.svg
   Cache-Control: public, max-age=300
 
-# Manifest para PWA - Sin cache
+# Manifest para PWA - Sin Clear-Site-Data
 /manifest.json
   Content-Type: application/json; charset=utf-8
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
