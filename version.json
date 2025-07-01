@@ -1,5 +1,5 @@
 {
-  "version": "2.7.6",
+  "version": "2.7.7",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
@@ -7,7 +7,7 @@
     "all": [
       {
         "type": "fix", 
-        "description": "Agregados logs de depuración para diagnosticar problema de carga en panel de administración"
+        "description": "SOLUCIONADO: Hook useLazyComponent simplificado - eliminado problema de componentes que se desmontan prematuramente"
       },
       {
         "type": "change",

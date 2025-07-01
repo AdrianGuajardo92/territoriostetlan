@@ -1,69 +1,41 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
-// Hook para lazy loading de componentes - OPTIMIZACIÓN BUNDLE SIZE ⚡
+// Hook simplificado para lazy loading - SIN refs complejas ⚡
 export const useLazyComponent = (importFunction, dependencies = []) => {
   const [Component, setComponent] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const isMountedRef = useRef(true);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const loadComponent = async () => {
-    console.log('🔍 [DEBUG] loadComponent called:', { hasComponent: !!Component, isLoading });
-    if (Component || isLoading) {
-      console.log('🔍 [DEBUG] loadComponent early return - already loaded or loading');
-      return;
-    }
-
-    console.log('🔍 [DEBUG] Starting component load...');
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      console.log('🔍 [DEBUG] Calling importFunction...');
-      const module = await importFunction();
-      console.log('🔍 [DEBUG] Import successful:', { module, default: !!module.default });
-      
-      if (isMountedRef.current) {
-        console.log('🔍 [DEBUG] Setting component (mounted)');
-        setComponent(() => module.default || module);
-      } else {
-        console.log('🔍 [DEBUG] Component unmounted, not setting');
-      }
-    } catch (err) {
-      console.error('🔍 [DEBUG] Error loading component:', err);
-      if (isMountedRef.current) {
-        setError(err);
-      }
-    } finally {
-      if (isMountedRef.current) {
-        console.log('🔍 [DEBUG] Setting isLoading to false');
-        setIsLoading(false);
-      }
-    }
-  };
 
   // Auto-cargar cuando se necesiten las dependencias
   useEffect(() => {
     console.log('🔍 [DEBUG] useLazyComponent useEffect:', { dependencies });
-    const shouldLoad = dependencies.some(dep => Boolean(dep)); // Cualquier valor truthy
+    const shouldLoad = dependencies.some(dep => Boolean(dep));
     console.log('🔍 [DEBUG] shouldLoad:', shouldLoad);
-    if (shouldLoad) {
-      console.log('🔍 [DEBUG] Calling loadComponent from useEffect');
-      loadComponent();
+    
+    if (shouldLoad && !Component && !isLoading) {
+      console.log('🔍 [DEBUG] Starting component load...');
+      setIsLoading(true);
+      setError(null);
+
+      importFunction()
+        .then(module => {
+          console.log('🔍 [DEBUG] Import successful:', { module, default: !!module.default });
+          setComponent(module.default || module);
+          setIsLoading(false);
+          console.log('🔍 [DEBUG] Component set successfully');
+        })
+        .catch(err => {
+          console.error('🔍 [DEBUG] Error loading component:', err);
+          setError(err);
+          setIsLoading(false);
+        });
     }
   }, dependencies);
 
   return {
     Component,
     isLoading,
-    error,
-    loadComponent
+    error
   };
 };
 
