@@ -30,6 +30,7 @@ function AppContent() {
   const [activeModal, setActiveModal] = useState(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [showMyProposals, setShowMyProposals] = useState(false);
+  const [updateVersion, setUpdateVersion] = useState(null);
   
   // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -58,6 +59,98 @@ function AppContent() {
       const processedDate = processedAt.toDate ? processedAt.toDate() : new Date(processedAt);
       return processedDate > lastViewed;
     }).length;
+  };
+
+  // Sistema de Service Worker y actualizaciones automáticas
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      const registerSW = async () => {
+        try {
+          console.log('🔧 Registrando Service Worker...');
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          
+          console.log('✅ Service Worker registrado:', registration);
+
+          // Escuchar mensajes del service worker
+          const handleSWMessage = (event) => {
+            if (event.data?.type === 'UPDATE_AVAILABLE') {
+              console.log('🎉 Nueva versión disponible:', event.data.version);
+              setUpdateAvailable(true);
+              setUpdateVersion(event.data.version);
+              
+              // Auto-recarga después de 3 segundos (opcional)
+              setTimeout(() => {
+                if (confirm(`¡Nueva versión ${event.data.version} disponible!\n\n¿Quieres actualizar ahora? (Recomendado)`)) {
+                  handleForceUpdate();
+                }
+              }, 3000);
+            }
+            
+            if (event.data?.type === 'FORCE_RELOAD') {
+              console.log('🔄 Recarga forzada solicitada por SW');
+              window.location.reload();
+            }
+          };
+
+          navigator.serviceWorker.addEventListener('message', handleSWMessage);
+          
+          // Verificar actualizaciones al registrar
+          if (registration.active) {
+            checkForUpdates();
+          }
+
+          // Verificar actualizaciones cada 10 minutos
+          setInterval(checkForUpdates, 10 * 60 * 1000);
+          
+        } catch (error) {
+          console.error('❌ Error registrando Service Worker:', error);
+        }
+      };
+
+      registerSW();
+    }
+  }, []);
+
+  // Función para verificar actualizaciones manualmente
+  const checkForUpdates = () => {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      const channel = new MessageChannel();
+      
+      channel.port1.onmessage = (event) => {
+        if (event.data.hasUpdate) {
+          console.log('🎉 Actualización detectada por verificación manual');
+          setUpdateAvailable(true);
+          setUpdateVersion(event.data.currentVersion);
+        }
+      };
+      
+      navigator.serviceWorker.controller.postMessage(
+        { type: 'CHECK_UPDATE' }, 
+        [channel.port2]
+      );
+    }
+  };
+
+  // Función para forzar actualización
+  const handleForceUpdate = () => {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      const channel = new MessageChannel();
+      
+      channel.port1.onmessage = (event) => {
+        if (event.data.success) {
+          console.log('🔄 Cache limpiado, recargando...');
+          window.location.reload();
+        }
+      };
+      
+      navigator.serviceWorker.controller.postMessage(
+        { type: 'FORCE_UPDATE' }, 
+        [channel.port2]
+      );
+    } else {
+      // Fallback si no hay service worker
+      window.location.reload();
+    }
   };
 
   // OPTIMIZACIÓN: Detectar cuando Inter font se carga para aplicar clase
@@ -256,7 +349,8 @@ function AppContent() {
       modal: 'updates',
       hasBadge: updateAvailable,
       badgeText: updateAvailable ? '!' : null,
-      description: updateAvailable ? '¡Nueva versión disponible!' : 'Verificar nuevas versiones'
+      description: updateAvailable ? `¡Nueva versión ${updateVersion} disponible!` : 'Verificar nuevas versiones',
+      action: updateAvailable ? handleForceUpdate : null
     },
     {
       id: 'install',

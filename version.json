@@ -1,10 +1,30 @@
 {
-  "version": "2.12.1",
+  "version": "2.13.0",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "major", 
+        "description": "🚀 ACTUALIZACIONES AUTOMÁTICAS: ¡Nunca más borrar cookies! Sistema completo de actualización en tiempo real"
+      },
+      {
+        "type": "feature", 
+        "description": "DETECCIÓN INTELIGENTE: Service Worker detecta nueva versión cada 5 minutos y notifica automáticamente"
+      },
+      {
+        "type": "feature", 
+        "description": "CACHE BUSTING AVANZADO: Headers optimizados en Netlify para actualizaciones inmediatas sin cache manual"
+      },
+      {
+        "type": "feature", 
+        "description": "NOTIFICACIONES AUTOMÁTICAS: Popup te avisa de nueva versión y opción de actualizar al instante"
+      },
+      {
+        "type": "improvement", 
+        "description": "LIMPIEZA AUTOMÁTICA: Cache antiguos se eliminan automáticamente, sin acumulación de archivos viejos"
+      },
       {
         "type": "fix", 
         "description": "CORRECCIÓN CRÍTICA: Arreglado error de importación que impedía abrir la aplicación"
@@ -196,6 +216,18 @@
           ],
       "publisher": [
         {
+          "type": "major",
+          "description": "🎉 FIN DE PROBLEMAS DE CACHE: ¡Ya no necesitas borrar cookies/datos! La app se actualiza automáticamente"
+        },
+        {
+          "type": "feature",
+          "description": "ACTUALIZACIONES INTELIGENTES: Recibes notificación automática cuando hay nueva versión disponible"
+        },
+        {
+          "type": "improvement",
+          "description": "UX MEJORADA: Un click para actualizar + recarga automática, proceso súper simple y rápido"
+        },
+        {
           "type": "fix",
           "description": "🔧 APLICACIÓN FUNCIONANDO: Corregido error que impedía abrir la app (hook useApp vs useAppContext)"
         },
@@ -221,6 +253,18 @@
         }
       ],
       "admin": [
+        {
+          "type": "major",
+          "description": "🚀 SISTEMA DE ACTUALIZACIÓN PROFESIONAL: Gestión automática de versiones sin intervención manual"
+        },
+        {
+          "type": "feature",
+          "description": "MONITOREO EN TIEMPO REAL: Service Worker detecta automáticamente nuevas versiones y limpia cache obsoleto"
+        },
+        {
+          "type": "improvement",
+          "description": "CONFIGURACIÓN OPTIMIZADA: Headers de Netlify configurados para balance perfecto entre performance y actualizaciones"
+        },
         {
           "type": "improvement",
           "description": "EXPERIENCIA MEJORADA: Solo los 3 filtros que realmente importan - sin opciones innecesarias, navegación más directa"

@@ -1,20 +1,94 @@
-// Service Worker Agresivo para Gestor de Territorios LS
+// Service Worker Agresivo para Gestor de Territorios LS con Auto-Update
 // La versión se actualizará dinámicamente basándose en version.json
-let CACHE_NAME = 'territorio-ls-v2.7.2';
-let RUNTIME_CACHE = 'territorio-runtime-v2.7.2';
+let CACHE_NAME = 'territorio-ls-v2.13.0';
+let RUNTIME_CACHE = 'territorio-runtime-v2.13.0';
+let CURRENT_VERSION = '2.13.0';
 
-// Función para actualizar la versión del cache
+// Función para actualizar la versión del cache con detección de cambios
 async function updateCacheVersion() {
   try {
-    const response = await fetch('/version.json');
+    const response = await fetch('/version.json?t=' + Date.now(), {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
+    
     if (response.ok) {
       const data = await response.json();
-      CACHE_NAME = `territorio-ls-v${data.version}`;
-      RUNTIME_CACHE = `territorio-runtime-v${data.version}`;
-      console.log('[SW] Versión del cache actualizada a:', data.version);
+      const newVersion = data.version;
+      
+      // Detectar si hay nueva versión
+      if (CURRENT_VERSION !== newVersion) {
+        console.log('[SW] 🎉 Nueva versión detectada:', CURRENT_VERSION, '→', newVersion);
+        
+        // Actualizar variables globales
+        const oldCacheName = CACHE_NAME;
+        const oldRuntimeCache = RUNTIME_CACHE;
+        
+        CURRENT_VERSION = newVersion;
+        CACHE_NAME = `territorio-ls-v${newVersion}`;
+        RUNTIME_CACHE = `territorio-runtime-v${newVersion}`;
+        
+        // Limpiar caches antiguos inmediatamente
+        await cleanOldCaches([oldCacheName, oldRuntimeCache]);
+        
+        // Notificar a todos los clientes sobre la actualización
+        await notifyClientsOfUpdate(newVersion);
+        
+        console.log('[SW] ✅ Actualización completada a versión:', newVersion);
+        return true; // Indica que hubo actualización
+      } else {
+        console.log('[SW] Versión actual:', CURRENT_VERSION);
+        return false; // No hubo cambios
+      }
     }
   } catch (error) {
     console.log('[SW] Error obteniendo versión:', error);
+    return false;
+  }
+}
+
+// Función para limpiar caches antiguos
+async function cleanOldCaches(excludeCaches = []) {
+  try {
+    const cacheNames = await caches.keys();
+    const currentCaches = [CACHE_NAME, RUNTIME_CACHE];
+    
+    const cachesToDelete = cacheNames.filter(cacheName => 
+      !currentCaches.includes(cacheName) && !excludeCaches.includes(cacheName)
+    );
+    
+    await Promise.all(
+      cachesToDelete.map(cacheName => {
+        console.log('[SW] 🗑️ Eliminando cache antiguo:', cacheName);
+        return caches.delete(cacheName);
+      })
+    );
+    
+    console.log('[SW] ✅ Limpieza de cache completada');
+  } catch (error) {
+    console.error('[SW] Error limpiando caches:', error);
+  }
+}
+
+// Función para notificar clientes sobre actualización
+async function notifyClientsOfUpdate(newVersion) {
+  try {
+    const clients = await self.clients.matchAll({ includeUncontrolled: true });
+    
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'UPDATE_AVAILABLE',
+        version: newVersion,
+        timestamp: Date.now()
+      });
+    });
+    
+    console.log('[SW] 📢 Notificados', clients.length, 'clientes sobre actualización');
+  } catch (error) {
+    console.error('[SW] Error notificando clientes:', error);
   }
 }
 
@@ -77,28 +151,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activación: Limpiar caches antiguos
-self.addEventListener('activate', event => {
-  console.log('[SW] Activando Service Worker...');
-  
-  event.waitUntil(
-    caches.keys()
-      .then(cacheNames => {
-        return Promise.all(
-          cacheNames
-            .filter(cacheName => cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE)
-            .map(cacheName => {
-              console.log('[SW] Eliminando cache antiguo:', cacheName);
-              return caches.delete(cacheName);
-            })
-        );
-      })
-      .then(() => {
-        console.log('[SW] Service Worker activado, tomando control...');
-        return self.clients.claim(); // Tomar control inmediatamente
-      })
-  );
-});
+
 
 // Estrategia de Fetch: Cache First con fallback agresivo
 self.addEventListener('fetch', event => {
@@ -299,11 +352,84 @@ function createErrorResponse() {
   });
 }
 
-// Manejar mensajes del cliente
+// Verificación periódica de actualizaciones (cada 5 minutos)
+function startPeriodicUpdateCheck() {
+  setInterval(async () => {
+    console.log('[SW] 🔍 Verificando actualizaciones...');
+    const hasUpdate = await updateCacheVersion();
+    
+    if (hasUpdate) {
+      // Si hay actualización, también triggear una limpieza extra
+      await cleanOldCaches();
+    }
+  }, 5 * 60 * 1000); // 5 minutos
+}
+
+// Verificación al activar el SW
+self.addEventListener('activate', event => {
+  console.log('[SW] Activando Service Worker...');
+  
+  event.waitUntil(
+    Promise.all([
+      // Actualizar versión al activar
+      updateCacheVersion(),
+      // Limpiar caches antiguos
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames
+            .filter(cacheName => cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE)
+            .map(cacheName => {
+              console.log('[SW] Eliminando cache antiguo:', cacheName);
+              return caches.delete(cacheName);
+            })
+        );
+      })
+    ]).then(() => {
+      console.log('[SW] Service Worker activado, tomando control...');
+      // Iniciar verificación periódica
+      startPeriodicUpdateCheck();
+      return self.clients.claim(); // Tomar control inmediatamente
+    })
+  );
+});
+
+// Manejar mensajes del cliente con nuevas funcionalidades
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     console.log('[SW] Recibido mensaje SKIP_WAITING');
     self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CHECK_UPDATE') {
+    console.log('[SW] 🔍 Verificación manual de actualización solicitada');
+    updateCacheVersion().then(hasUpdate => {
+      event.ports[0]?.postMessage({ 
+        hasUpdate, 
+        currentVersion: CURRENT_VERSION 
+      });
+    });
+  }
+  
+  if (event.data && event.data.type === 'FORCE_UPDATE') {
+    console.log('[SW] 🔄 Recarga forzada solicitada');
+    // Limpiar TODO el cache
+    caches.keys().then(cacheNames => {
+      Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)))
+        .then(() => {
+          console.log('[SW] Cache limpiado para recarga forzada');
+          event.ports[0]?.postMessage({ success: true });
+          
+          // Notificar a todos los clientes para que se recarguen
+          self.clients.matchAll().then(clients => {
+            clients.forEach(client => {
+              client.postMessage({
+                type: 'FORCE_RELOAD',
+                timestamp: Date.now()
+              });
+            });
+          });
+        });
+    });
   }
   
   if (event.data && event.data.type === 'CLEAR_CACHE') {
@@ -312,7 +438,7 @@ self.addEventListener('message', event => {
       Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)))
         .then(() => {
           console.log('[SW] Cache limpiado completamente');
-          event.ports[0].postMessage({ success: true });
+          event.ports[0]?.postMessage({ success: true });
         });
     });
   }

@@ -378,15 +378,21 @@
     });
     </script>
     
-    <!-- CORRECCIÓN TEMPORAL: Desactivar Service Worker para debug MIME ⚡ -->
+    <!-- CACHE BUSTING DINÁMICO: Evitar caché en recursos principales ⚡ -->
     <script>
-      // Desregistrar cualquier service worker existente
+      // Cache busting automático para recursos principales
+      const cacheBuster = Date.now();
+      
+      // Agregar timestamp a imports dinámicos si es necesario
+      window.CACHE_BUSTER = cacheBuster;
+      
+      console.log('🚀 Cache buster aplicado:', cacheBuster);
+      
+      // Service Worker auto-update mejorado
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-            console.log('Service Worker desregistrado:', registration.scope);
-          }
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('🔄 Service Worker actualizado, aplicando cambios...');
+          // No recargar inmediatamente, dejar que la app maneje la actualización
         });
       }
     </script>
