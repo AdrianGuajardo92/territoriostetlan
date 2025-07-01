@@ -50,6 +50,7 @@ export const AppProvider = ({ children }) => {
   const [publishers, setPublishers] = useState([]);
   const [users, setUsers] = useState([]);
   const [proposals, setProposals] = useState([]);
+  const [territoryHistory, setTerritoryHistory] = useState([]); // Agregar estado para historial
   const [isLoading, setIsLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [adminEditMode, setAdminEditMode] = useState(false);
@@ -885,8 +886,18 @@ export const AppProvider = ({ children }) => {
           });
         }
 
+        // Suscripción al historial de territorios
+        const historyQuery = query(collection(db, 'territoryHistory'), orderBy('assignedDate', 'desc'));
+        const unsubHistory = onSnapshot(historyQuery, (snapshot) => {
+          const historyData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setTerritoryHistory(historyData);
+        });
+
         // Guardar funciones de cleanup
-        unsubscribesRef.current = [unsubTerritories, unsubAddresses, unsubUsers, unsubProposals];
+        unsubscribesRef.current = [unsubTerritories, unsubAddresses, unsubUsers, unsubProposals, unsubHistory];
         
         setIsLoading(false);
       } catch (error) {
@@ -929,6 +940,7 @@ export const AppProvider = ({ children }) => {
     publishers,
     users,
     proposals,
+    territoryHistory, // Agregar territoryHistory al contexto
     isLoading,
     authLoading,
     CURRENT_VERSION: appVersion, // Ahora es dinámico desde version.json

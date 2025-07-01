@@ -1,10 +1,14 @@
 {
-  "version": "2.7.3",
+  "version": "2.7.4",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "fix",
+        "description": "Corregido error que impedía cargar el modal de estadísticas y administración"
+      },
       {
         "type": "new",
         "description": "Sistema de versiones dinámico - las actualizaciones ahora se leen automáticamente desde version.json"
