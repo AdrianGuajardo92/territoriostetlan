@@ -330,40 +330,51 @@ const AdminModal = (props = {}) => {
               )}
             </div>
 
-            {/* Filtros elegantes optimizados para móvil */}
-            <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                <i className="fas fa-filter mr-2 text-gray-500"></i>
-                Filtrar por estado:
-              </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {filterOptions.map(filter => (
-                  <button
-                    key={filter.id}
-                    onClick={() => setProposalFilter(filter.id)}
-                    className={`
-                      relative p-3 rounded-xl text-center transition-all duration-300 transform hover:scale-105
-                      ${proposalFilter === filter.id 
-                        ? `bg-gradient-to-r ${filter.color} text-white shadow-lg` 
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                      }
-                    `}
-                  >
-                    <div className="flex flex-col items-center space-y-1">
-                      <i className={`${filter.icon} text-lg`}></i>
-                      <span className="text-xs font-medium">{filter.label}</span>
+            {/* Filtros compactos horizontales optimizados para móvil */}
+            <div className="bg-white rounded-xl p-3 shadow-lg border border-gray-200">
+              <div className="flex items-center justify-between gap-2">
+                {/* Label del filtro más pequeño */}
+                <div className="flex items-center gap-1.5 text-xs text-gray-600 font-medium min-w-0">
+                  <i className="fas fa-filter text-gray-500"></i>
+                  <span className="hidden xs:inline">Filtros:</span>
+                </div>
+                
+                {/* Filtros horizontales compactos */}
+                <div className="flex gap-1.5 flex-1 justify-end">
+                  {filterOptions.map(filter => (
+                    <button
+                      key={filter.id}
+                      onClick={() => setProposalFilter(filter.id)}
+                      className={`
+                        relative px-2.5 py-1.5 rounded-lg text-center transition-all duration-200 transform hover:scale-105 min-w-0 flex items-center gap-1
+                        ${proposalFilter === filter.id 
+                          ? `bg-gradient-to-r ${filter.color} text-white shadow-md` 
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        }
+                      `}
+                      title={`${filter.label} (${filter.count})`}
+                    >
+                      {/* Ícono siempre visible */}
+                      <i className={`${filter.icon} text-sm`}></i>
+                      
+                      {/* Contador siempre visible si hay elementos */}
                       {filter.count > 0 && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                        <span className={`text-xs font-bold min-w-0 ${
                           proposalFilter === filter.id 
-                            ? 'bg-white/20 text-white' 
-                            : 'bg-gray-200 text-gray-600'
+                            ? 'text-white' 
+                            : 'text-gray-600'
                         }`}>
                           {filter.count}
                         </span>
                       )}
-                    </div>
-                  </button>
-                ))}
+                      
+                      {/* Label solo en pantallas medianas+ */}
+                      <span className="hidden sm:inline text-xs font-medium truncate">
+                        {filter.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             

@@ -1,10 +1,14 @@
 {
-  "version": "2.11.0",
+  "version": "2.11.1",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "improvement", 
+        "description": "FILTROS COMPACTOS: Rediseño horizontal ultra-compacto, solo íconos en móvil para aprovechar espacio"
+      },
       {
         "type": "major", 
         "description": "HISTORIAL COMPLETO DE PROPUESTAS: Sistema completo con filtros para ver todas las propuestas (pendientes, aprobadas, rechazadas)"
@@ -159,6 +163,10 @@
       }
     ],
     "admin": [
+      {
+        "type": "improvement",
+        "description": "UX OPTIMIZADA: Filtros horizontales compactos que muestran solo íconos+contadores en móvil, maximizando espacio para propuestas"
+      },
       {
         "type": "major",
         "description": "HISTORIAL COMPLETO DE PROPUESTAS - Sistema avanzado con filtros para gestionar todas las propuestas de forma eficiente"
