@@ -5,6 +5,7 @@ import LoginView from './components/auth/LoginView';
 import MobileMenu from './components/common/MobileMenu';
 import TerritoriesView from './pages/TerritoriesView';
 import TerritoryDetailView from './pages/TerritoryDetailView';
+import MyProposalsView from './pages/MyProposalsView';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
 // CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
@@ -17,8 +18,7 @@ import InstallModal from './components/modals/InstallModal';
 import { 
   LazyStatsModal, 
   LazyAdminModal, 
-  LazyReportsModal, 
-  LazyProposalsModal 
+  LazyReportsModal
 } from './components/modals/LazyModals';
 
 
@@ -29,9 +29,36 @@ function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [showMyProposals, setShowMyProposals] = useState(false);
   
   // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
   const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  // Sistema de notificaciones para propuestas
+  const getUnseenProposalsCount = () => {
+    if (!currentUser || currentUser.role === 'admin') return 0;
+    
+    const userProposals = proposals.filter(p => p.submittedBy === currentUser.email);
+    const lastViewedTimestamp = localStorage.getItem(`lastProposalsView_${currentUser.email}`);
+    
+    if (!lastViewedTimestamp) {
+      // Primera vez que accede, mostrar todas las procesadas
+      return userProposals.filter(p => p.status !== 'pending').length;
+    }
+    
+    const lastViewed = new Date(lastViewedTimestamp);
+    
+    // Contar propuestas procesadas después de la última visita
+    return userProposals.filter(p => {
+      if (p.status === 'pending') return false;
+      
+      const processedAt = p.approvedAt || p.rejectedAt;
+      if (!processedAt) return false;
+      
+      const processedDate = processedAt.toDate ? processedAt.toDate() : new Date(processedAt);
+      return processedDate > lastViewed;
+    }).length;
+  };
 
   // OPTIMIZACIÓN: Detectar cuando Inter font se carga para aplicar clase
   useEffect(() => {
@@ -106,7 +133,15 @@ function AppContent() {
         currentURL: window.location.href
       });
 
-      // PRIORIDAD 1: Si hay territorio seleccionado, volver a lista
+      // PRIORIDAD 1: Si hay vista de propuestas abierta, volver a lista
+      if (showMyProposals) {
+        console.log('✅ Cerrando mis propuestas, volviendo a lista');
+        setShowMyProposals(false);
+        event.preventDefault();
+        return;
+      }
+
+      // PRIORIDAD 2: Si hay territorio seleccionado, volver a lista
       if (selectedTerritory) {
         console.log('✅ Cerrando territorio, volviendo a lista');
         setSelectedTerritory(null);
@@ -114,7 +149,7 @@ function AppContent() {
         return;
       }
 
-      // PRIORIDAD 2: Si hay modal activo, cerrarlo
+      // PRIORIDAD 3: Si hay modal activo, cerrarlo
       if (activeModal) {
         console.log(`🔙 Botón físico de volver - Cerrando modal: ${activeModal}`);
         setActiveModal(null);
@@ -122,7 +157,7 @@ function AppContent() {
         return;
       }
 
-      // PRIORIDAD 3: Si hay menú abierto, cerrarlo
+      // PRIORIDAD 4: Si hay menú abierto, cerrarlo
       if (isMenuOpen) {
         console.log('✅ Cerrando menú');
         setIsMenuOpen(false);
@@ -130,12 +165,15 @@ function AppContent() {
         return;
       }
 
-      // PRIORIDAD 4: Verificar el estado del historial para determinar acción
+      // PRIORIDAD 5: Verificar el estado del historial para determinar acción
       const currentState = event.state;
       
       // Si tenemos un estado específico de la app, manejarlo
       if (currentState && currentState.app === 'territorios') {
         if (currentState.level === 'territory') {
+          return; // Permitir navegación normal
+        }
+        if (currentState.level === 'proposals') {
           return; // Permitir navegación normal
         }
         if (currentState.level === 'menu') {
@@ -146,12 +184,12 @@ function AppContent() {
         }
       }
 
-      // PRIORIDAD 5: Si hay historial disponible, permitir navegación normal  
+      // PRIORIDAD 6: Si hay historial disponible, permitir navegación normal  
       if (window.history.length > 1) {
         return; // Permitir navegación normal hacia atrás
       }
 
-      // PRIORIDAD 6: Solo mostrar confirmación si realmente no hay a dónde volver
+      // PRIORIDAD 7: Solo mostrar confirmación si realmente no hay a dónde volver
       event.preventDefault();
       
       const shouldExit = window.confirm('¿Quieres salir de la aplicación?');
@@ -166,7 +204,7 @@ function AppContent() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeModal, isMenuOpen, selectedTerritory]);
+  }, [activeModal, isMenuOpen, selectedTerritory, showMyProposals]);
 
   // Menu items configuration
   const menuItems = [
@@ -189,9 +227,9 @@ function AppContent() {
       id: 'myProposals',
       text: 'Mis Propuestas',
       icon: 'edit',
-      modal: 'proposals',
+      view: 'proposals',
       hasBadge: true,
-      badgeCount: proposals.filter(p => p.status === 'pending').length,
+      badgeCount: getUnseenProposalsCount(),
       description: 'Ver tus cambios propuestos'
     },
     {
@@ -249,6 +287,12 @@ function AppContent() {
       setIsMenuOpen(false);
     }
     
+    // Manejar navegación a vistas especiales
+    if (modalId === 'proposals') {
+      handleOpenMyProposals();
+      return;
+    }
+    
     setActiveModal(modalId);
     // El historial ahora lo maneja automáticamente useModalHistory
   };
@@ -273,6 +317,27 @@ function AppContent() {
     setSelectedTerritory(null);
     // Si el estado actual es un territorio, navegar hacia atrás
     if (window.history.state?.level === 'territory') {
+      window.history.back();
+    }
+  };
+
+  const handleOpenMyProposals = () => {
+    setShowMyProposals(true);
+    // Marcar como visto al abrir
+    if (currentUser) {
+      localStorage.setItem(`lastProposalsView_${currentUser.email}`, new Date().toISOString());
+    }
+    // Agregar entrada específica al historial
+    window.history.pushState({ 
+      app: 'territorios', 
+      level: 'proposals'
+    }, '', window.location.href);
+  };
+
+  const handleBackFromMyProposals = () => {
+    setShowMyProposals(false);
+    // Si el estado actual es propuestas, navegar hacia atrás
+    if (window.history.state?.level === 'proposals') {
       window.history.back();
     }
   };
@@ -316,7 +381,11 @@ function AppContent() {
       )}
 
       {/* Vista principal */}
-      {selectedTerritory ? (
+      {showMyProposals ? (
+        <MyProposalsView
+          onBack={handleBackFromMyProposals}
+        />
+      ) : selectedTerritory ? (
         <TerritoryDetailView
           territory={selectedTerritory}
           onBack={handleBackFromTerritory}
@@ -353,9 +422,6 @@ function AppContent() {
       )}
       {activeModal === 'admin' && currentUser?.role === 'admin' && (
         <LazyAdminModal isOpen onClose={handleCloseModal} modalId="admin-modal" />
-      )}
-      {activeModal === 'proposals' && currentUser?.role !== 'admin' && (
-        <LazyProposalsModal isOpen onClose={handleCloseModal} modalId="proposals-modal" />
       )}
       {activeModal === 'password' && (
         <PasswordModal isOpen onClose={handleCloseModal} modalId="password-modal" />

@@ -1,10 +1,38 @@
 {
-  "version": "2.11.2",
+  "version": "2.12.1",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "fix", 
+        "description": "CORRECCIÓN CRÍTICA: Arreglado error de importación que impedía abrir la aplicación"
+      },
+      {
+        "type": "major", 
+        "description": "🎉 MIS PROPUESTAS - Nueva sección completa para que cada publicador vea SUS propuestas con filtros y notificaciones"
+      },
+      {
+        "type": "feature", 
+        "description": "TRANSPARENCIA TOTAL: Quién procesó tu propuesta, cuándo y por qué fue rechazada - información completa agrupada"
+      },
+      {
+        "type": "feature", 
+        "description": "NOTIFICACIONES INTELIGENTES: Badge rojo en menú que muestra propuestas procesadas desde tu última visita"
+      },
+      {
+        "type": "improvement", 
+        "description": "NAVEGACIÓN AVANZADA: Vista dedicada con historial del navegador, no solo un modal temporal"
+      },
+      {
+        "type": "improvement", 
+        "description": "FILTROS SIMPLIFICADOS: Solo 3 filtros esenciales (Pendientes, Aprobadas, Rechazadas) - Grid 3x1 perfecto"
+      },
+      {
+        "type": "fix", 
+        "description": "INTERFAZ LIMPIA: Eliminada barra grande molesta que aparecía al cambiar filtros, interfaz más elegante"
+      },
       {
         "type": "improvement", 
         "description": "FILTROS PERFECTOS: Distribución completa a lo ancho de pantalla, sin texto extra, solo íconos + contadores"
@@ -165,11 +193,41 @@
         "type": "improvement",
         "description": "Sistema de cambio de contraseña actualizado y funcional."
       }
-    ],
-    "admin": [
+          ],
+      "publisher": [
+        {
+          "type": "fix",
+          "description": "🔧 APLICACIÓN FUNCIONANDO: Corregido error que impedía abrir la app (hook useApp vs useAppContext)"
+        },
+        {
+          "type": "major",
+          "description": "🎉 NUEVA SECCIÓN: 'Mis Propuestas' - Tu espacio personal para ver todas tus solicitudes de direcciones"
+        },
+        {
+          "type": "feature",
+          "description": "INFORMACIÓN COMPLETA: Ve quién procesó tus propuestas, cuándo y por qué fueron rechazadas"
+        },
+        {
+          "type": "feature",
+          "description": "NOTIFICACIONES AUTOMÁTICAS: Badge rojo te avisa cuando hay cambios nuevos en tus propuestas"
+        },
+        {
+          "type": "feature",
+          "description": "FILTROS PERSONALES: Pendientes (en espera), Aprobadas (aceptadas), Rechazadas con razones detalladas"
+        },
+        {
+          "type": "feature",
+          "description": "MODAL DETALLADO: Toca 'Ver Detalles Completos' para información exhaustiva de cada propuesta"
+        }
+      ],
+      "admin": [
+        {
+          "type": "improvement",
+          "description": "EXPERIENCIA MEJORADA: Solo los 3 filtros que realmente importan - sin opciones innecesarias, navegación más directa"
+        },
       {
         "type": "improvement",
-        "description": "FILTROS OPTIMIZADOS: Grid 4x1 que ocupa toda la pantalla, sin espacio desperdiciado, interfaz más limpia y eficiente"
+        "description": "FILTROS OPTIMIZADOS: Grid 3x1 que ocupa toda la pantalla, sin espacio desperdiciado, interfaz más limpia y eficiente"
       },
       {
         "type": "improvement",

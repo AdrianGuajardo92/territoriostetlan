@@ -241,8 +241,6 @@ const AdminModal = (props = {}) => {
         // Filtrar propuestas según el filtro seleccionado
         const getFilteredProposals = () => {
           switch (proposalFilter) {
-            case 'all':
-              return proposals;
             case 'pending':
               return proposals.filter(p => p.status === 'pending');
             case 'approved':
@@ -259,7 +257,7 @@ const AdminModal = (props = {}) => {
         const approvedCount = proposals.filter(p => p.status === 'approved').length;
         const rejectedCount = proposals.filter(p => p.status === 'rejected').length;
         
-        // Configuración de filtros
+        // Configuración de filtros - Solo 3 filtros esenciales
         const filterOptions = [
           { 
             id: 'pending', 
@@ -267,13 +265,6 @@ const AdminModal = (props = {}) => {
             count: pendingCount,
             color: 'from-amber-500 to-orange-500',
             icon: 'fas fa-clock'
-          },
-          { 
-            id: 'all', 
-            label: 'Todas', 
-            count: proposals.length,
-            color: 'from-slate-500 to-gray-600',
-            icon: 'fas fa-list'
           },
           { 
             id: 'approved', 
@@ -296,43 +287,32 @@ const AdminModal = (props = {}) => {
         return (
           <div className="space-y-6">
             {/* Header de la sección */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <i className="fas fa-clipboard-list text-white text-xl"></i>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800">Historial de Propuestas</h3>
-                  <p className="text-gray-600 text-sm">
-                    {filteredProposals.length > 0 
-                      ? `${filteredProposals.length} propuesta${filteredProposals.length !== 1 ? 's' : ''} ${
-                          proposalFilter === 'all' ? 'en total' :
-                          proposalFilter === 'pending' ? 'pendientes' :
-                          proposalFilter === 'approved' ? 'aprobadas' :
-                          'rechazadas'
-                        }`
-                      : `No hay propuestas ${
-                          proposalFilter === 'all' ? '' :
-                          proposalFilter === 'pending' ? 'pendientes' :
-                          proposalFilter === 'approved' ? 'aprobadas' :
-                          'rechazadas'
-                        }`
-                    }
-                  </p>
-                </div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+                <i className="fas fa-clipboard-list text-white text-xl"></i>
               </div>
-              
-              {/* Badge contador */}
-              {filteredProposals.length > 0 && (
-                <div className={`bg-gradient-to-r ${activeFilter?.color} text-white px-4 py-2 rounded-2xl shadow-lg`}>
-                  <span className="font-bold text-lg">{filteredProposals.length}</span>
-                </div>
-              )}
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">Historial de Propuestas</h3>
+                <p className="text-gray-600 text-sm">
+                  {filteredProposals.length > 0 
+                    ? `${filteredProposals.length} propuesta${filteredProposals.length !== 1 ? 's' : ''} ${
+                        proposalFilter === 'pending' ? 'pendientes' :
+                        proposalFilter === 'approved' ? 'aprobadas' :
+                        'rechazadas'
+                      }`
+                    : `No hay propuestas ${
+                        proposalFilter === 'pending' ? 'pendientes' :
+                        proposalFilter === 'approved' ? 'aprobadas' :
+                        'rechazadas'
+                      }`
+                  }
+                </p>
+              </div>
             </div>
 
             {/* Filtros distribuidos a lo ancho completo de la pantalla */}
             <div className="bg-white rounded-xl p-3 shadow-lg border border-gray-200">
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {filterOptions.map(filter => (
                   <button
                     key={filter.id}
@@ -369,28 +349,24 @@ const AdminModal = (props = {}) => {
                   <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl ${
                     proposalFilter === 'pending' ? 'bg-gradient-to-br from-green-100 to-emerald-100' :
                     proposalFilter === 'approved' ? 'bg-gradient-to-br from-blue-100 to-indigo-100' :
-                    proposalFilter === 'rejected' ? 'bg-gradient-to-br from-red-100 to-pink-100' :
-                    'bg-gradient-to-br from-gray-100 to-slate-100'
+                    'bg-gradient-to-br from-red-100 to-pink-100'
                   }`}>
                     <i className={`text-4xl ${
                       proposalFilter === 'pending' ? 'fas fa-check-circle text-green-500' :
                       proposalFilter === 'approved' ? 'fas fa-check-double text-blue-500' :
-                      proposalFilter === 'rejected' ? 'fas fa-times-circle text-red-500' :
-                      'fas fa-list text-gray-500'
+                      'fas fa-times-circle text-red-500'
                     }`}></i>
                   </div>
                   <h4 className="text-2xl font-bold text-gray-800 mb-3">
                     {proposalFilter === 'pending' ? '¡Todo al día!' :
                      proposalFilter === 'approved' ? 'Sin propuestas aprobadas' :
-                     proposalFilter === 'rejected' ? 'Sin propuestas rechazadas' :
-                     'Sin propuestas'
+                     'Sin propuestas rechazadas'
                     }
                   </h4>
                   <p className="text-gray-600 leading-relaxed">
                     {proposalFilter === 'pending' ? 'No hay propuestas pendientes de revisión. Todas las solicitudes han sido procesadas.' :
                      proposalFilter === 'approved' ? 'Aún no se han aprobado propuestas de direcciones.' :
-                     proposalFilter === 'rejected' ? 'No hay propuestas rechazadas registradas.' :
-                     'No hay propuestas registradas en el sistema.'
+                     'No hay propuestas rechazadas registradas.'
                     }
                   </p>
                 </div>
