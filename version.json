@@ -1,5 +1,5 @@
 {
-  "version": "2.15.1",
+  "version": "2.15.2",
   "releaseDate": "2024-12-27",
   "forceUpdate": true,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
@@ -455,6 +455,16 @@
   },
   "lastUpdated": "2024-12-27",
   "changelog": [
+    {
+      "version": "2.15.2",
+      "date": "2025-01-29",
+      "changes": [
+        "🔧 CORRECCIÓN CRÍTICA: Arreglado valor hardcodeado en AppContext.jsx",
+        "🔍 DIAGNÓSTICO AVANZADO: Logs detallados para debuggear carga de versión",
+        "✅ Estado inicial actualizado a 2.15.1 como fallback",
+        "🎯 Identificado y corregido el problema de versión persistente"
+      ]
+    },
     {
       "version": "2.15.1",
       "date": "2025-01-29",

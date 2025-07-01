@@ -12,8 +12,8 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <meta http-equiv="Last-Modified" content="Mon, 29 Jan 2025 12:34:41 GMT" />
-    <meta name="version" content="2.15.1" />
-    <meta name="cache-buster" content="1751406881093" />
+    <meta name="version" content="2.15.2" />
+    <meta name="cache-buster" content="1751408000000" />
     
     <!-- CRITICAL: Resource Hints para optimización móvil ⚡ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -181,7 +181,7 @@
       };
     </script>
     
-    <title>Territorios LS v2.15.1 - Gestión de Territorios</title>
+    <title>Territorios LS v2.15.2 - Gestión de Territorios</title>
     
     <!-- SOLUCIÓN #3: CRITICAL CSS INLINE - Sin cambios visuales ⚡ -->
     <style>
@@ -389,9 +389,10 @@
     <!-- 🔥 FORZAR ACTUALIZACIÓN COMPLETA: Eliminar Service Worker problemático -->
     <script>
       // FORCE CLEANUP: Nueva versión requiere limpieza completa
-      const cleanupKey = 'sw_cleanup_v2_15_1_force_done';
+      const cleanupKey = 'sw_cleanup_v2_15_2_debug_done';
       // RESET: Forzar nueva limpieza para esta versión
       localStorage.removeItem('sw_cleanup_v2_15_1_done');
+      localStorage.removeItem('sw_cleanup_v2_15_1_force_done');
       const hasCleanedUp = localStorage.getItem(cleanupKey);
       
       if (!hasCleanedUp && 'serviceWorker' in navigator) {
@@ -463,6 +464,6 @@
       console.log('🚀 Cache buster aplicado:', cacheBuster);
     </script>
     
-    <script type="module" src="/src/main.jsx?v=2.15.1&t=1751406881093"></script>
+    <script type="module" src="/src/main.jsx?v=2.15.2&t=1751408000000"></script>
 </body>
 </html>

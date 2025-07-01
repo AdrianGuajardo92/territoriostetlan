@@ -60,12 +60,17 @@ export const AppProvider = ({ children }) => {
   const { showToast } = useToast();
 
   // Estado para la versión dinámica
-  const [appVersion, setAppVersion] = useState('2.7.2'); // Valor por defecto
+  const [appVersion, setAppVersion] = useState('2.15.2'); // Valor por defecto con logs de debugging
   
   // 📋 Cargar versión desde version.json
   const loadAppVersion = async () => {
     try {
-      const response = await fetch('/version.json?t=' + Date.now(), {
+      console.log('🔍 DIAGNOSTICO: Intentando cargar versión desde version.json...');
+      
+      const url = '/version.json?t=' + Date.now();
+      console.log('🌐 DIAGNOSTICO: URL de fetch:', url);
+      
+      const response = await fetch(url, {
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -73,13 +78,21 @@ export const AppProvider = ({ children }) => {
         }
       });
       
+      console.log('📡 DIAGNOSTICO: Response status:', response.status, response.ok);
+      
       if (response.ok) {
         const versionData = await response.json();
+        console.log('📄 DIAGNOSTICO: Datos de version.json:', versionData);
+        console.log('🔢 DIAGNOSTICO: Nueva versión detectada:', versionData.version);
+        
         setAppVersion(versionData.version);
-        console.log('✅ Versión cargada:', versionData.version);
+        console.log('✅ DIAGNOSTICO: Estado actualizado a versión:', versionData.version);
+      } else {
+        console.error('❌ DIAGNOSTICO: Response no OK:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('❌ Error cargando versión:', error);
+      console.error('❌ DIAGNOSTICO: Error completo cargando versión:', error);
+      console.error('❌ DIAGNOSTICO: Error stack:', error.stack);
       // Mantener la versión por defecto si hay error
     }
   };

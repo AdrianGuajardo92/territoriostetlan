@@ -1,8 +1,8 @@
 // Service Worker Agresivo para Gestor de Territorios LS con Auto-Update
 // La versión se actualizará dinámicamente basándose en version.json
-let CACHE_NAME = 'territorio-ls-v2.15.1-super-force';
-let RUNTIME_CACHE = 'territorio-runtime-v2.15.1-super-force';
-let CURRENT_VERSION = '2.15.1';
+let CACHE_NAME = 'territorio-ls-v2.15.2-debug-force';
+let RUNTIME_CACHE = 'territorio-runtime-v2.15.2-debug-force';
+let CURRENT_VERSION = '2.15.2';
 
 // Función para actualizar la versión del cache con detección de cambios
 async function updateCacheVersion() {
@@ -33,8 +33,8 @@ async function updateCacheVersion() {
         const oldRuntimeCache = RUNTIME_CACHE;
         
         CURRENT_VERSION = newVersion;
-        CACHE_NAME = `territorio-ls-v${newVersion}-super-force`;
-        RUNTIME_CACHE = `territorio-runtime-v${newVersion}-super-force`;
+        CACHE_NAME = `territorio-ls-v${newVersion}-debug-force`;
+        RUNTIME_CACHE = `territorio-runtime-v${newVersion}-debug-force`;
         
         // 🔥 LIMPIAR TODO EL CACHE si es forzado
         if (forceUpdate) {
