@@ -3,6 +3,7 @@ import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import StatsModal from './StatsModal'; // Importar el componente completo de estadísticas
 
 const AdminModal = (props = {}) => {
   const { isOpen = false, onClose = () => {} } = props;
@@ -22,6 +23,7 @@ const AdminModal = (props = {}) => {
   const [view, setView] = useState('actions');
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [showStatsModal, setShowStatsModal] = useState(false); // Estado para las estadísticas completas
   
   useEffect(() => {
     if (isOpen) {
@@ -54,10 +56,10 @@ const AdminModal = (props = {}) => {
     },
     { 
       id: 'stats', 
-      title: 'Estadísticas Avanzadas', 
-      description: 'Análisis detallado del trabajo', 
-      icon: 'activity', 
-      action: () => setView('stats') 
+      title: 'Estadísticas Completas', 
+      description: 'Análisis detallado con filtros y exportación', 
+      icon: 'barChart', 
+      action: () => setShowStatsModal(true) 
     }
   ];
   
@@ -260,54 +262,7 @@ const AdminModal = (props = {}) => {
           </div>
         );
       
-      case 'stats':
-        const totalAddresses = addresses.length;
-        const visitedAddresses = addresses.filter(a => a.isVisited).length;
-        const completionRate = totalAddresses > 0 ? (visitedAddresses / totalAddresses * 100).toFixed(1) : 0;
-        
-        return (
-          <div className="p-6">
-            <div className="flex items-center mb-6">
-              <button onClick={() => setView('actions')} className="p-2 rounded-full hover:bg-gray-100">
-                <Icon name="arrowLeft" size={20} />
-              </button>
-              <h3 className="text-xl font-bold text-gray-900 ml-2">Estadísticas Avanzadas</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-                <p className="text-sm text-gray-600">Total Territorios</p>
-                <p className="text-3xl font-bold text-gray-900">{territories.length}</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-                <p className="text-sm text-gray-600">Total Direcciones</p>
-                <p className="text-3xl font-bold text-gray-900">{totalAddresses}</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-                <p className="text-sm text-gray-600">Progreso General</p>
-                <p className="text-3xl font-bold text-green-600">{completionRate}%</p>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4">Estado de Territorios</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Disponibles</span>
-                  <span className="font-medium">{territories.filter(t => t.status === 'Disponible').length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">En uso</span>
-                  <span className="font-medium">{territories.filter(t => t.status === 'En uso').length}</span>
-                </div>
-                <div className="flex justify-between">
-                                      <span className="text-sm text-gray-600">Completados</span>
-                    <span className="font-medium">{territories.filter(t => t.status === 'Completado' || t.status === 'Terminado').length}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+
       
       default:
         return <div className="p-6 text-center">Vista no reconocida</div>;
@@ -322,8 +277,8 @@ const AdminModal = (props = {}) => {
         title=""
         size="lg"
       >
-        <div className="flex flex-col h-full">
-          <div className="bg-gray-50 border-b border-gray-200 p-6">
+        <div className="flex flex-col h-full max-h-[80vh]">
+          <div className="bg-gray-50 border-b border-gray-200 p-6 flex-shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-800">Panel de Administrador</h2>
               <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
@@ -331,7 +286,7 @@ const AdminModal = (props = {}) => {
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-0" style={{ maxHeight: 'calc(80vh - 100px)' }}>
             {renderContent()}
           </div>
         </div>
@@ -370,6 +325,14 @@ const AdminModal = (props = {}) => {
             </div>
           </div>
         </Modal>
+      )}
+      
+      {/* Modal de Estadísticas Completas */}
+      {showStatsModal && (
+        <StatsModal 
+          isOpen={showStatsModal} 
+          onClose={() => setShowStatsModal(false)} 
+        />
       )}
     </>
   );

@@ -1,10 +1,18 @@
 {
-  "version": "2.7.8",
+  "version": "2.7.9",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "improvement", 
+        "description": "Integradas estadísticas completas en el panel de administración con filtros y exportación"
+      },
+      {
+        "type": "fix", 
+        "description": "Corregido problema de scroll en modales - agregada altura máxima y scroll funcional"
+      },
       {
         "type": "fix", 
         "description": "Corregido error de props null en AdminModal - agregada validación defensiva y logs adicionales"
@@ -55,6 +63,10 @@
       }
     ],
     "admin": [
+      {
+        "type": "improvement",
+        "description": "Estadísticas completas ahora integradas directamente en el panel de administración"
+      },
       {
         "type": "new",
         "description": "Estadísticas exclusivas para administradores con exportación a PDF y Excel"
