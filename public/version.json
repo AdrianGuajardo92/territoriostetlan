@@ -1,5 +1,5 @@
 {
-  "version": "2.15.4",
+  "version": "2.15.5",
   "buildDate": "2025-01-30",
-  "description": "Territorios LS - Versión corregida para móviles"
+  "description": "Territorios LS - Cache bust agresivo para móviles"
 } 
