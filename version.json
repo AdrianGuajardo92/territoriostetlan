@@ -1,6 +1,6 @@
 {
-  "version": "2.7.1",
-  "releaseDate": "2024-12-26",
+  "version": "2.7.2",
+  "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "changes": {
         "all": [
@@ -62,5 +62,5 @@
       }
     ]
   },
-  "lastUpdated": "2024-12-26"
+  "lastUpdated": "2024-12-27"
 }
