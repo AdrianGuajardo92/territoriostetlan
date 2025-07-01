@@ -230,39 +230,77 @@ const TerritoryMapModal = ({
             }
         }
 
-        // Marcador de ubicación del usuario si existe - Solo crear una vez
+        // ✅ MARCADOR DE UBICACIÓN DEL USUARIO - PIN ESTILO GOOGLE MAPS
         if (sortState.userLocation && mapInstanceRef.current && !mapInstanceRef.current._userLocationMarker) {
             const userIcon = L.divIcon({
                 html: `<div style="
-                    background-color: #3b82f6; 
-                    width: 24px; 
-                    height: 24px; 
-                    border-radius: 50%; 
-                    border: 3px solid white; 
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.4); 
                     position: relative;
+                    width: 32px;
+                    height: 44px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transform: translateY(-44px);
                 ">
+                    <!-- PIN CON FORMA DE GOTA ESTILO GOOGLE MAPS -->
+                    <i class="fas fa-map-marker-alt" style="
+                        font-size: 40px;
+                        color: #dc2626;
+                        text-shadow: 
+                            -2px -2px 0 #000,
+                            2px -2px 0 #000,
+                            -2px 2px 0 #000,
+                            2px 2px 0 #000;
+                        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+                    "></i>
+                    <!-- CÍRCULO INTERIOR BLANCO -->
                     <div style="
-                        position: absolute; 
-                        top: 50%; 
-                        left: 50%; 
-                        transform: translate(-50%, -50%); 
-                        width: 8px; 
-                        height: 8px; 
-                        background-color: white; 
+                        position: absolute;
+                        top: 6px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        width: 16px;
+                        height: 16px;
+                        background-color: white;
                         border-radius: 50%;
+                        border: 1px solid #000;
                     "></div>
-                </div>`,
-                iconSize: [24, 24],
-                className: 'user-location-marker'
+                    <!-- ANIMACIÓN DE PULSO -->
+                    <div style="
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 60px;
+                        height: 60px;
+                        background-color: rgba(220, 38, 38, 0.2);
+                        border-radius: 50%;
+                        animation: userLocationPulse 2s infinite;
+                    "></div>
+                </div>
+                <style>
+                    @keyframes userLocationPulse {
+                        0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+                        100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+                    }
+                </style>`,
+                iconSize: [32, 44],
+                iconAnchor: [16, 44], // Anclar en la punta del pin
+                className: 'user-location-pin'
             });
             
             const userMarker = L.marker([sortState.userLocation.lat, sortState.userLocation.lng], { icon: userIcon })
                 .addTo(mapInstanceRef.current)
-                .bindPopup('Tu ubicación');
+                .bindPopup(`
+                    <div style="text-align: center; font-weight: bold; color: #dc2626;">
+                        📍 Tu ubicación actual
+                    </div>
+                `);
             
             // Marcar para no recrear
             mapInstanceRef.current._userLocationMarker = userMarker;
+            
+            console.log('✅ PIN de ubicación del usuario creado exitosamente');
         }
     }, [getCoordinates, getAddressColor, sortState.sortOrder, sortState.userLocation, addresses]);
     
