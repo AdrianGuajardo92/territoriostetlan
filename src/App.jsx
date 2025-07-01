@@ -364,13 +364,9 @@ function AppContent() {
     }
   };
 
-  // ✨ Manejar apertura del menú con verificación automática de actualizaciones
+  // Manejar apertura del menú
   const handleOpenMenu = () => {
     setIsMenuOpen(true);
-    
-    // ✨ VERIFICAR ACTUALIZACIONES al abrir el menú (verificación inmediata)
-    console.log('🔍 Verificando actualizaciones al abrir menú...');
-    setTimeout(() => checkForUpdates(false), 500); // Sin mostrar feedback para que sea transparente
     
     // Agregar entrada al historial para el menú
     window.history.pushState({ 
