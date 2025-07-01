@@ -1,10 +1,14 @@
 {
-  "version": "2.9.1",
+  "version": "2.9.2",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "cleanup", 
+        "description": "LIMPIEZA COMPLETA: Eliminados TODOS los logs de debugging de LazyModals.jsx - consola 100% limpia"
+      },
       {
         "type": "cleanup", 
         "description": "Eliminados logs de debugging temporales del hook useLazyComponent - código limpio y optimizado"

@@ -44,25 +44,14 @@ export const LazyStatsModal = ({ isOpen, ...props }) => {
 
 // Lazy AdminModal - NO crítico para carga inicial
 export const LazyAdminModal = ({ isOpen, ...props }) => {
-  console.log('🔍 [DEBUG] LazyAdminModal render:', { isOpen, props });
-  
   const { Component, isLoading, error } = useLazyComponent(
-    () => {
-      console.log('🔍 [DEBUG] Iniciando import dinámico de AdminModal');
-      return import('./AdminModal');
-    },
+    () => import('./AdminModal'),
     [isOpen]
   );
 
-  console.log('🔍 [DEBUG] LazyAdminModal state:', { Component: !!Component, isLoading, error });
-
-  if (!isOpen) {
-    console.log('🔍 [DEBUG] AdminModal no está abierto, retornando null');
-    return null;
-  }
+  if (!isOpen) return null;
   
   if (error) {
-    console.log('🔍 [DEBUG] AdminModal error:', error);
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 max-w-md">
@@ -79,22 +68,16 @@ export const LazyAdminModal = ({ isOpen, ...props }) => {
   }
 
   if (isLoading || !Component) {
-    console.log('🔍 [DEBUG] AdminModal cargando...', { isLoading, hasComponent: !!Component });
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6">
           <LazyFallback message="Cargando panel admin..." />
-          <div className="mt-2 text-xs text-gray-500">
-            Debug: isLoading={String(isLoading)}, hasComponent={String(!!Component)}
-          </div>
         </div>
       </div>
     );
   }
 
-  console.log('🔍 [DEBUG] AdminModal listo para renderizar');
-  console.log('🔍 [DEBUG] Props que se van a pasar:', { isOpen, ...props });
-  return <Component isOpen={isOpen} onClose={props.onClose} {...props} />;
+  return <Component isOpen={isOpen} {...props} />;
 };
 
 // Lazy ReportsModal - NO crítico para carga inicial
