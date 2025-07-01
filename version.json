@@ -1,10 +1,14 @@
 {
-  "version": "2.11.1",
+  "version": "2.11.2",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "improvement", 
+        "description": "FILTROS PERFECTOS: Distribución completa a lo ancho de pantalla, sin texto extra, solo íconos + contadores"
+      },
       {
         "type": "improvement", 
         "description": "FILTROS COMPACTOS: Rediseño horizontal ultra-compacto, solo íconos en móvil para aprovechar espacio"
@@ -163,6 +167,10 @@
       }
     ],
     "admin": [
+      {
+        "type": "improvement",
+        "description": "FILTROS OPTIMIZADOS: Grid 4x1 que ocupa toda la pantalla, sin espacio desperdiciado, interfaz más limpia y eficiente"
+      },
       {
         "type": "improvement",
         "description": "UX OPTIMIZADA: Filtros horizontales compactos que muestran solo íconos+contadores en móvil, maximizando espacio para propuestas"

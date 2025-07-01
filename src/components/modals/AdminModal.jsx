@@ -330,51 +330,35 @@ const AdminModal = (props = {}) => {
               )}
             </div>
 
-            {/* Filtros compactos horizontales optimizados para móvil */}
+            {/* Filtros distribuidos a lo ancho completo de la pantalla */}
             <div className="bg-white rounded-xl p-3 shadow-lg border border-gray-200">
-              <div className="flex items-center justify-between gap-2">
-                {/* Label del filtro más pequeño */}
-                <div className="flex items-center gap-1.5 text-xs text-gray-600 font-medium min-w-0">
-                  <i className="fas fa-filter text-gray-500"></i>
-                  <span className="hidden xs:inline">Filtros:</span>
-                </div>
-                
-                {/* Filtros horizontales compactos */}
-                <div className="flex gap-1.5 flex-1 justify-end">
-                  {filterOptions.map(filter => (
-                    <button
-                      key={filter.id}
-                      onClick={() => setProposalFilter(filter.id)}
-                      className={`
-                        relative px-2.5 py-1.5 rounded-lg text-center transition-all duration-200 transform hover:scale-105 min-w-0 flex items-center gap-1
-                        ${proposalFilter === filter.id 
-                          ? `bg-gradient-to-r ${filter.color} text-white shadow-md` 
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                        }
-                      `}
-                      title={`${filter.label} (${filter.count})`}
-                    >
-                      {/* Ícono siempre visible */}
-                      <i className={`${filter.icon} text-sm`}></i>
-                      
-                      {/* Contador siempre visible si hay elementos */}
-                      {filter.count > 0 && (
-                        <span className={`text-xs font-bold min-w-0 ${
-                          proposalFilter === filter.id 
-                            ? 'text-white' 
-                            : 'text-gray-600'
-                        }`}>
-                          {filter.count}
-                        </span>
-                      )}
-                      
-                      {/* Label solo en pantallas medianas+ */}
-                      <span className="hidden sm:inline text-xs font-medium truncate">
-                        {filter.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+              <div className="grid grid-cols-4 gap-2">
+                {filterOptions.map(filter => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setProposalFilter(filter.id)}
+                    className={`
+                      relative px-2 py-2.5 rounded-lg text-center transition-all duration-200 transform hover:scale-105 flex flex-col items-center gap-1
+                      ${proposalFilter === filter.id 
+                        ? `bg-gradient-to-r ${filter.color} text-white shadow-md` 
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                      }
+                    `}
+                    title={`${filter.label} (${filter.count})`}
+                  >
+                    {/* Ícono siempre visible */}
+                    <i className={`${filter.icon} text-lg`}></i>
+                    
+                    {/* Contador siempre visible */}
+                    <span className={`text-xs font-bold ${
+                      proposalFilter === filter.id 
+                        ? 'text-white' 
+                        : 'text-gray-600'
+                    }`}>
+                      {filter.count || 0}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
             
