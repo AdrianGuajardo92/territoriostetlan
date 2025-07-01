@@ -380,39 +380,71 @@
     
     <!-- 🔥 FORZAR ACTUALIZACIÓN COMPLETA: Eliminar Service Worker problemático -->
     <script>
-      // SOLUCIÓN NUCLEAR: Desregistrar TODOS los Service Workers
-      if ('serviceWorker' in navigator) {
+      // EVITAR BUCLE INFINITO: Solo ejecutar UNA VEZ
+      const cleanupKey = 'sw_cleanup_v2_15_1_done';
+      const hasCleanedUp = localStorage.getItem(cleanupKey);
+      
+      if (!hasCleanedUp && 'serviceWorker' in navigator) {
         console.log('🔥 DESREGISTRANDO todos los Service Workers para forzar actualización...');
         
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister().then(function(success) {
-              if (success) {
+        // Marcar inmediatamente para evitar múltiples ejecuciones
+        localStorage.setItem(cleanupKey, 'true');
+        
+        // Función async más simple para evitar problemas de scope
+        async function cleanupAndReload() {
+          try {
+            let needsReload = false;
+            
+            // Desregistrar Service Workers
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            if (registrations.length > 0) {
+              console.log(`🗑️ Desregistrando ${registrations.length} Service Worker(s)...`);
+              for(let registration of registrations) {
+                await registration.unregister();
                 console.log('✅ Service Worker desregistrado:', registration.scope);
               }
-            });
-          }
-          
-          // Limpiar TODO el cache después de desregistrar
-          if ('caches' in window) {
-            caches.keys().then(function(cacheNames) {
-              return Promise.all(
-                cacheNames.map(function(cacheName) {
-                  console.log('🗑️ Eliminando cache:', cacheName);
-                  return caches.delete(cacheName);
-                })
-              );
-            }).then(function() {
-              console.log('✅ Todos los caches eliminados');
-              
-              // Recargar la página después de limpiar todo
+              needsReload = true;
+            }
+            
+            // Limpiar caches
+            if ('caches' in window) {
+              const cacheNames = await caches.keys();
+              if (cacheNames.length > 0) {
+                console.log(`🗑️ Eliminando ${cacheNames.length} cache(s)...`);
+                await Promise.all(
+                  cacheNames.map(cacheName => {
+                    console.log('🗑️ Eliminando cache:', cacheName);
+                    return caches.delete(cacheName);
+                  })
+                );
+                console.log('✅ Todos los caches eliminados');
+                needsReload = true;
+              }
+            }
+            
+            // Recargar solo si había algo que limpiar
+            if (needsReload) {
+              console.log('🔄 Recargando en 1 segundo...');
               setTimeout(() => {
-                console.log('🔄 Recargando para aplicar cambios...');
                 window.location.reload(true);
               }, 1000);
-            });
+            } else {
+              console.log('✅ Ya estaba limpio, continuando normalmente...');
+            }
+            
+          } catch (error) {
+            console.error('❌ Error durante limpieza:', error);
+            // Si hay error, recargar de todos modos después de delay
+            setTimeout(() => {
+              console.log('🔄 Recargando debido a error...');
+              window.location.reload(true);
+            }, 2000);
           }
-        });
+        }
+        
+                 cleanupAndReload();
+      } else if (hasCleanedUp) {
+        console.log('✅ Limpieza ya realizada anteriormente, continuando...');
       }
       
       // Cache busting súper agresivo

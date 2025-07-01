@@ -1,10 +1,14 @@
 {
-  "version": "2.15.0",
+  "version": "2.15.1",
   "releaseDate": "2024-12-27",
   "forceUpdate": true,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "critical", 
+        "description": "🔧 BUCLE INFINITO CORREGIDO: Arreglado script que se ejecutaba infinitamente al recargar - ahora ejecuta solo UNA VEZ"
+      },
       {
         "type": "critical", 
         "description": "🚨 SOLUCIÓN NUCLEAR: Desregistra Service Worker + limpia TODO el cache + headers súper agresivos para romper cache problemático"

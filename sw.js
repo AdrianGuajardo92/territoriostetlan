@@ -1,8 +1,8 @@
 // Service Worker Agresivo para Gestor de Territorios LS con Auto-Update
 // La versión se actualizará dinámicamente basándose en version.json
-let CACHE_NAME = 'territorio-ls-v2.15.0';
-let RUNTIME_CACHE = 'territorio-runtime-v2.15.0';
-let CURRENT_VERSION = '2.15.0';
+let CACHE_NAME = 'territorio-ls-v2.15.1';
+let RUNTIME_CACHE = 'territorio-runtime-v2.15.1';
+let CURRENT_VERSION = '2.15.1';
 
 // Función para actualizar la versión del cache con detección de cambios
 async function updateCacheVersion() {
