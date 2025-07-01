@@ -283,25 +283,28 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
       modalId={null} // Deshabilitar useModalHistory para evitar conflictos
     >
       <div className="h-full flex flex-col bg-gradient-to-br from-indigo-50 via-white to-blue-50">
-        {/* Header del buscador mejorado */}
-        <div className="bg-white/95 backdrop-blur-xl shadow-lg border-b border-indigo-100 px-4 py-6 flex-shrink-0">
+        {/* Header del buscador con temática consistente */}
+        <div className="shadow-lg px-4 py-6 flex-shrink-0" style={{ backgroundColor: '#2C3E50' }}>
           <div className="flex items-center gap-4">
             {/* Botón de volver - Flechita hacia atrás */}
             <button
               onClick={onClose}
-              className="p-3 rounded-xl hover:bg-slate-100 transition-colors group flex-shrink-0"
+              className="p-3 rounded-xl transition-colors group flex-shrink-0"
+              style={{ backgroundColor: '#34495e' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
               title="Volver"
             >
-              <Icon name="arrowLeft" size={24} className="text-slate-600 group-hover:text-slate-800 transition-colors" />
+              <Icon name="arrowLeft" size={24} className="text-white transition-colors" />
             </button>
 
-            {/* Barra de búsqueda rediseñada - SIN ICONO */}
+            {/* Barra de búsqueda rediseñada */}
             <div className="flex-1 relative">
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-4 pr-12 py-4 border-2 border-blue-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg placeholder-slate-500 bg-white shadow-lg transition-all"
+                className="w-full pl-4 pr-12 py-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-white focus:border-white text-lg placeholder-gray-400 bg-white shadow-lg transition-all"
                 placeholder="Buscar dirección o nota..."
                 autoFocus
               />
@@ -309,10 +312,10 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
               {/* X siempre visible del lado derecho */}
               <button
                 onClick={handleClearSearch}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full hover:bg-slate-100 transition-colors"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full hover:bg-gray-100 transition-colors"
                 title="Limpiar búsqueda"
               >
-                <Icon name="x" size={18} className="text-slate-500" />
+                <Icon name="x" size={18} className="text-gray-500" />
               </button>
             </div>
           </div>
@@ -320,14 +323,14 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
           {/* Estadísticas de búsqueda */}
           {searchTerm && (
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-slate-700 font-medium">
+              <p className="text-sm text-white/90 font-medium">
                 {searchResults.length > 0 
                   ? `${searchResults.length} dirección${searchResults.length !== 1 ? 'es' : ''} encontrada${searchResults.length !== 1 ? 's' : ''}`
                   : 'No se encontraron direcciones'
                 }
               </p>
               {searchResults.length > 0 && (
-                <p className="text-xs text-blue-600 font-medium">
+                <p className="text-xs text-white/70 font-medium">
                   Toca una tarjeta para ir al territorio
                 </p>
               )}
