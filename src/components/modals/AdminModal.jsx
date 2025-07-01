@@ -31,34 +31,39 @@ const AdminModal = (props = {}) => {
     }
   }, [isOpen, currentUser]);
   
+  // Configuración de opciones del administrador con diseño elegante
   const adminOptions = [
     { 
       id: 'proposals', 
       title: 'Propuestas de Cambios', 
       description: pendingProposalsCount > 0 ? `${pendingProposalsCount} pendientes` : 'Ver cambios propuestos', 
-      icon: 'checkSquare', 
+      icon: 'fas fa-clipboard-check', 
       badge: pendingProposalsCount, 
+      color: 'orange',
       action: () => setView('proposals') 
     },
     { 
       id: 'users', 
       title: 'Gestión de Usuarios', 
       description: 'Administrar publicadores', 
-      icon: 'users', 
+      icon: 'fas fa-users-cog', 
+      color: 'blue',
       action: () => setView('users') 
     },
     { 
       id: 'territories', 
       title: 'Gestión de Territorios', 
       description: 'Administrar territorios', 
-      icon: 'map', 
+      icon: 'fas fa-map-marked-alt', 
+      color: 'green',
       action: () => setView('territories') 
     },
     { 
       id: 'stats', 
       title: 'Estadísticas Completas', 
       description: 'Análisis detallado con filtros y exportación', 
-      icon: 'barChart', 
+      icon: 'fas fa-chart-line', 
+      color: 'purple',
       action: () => setShowStatsModal(true) 
     }
   ];
@@ -92,44 +97,141 @@ const AdminModal = (props = {}) => {
     switch (view) {
       case 'no_access':
         return (
-          <div className="flex-1 flex items-center justify-center p-8">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Icon name="shield" size={40} className="text-red-500" />
+          <div className="flex items-center justify-center min-h-[60vh] p-8">
+            <div className="text-center max-w-md">
+              {/* Ícono elegante */}
+              <div className="relative w-32 h-32 mx-auto mb-8">
+                <div className="w-32 h-32 bg-gradient-to-br from-red-100 to-pink-100 rounded-full flex items-center justify-center shadow-2xl border-4 border-red-200">
+                  <i className="fas fa-shield-alt text-5xl text-red-500"></i>
+                </div>
+                <div className="absolute -top-2 -right-2 w-12 h-12 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
+                  <i className="fas fa-exclamation text-white text-xl"></i>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Acceso Denegado</h3>
-              <p className="text-gray-600">No tienes los permisos para acceder aquí.</p>
+              
+              {/* Título y descripción */}
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">Acceso Restringido</h3>
+              <p className="text-gray-600 text-lg leading-relaxed mb-8">
+                Esta sección está reservada únicamente para administradores autorizados del sistema.
+              </p>
+              
+              {/* Card informativa */}
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border-2 border-amber-200">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center mr-3">
+                    <i className="fas fa-info-circle text-white text-xl"></i>
+                  </div>
+                  <h4 className="text-lg font-semibold text-amber-900">¿Necesitas acceso?</h4>
+                </div>
+                <p className="text-amber-800 text-sm leading-relaxed">
+                  Si crees que deberías tener acceso a esta sección, contacta con un administrador del sistema para que revise tus permisos.
+                </p>
+              </div>
             </div>
           </div>
         );
       
       case 'actions':
+        // Configuración de colores para cada opción
+        const colorConfig = {
+          orange: { 
+            bg: 'from-orange-50 to-amber-100', 
+            iconBg: 'bg-orange-500', 
+            text: 'text-orange-600',
+            accent: 'border-orange-200',
+            hover: 'hover:shadow-orange-100/50'
+          },
+          blue: { 
+            bg: 'from-blue-50 to-indigo-100', 
+            iconBg: 'bg-blue-500', 
+            text: 'text-blue-600',
+            accent: 'border-blue-200',
+            hover: 'hover:shadow-blue-100/50'
+          },
+          green: { 
+            bg: 'from-green-50 to-emerald-100', 
+            iconBg: 'bg-green-500', 
+            text: 'text-green-600',
+            accent: 'border-green-200',
+            hover: 'hover:shadow-green-100/50'
+          },
+          purple: { 
+            bg: 'from-purple-50 to-violet-100', 
+            iconBg: 'bg-purple-500', 
+            text: 'text-purple-600',
+            accent: 'border-purple-200',
+            hover: 'hover:shadow-purple-100/50'
+          }
+        };
+
         return (
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {adminOptions.map(option => (
-                <button 
-                  key={option.id} 
-                  onClick={option.action} 
-                  className="relative p-6 bg-white border-2 border-gray-200 rounded-lg text-left transition-all hover:border-gray-400 hover:shadow-md group"
-                >
-                  {option.badge > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold animate-pulse">
-                      {option.badge}
-                    </span>
-                  )}
-                  <div className="flex items-start">
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center mr-4 bg-gray-100 text-gray-600">
-                      <Icon name={option.icon} size={24} />
+          <div className="space-y-8">
+            {/* Título de bienvenida */}
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-slate-600 to-gray-700 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+                <i className="fas fa-tools text-3xl text-white"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Centro de Administración</h3>
+              <p className="text-gray-600 max-w-md mx-auto">Gestiona todos los aspectos del sistema desde este panel central</p>
+            </div>
+
+            {/* Grid de opciones elegantes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {adminOptions.map(option => {
+                const config = colorConfig[option.color] || colorConfig.blue;
+                
+                return (
+                  <button 
+                    key={option.id} 
+                    onClick={option.action} 
+                    className={`
+                      relative p-6 bg-gradient-to-br ${config.bg} 
+                      border-2 ${config.accent} rounded-3xl text-left 
+                      transition-all duration-300 ease-out
+                      hover:shadow-2xl ${config.hover} hover:scale-[1.02]
+                      transform backdrop-blur-sm border-white/20 group
+                    `}
+                  >
+                    {/* Badge de notificación elegante */}
+                    {option.badge > 0 && (
+                      <div className="absolute -top-3 -right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white text-sm rounded-2xl w-8 h-8 flex items-center justify-center font-bold animate-pulse shadow-lg">
+                        {option.badge}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-start">
+                      {/* Ícono elegante */}
+                      <div className={`w-16 h-16 ${config.iconBg} rounded-2xl flex items-center justify-center mr-4 shadow-lg transform group-hover:scale-110 transition-transform`}>
+                        <i className={`${option.icon} text-2xl text-white`}></i>
+                      </div>
+                      
+                      {/* Contenido */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-gray-800 transition-colors">{option.title}</h4>
+                        <p className="text-sm text-gray-600 leading-relaxed">{option.description}</p>
+                      </div>
+                      
+                      {/* Flecha elegante */}
+                      <div className="ml-2 mt-2">
+                        <i className="fas fa-arrow-right text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all"></i>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-1">{option.title}</h4>
-                      <p className="text-sm text-gray-600">{option.description}</p>
-                    </div>
-                    <Icon name="chevronRight" size={20} className="text-gray-400 mt-1 transition-transform group-hover:translate-x-1" />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
+            </div>
+            
+            {/* Footer informativo */}
+            <div className="bg-gradient-to-r from-slate-100 to-gray-100 rounded-2xl p-6 border border-slate-200">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-slate-600 rounded-xl flex items-center justify-center mr-4">
+                  <i className="fas fa-info-circle text-white text-lg"></i>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-800 mb-1">Acceso Exclusivo</h4>
+                  <p className="text-sm text-slate-600">Solo los administradores pueden acceder a estas funciones avanzadas</p>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -138,60 +240,110 @@ const AdminModal = (props = {}) => {
         const pendingProposals = proposals.filter(p => p.status === 'pending');
         
         return (
-          <div className="p-6">
-            <div className="flex items-center mb-6">
-              <button onClick={() => setView('actions')} className="p-2 rounded-full hover:bg-gray-100">
-                <Icon name="arrowLeft" size={20} />
-              </button>
-              <h3 className="text-xl font-bold text-gray-900 ml-2">Propuestas Pendientes</h3>
+          <div className="space-y-6">
+            {/* Header de la sección */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <i className="fas fa-clipboard-check text-white text-xl"></i>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800">Propuestas Pendientes</h3>
+                  <p className="text-gray-600 text-sm">
+                    {pendingProposals.length > 0 
+                      ? `${pendingProposals.length} propuesta${pendingProposals.length !== 1 ? 's' : ''} esperando revisión`
+                      : 'Todas las propuestas han sido revisadas'
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              {/* Badge contador */}
+              {pendingProposals.length > 0 && (
+                <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-2xl shadow-lg">
+                  <span className="font-bold text-lg">{pendingProposals.length}</span>
+                </div>
+              )}
             </div>
             
             {pendingProposals.length === 0 ? (
-              <div className="text-center py-12">
-                <Icon name="checkCircle" size={48} className="mx-auto mb-4 text-green-500" />
-                <p className="text-gray-600">No hay propuestas pendientes</p>
+              /* Estado vacío elegante */
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center max-w-md">
+                  <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                    <i className="fas fa-check-circle text-4xl text-green-500"></i>
+                  </div>
+                  <h4 className="text-2xl font-bold text-gray-800 mb-3">¡Todo al día!</h4>
+                  <p className="text-gray-600 leading-relaxed">
+                    No hay propuestas pendientes de revisión. Todas las solicitudes han sido procesadas.
+                  </p>
+                </div>
               </div>
             ) : (
+              /* Lista de propuestas elegante */
               <div className="space-y-4">
                 {pendingProposals.map(proposal => {
                   const territory = territories.find(t => t.id === proposal.territoryId);
                   
                   return (
-                    <div key={proposal.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">
-                            {proposal.type === 'new' ? 'Nueva Dirección' : 'Editar Dirección'}
-                          </h4>
-                          <p className="text-sm text-gray-600">Por {proposal.proposedByName}</p>
+                    <div key={proposal.id} className="bg-gradient-to-br from-white to-orange-50/30 rounded-2xl shadow-lg p-6 border-2 border-orange-100 hover:shadow-xl hover:scale-[1.01] transition-all duration-300">
+                      {/* Header de la propuesta */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-r from-orange-400 to-amber-500 rounded-xl flex items-center justify-center shadow-md">
+                            <i className={`fas ${proposal.type === 'new' ? 'fa-plus' : 'fa-edit'} text-white`}></i>
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-bold text-gray-900 mb-1">
+                              {proposal.type === 'new' ? 'Nueva Dirección' : 'Editar Dirección'}
+                            </h4>
+                            <p className="text-sm text-gray-600 flex items-center">
+                              <i className="fas fa-user mr-2 text-gray-400"></i>
+                              Propuesta por <span className="font-medium ml-1">{proposal.proposedByName}</span>
+                            </p>
+                          </div>
                         </div>
-                        <span className="px-2 py-1 text-xs rounded-full font-medium bg-yellow-100 text-yellow-800">
-                          Pendiente
-                        </span>
+                        
+                        <div className="bg-gradient-to-r from-yellow-100 to-amber-100 px-3 py-2 rounded-xl border border-yellow-200">
+                          <span className="text-xs font-bold text-yellow-800 flex items-center">
+                            <i className="fas fa-clock mr-1.5"></i>
+                            Pendiente
+                          </span>
+                        </div>
                       </div>
                       
-                      <div className="mb-3">
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Territorio:</span> {territory?.name || 'Desconocido'}
-                        </p>
-                        {proposal.reason && (
-                          <p className="text-sm text-gray-700 mt-1">
-                            <span className="font-medium">Razón:</span> {proposal.reason}
+                      {/* Contenido de la propuesta */}
+                      <div className="bg-white/70 rounded-xl p-4 mb-4 border border-orange-100/50">
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-700 flex items-center">
+                            <i className="fas fa-map-marker-alt mr-2 text-orange-500 w-4"></i>
+                            <span className="font-medium">Territorio:</span> 
+                            <span className="ml-2">{territory?.name || 'Desconocido'}</span>
                           </p>
-                        )}
+                          {proposal.reason && (
+                            <p className="text-sm text-gray-700 flex items-start">
+                              <i className="fas fa-comment-alt mr-2 text-orange-500 w-4 mt-0.5"></i>
+                              <span className="font-medium">Razón:</span> 
+                              <span className="ml-2 flex-1">{proposal.reason}</span>
+                            </p>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="flex justify-end space-x-2 mt-4 pt-3 border-t">
+                      {/* Botones de acción elegantes */}
+                      <div className="flex justify-end gap-3">
                         <button
                           onClick={() => setSelectedProposal(proposal)}
-                          className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+                          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 rounded-xl hover:from-red-200 hover:to-pink-200 transition-all transform hover:scale-105 font-medium shadow-md border border-red-200"
                         >
+                          <i className="fas fa-times"></i>
                           Rechazar
                         </button>
                         <button
                           onClick={() => handleApprove(proposal)}
-                          className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-md"
                         >
+                          <i className="fas fa-check"></i>
                           Aprobar
                         </button>
                       </div>
@@ -204,61 +356,310 @@ const AdminModal = (props = {}) => {
         );
       
       case 'users':
+        const adminUsers = users.filter(u => u.role === 'admin');
+        const publisherUsers = users.filter(u => u.role !== 'admin');
+        
         return (
-          <div className="p-6">
-            <div className="flex items-center mb-6">
-              <button onClick={() => setView('actions')} className="p-2 rounded-full hover:bg-gray-100">
-                <Icon name="arrowLeft" size={20} />
-              </button>
-              <h3 className="text-xl font-bold text-gray-900 ml-2">Gestión de Usuarios</h3>
+          <div className="space-y-6">
+            {/* Header de la sección */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <i className="fas fa-users-cog text-white text-xl"></i>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h3>
+                  <p className="text-gray-600 text-sm">
+                    {users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''} en el sistema
+                  </p>
+                </div>
+              </div>
+              
+              {/* Badge contador */}
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-2xl shadow-lg">
+                <span className="font-bold text-lg">{users.length}</span>
+              </div>
             </div>
-            <div className="space-y-4">
-              {users.map(user => (
-                <div key={user.id} className="bg-white rounded-lg shadow p-4 border border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{user.name}</h4>
-                      <p className="text-sm text-gray-600">
-                        Código: {user.accessCode} • Rol: {user.role === 'admin' ? 'Administrador' : 'Publicador'}
-                      </p>
+
+            {/* Sección de Administradores */}
+            {adminUsers.length > 0 && (
+              <div>
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-violet-600 rounded-lg flex items-center justify-center mr-3">
+                    <i className="fas fa-crown text-white text-sm"></i>
+                  </div>
+                  <h4 className="text-lg font-bold text-gray-800">Administradores</h4>
+                  <span className="ml-2 bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                    {adminUsers.length}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  {adminUsers.map(user => (
+                    <div key={user.id} className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl shadow-lg p-6 border-2 border-purple-200 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i className="fas fa-user-shield text-white text-xl"></i>
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-bold text-gray-900">{user.name}</h4>
+                            <p className="text-sm text-purple-700 font-medium flex items-center">
+                              <i className="fas fa-key mr-2"></i>
+                              {user.accessCode}
+                            </p>
+                            <div className="flex items-center mt-1">
+                              <span className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                                ADMINISTRADOR
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <button className="p-3 text-purple-600 hover:bg-purple-100 rounded-xl transition-colors">
+                          <i className="fas fa-edit text-lg"></i>
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-600 hover:bg-gray-100 rounded">
-                        <Icon name="edit" size={16} />
-                      </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sección de Publicadores */}
+            <div>
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
+                  <i className="fas fa-users text-white text-sm"></i>
+                </div>
+                <h4 className="text-lg font-bold text-gray-800">Publicadores</h4>
+                <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                  {publisherUsers.length}
+                </span>
+              </div>
+              
+              {publisherUsers.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center max-w-md">
+                    <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <i className="fas fa-user-plus text-3xl text-blue-500"></i>
                     </div>
+                    <h4 className="text-xl font-bold text-gray-800 mb-2">No hay publicadores</h4>
+                    <p className="text-gray-600">Aún no se han registrado publicadores en el sistema.</p>
                   </div>
                 </div>
-              ))}
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {publisherUsers.map(user => (
+                    <div key={user.id} className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-lg p-6 border-2 border-blue-200 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                          <i className="fas fa-user text-white text-2xl"></i>
+                        </div>
+                        <h4 className="text-lg font-bold text-gray-900 mb-2">{user.name}</h4>
+                        <p className="text-sm text-blue-700 font-medium flex items-center justify-center mb-3">
+                          <i className="fas fa-key mr-2"></i>
+                          {user.accessCode}
+                        </p>
+                        <div className="flex items-center justify-center mb-4">
+                          <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                            PUBLICADOR
+                          </span>
+                        </div>
+                        <button className="w-full py-2 px-4 bg-white/70 hover:bg-white border border-blue-200 text-blue-700 rounded-xl transition-colors font-medium flex items-center justify-center gap-2">
+                          <i className="fas fa-edit"></i>
+                          Editar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );
       
       case 'territories':
+        const availableTerritories = territories.filter(t => t.status === 'Disponible');
+        const inUseTerritories = territories.filter(t => t.status === 'En uso');
+        const completedTerritories = territories.filter(t => t.status === 'Completado' || t.status === 'Terminado');
+        
+        // Función para obtener configuración de colores por estado
+        const getStatusConfig = (status) => {
+          switch (status) {
+            case 'Disponible':
+              return {
+                bg: 'from-green-50 to-emerald-100',
+                iconBg: 'bg-green-500',
+                text: 'text-green-700',
+                border: 'border-green-200',
+                badge: 'bg-green-500'
+              };
+            case 'En uso':
+              return {
+                bg: 'from-yellow-50 to-amber-100',
+                iconBg: 'bg-yellow-500',
+                text: 'text-yellow-700',
+                border: 'border-yellow-200',
+                badge: 'bg-yellow-500'
+              };
+            default: // Completado/Terminado
+              return {
+                bg: 'from-gray-50 to-slate-100',
+                iconBg: 'bg-gray-500',
+                text: 'text-gray-700',
+                border: 'border-gray-200',
+                badge: 'bg-gray-500'
+              };
+          }
+        };
+        
         return (
-          <div className="p-6">
-            <div className="flex items-center mb-6">
-              <button onClick={() => setView('actions')} className="p-2 rounded-full hover:bg-gray-100">
-                <Icon name="arrowLeft" size={20} />
-              </button>
-              <h3 className="text-xl font-bold text-gray-900 ml-2">Gestión de Territorios</h3>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {territories.map(territory => (
-                <div key={territory.id} className="bg-white rounded-lg shadow p-4 border border-gray-200">
-                  <h4 className="font-semibold text-gray-900">{territory.name}</h4>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Estado: <span className={`font-medium ${
-                      territory.status === 'Disponible' ? 'text-green-600' : 
-                      territory.status === 'En uso' ? 'text-yellow-600' : 'text-gray-600'
-                    }`}>{territory.status}</span>
-                  </p>
-                  {territory.assignedTo && (
-                    <p className="text-xs text-gray-500 mt-1">Asignado a: {territory.assignedTo}</p>
-                  )}
+          <div className="space-y-6">
+            {/* Header de la sección */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <i className="fas fa-map-marked-alt text-white text-xl"></i>
                 </div>
-              ))}
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800">Gestión de Territorios</h3>
+                  <p className="text-gray-600 text-sm">
+                    {territories.length} territorio{territories.length !== 1 ? 's' : ''} en total
+                  </p>
+                </div>
+              </div>
+              
+              {/* Badge contador */}
+              <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-2xl shadow-lg">
+                <span className="font-bold text-lg">{territories.length}</span>
+              </div>
             </div>
+
+            {/* Estadísticas rápidas */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-4 border-2 border-green-200">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center mr-3">
+                    <i className="fas fa-check-circle text-white"></i>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-green-700">{availableTerritories.length}</p>
+                    <p className="text-sm text-green-600 font-medium">Disponibles</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-yellow-50 to-amber-100 rounded-2xl p-4 border-2 border-yellow-200">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center mr-3">
+                    <i className="fas fa-clock text-white"></i>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-yellow-700">{inUseTerritories.length}</p>
+                    <p className="text-sm text-yellow-600 font-medium">En Uso</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-2xl p-4 border-2 border-gray-200">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-gray-500 rounded-xl flex items-center justify-center mr-3">
+                    <i className="fas fa-flag text-white"></i>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-700">{completedTerritories.length}</p>
+                    <p className="text-sm text-gray-600 font-medium">Completados</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de territorios elegante */}
+            {territories.length === 0 ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center max-w-md">
+                  <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                    <i className="fas fa-map-plus text-4xl text-green-500"></i>
+                  </div>
+                  <h4 className="text-2xl font-bold text-gray-800 mb-3">No hay territorios</h4>
+                  <p className="text-gray-600 leading-relaxed">
+                    Aún no se han configurado territorios en el sistema.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {territories.map(territory => {
+                  const config = getStatusConfig(territory.status);
+                  const addressesCount = addresses.filter(a => a.territoryId === territory.id).length;
+                  const visitedCount = addresses.filter(a => a.territoryId === territory.id && a.isVisited).length;
+                  const progress = addressesCount > 0 ? Math.round((visitedCount / addressesCount) * 100) : 0;
+                  
+                  return (
+                    <div key={territory.id} className={`bg-gradient-to-br ${config.bg} rounded-2xl shadow-lg p-6 border-2 ${config.border} hover:shadow-xl hover:scale-[1.02] transition-all duration-300`}>
+                      {/* Header del territorio */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 ${config.iconBg} rounded-xl flex items-center justify-center shadow-lg`}>
+                            <i className="fas fa-map text-white text-lg"></i>
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-bold text-gray-900">{territory.name}</h4>
+                            <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold ${config.badge} text-white`}>
+                              <i className={`fas ${territory.status === 'Disponible' ? 'fa-check' : territory.status === 'En uso' ? 'fa-clock' : 'fa-flag'} mr-1`}></i>
+                              {territory.status}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Información del territorio */}
+                      <div className="space-y-3">
+                        {/* Progreso */}
+                        <div>
+                          <div className="flex justify-between text-sm font-medium text-gray-700 mb-1">
+                            <span>Progreso</span>
+                            <span>{progress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full transition-all duration-500 ${config.badge}`}
+                              style={{ width: `${progress}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {visitedCount} de {addressesCount} direcciones
+                          </p>
+                        </div>
+                        
+                        {/* Asignación */}
+                        {territory.assignedTo ? (
+                          <div className="bg-white/70 rounded-lg p-3 border border-white/50">
+                            <p className="text-sm font-medium text-gray-700 flex items-center">
+                              <i className="fas fa-user mr-2 text-gray-500"></i>
+                              Asignado a: <span className="ml-1 font-bold">{territory.assignedTo}</span>
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-white/70 rounded-lg p-3 border border-white/50">
+                            <p className="text-sm text-gray-600 flex items-center">
+                              <i className="fas fa-user-slash mr-2 text-gray-400"></i>
+                              Sin asignar
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Botón de acción */}
+                      <button className="w-full mt-4 py-2 px-4 bg-white/70 hover:bg-white border border-white/50 text-gray-700 rounded-xl transition-colors font-medium flex items-center justify-center gap-2">
+                        <i className="fas fa-edit"></i>
+                        Gestionar
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       
@@ -275,18 +676,51 @@ const AdminModal = (props = {}) => {
         isOpen={isOpen}
         onClose={onClose}
         title=""
-        size="lg"
+        size="full"
       >
-        <div className="flex flex-col h-full max-h-[80vh]">
-          <div className="bg-gray-50 border-b border-gray-200 p-6 flex-shrink-0">
+        <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-gray-50">
+          {/* Header elegante con temática consistente */}
+          <div className="shadow-xl px-4 py-6 flex-shrink-0" style={{ backgroundColor: '#2C3E50' }}>
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-800">Panel de Administrador</h2>
-              <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-                <Icon name="x" size={20} className="text-gray-600" />
+              {/* Título con ícono */}
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <i className="fas fa-user-shield text-2xl text-white"></i>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Panel de Administrador</h2>
+                  <p className="text-white/70 text-sm">Gestión completa del sistema</p>
+                </div>
+              </div>
+              
+              {/* Botón cerrar elegante */}
+              <button 
+                onClick={onClose}
+                className="p-3 rounded-xl transition-all transform hover:scale-105 group"
+                style={{ backgroundColor: '#34495e' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
+              >
+                <Icon name="x" size={20} className="text-white group-hover:rotate-90 transition-transform" />
               </button>
             </div>
+            
+            {/* Breadcrumb elegante */}
+            {view !== 'actions' && view !== 'no_access' && (
+              <div className="mt-4 flex items-center">
+                <button 
+                  onClick={() => setView('actions')} 
+                  className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white/90 rounded-xl hover:bg-white/20 transition-all transform hover:scale-105 backdrop-blur-sm"
+                >
+                  <i className="fas fa-arrow-left"></i>
+                  <span className="font-medium">Volver al Panel</span>
+                </button>
+              </div>
+            )}
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0" style={{ maxHeight: 'calc(80vh - 100px)' }}>
+          
+          {/* Contenido scrolleable con diseño elegante */}
+          <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6" style={{ maxHeight: 'calc(100vh - 140px)' }}>
             {renderContent()}
           </div>
         </div>
