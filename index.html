@@ -7,6 +7,14 @@
     <meta name="theme-color" content="#6366f1">
     <meta name="description" content="Gestión de territorios para predicación en lengua de señas">
     
+    <!-- 🚀 CACHE BUSTING SUPER AGRESIVO - Forzar recarga total -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta http-equiv="Last-Modified" content="Mon, 29 Jan 2025 12:34:41 GMT" />
+    <meta name="version" content="2.15.1" />
+    <meta name="cache-buster" content="1751406881093" />
+    
     <!-- CRITICAL: Resource Hints para optimización móvil ⚡ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -173,7 +181,7 @@
       };
     </script>
     
-    <title>Territorios LS - Gestión de Territorios</title>
+    <title>Territorios LS v2.15.1 - Gestión de Territorios</title>
     
     <!-- SOLUCIÓN #3: CRITICAL CSS INLINE - Sin cambios visuales ⚡ -->
     <style>
@@ -380,8 +388,10 @@
     
     <!-- 🔥 FORZAR ACTUALIZACIÓN COMPLETA: Eliminar Service Worker problemático -->
     <script>
-      // EVITAR BUCLE INFINITO: Solo ejecutar UNA VEZ
-      const cleanupKey = 'sw_cleanup_v2_15_1_done';
+      // FORCE CLEANUP: Nueva versión requiere limpieza completa
+      const cleanupKey = 'sw_cleanup_v2_15_1_force_done';
+      // RESET: Forzar nueva limpieza para esta versión
+      localStorage.removeItem('sw_cleanup_v2_15_1_done');
       const hasCleanedUp = localStorage.getItem(cleanupKey);
       
       if (!hasCleanedUp && 'serviceWorker' in navigator) {
@@ -453,6 +463,6 @@
       console.log('🚀 Cache buster aplicado:', cacheBuster);
     </script>
     
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.jsx?v=2.15.1&t=1751406881093"></script>
 </body>
 </html>

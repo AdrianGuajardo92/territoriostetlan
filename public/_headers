@@ -4,63 +4,99 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
-# 🔥 FORZAR ACTUALIZACIÓN: Headers súper agresivos para romper cache
-/index.html
-  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
+# 🚀 SUPER AGGRESSIVE CACHE BUSTING v2.15.1
+Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
+Pragma: no-cache
+Expires: Thu, 01 Jan 1970 00:00:00 GMT
+Clear-Site-Data: "cache", "storage", "cookies", "executionContexts"
+Last-Modified: Mon, 29 Jan 2025 12:34:41 GMT
+ETag: "v2.15.1-1751406881093"
+Vary: *
+
+/
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
   Pragma: no-cache
-  Expires: 0
-  Clear-Site-Data: "cache", "storage"
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage", "cookies", "executionContexts"
+  ETag: "index-v2.15.1-1751406881093"
+
+/index.html
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage", "cookies", "executionContexts"
+  ETag: "index-v2.15.1-1751406881093"
 
 /sw.js
-  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
-  Pragma: no-cache
-  Expires: 0
-  Clear-Site-Data: "cache", "storage"
   Content-Type: application/javascript; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage", "cookies", "executionContexts"
 
 /version.json
-  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
-  Pragma: no-cache
-  Expires: 0
-  Clear-Site-Data: "cache", "storage"
   Content-Type: application/json; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage", "cookies", "executionContexts"
+  ETag: "version-v2.15.1-1751406881093"
 
-# 🔥 TEMPORALMENTE: NO CACHEAR JavaScript para forzar nueva versión
+# 🔥 NUCLEAR OPTION: NO CACHE for ALL JavaScript and assets
+/src/*
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage"
+
+/assets/*
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage"
+
 /assets/*.js
   Content-Type: application/javascript; charset=utf-8
-  Cache-Control: no-cache, no-store, must-revalidate
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
   Pragma: no-cache
-  Expires: 0
-  
-/assets/*-*.js
-  Content-Type: application/javascript; charset=utf-8
-  Cache-Control: no-cache, no-store, must-revalidate
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage"
+
+/assets/*.css
+  Content-Type: text/css; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
   Pragma: no-cache
-  Expires: 0
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage"
 
 /*.js
   Content-Type: application/javascript; charset=utf-8
-  Cache-Control: no-cache, no-store, must-revalidate
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
   Pragma: no-cache
-  Expires: 0
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage"
+
+/*.jsx
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
+  Pragma: no-cache
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage"
 
 *.js
   Content-Type: application/javascript; charset=utf-8
-  Cache-Control: no-cache, no-store, must-revalidate
+  Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0, s-maxage=0
   Pragma: no-cache
-  Expires: 0
+  Expires: Thu, 01 Jan 1970 00:00:00 GMT
+  Clear-Site-Data: "cache", "storage"
 
-# 🔥 TEMPORALMENTE: NO CACHEAR CSS para forzar nueva versión
-/assets/*.css
-  Content-Type: text/css; charset=utf-8
-  Cache-Control: no-cache, no-store, must-revalidate
-  Pragma: no-cache
-  Expires: 0
-
-# Recursos estáticos que rara vez cambian
+# Only manifest is cached for PWA functionality
 /manifest.json
-  Cache-Control: public, max-age=86400
   Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=3600
 
 # Imágenes y recursos multimedia - Cache largo
 /assets/*.png
