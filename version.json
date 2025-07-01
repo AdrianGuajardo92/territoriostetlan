@@ -1,7 +1,7 @@
 {
-  "version": "2.15.2",
+  "version": "2.15.3",
   "releaseDate": "2024-12-27",
-  "forceUpdate": true,
+  "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
@@ -455,6 +455,17 @@
   },
   "lastUpdated": "2024-12-27",
   "changelog": [
+    {
+      "version": "2.15.3",
+      "date": "2025-01-29",
+      "changes": [
+        "🧹 CONSOLA LIMPIA: Eliminados todos los mensajes molestos de Clear-Site-Data",
+        "✅ Headers optimizados: Clear-Site-Data solo en recursos críticos (HTML, SW, version.json)",
+        "🚀 Cache inteligente: Assets con cache largo (7 días) para mejor performance",
+        "🔇 Logs silenciosos: Removidos logs de diagnóstico, errores manejados silenciosamente",
+        "⚡ Balance perfecto: Actualizaciones siguen funcionando pero sin ruido en consola"
+      ]
+    },
     {
       "version": "2.15.2",
       "date": "2025-01-29",

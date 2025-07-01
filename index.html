@@ -12,8 +12,8 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <meta http-equiv="Last-Modified" content="Mon, 29 Jan 2025 12:34:41 GMT" />
-    <meta name="version" content="2.15.2" />
-    <meta name="cache-buster" content="1751408000000" />
+    <meta name="version" content="2.15.3" />
+    <meta name="cache-buster" content="1751408500000" />
     
     <!-- CRITICAL: Resource Hints para optimización móvil ⚡ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,11 +45,8 @@
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossOrigin="anonymous" referrerPolicy="no-referrer"></noscript>
     
           <script>
-        // OPTIMIZADO: Verificador de FontAwesome con preload ⚡
+        // OPTIMIZADO: Verificador de FontAwesome silencioso ⚡
         window.addEventListener('DOMContentLoaded', function() {
-          console.log('🔧 Verificando FontAwesome...');
-          
-          // Test con múltiples intentos - más robusto
           let attempts = 0;
           const maxAttempts = 3;
           
@@ -68,45 +65,31 @@
             
             document.body.removeChild(testIcon);
             
-            if (isLoaded) {
-              console.log('✅ FontAwesome CARGADO');
+            if (isLoaded || attempts >= maxAttempts) {
               return;
             }
             
-            console.log(`⏳ FontAwesome cargando... (${attempts}/${maxAttempts})`);
-            
-            if (attempts < maxAttempts) {
-              setTimeout(checkFontAwesome, 800);
-            } else {
-              console.warn('⚠️ FontAwesome carga lenta - continuando sin recargar');
-            }
+            setTimeout(checkFontAwesome, 800);
           }
           
-          // Primer check después de 300ms
           setTimeout(checkFontAwesome, 300);
         });
         
-        // SOLUCIÓN #3: Detector de fuentes cargadas - Estabilidad visual ⚡
+        // SOLUCIÓN #3: Detector de fuentes cargadas silencioso ⚡
         window.addEventListener('DOMContentLoaded', function() {
-          console.log('🎨 Iniciando estabilización de fuentes...');
-          
-          // Función para verificar si Inter está cargada
           function checkInterFont() {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             
-            // Test con fuente fallback
             context.font = '16px monospace';
             const fallbackWidth = context.measureText('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz').width;
             
-            // Test con Inter
             context.font = '16px Inter, monospace';
             const interWidth = context.measureText('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz').width;
             
             return Math.abs(interWidth - fallbackWidth) > 1;
           }
           
-          // Verificar carga de fuentes periódicamente
           let fontCheckAttempts = 0;
           const maxFontChecks = 5;
           
@@ -115,15 +98,12 @@
             
             if (checkInterFont() || fontCheckAttempts >= maxFontChecks) {
               document.documentElement.classList.add('fonts-loaded');
-              console.log('✅ Fuentes estabilizadas');
               return;
             }
             
-            console.log(`⏳ Esperando estabilización de fuentes... (${fontCheckAttempts}/${maxFontChecks})`);
             setTimeout(stabilizeFonts, 100);
           }
           
-          // Iniciar después de 200ms
           setTimeout(stabilizeFonts, 200);
         });
       
@@ -144,7 +124,6 @@
           };
           
           leafletCSS.onerror = () => {
-            console.error('Error loading Leaflet CSS');
             reject(new Error('Failed to load Leaflet CSS'));
           };
           
@@ -172,7 +151,6 @@
           };
           
           leafletJS.onerror = () => {
-            console.error('Error loading Leaflet JS');
             reject(new Error('Failed to load Leaflet JS'));
           };
           
@@ -181,7 +159,7 @@
       };
     </script>
     
-    <title>Territorios LS v2.15.2 - Gestión de Territorios</title>
+    <title>Territorios LS v2.15.3 - Gestión de Territorios</title>
     
     <!-- SOLUCIÓN #3: CRITICAL CSS INLINE - Sin cambios visuales ⚡ -->
     <style>
@@ -386,17 +364,19 @@
     });
     </script>
     
-    <!-- 🔥 FORZAR ACTUALIZACIÓN COMPLETA: Eliminar Service Worker problemático -->
+    <!-- 🧹 LIMPIEZA INTELIGENTE: Solo cuando detecta Service Workers viejos -->
     <script>
-      // FORCE CLEANUP: Nueva versión requiere limpieza completa
-      const cleanupKey = 'sw_cleanup_v2_15_2_debug_done';
-      // RESET: Forzar nueva limpieza para esta versión
+      // CLEANUP OPTIMIZADO: Solo cuando sea necesario
+      const cleanupKey = 'sw_cleanup_v2_15_3_done';
+      // Limpiar keys antiguas
       localStorage.removeItem('sw_cleanup_v2_15_1_done');
       localStorage.removeItem('sw_cleanup_v2_15_1_force_done');
+      localStorage.removeItem('sw_cleanup_v2_15_2_debug_done');
       const hasCleanedUp = localStorage.getItem(cleanupKey);
       
       if (!hasCleanedUp && 'serviceWorker' in navigator) {
-        console.log('🔥 DESREGISTRANDO todos los Service Workers para forzar actualización...');
+        // Solo mostrar log si hay algo que limpiar
+        let needsCleanup = false;
         
         // Marcar inmediatamente para evitar múltiples ejecuciones
         localStorage.setItem(cleanupKey, 'true');
@@ -406,64 +386,48 @@
           try {
             let needsReload = false;
             
-            // Desregistrar Service Workers
+            // Desregistrar Service Workers silenciosamente
             const registrations = await navigator.serviceWorker.getRegistrations();
             if (registrations.length > 0) {
-              console.log(`🗑️ Desregistrando ${registrations.length} Service Worker(s)...`);
               for(let registration of registrations) {
                 await registration.unregister();
-                console.log('✅ Service Worker desregistrado:', registration.scope);
               }
               needsReload = true;
             }
             
-            // Limpiar caches
+            // Limpiar caches silenciosamente
             if ('caches' in window) {
               const cacheNames = await caches.keys();
               if (cacheNames.length > 0) {
-                console.log(`🗑️ Eliminando ${cacheNames.length} cache(s)...`);
                 await Promise.all(
-                  cacheNames.map(cacheName => {
-                    console.log('🗑️ Eliminando cache:', cacheName);
-                    return caches.delete(cacheName);
-                  })
+                  cacheNames.map(cacheName => caches.delete(cacheName))
                 );
-                console.log('✅ Todos los caches eliminados');
                 needsReload = true;
               }
             }
             
             // Recargar solo si había algo que limpiar
             if (needsReload) {
-              console.log('🔄 Recargando en 1 segundo...');
               setTimeout(() => {
                 window.location.reload(true);
-              }, 1000);
-            } else {
-              console.log('✅ Ya estaba limpio, continuando normalmente...');
+              }, 500);
             }
             
           } catch (error) {
-            console.error('❌ Error durante limpieza:', error);
-            // Si hay error, recargar de todos modos después de delay
+            // Si hay error, recargar silenciosamente
             setTimeout(() => {
-              console.log('🔄 Recargando debido a error...');
               window.location.reload(true);
-            }, 2000);
+            }, 1000);
           }
         }
         
                  cleanupAndReload();
-      } else if (hasCleanedUp) {
-        console.log('✅ Limpieza ya realizada anteriormente, continuando...');
       }
       
-      // Cache busting súper agresivo
-      const cacheBuster = Date.now();
-      window.CACHE_BUSTER = cacheBuster;
-      console.log('🚀 Cache buster aplicado:', cacheBuster);
+      // Cache busting timestamp
+      window.CACHE_BUSTER = Date.now();
     </script>
     
-    <script type="module" src="/src/main.jsx?v=2.15.2&t=1751408000000"></script>
+    <script type="module" src="/src/main.jsx?v=2.15.3&t=1751408500000"></script>
 </body>
 </html>
