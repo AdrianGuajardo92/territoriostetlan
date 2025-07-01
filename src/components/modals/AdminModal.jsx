@@ -24,6 +24,7 @@ const AdminModal = (props = {}) => {
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showStatsModal, setShowStatsModal] = useState(false); // Estado para las estadísticas completas
+  const [proposalFilter, setProposalFilter] = useState('pending'); // Filtro para propuestas: all, pending, approved, rejected
   
   useEffect(() => {
     if (isOpen) {
@@ -237,52 +238,172 @@ const AdminModal = (props = {}) => {
         );
       
       case 'proposals':
-        const pendingProposals = proposals.filter(p => p.status === 'pending');
+        // Filtrar propuestas según el filtro seleccionado
+        const getFilteredProposals = () => {
+          switch (proposalFilter) {
+            case 'all':
+              return proposals;
+            case 'pending':
+              return proposals.filter(p => p.status === 'pending');
+            case 'approved':
+              return proposals.filter(p => p.status === 'approved');
+            case 'rejected':
+              return proposals.filter(p => p.status === 'rejected');
+            default:
+              return proposals.filter(p => p.status === 'pending');
+          }
+        };
+
+        const filteredProposals = getFilteredProposals();
+        const pendingCount = proposals.filter(p => p.status === 'pending').length;
+        const approvedCount = proposals.filter(p => p.status === 'approved').length;
+        const rejectedCount = proposals.filter(p => p.status === 'rejected').length;
+        
+        // Configuración de filtros
+        const filterOptions = [
+          { 
+            id: 'pending', 
+            label: 'Pendientes', 
+            count: pendingCount,
+            color: 'from-amber-500 to-orange-500',
+            icon: 'fas fa-clock'
+          },
+          { 
+            id: 'all', 
+            label: 'Todas', 
+            count: proposals.length,
+            color: 'from-slate-500 to-gray-600',
+            icon: 'fas fa-list'
+          },
+          { 
+            id: 'approved', 
+            label: 'Aprobadas', 
+            count: approvedCount,
+            color: 'from-green-500 to-emerald-600',
+            icon: 'fas fa-check'
+          },
+          { 
+            id: 'rejected', 
+            label: 'Rechazadas', 
+            count: rejectedCount,
+            color: 'from-red-500 to-pink-600',
+            icon: 'fas fa-times'
+          }
+        ];
+
+        const activeFilter = filterOptions.find(f => f.id === proposalFilter);
         
         return (
           <div className="space-y-6">
             {/* Header de la sección */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <i className="fas fa-clipboard-check text-white text-xl"></i>
+                  <i className="fas fa-clipboard-list text-white text-xl"></i>
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-800">Propuestas Pendientes</h3>
+                  <h3 className="text-2xl font-bold text-gray-800">Historial de Propuestas</h3>
                   <p className="text-gray-600 text-sm">
-                    {pendingProposals.length > 0 
-                      ? `${pendingProposals.length} propuesta${pendingProposals.length !== 1 ? 's' : ''} esperando revisión`
-                      : 'Todas las propuestas han sido revisadas'
+                    {filteredProposals.length > 0 
+                      ? `${filteredProposals.length} propuesta${filteredProposals.length !== 1 ? 's' : ''} ${
+                          proposalFilter === 'all' ? 'en total' :
+                          proposalFilter === 'pending' ? 'pendientes' :
+                          proposalFilter === 'approved' ? 'aprobadas' :
+                          'rechazadas'
+                        }`
+                      : `No hay propuestas ${
+                          proposalFilter === 'all' ? '' :
+                          proposalFilter === 'pending' ? 'pendientes' :
+                          proposalFilter === 'approved' ? 'aprobadas' :
+                          'rechazadas'
+                        }`
                     }
                   </p>
                 </div>
               </div>
               
               {/* Badge contador */}
-              {pendingProposals.length > 0 && (
-                <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-2xl shadow-lg">
-                  <span className="font-bold text-lg">{pendingProposals.length}</span>
+              {filteredProposals.length > 0 && (
+                <div className={`bg-gradient-to-r ${activeFilter?.color} text-white px-4 py-2 rounded-2xl shadow-lg`}>
+                  <span className="font-bold text-lg">{filteredProposals.length}</span>
                 </div>
               )}
             </div>
+
+            {/* Filtros elegantes optimizados para móvil */}
+            <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                <i className="fas fa-filter mr-2 text-gray-500"></i>
+                Filtrar por estado:
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {filterOptions.map(filter => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setProposalFilter(filter.id)}
+                    className={`
+                      relative p-3 rounded-xl text-center transition-all duration-300 transform hover:scale-105
+                      ${proposalFilter === filter.id 
+                        ? `bg-gradient-to-r ${filter.color} text-white shadow-lg` 
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                      }
+                    `}
+                  >
+                    <div className="flex flex-col items-center space-y-1">
+                      <i className={`${filter.icon} text-lg`}></i>
+                      <span className="text-xs font-medium">{filter.label}</span>
+                      {filter.count > 0 && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                          proposalFilter === filter.id 
+                            ? 'bg-white/20 text-white' 
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {filter.count}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
             
-            {pendingProposals.length === 0 ? (
-              /* Estado vacío elegante */
+            {filteredProposals.length === 0 ? (
+              /* Estado vacío elegante según filtro */
               <div className="flex items-center justify-center py-16">
                 <div className="text-center max-w-md">
-                  <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
-                    <i className="fas fa-check-circle text-4xl text-green-500"></i>
+                  <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl ${
+                    proposalFilter === 'pending' ? 'bg-gradient-to-br from-green-100 to-emerald-100' :
+                    proposalFilter === 'approved' ? 'bg-gradient-to-br from-blue-100 to-indigo-100' :
+                    proposalFilter === 'rejected' ? 'bg-gradient-to-br from-red-100 to-pink-100' :
+                    'bg-gradient-to-br from-gray-100 to-slate-100'
+                  }`}>
+                    <i className={`text-4xl ${
+                      proposalFilter === 'pending' ? 'fas fa-check-circle text-green-500' :
+                      proposalFilter === 'approved' ? 'fas fa-check-double text-blue-500' :
+                      proposalFilter === 'rejected' ? 'fas fa-times-circle text-red-500' :
+                      'fas fa-list text-gray-500'
+                    }`}></i>
                   </div>
-                  <h4 className="text-2xl font-bold text-gray-800 mb-3">¡Todo al día!</h4>
+                  <h4 className="text-2xl font-bold text-gray-800 mb-3">
+                    {proposalFilter === 'pending' ? '¡Todo al día!' :
+                     proposalFilter === 'approved' ? 'Sin propuestas aprobadas' :
+                     proposalFilter === 'rejected' ? 'Sin propuestas rechazadas' :
+                     'Sin propuestas'
+                    }
+                  </h4>
                   <p className="text-gray-600 leading-relaxed">
-                    No hay propuestas pendientes de revisión. Todas las solicitudes han sido procesadas.
+                    {proposalFilter === 'pending' ? 'No hay propuestas pendientes de revisión. Todas las solicitudes han sido procesadas.' :
+                     proposalFilter === 'approved' ? 'Aún no se han aprobado propuestas de direcciones.' :
+                     proposalFilter === 'rejected' ? 'No hay propuestas rechazadas registradas.' :
+                     'No hay propuestas registradas en el sistema.'
+                    }
                   </p>
                 </div>
               </div>
             ) : (
               /* Lista de propuestas con información completa */
               <div className="space-y-6">
-                {pendingProposals.map(proposal => {
+                {filteredProposals.map(proposal => {
                   const territory = territories.find(t => t.id === proposal.territoryId);
                   const currentAddress = proposal.type === 'edit' 
                     ? addresses.find(a => a.id === proposal.addressId) 
@@ -311,10 +432,27 @@ const AdminModal = (props = {}) => {
                           </div>
                         </div>
                         
-                        <div className="bg-gradient-to-r from-yellow-100 to-amber-100 px-3 py-2 rounded-xl border border-yellow-200">
-                          <span className="text-xs font-bold text-yellow-800 flex items-center">
-                            <i className="fas fa-clock mr-1.5"></i>
-                            Pendiente
+                        {/* Estado dinámico de la propuesta */}
+                        <div className={`px-3 py-2 rounded-xl border ${
+                          proposal.status === 'pending' 
+                            ? 'bg-gradient-to-r from-yellow-100 to-amber-100 border-yellow-200' :
+                          proposal.status === 'approved'
+                            ? 'bg-gradient-to-r from-green-100 to-emerald-100 border-green-200' :
+                            'bg-gradient-to-r from-red-100 to-pink-100 border-red-200'
+                        }`}>
+                          <span className={`text-xs font-bold flex items-center ${
+                            proposal.status === 'pending' ? 'text-yellow-800' :
+                            proposal.status === 'approved' ? 'text-green-800' :
+                            'text-red-800'
+                          }`}>
+                            <i className={`${
+                              proposal.status === 'pending' ? 'fas fa-clock' :
+                              proposal.status === 'approved' ? 'fas fa-check' :
+                              'fas fa-times'
+                            } mr-1.5`}></i>
+                            {proposal.status === 'pending' ? 'Pendiente' :
+                             proposal.status === 'approved' ? 'Aprobada' :
+                             'Rechazada'}
                           </span>
                         </div>
                       </div>
@@ -475,24 +613,77 @@ const AdminModal = (props = {}) => {
                           </p>
                         </div>
                       )}
+
+                      {/* Información de procesamiento para propuestas aprobadas/rechazadas */}
+                      {proposal.status !== 'pending' && (
+                        <div className={`rounded-xl p-4 border mt-4 ${
+                          proposal.status === 'approved' 
+                            ? 'bg-green-50/70 border-green-200/50' 
+                            : 'bg-red-50/70 border-red-200/50'
+                        }`}>
+                          <h6 className={`font-semibold mb-2 flex items-center ${
+                            proposal.status === 'approved' ? 'text-green-800' : 'text-red-800'
+                          }`}>
+                            <i className={`${
+                              proposal.status === 'approved' ? 'fas fa-check-circle' : 'fas fa-times-circle'
+                            } mr-2`}></i>
+                            {proposal.status === 'approved' ? 'Propuesta Aprobada' : 'Propuesta Rechazada'}
+                          </h6>
+                          <div className="bg-white p-3 rounded-lg border border-opacity-50">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Procesada por:</span>
+                                </p>
+                                <p className="text-gray-800">
+                                  {proposal.approvedBy || proposal.rejectedBy || 'Administrador'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Fecha:</span>
+                                </p>
+                                <p className="text-gray-800">
+                                  {(proposal.approvedAt || proposal.rejectedAt)?.toDate 
+                                    ? (proposal.approvedAt || proposal.rejectedAt).toDate().toLocaleDateString('es-MX')
+                                    : 'Fecha no disponible'
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            {proposal.status === 'rejected' && proposal.rejectionReason && (
+                              <div className="mt-3 pt-3 border-t border-red-200">
+                                <p className="text-gray-600 text-sm">
+                                  <span className="font-medium">Razón del rechazo:</span>
+                                </p>
+                                <p className="text-red-800 text-sm mt-1 italic">
+                                  "{proposal.rejectionReason}"
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       
-                      {/* Botones de acción elegantes */}
-                      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-orange-200">
-                        <button
-                          onClick={() => setSelectedProposal(proposal)}
-                          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 rounded-xl hover:from-red-200 hover:to-pink-200 transition-all transform hover:scale-105 font-medium shadow-md border border-red-200"
-                        >
-                          <i className="fas fa-times"></i>
-                          Rechazar
-                        </button>
-                        <button
-                          onClick={() => handleApprove(proposal)}
-                          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-md"
-                        >
-                          <i className="fas fa-check"></i>
-                          Aprobar
-                        </button>
-                      </div>
+                      {/* Botones de acción solo para propuestas pendientes */}
+                      {proposal.status === 'pending' && (
+                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-orange-200">
+                          <button
+                            onClick={() => setSelectedProposal(proposal)}
+                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 rounded-xl hover:from-red-200 hover:to-pink-200 transition-all transform hover:scale-105 font-medium shadow-md border border-red-200"
+                          >
+                            <i className="fas fa-times"></i>
+                            Rechazar
+                          </button>
+                          <button
+                            onClick={() => handleApprove(proposal)}
+                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-md"
+                          >
+                            <i className="fas fa-check"></i>
+                            Aprobar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -900,7 +1091,7 @@ const AdminModal = (props = {}) => {
                 disabled={!rejectReason.trim()}
                 className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:bg-red-400"
               >
-                Rechazar con Razón
+                Rechazar
               </button>
             </div>
           </div>

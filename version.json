@@ -1,10 +1,30 @@
 {
-  "version": "2.10.0",
+  "version": "2.11.0",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "major", 
+        "description": "HISTORIAL COMPLETO DE PROPUESTAS: Sistema completo con filtros para ver todas las propuestas (pendientes, aprobadas, rechazadas)"
+      },
+      {
+        "type": "improvement", 
+        "description": "Filtros inteligentes: Pendientes, Todas, Aprobadas y Rechazadas con contadores y colores temáticos"
+      },
+      {
+        "type": "improvement", 
+        "description": "Información completa de propuestas procesadas: quién las procesó, cuándo y razón de rechazo"
+      },
+      {
+        "type": "improvement", 
+        "description": "Diseño optimizado para móvil: grid responsive 2x2 en móvil, 4x1 en desktop"
+      },
+      {
+        "type": "fix", 
+        "description": "Botón simplificado: 'Rechazar con Razón' cambiado a 'Rechazar'"
+      },
       {
         "type": "major", 
         "description": "PROPUESTAS DETALLADAS: Vista completa con TODA la información de las propuestas de direcciones"
@@ -139,6 +159,22 @@
       }
     ],
     "admin": [
+      {
+        "type": "major",
+        "description": "HISTORIAL COMPLETO DE PROPUESTAS - Sistema avanzado con filtros para gestionar todas las propuestas de forma eficiente"
+      },
+      {
+        "type": "improvement",
+        "description": "4 filtros inteligentes: Pendientes (para procesar), Todas (historial completo), Aprobadas y Rechazadas"
+      },
+      {
+        "type": "improvement",
+        "description": "Información de trazabilidad: quién procesó cada propuesta, cuándo y razón de rechazo detallada"
+      },
+      {
+        "type": "improvement",
+        "description": "UX mejorada: botones solo para pendientes, estados visuales claros, diseño 100% móvil-friendly"
+      },
       {
         "type": "major",
         "description": "PROPUESTAS CON INFORMACIÓN COMPLETA - Ahora muestra TODOS los datos de las propuestas para tomar decisiones informadas"
