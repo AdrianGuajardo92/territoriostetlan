@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { ToastProvider } from './hooks/useToast';
+import { ToastProvider, useToast } from './hooks/useToast';
 import LoginView from './components/auth/LoginView';
 import MobileMenu from './components/common/MobileMenu';
 import TerritoriesView from './pages/TerritoriesView';
@@ -25,6 +25,7 @@ import {
 
 function AppContent() {
   const { currentUser, authLoading, proposals, logout, territories, adminEditMode, handleToggleAdminMode } = useApp();
+  const { showToast } = useToast();
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
@@ -61,7 +62,7 @@ function AppContent() {
     }).length;
   };
 
-  // Sistema de Service Worker y actualizaciones automáticas
+  // Sistema de Service Worker y actualizaciones automáticas MEJORADO
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       const registerSW = async () => {
@@ -78,12 +79,8 @@ function AppContent() {
               setUpdateAvailable(true);
               setUpdateVersion(event.data.version);
               
-              // Auto-recarga después de 3 segundos (opcional)
-              setTimeout(() => {
-                if (confirm(`¡Nueva versión ${event.data.version} disponible!\n\n¿Quieres actualizar ahora? (Recomendado)`)) {
-                  handleForceUpdate();
-                }
-              }, 3000);
+              // Toast notification inmediata y elegante
+              showUpdateNotification(event.data.version);
             }
             
             if (event.data?.type === 'FORCE_RELOAD') {
@@ -94,13 +91,12 @@ function AppContent() {
 
           navigator.serviceWorker.addEventListener('message', handleSWMessage);
           
-          // Verificar actualizaciones al registrar
-          if (registration.active) {
-            checkForUpdates();
-          }
+          // ✨ VERIFICACIÓN INMEDIATA al cargar la app
+          console.log('🔍 Verificando actualizaciones al iniciar...');
+          setTimeout(() => checkForUpdates(), 2000);
 
-          // Verificar actualizaciones cada 10 minutos
-          setInterval(checkForUpdates, 10 * 60 * 1000);
+          // ✨ VERIFICACIÓN más frecuente cada 2 minutos (en lugar de 10)
+          setInterval(checkForUpdates, 2 * 60 * 1000);
           
         } catch (error) {
           console.error('❌ Error registrando Service Worker:', error);
@@ -111,23 +107,122 @@ function AppContent() {
     }
   }, []);
 
-  // Función para verificar actualizaciones manualmente
-  const checkForUpdates = () => {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  // ✨ Función para mostrar notificación de actualización elegante
+  const showUpdateNotification = (version) => {
+    // Crear toast personalizado más prominente
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 left-4 right-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl shadow-2xl z-50 transform transition-all duration-500 translate-y-[-100px]';
+    toast.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <i class="fas fa-download text-white"></i>
+          </div>
+          <div>
+            <div class="font-bold text-lg">¡Nueva versión disponible!</div>
+            <div class="text-blue-100 text-sm">Versión ${version} - Actualiza para obtener las mejoras</div>
+          </div>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" class="text-white/80 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button onclick="window.updateApp()" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors">
+          Actualizar Ahora
+        </button>
+        <button onclick="this.parentElement.parentElement.remove()" class="bg-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors">
+          Más Tarde
+        </button>
+      </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Animación de entrada
+    setTimeout(() => {
+      toast.style.transform = 'translateY(0)';
+    }, 100);
+    
+    // Auto-quitar después de 10 segundos si no interactúa
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.style.transform = 'translateY(-100px)';
+        setTimeout(() => toast.remove(), 500);
+      }
+    }, 10000);
+    
+    // Hacer función global para el botón
+    window.updateApp = handleForceUpdate;
+  };
+
+  // ✨ Función mejorada para verificar actualizaciones con feedback
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  
+  const checkForUpdates = async (showFeedback = false) => {
+    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+      if (showFeedback) {
+        showToast('Service Worker no disponible', 'error');
+      }
+      return false;
+    }
+
+    if (showFeedback) {
+      setIsCheckingUpdates(true);
+      showToast('🔍 Buscando actualizaciones...', 'info');
+    }
+
+    try {
       const channel = new MessageChannel();
       
-      channel.port1.onmessage = (event) => {
-        if (event.data.hasUpdate) {
-          console.log('🎉 Actualización detectada por verificación manual');
-          setUpdateAvailable(true);
-          setUpdateVersion(event.data.currentVersion);
-        }
-      };
+      const updatePromise = new Promise((resolve) => {
+        channel.port1.onmessage = (event) => {
+          if (event.data.hasUpdate) {
+            console.log('🎉 Actualización detectada:', event.data.currentVersion);
+            setUpdateAvailable(true);
+            setUpdateVersion(event.data.currentVersion);
+            
+            if (showFeedback) {
+              showUpdateNotification(event.data.currentVersion);
+            }
+            resolve(true);
+          } else {
+            if (showFeedback) {
+              showToast('✅ Ya tienes la versión más reciente', 'success');
+            }
+            resolve(false);
+          }
+        };
+      });
       
       navigator.serviceWorker.controller.postMessage(
         { type: 'CHECK_UPDATE' }, 
         [channel.port2]
       );
+
+      // Timeout de 10 segundos
+      const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => {
+          if (showFeedback) {
+            showToast('⏰ Verificación tardó demasiado, intenta más tarde', 'warning');
+          }
+          resolve(false);
+        }, 10000);
+      });
+
+      const result = await Promise.race([updatePromise, timeoutPromise]);
+      return result;
+      
+    } catch (error) {
+      console.error('Error verificando actualizaciones:', error);
+      if (showFeedback) {
+        showToast('❌ Error verificando actualizaciones', 'error');
+      }
+      return false;
+    } finally {
+      if (showFeedback) {
+        setIsCheckingUpdates(false);
+      }
     }
   };
 
@@ -344,13 +439,19 @@ function AppContent() {
     },
     {
       id: 'updates',
-      text: 'Actualizaciones',
-      icon: 'download',
-      modal: 'updates',
+      text: updateAvailable ? `¡Actualizar a v${updateVersion}!` : 'Buscar Actualizaciones',
+      icon: updateAvailable ? 'download' : 'sync-alt',
+      modal: updateAvailable ? null : 'updates',
       hasBadge: updateAvailable,
       badgeText: updateAvailable ? '!' : null,
-      description: updateAvailable ? `¡Nueva versión ${updateVersion} disponible!` : 'Verificar nuevas versiones',
-      action: updateAvailable ? handleForceUpdate : null
+      description: updateAvailable 
+        ? `Nueva versión ${updateVersion} lista para instalar` 
+        : isCheckingUpdates 
+          ? 'Verificando actualizaciones...' 
+          : 'Buscar nuevas versiones disponibles',
+      action: updateAvailable ? handleForceUpdate : (() => checkForUpdates(true)),
+      isLoading: isCheckingUpdates,
+      isUpdateAction: updateAvailable
     },
     {
       id: 'install',
@@ -436,9 +537,14 @@ function AppContent() {
     }
   };
 
-  // Manejar apertura del menú con historial
+  // ✨ Manejar apertura del menú con verificación automática de actualizaciones
   const handleOpenMenu = () => {
     setIsMenuOpen(true);
+    
+    // ✨ VERIFICAR ACTUALIZACIONES al abrir el menú (verificación inmediata)
+    console.log('🔍 Verificando actualizaciones al abrir menú...');
+    setTimeout(() => checkForUpdates(false), 500); // Sin mostrar feedback para que sea transparente
+    
     // Agregar entrada al historial para el menú
     window.history.pushState({ 
       app: 'territorios', 

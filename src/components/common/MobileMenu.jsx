@@ -90,14 +90,21 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                           href="#" 
                           onClick={(e) => { 
                             e.preventDefault(); 
-                            onOpenModal(item.id);
+                            
+                            // ✨ Manejo especial para actualizaciones
                             if (item.action) { 
                               item.action(); 
-                              onClose(); 
+                              if (item.isUpdateAction) {
+                                // No cerrar menú si es actualización (se recargará la página)
+                              } else {
+                                onClose(); 
+                              }
                             } else if (item.isLogout) { 
                               handleLogout(); 
                               onClose(); 
-                            } 
+                            } else {
+                              onOpenModal(item.id);
+                            }
                           }} 
                           onMouseEnter={() => setHoveredItem(item.id)}
                           onMouseLeave={() => setHoveredItem(null)}
@@ -112,38 +119,60 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                             <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full" style={{ backgroundColor: '#EAEAEA' }}></div>
                           )}
                           
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center mr-3 transition-colors duration-200"
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 transition-colors duration-200 ${
+                            item.isUpdateAction ? 'bg-gradient-to-r from-blue-500 to-purple-600' :
+                            item.isLoading ? 'bg-gradient-to-r from-gray-400 to-gray-500' : ''
+                          }`}
                             style={{
-                              backgroundColor: isActive ? '#595959' : '#3A3A3A'
+                              backgroundColor: item.isUpdateAction ? undefined : 
+                                               item.isLoading ? undefined :
+                                               isActive ? '#595959' : '#3A3A3A'
                             }}
                           >
-                            <Icon 
-                              name={iconConfig.icon} 
-                              size={20} 
-                              style={{ 
-                                color: isActive ? '#FFFFFF' : (isLogout ? '#F87171' : '#D0D0D0')
-                              }}
-                            />
-                            {item.hasBadge && (item.badgeCount > 0 || item.badgeText) && (
-                              <span className="absolute -top-1 -right-1 text-xs rounded-full flex items-center justify-center font-medium min-w-[20px] h-5 px-1 shadow-sm"
-                                style={{ backgroundColor: '#DC2626', color: '#FFFFFF' }}
-                              >
+                            {item.isLoading ? (
+                              // ✨ Spinner de carga elegante
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            ) : (
+                              <Icon 
+                                name={iconConfig.icon} 
+                                size={20} 
+                                style={{ 
+                                  color: item.isUpdateAction ? '#FFFFFF' :
+                                         isActive ? '#FFFFFF' : 
+                                         (isLogout ? '#F87171' : '#D0D0D0')
+                                }}
+                              />
+                            )}
+                            {item.hasBadge && (item.badgeCount > 0 || item.badgeText) && !item.isLoading && (
+                              <span className={`absolute -top-1 -right-1 text-xs rounded-full flex items-center justify-center font-medium min-w-[20px] h-5 px-1 shadow-sm ${
+                                item.isUpdateAction ? 'bg-white text-blue-600 animate-pulse' : 'bg-red-600 text-white'
+                              }`}>
                                 {item.badgeCount || item.badgeText}
                               </span>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm transition-colors duration-200"
+                            <p className={`font-medium text-sm transition-colors duration-200 ${
+                              item.isUpdateAction ? 'text-white font-bold' : ''
+                            }`}
                               style={{ 
-                                color: isActive ? '#FFFFFF' : (isLogout ? '#F87171' : '#EAEAEA')
+                                color: item.isUpdateAction ? '#FFFFFF' :
+                                       isActive ? '#FFFFFF' : 
+                                       (isLogout ? '#F87171' : '#EAEAEA')
                               }}
                             >
                               {item.text}
+                              {item.isUpdateAction && (
+                                <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full">¡Nuevo!</span>
+                              )}
                             </p>
                             {item.description && (
-                              <p className="text-xs mt-0.5 transition-colors duration-200"
+                              <p className={`text-xs mt-0.5 transition-colors duration-200 ${
+                                item.isUpdateAction ? 'text-blue-100' : ''
+                              }`}
                                 style={{ 
-                                  color: isActive ? '#D0D0D0' : '#A0A0A0'
+                                  color: item.isUpdateAction ? '#E0E7FF' :
+                                         isActive ? '#D0D0D0' : '#A0A0A0'
                                 }}
                               >{item.description}</p>
                             )}

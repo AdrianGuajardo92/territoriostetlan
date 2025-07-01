@@ -1,10 +1,34 @@
 {
-  "version": "2.13.0",
+  "version": "2.14.0",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "major", 
+        "description": "🎉 ACTUALIZACIONES SÚPER INTUITIVAS: Sistema perfecto que hace actualizar increíblemente fácil para TODOS"
+      },
+      {
+        "type": "feature", 
+        "description": "VERIFICACIÓN INMEDIATA: Al abrir app (2 seg) + al abrir menú (0.5 seg) + cada 2 minutos automático"
+      },
+      {
+        "type": "feature", 
+        "description": "BOTÓN MÁGICO: 'Buscar Actualizaciones' con feedback instantáneo y estados visuales espectaculares"
+      },
+      {
+        "type": "feature", 
+        "description": "TOAST ELEGANTE: Notificación hermosa arriba con botones 'Actualizar Ahora' y 'Más Tarde'"
+      },
+      {
+        "type": "feature", 
+        "description": "MENÚ INTELIGENTE: Gradientes azul-púrpura cuando hay actualización + spinner de carga + badge animado"
+      },
+      {
+        "type": "improvement", 
+        "description": "UX PERFECTA: Usuario siempre sabe qué pasa - 'Verificando...', '✅ Ya tienes la más reciente', etc."
+      },
       {
         "type": "major", 
         "description": "🚀 ACTUALIZACIONES AUTOMÁTICAS: ¡Nunca más borrar cookies! Sistema completo de actualización en tiempo real"
@@ -217,6 +241,30 @@
       "publisher": [
         {
           "type": "major",
+          "description": "🎉 ACTUALIZAR ES SÚPER FÁCIL: ¡Sistema perfecto que cualquier persona puede usar sin problemas!"
+        },
+        {
+          "type": "feature",
+          "description": "✨ AL ABRIR LA APP: Verificación automática en 2 segundos - sin que tengas que hacer nada"
+        },
+        {
+          "type": "feature",
+          "description": "🔍 BOTÓN INTELIGENTE: 'Buscar Actualizaciones' te dice si hay algo nuevo al instante"
+        },
+        {
+          "type": "feature",
+          "description": "📱 NOTIFICACIÓN HERMOSA: Aparece arriba con botones grandes 'Actualizar Ahora' y 'Más Tarde'"
+        },
+        {
+          "type": "feature",
+          "description": "🎨 MENÚ VISUAL: Cuando hay actualización se ve azul-púrpura con '¡Nuevo!' - imposible no verlo"
+        },
+        {
+          "type": "improvement",
+          "description": "💬 SIEMPRE INFORMADO: La app te dice exactamente qué está pasando - 'Buscando...', 'Ya tienes la más nueva', etc."
+        },
+        {
+          "type": "major",
           "description": "🎉 FIN DE PROBLEMAS DE CACHE: ¡Ya no necesitas borrar cookies/datos! La app se actualiza automáticamente"
         },
         {
@@ -253,6 +301,26 @@
         }
       ],
       "admin": [
+        {
+          "type": "major",
+          "description": "🎯 ACTUALIZACIÓN INSTANTÁNEA PARA USUARIOS: Sistema que elimina completamente la fricción de actualizar"
+        },
+        {
+          "type": "feature",
+          "description": "⚡ VERIFICACIÓN TRIPLE: Al abrir app (2s) + al abrir menú (0.5s) + cada 2 minutos = cobertura total"
+        },
+        {
+          "type": "feature",
+          "description": "🎨 UX ESPECTACULAR: Gradientes, spinners, badges animados - imposible que el usuario no vea las actualizaciones"
+        },
+        {
+          "type": "feature",
+          "description": "📱 TOAST PROFESIONAL: Notificación elegante con call-to-action claro y opción de posponer"
+        },
+        {
+          "type": "improvement",
+          "description": "🔄 CERO SOPORTE: Los usuarios pueden actualizar solos sin necesidad de instrucciones o ayuda"
+        },
         {
           "type": "major",
           "description": "🚀 SISTEMA DE ACTUALIZACIÓN PROFESIONAL: Gestión automática de versiones sin intervención manual"
