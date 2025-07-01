@@ -58,7 +58,7 @@ export const AppProvider = ({ children }) => {
   const unsubscribesRef = useRef([]);
   const { showToast } = useToast();
 
-  const CURRENT_VERSION = '2.7.1';
+  const CURRENT_VERSION = '2.7.2';
   
   // 🔐 AUTH FUNCTIONS - SISTEMA PERSONALIZADO CON CÓDIGOS DE ACCESO
   const login = async (accessCode, password) => {
