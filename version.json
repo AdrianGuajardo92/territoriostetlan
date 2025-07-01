@@ -2,6 +2,7 @@
   "version": "2.7.2",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
+  "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
         "all": [
       {

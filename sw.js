@@ -1,6 +1,22 @@
 // Service Worker Agresivo para Gestor de Territorios LS
-const CACHE_NAME = 'territorio-ls-v2.7.2';
-const RUNTIME_CACHE = 'territorio-runtime-v2.7.2';
+// La versión se actualizará dinámicamente basándose en version.json
+let CACHE_NAME = 'territorio-ls-v2.7.2';
+let RUNTIME_CACHE = 'territorio-runtime-v2.7.2';
+
+// Función para actualizar la versión del cache
+async function updateCacheVersion() {
+  try {
+    const response = await fetch('/version.json');
+    if (response.ok) {
+      const data = await response.json();
+      CACHE_NAME = `territorio-ls-v${data.version}`;
+      RUNTIME_CACHE = `territorio-runtime-v${data.version}`;
+      console.log('[SW] Versión del cache actualizada a:', data.version);
+    }
+  } catch (error) {
+    console.log('[SW] Error obteniendo versión:', error);
+  }
+}
 
 // Recursos críticos que SIEMPRE deben estar en cache
 const CRITICAL_RESOURCES = [
@@ -31,7 +47,8 @@ self.addEventListener('install', event => {
   console.log('[SW] Instalando Service Worker Agresivo...');
   
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    updateCacheVersion()
+      .then(() => caches.open(CACHE_NAME))
       .then(cache => {
         // Cachear recursos críticos
         console.log('[SW] Cacheando recursos críticos...');
@@ -301,4 +318,4 @@ self.addEventListener('message', event => {
   }
 });
 
-console.log('[SW] Service Worker Agresivo cargado - v2.7.2');
+console.log('[SW] Service Worker Agresivo cargado');

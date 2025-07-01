@@ -58,7 +58,30 @@ export const AppProvider = ({ children }) => {
   const unsubscribesRef = useRef([]);
   const { showToast } = useToast();
 
-  const CURRENT_VERSION = '2.7.2';
+  // Estado para la versión dinámica
+  const [appVersion, setAppVersion] = useState('2.7.2'); // Valor por defecto
+  
+  // 📋 Cargar versión desde version.json
+  const loadAppVersion = async () => {
+    try {
+      const response = await fetch('/version.json?t=' + Date.now(), {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (response.ok) {
+        const versionData = await response.json();
+        setAppVersion(versionData.version);
+        console.log('✅ Versión cargada:', versionData.version);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando versión:', error);
+      // Mantener la versión por defecto si hay error
+    }
+  };
   
   // 🔐 AUTH FUNCTIONS - SISTEMA PERSONALIZADO CON CÓDIGOS DE ACCESO
   const login = async (accessCode, password) => {
@@ -752,6 +775,11 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // 📋 Cargar versión al iniciar la aplicación
+  useEffect(() => {
+    loadAppVersion();
+  }, []); // Solo se ejecuta una vez al montar
+
   // 🚀 INICIALIZACIÓN Y GESTIÓN DE AUTENTICACIÓN PERSONALIZADA
   useEffect(() => {
     const initializeAuth = async () => {
@@ -903,7 +931,7 @@ export const AppProvider = ({ children }) => {
     proposals,
     isLoading,
     authLoading,
-    CURRENT_VERSION,
+    CURRENT_VERSION: appVersion, // Ahora es dinámico desde version.json
     adminEditMode,
     
     // Auth functions
