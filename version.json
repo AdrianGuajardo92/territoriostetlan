@@ -1,10 +1,30 @@
 {
-  "version": "2.8.0",
+  "version": "2.8.1",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "redesign", 
+        "description": "REDISEÑO COMPLETO del modal de estadísticas para administradores - diseño espectacular y 100% optimizado para móviles"
+      },
+      {
+        "type": "improvement", 
+        "description": "Header elegante con gradientes, íconos FontAwesome y temática consistente con la aplicación"
+      },
+      {
+        "type": "improvement", 
+        "description": "StatCards completamente rediseñadas con gradientes, colores temáticos y animaciones hover"
+      },
+      {
+        "type": "improvement", 
+        "description": "Sección predictiva con diseño especial, decoraciones de fondo y texto degradado"
+      },
+      {
+        "type": "improvement", 
+        "description": "Tabs mejoradas, botones de exportación elegantes y navegación optimizada para móviles"
+      },
       {
         "type": "fix", 
         "description": "Corregido error de ícono 'trophy' no encontrado - agregado al mapeo de íconos"
@@ -67,6 +87,10 @@
       }
     ],
     "admin": [
+      {
+        "type": "redesign",
+        "description": "Modal de estadísticas completamente rediseñado con diseño espectacular, gradientes elegantes y 100% optimizado para móviles"
+      },
       {
         "type": "improvement",
         "description": "Estadísticas completas ahora integradas directamente en el panel de administración"
