@@ -1,10 +1,14 @@
 {
-  "version": "2.14.0",
+  "version": "2.14.1",
   "releaseDate": "2024-12-27",
-  "forceUpdate": false,
+  "forceUpdate": true,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "fix", 
+        "description": "🔥 ACTUALIZACIÓN FORZADA: Limpieza completa de cache para asegurar que todos vean la nueva versión"
+      },
       {
         "type": "major", 
         "description": "🎉 ACTUALIZACIONES SÚPER INTUITIVAS: Sistema perfecto que hace actualizar increíblemente fácil para TODOS"

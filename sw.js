@@ -1,8 +1,8 @@
 // Service Worker Agresivo para Gestor de Territorios LS con Auto-Update
 // La versión se actualizará dinámicamente basándose en version.json
-let CACHE_NAME = 'territorio-ls-v2.14.0';
-let RUNTIME_CACHE = 'territorio-runtime-v2.14.0';
-let CURRENT_VERSION = '2.14.0';
+let CACHE_NAME = 'territorio-ls-v2.14.1';
+let RUNTIME_CACHE = 'territorio-runtime-v2.14.1';
+let CURRENT_VERSION = '2.14.1';
 
 // Función para actualizar la versión del cache con detección de cambios
 async function updateCacheVersion() {
@@ -19,9 +19,14 @@ async function updateCacheVersion() {
       const data = await response.json();
       const newVersion = data.version;
       
-      // Detectar si hay nueva versión
-      if (CURRENT_VERSION !== newVersion) {
+      // Detectar si hay nueva versión O si se fuerza actualización
+      const forceUpdate = data.forceUpdate === true;
+      
+      if (CURRENT_VERSION !== newVersion || forceUpdate) {
         console.log('[SW] 🎉 Nueva versión detectada:', CURRENT_VERSION, '→', newVersion);
+        if (forceUpdate) {
+          console.log('[SW] 🔄 Actualización FORZADA activada');
+        }
         
         // Actualizar variables globales
         const oldCacheName = CACHE_NAME;
@@ -31,8 +36,20 @@ async function updateCacheVersion() {
         CACHE_NAME = `territorio-ls-v${newVersion}`;
         RUNTIME_CACHE = `territorio-runtime-v${newVersion}`;
         
-        // Limpiar caches antiguos inmediatamente
-        await cleanOldCaches([oldCacheName, oldRuntimeCache]);
+        // 🔥 LIMPIAR TODO EL CACHE si es forzado
+        if (forceUpdate) {
+          console.log('[SW] 🧹 Limpiando TODO el cache por actualización forzada...');
+          const allCacheNames = await caches.keys();
+          await Promise.all(
+            allCacheNames.map(cacheName => {
+              console.log('[SW] 🗑️ Eliminando cache:', cacheName);
+              return caches.delete(cacheName);
+            })
+          );
+        } else {
+          // Limpiar caches antiguos normalmente
+          await cleanOldCaches([oldCacheName, oldRuntimeCache]);
+        }
         
         // Notificar a todos los clientes sobre la actualización
         await notifyClientsOfUpdate(newVersion);
