@@ -93,7 +93,8 @@ export const LazyAdminModal = ({ isOpen, ...props }) => {
   }
 
   console.log('🔍 [DEBUG] AdminModal listo para renderizar');
-  return <Component isOpen={isOpen} {...props} />;
+  console.log('🔍 [DEBUG] Props que se van a pasar:', { isOpen, ...props });
+  return <Component isOpen={isOpen} onClose={props.onClose} {...props} />;
 };
 
 // Lazy ReportsModal - NO crítico para carga inicial

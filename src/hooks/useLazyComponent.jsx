@@ -20,7 +20,13 @@ export const useLazyComponent = (importFunction, dependencies = []) => {
       importFunction()
         .then(module => {
           console.log('🔍 [DEBUG] Import successful:', { module, default: !!module.default });
-          setComponent(module.default || module);
+          const ComponentToSet = module.default || module;
+          console.log('🔍 [DEBUG] Component to set:', { 
+            type: typeof ComponentToSet, 
+            name: ComponentToSet?.name || 'unknown',
+            isFunction: typeof ComponentToSet === 'function'
+          });
+          setComponent(() => ComponentToSet);
           setIsLoading(false);
           console.log('🔍 [DEBUG] Component set successfully');
         })

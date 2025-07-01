@@ -4,7 +4,8 @@ import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 
-const AdminModal = ({ isOpen, onClose }) => {
+const AdminModal = (props = {}) => {
+  const { isOpen = false, onClose = () => {} } = props;
   const { 
     currentUser, 
     territories,
