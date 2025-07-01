@@ -59,10 +59,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }));
   }, []);
 
-  // Manejar highlight cuando se navega desde el buscador
+  // Manejar highlight cuando se navega desde el buscador - SIN PARPADEO
   useEffect(() => {
     if (territory.highlightedAddressId) {
-      // Activar highlight para la dirección específica
+      // Activar highlight para la dirección específica - SIN PARPADEO
       setNavigatingAddressId(territory.highlightedAddressId);
       setIsNavigatingHighlightActive(true);
       
@@ -77,11 +77,11 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         }
       }, 500);
       
-      // Auto-desactivar highlight después de 10 segundos
+      // Auto-desactivar highlight después de 8 segundos (reducido)
       const timer = setTimeout(() => {
         setIsNavigatingHighlightActive(false);
         setNavigatingAddressId(null);
-      }, 10000);
+      }, 8000);
       
       highlightTimerRef.current = timer;
       

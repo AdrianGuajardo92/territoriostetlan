@@ -78,7 +78,8 @@ const AddressCard = memo(({
     // Permisos estrictos para marcar/desmarcar direcciones
     const canToggleStatus = isAssignedToMe || (isAdmin && globalAdminEditMode);
     
-    const navigatingClass = (isNavigating || isNavigatingLocal) ? 'ring-4 ring-blue-400 ring-opacity-75 animate-pulse scale-105' : '';
+    // Highlight elegante sin parpadeo - CONTRASTE AZUL SUTIL
+    const navigatingClass = (isNavigating || isNavigatingLocal) ? 'ring-4 ring-blue-500 ring-opacity-50 bg-blue-50/50 scale-[1.02] shadow-2xl' : '';
 
     // Funciones de navegación inteligente
     const getNavigationUrl = (mode) => {

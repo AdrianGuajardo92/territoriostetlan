@@ -114,7 +114,7 @@ const SearchAddressCard = ({ address, onClick }) => {
         shadow-lg ${config.hoverShadow}
         hover:shadow-2xl hover:scale-[1.02]
         transition-all duration-300 ease-out
-        ${isNavigatingLocal ? 'ring-4 ring-blue-400 ring-opacity-75 animate-pulse scale-105' : ''}
+        ${isNavigatingLocal ? 'ring-4 ring-blue-500 ring-opacity-50 bg-blue-50/50 scale-[1.02] shadow-2xl' : ''}
       `}
       onClick={onClick}
     >
@@ -256,14 +256,17 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
     return results;
   }, [searchTerm, addresses, territories]);
 
-  // Navegar al territorio y destacar la dirección
+  // Navegar al territorio y destacar la dirección - CORREGIDO
   const handleNavigateToAddress = useCallback((address) => {
     if (onNavigateToTerritory && address.territory) {
-      // Cerrar el modal
+      // Cerrar el modal INMEDIATAMENTE
       onClose();
       
-      // Navegar al territorio con la dirección destacada
-      onNavigateToTerritory(address.territory, address.id);
+      // PREVENIR que se abra el menú con mejor timing
+      setTimeout(() => {
+        // Navegar al territorio con la dirección destacada
+        onNavigateToTerritory(address.territory, address.id);
+      }, 200); // Aumentado el delay para evitar conflictos
     }
   }, [onNavigateToTerritory, onClose]);
 
@@ -280,57 +283,52 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
       size="full" // Pantalla completa
       modalId={modalId}
     >
-      <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-blue-50">
-        {/* Header del buscador */}
-        <div className="bg-white/90 backdrop-blur-md shadow-sm border-b border-white/40 px-4 py-4 flex-shrink-0">
+      <div className="h-full flex flex-col bg-gradient-to-br from-indigo-50 via-white to-blue-50">
+        {/* Header del buscador mejorado */}
+        <div className="bg-white/95 backdrop-blur-xl shadow-lg border-b border-indigo-100 px-4 py-6 flex-shrink-0">
           <div className="flex items-center gap-4">
-            {/* Botón cerrar */}
+            {/* Botón cerrar elegante */}
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+              className="p-3 rounded-xl hover:bg-slate-100 transition-colors group"
               title="Cerrar búsqueda"
             >
-              <Icon name="x" size={24} className="text-slate-600" />
+              <Icon name="x" size={24} className="text-slate-600 group-hover:text-slate-800 transition-colors" />
             </button>
 
-            {/* Barra de búsqueda */}
+            {/* Barra de búsqueda rediseñada - SIN ICONO */}
             <div className="flex-1 relative">
-              <Icon 
-                name="search" 
-                size={20} 
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" 
-              />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-12 py-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder-slate-500 bg-white/80 backdrop-blur-sm"
+                className="w-full pl-4 pr-12 py-4 border-2 border-blue-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg placeholder-slate-500 bg-white shadow-lg transition-all"
                 placeholder="Buscar dirección o nota..."
                 autoFocus
               />
-              {searchTerm && (
-                <button
-                  onClick={handleClearSearch}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-slate-100 transition-colors"
-                  title="Limpiar búsqueda"
-                >
-                  <Icon name="x" size={18} className="text-slate-500" />
-                </button>
-              )}
+              
+              {/* X siempre visible del lado derecho */}
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full hover:bg-slate-100 transition-colors"
+                title="Limpiar búsqueda"
+              >
+                <Icon name="x" size={18} className="text-slate-500" />
+              </button>
             </div>
           </div>
 
           {/* Estadísticas de búsqueda */}
           {searchTerm && (
-            <div className="mt-3 flex items-center justify-between">
-              <p className="text-sm text-slate-600">
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-slate-700 font-medium">
                 {searchResults.length > 0 
                   ? `${searchResults.length} dirección${searchResults.length !== 1 ? 'es' : ''} encontrada${searchResults.length !== 1 ? 's' : ''}`
                   : 'No se encontraron direcciones'
                 }
               </p>
               {searchResults.length > 0 && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-blue-600 font-medium">
                   Toca una tarjeta para ir al territorio
                 </p>
               )}
@@ -341,72 +339,91 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
         {/* Contenido principal */}
         <div className="flex-1 overflow-y-auto">
           {!searchTerm ? (
-            // Estado inicial - sin búsqueda
-            <div className="flex items-center justify-center h-full px-4">
+            // Estado inicial - sin búsqueda MEJORADO
+            <div className="flex items-center justify-center h-full px-6">
               <div className="text-center max-w-md">
-                <div className="w-24 h-24 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Icon name="search" size={40} className="text-blue-600" />
+                <div className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center shadow-lg">
+                  <i className="fas fa-home text-4xl text-blue-600"></i>
                 </div>
-                <h3 className="text-xl font-semibold text-slate-800 mb-3">
-                  Buscar en todos los territorios
+                <h3 className="text-2xl font-bold text-slate-800 mb-4">
+                  Buscar direcciones
                 </h3>
-                <p className="text-slate-600 mb-4">
-                  Escribe el nombre de una calle, dirección o alguna nota para encontrar rápidamente la dirección que buscas.
+                <p className="text-slate-600 mb-6 leading-relaxed">
+                  Encuentra rápidamente cualquier dirección escribiendo el nombre de una calle o alguna nota específica.
                 </p>
-                <div className="bg-blue-50 rounded-lg p-4 text-left border border-blue-200">
-                  <h4 className="font-medium text-blue-800 mb-2">💡 Búsqueda inteligente:</h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• Busca sin acentos (calle vs callé)</li>
-                    <li>• Encuentra notas de las direcciones</li>
-                    <li>• Busca en todos los territorios</li>
-                    <li>• Toca una tarjeta para ir al territorio</li>
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200 shadow-sm">
+                  <h4 className="font-semibold text-blue-800 mb-3 flex items-center">
+                    <i className="fas fa-lightbulb mr-2"></i>
+                    Consejos de búsqueda:
+                  </h4>
+                  <ul className="text-sm text-blue-700 space-y-2 text-left">
+                    <li className="flex items-center">
+                      <i className="fas fa-check-circle mr-2 text-green-500"></i>
+                      Busca sin preocuparte por los acentos
+                    </li>
+                    <li className="flex items-center">
+                      <i className="fas fa-check-circle mr-2 text-green-500"></i>
+                      Encuentra direcciones por notas
+                    </li>
+                    <li className="flex items-center">
+                      <i className="fas fa-check-circle mr-2 text-green-500"></i>
+                      Busca en todos los territorios
+                    </li>
                   </ul>
                 </div>
               </div>
             </div>
           ) : searchResults.length === 0 ? (
-            // Sin resultados
+            // Sin resultados MEJORADO
             <div className="flex items-center justify-center h-full px-4">
               <div className="text-center">
-                <div className="w-20 h-20 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
-                  <Icon name="searchX" size={32} className="text-slate-400" />
+                <div className="w-24 h-24 mx-auto mb-6 bg-slate-100 rounded-full flex items-center justify-center">
+                  <Icon name="searchX" size={36} className="text-slate-400" />
                 </div>
-                <h3 className="text-lg font-medium text-slate-700 mb-2">
+                <h3 className="text-xl font-semibold text-slate-700 mb-3">
                   No se encontraron direcciones
                 </h3>
-                <p className="text-slate-500 mb-4">
-                  No hay direcciones que coincidan con "{searchTerm}"
+                <p className="text-slate-500 mb-6">
+                  No hay direcciones que coincidan con <span className="font-medium">"{searchTerm}"</span>
                 </p>
                 <button
                   onClick={handleClearSearch}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-lg"
                 >
                   Limpiar búsqueda
                 </button>
               </div>
             </div>
           ) : (
-            // Resultados encontrados
+            // Resultados encontrados - MEJORAR NAVEGACIÓN
             <div className="p-4 space-y-4">
               {searchResults.map((address) => (
-                <SearchAddressCard
+                <div
                   key={address.id}
-                  address={address}
-                  onClick={() => handleNavigateToAddress(address)}
-                />
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleNavigateToAddress(address);
+                  }}
+                >
+                  <SearchAddressCard
+                    address={address}
+                    onClick={() => {}} // Función vacía para evitar doble click
+                  />
+                </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Footer informativo */}
+        {/* Footer informativo mejorado */}
         {searchTerm && searchResults.length > 0 && (
-          <div className="bg-white/90 backdrop-blur-md border-t border-white/40 px-4 py-3 flex-shrink-0">
+          <div className="bg-white/95 backdrop-blur-xl border-t border-indigo-100 px-4 py-4 flex-shrink-0">
             <div className="flex items-center justify-center">
-              <div className="bg-blue-50 rounded-lg px-4 py-2 border border-blue-200">
-                <p className="text-sm text-blue-700 font-medium">
-                  <Icon name="info" size={16} className="inline mr-2" />
-                  Toca cualquier tarjeta para ir directamente al territorio
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl px-6 py-3 border border-blue-200">
+                <p className="text-sm text-blue-700 font-medium flex items-center">
+                  <Icon name="info" size={16} className="mr-2" />
+                  Toca cualquier tarjeta para navegar al territorio
                 </p>
               </div>
             </div>
