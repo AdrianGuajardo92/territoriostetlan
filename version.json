@@ -1,10 +1,18 @@
 {
-  "version": "2.14.1",
+  "version": "2.15.0",
   "releaseDate": "2024-12-27",
   "forceUpdate": true,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "critical", 
+        "description": "🚨 SOLUCIÓN NUCLEAR: Desregistra Service Worker + limpia TODO el cache + headers súper agresivos para romper cache problemático"
+      },
+      {
+        "type": "fix", 
+        "description": "🔄 AUTO-RECARGA: Página se recarga automáticamente después de limpiar cache para aplicar nueva versión inmediatamente"
+      },
       {
         "type": "fix", 
         "description": "🔥 ACTUALIZACIÓN FORZADA: Limpieza completa de cache para asegurar que todos vean la nueva versión"

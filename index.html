@@ -378,23 +378,47 @@
     });
     </script>
     
-    <!-- CACHE BUSTING DINÁMICO: Evitar caché en recursos principales ⚡ -->
+    <!-- 🔥 FORZAR ACTUALIZACIÓN COMPLETA: Eliminar Service Worker problemático -->
     <script>
-      // Cache busting automático para recursos principales
-      const cacheBuster = Date.now();
-      
-      // Agregar timestamp a imports dinámicos si es necesario
-      window.CACHE_BUSTER = cacheBuster;
-      
-      console.log('🚀 Cache buster aplicado:', cacheBuster);
-      
-      // Service Worker auto-update mejorado
+      // SOLUCIÓN NUCLEAR: Desregistrar TODOS los Service Workers
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          console.log('🔄 Service Worker actualizado, aplicando cambios...');
-          // No recargar inmediatamente, dejar que la app maneje la actualización
+        console.log('🔥 DESREGISTRANDO todos los Service Workers para forzar actualización...');
+        
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister().then(function(success) {
+              if (success) {
+                console.log('✅ Service Worker desregistrado:', registration.scope);
+              }
+            });
+          }
+          
+          // Limpiar TODO el cache después de desregistrar
+          if ('caches' in window) {
+            caches.keys().then(function(cacheNames) {
+              return Promise.all(
+                cacheNames.map(function(cacheName) {
+                  console.log('🗑️ Eliminando cache:', cacheName);
+                  return caches.delete(cacheName);
+                })
+              );
+            }).then(function() {
+              console.log('✅ Todos los caches eliminados');
+              
+              // Recargar la página después de limpiar todo
+              setTimeout(() => {
+                console.log('🔄 Recargando para aplicar cambios...');
+                window.location.reload(true);
+              }, 1000);
+            });
+          }
         });
       }
+      
+      // Cache busting súper agresivo
+      const cacheBuster = Date.now();
+      window.CACHE_BUSTER = cacheBuster;
+      console.log('🚀 Cache buster aplicado:', cacheBuster);
     </script>
     
     <script type="module" src="/src/main.jsx"></script>
