@@ -1,10 +1,14 @@
 {
-  "version": "2.9.0",
+  "version": "2.9.1",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "cleanup", 
+        "description": "Eliminados logs de debugging temporales del hook useLazyComponent - código limpio y optimizado"
+      },
       {
         "type": "redesign", 
         "description": "REDISEÑO TOTAL del Panel de Administrador - diseño espectacular, elegante y 100% optimizado para móviles"

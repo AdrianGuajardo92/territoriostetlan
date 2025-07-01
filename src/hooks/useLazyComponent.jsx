@@ -8,30 +8,19 @@ export const useLazyComponent = (importFunction, dependencies = []) => {
 
   // Auto-cargar cuando se necesiten las dependencias
   useEffect(() => {
-    console.log('🔍 [DEBUG] useLazyComponent useEffect:', { dependencies });
     const shouldLoad = dependencies.some(dep => Boolean(dep));
-    console.log('🔍 [DEBUG] shouldLoad:', shouldLoad);
     
     if (shouldLoad && !Component && !isLoading) {
-      console.log('🔍 [DEBUG] Starting component load...');
       setIsLoading(true);
       setError(null);
 
       importFunction()
         .then(module => {
-          console.log('🔍 [DEBUG] Import successful:', { module, default: !!module.default });
           const ComponentToSet = module.default || module;
-          console.log('🔍 [DEBUG] Component to set:', { 
-            type: typeof ComponentToSet, 
-            name: ComponentToSet?.name || 'unknown',
-            isFunction: typeof ComponentToSet === 'function'
-          });
           setComponent(() => ComponentToSet);
           setIsLoading(false);
-          console.log('🔍 [DEBUG] Component set successfully');
         })
         .catch(err => {
-          console.error('🔍 [DEBUG] Error loading component:', err);
           setError(err);
           setIsLoading(false);
         });
