@@ -63,7 +63,7 @@ const AdminModal = ({ isOpen, onClose }) => {
   const handleApprove = async (proposal) => {
     try {
       await handleApproveProposal(proposal.id);
-      showToast('Propuesta aprobada', 'success');
+      // Notificación eliminada - ya se muestra en handleApproveProposal
     } catch (error) {
       showToast('Error al aprobar propuesta', 'error');
     }
@@ -77,7 +77,7 @@ const AdminModal = ({ isOpen, onClose }) => {
     
     try {
       await handleRejectProposal(selectedProposal.id, rejectReason);
-      showToast('Propuesta rechazada', 'info');
+      // Notificación eliminada - ya se muestra en handleRejectProposal
       setSelectedProposal(null);
       setRejectReason('');
     } catch (error) {

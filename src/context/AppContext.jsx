@@ -391,6 +391,10 @@ export const AppProvider = ({ children }) => {
   // 🏢 TERRITORY FUNCTIONS  
   const handleAssignTerritory = async (territoryId, publisherName) => {
     try {
+      // Verificar si es reasignación
+      const territory = territories.find(t => t.id === territoryId);
+      const isReassignment = territory?.status === 'En uso' && territory?.assignedTo && territory.assignedTo !== publisherName;
+      
       await updateDoc(doc(db, 'territories', territoryId), {
         status: 'En uso',
         assignedTo: publisherName,
@@ -400,13 +404,17 @@ export const AppProvider = ({ children }) => {
 
       await addDoc(collection(db, 'territoryHistory'), {
         territoryId,
-        territoryName: territories.find(t => t.id === territoryId)?.name || 'Desconocido',
+        territoryName: territory?.name || 'Desconocido',
         assignedTo: publisherName,
-        status: 'Asignado',
+        status: isReassignment ? 'Reasignado' : 'Asignado',
         assignedDate: serverTimestamp()
       });
 
-      showToast(`Territorio asignado a ${publisherName}`, 'success');
+      const territoryName = territory?.name || territoryId;
+      const message = isReassignment 
+        ? `Territorio ${territoryName} reasignado a ${publisherName}`
+        : `Territorio ${territoryName} asignado a ${publisherName}`;
+      showToast(message, 'success');
     } catch (error) {
       console.error('Error assigning territory:', error);
       showToast('Error al asignar territorio', 'error');
@@ -435,7 +443,7 @@ export const AppProvider = ({ children }) => {
         });
       }
 
-      showToast('Territorio devuelto correctamente', 'success');
+      showToast(`Territorio ${territory?.name || territoryId} devuelto`, 'success');
     } catch (error) {
       console.error('Error returning territory:', error);
       showToast('Error al devolver territorio', 'error');
@@ -465,7 +473,7 @@ export const AppProvider = ({ children }) => {
         });
       }
 
-      showToast('Territorio marcado como completado', 'success');
+      showToast(`Territorio ${territory?.name || territoryId} completado`, 'success');
     } catch (error) {
       console.error('Error completing territory:', error);
       showToast('Error al completar territorio', 'error');

@@ -272,7 +272,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     setIsProcessing(true);
     try {
       await handleCompleteTerritory(territory.id);
-      showToast('Territorio marcado como completado', 'success');
+      // Notificación eliminada - ya se muestra en handleCompleteTerritory
       onBack();
     } catch (error) {
       showToast('Error al completar territorio', 'error');

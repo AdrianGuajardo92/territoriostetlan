@@ -52,8 +52,8 @@ const TerritoryDetailHeader = ({
     if (normalizedStatus === 'Disponible') {
       // Territorio disponible - asignar directamente
       onAssign();
-    } else if (normalizedStatus === 'En uso') {
-      // Territorio en uso - mostrar opciones
+    } else if (normalizedStatus === 'En uso' || (normalizedStatus === 'Completado' && adminEditMode)) {
+      // Territorio en uso o completado (en modo admin) - mostrar opciones
       toggleAdminMenu();
     }
   };
@@ -97,7 +97,7 @@ const TerritoryDetailHeader = ({
         {/* Lado derecho - Botón admin + agregar + menú */}
         <div className="flex items-center space-x-2">
           {/* Botón contextual de administración */}
-          {isAdmin && normalizedStatus !== 'Completado' && (
+          {isAdmin && (normalizedStatus !== 'Completado' || adminEditMode) && (
             <div className="relative" ref={adminMenuRef}>
               <button 
                 onClick={handleAdminButtonClick}
@@ -126,11 +126,12 @@ const TerritoryDetailHeader = ({
                 )}
               </button>
 
-              {/* Mini-menú para territorios en uso */}
-              {isAdminMenuOpen && normalizedStatus === 'En uso' && (
+              {/* Mini-menú para territorios en uso o completados (en modo admin) */}
+              {isAdminMenuOpen && (normalizedStatus === 'En uso' || (normalizedStatus === 'Completado' && adminEditMode)) && (
                 <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-200 py-3 z-50">
-                  {/* Reasignar a otro */}
-                  <div className="px-3 mb-2">
+                  {/* Reasignar a otro - Solo para territorios en uso */}
+                  {normalizedStatus === 'En uso' && (
+                    <div className="px-3 mb-2">
                     <button 
                       onClick={() => {
                         onAssign();
@@ -161,6 +162,7 @@ const TerritoryDetailHeader = ({
                       </div>
                     </button>
                   </div>
+                  )}
 
                   {/* Devolver territorio */}
                   <div className="px-3 mb-2">
@@ -193,8 +195,9 @@ const TerritoryDetailHeader = ({
                     </button>
                   </div>
 
-                  {/* Marcar como completado */}
-                  <div className="px-3">
+                  {/* Marcar como completado - Solo para territorios en uso */}
+                  {normalizedStatus === 'En uso' && (
+                    <div className="px-3">
                     <button 
                       onClick={() => {
                         onComplete();
@@ -213,8 +216,8 @@ const TerritoryDetailHeader = ({
                           </svg>
                         </div>
                         <div className="text-left flex-1">
-                          <p className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Completar</p>
-                          <p className="text-xs text-gray-500">Marcar terminado</p>
+                          <p className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Territorio completado</p>
+                          <p className="text-xs text-gray-500">Marcar como terminado</p>
                         </div>
                         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -222,6 +225,7 @@ const TerritoryDetailHeader = ({
                       </div>
                     </button>
                   </div>
+                  )}
                 </div>
               )}
             </div>
