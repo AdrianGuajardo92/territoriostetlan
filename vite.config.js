@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  esbuild: {
+    // Forzar que todos los archivos JSX se transpilen a JS
+    loader: 'jsx',
+    include: /src\/.*\.jsx?$/,
+    exclude: []
+  },
   server: {
     port: 3000,
     strictPort: true,
@@ -16,6 +22,8 @@ export default defineConfig({
     // OPTIMIZACIÓN: Splitting agresivo para móviles ⚡
     rollupOptions: {
       output: {
+        // Forzar extensión .js para todos los archivos
+        format: 'es',
         manualChunks: {
           // Vendor principal - solo lo crítico
           'vendor-core': ['react', 'react-dom'],
@@ -24,28 +32,20 @@ export default defineConfig({
           'vendor-firebase': ['firebase/app', 'firebase/firestore', 'firebase/auth'],
           
           // Utils y helpers
-          'utils': ['./src/utils/helpers.js', './src/utils/routeOptimizer.js'],
-          
-          // Modales pesados - lazy loading
-          'modals-heavy': [
-            './src/components/modals/StatsModal.jsx',
-            './src/components/modals/AdminModal.jsx',
-            './src/components/modals/ReportsModal.jsx'
-          ],
-          
-          // Modales ligeros
-          'modals-light': [
-            './src/components/modals/SearchModal.jsx',
-            './src/components/modals/PasswordModal.jsx',
-            './src/components/modals/UpdatesModal.jsx',
-            './src/components/modals/InstallModal.jsx'
-          ]
+          'utils': ['./src/utils/helpers.js', './src/utils/routeOptimizer.js']
         },
         
-        // Optimizar chunks para carga rápida - nombres seguros
+        // CRÍTICO: Forzar nombres de archivo con extensión .js
         chunkFileNames: `assets/[name]-[hash].js`,
         entryFileNames: `assets/[name]-[hash].js`,
-        assetFileNames: `assets/[name]-[hash].[ext]`
+        assetFileNames: (assetInfo) => {
+          // Asegurar que ningún archivo tenga extensión .jsx
+          const ext = assetInfo.name.split('.').pop();
+          if (ext === 'jsx') {
+            return `assets/[name]-[hash].js`;
+          }
+          return `assets/[name]-[hash].[ext]`;
+        }
       }
     },
     
