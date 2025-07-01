@@ -1,10 +1,26 @@
 {
-  "version": "2.9.2",
+  "version": "2.10.0",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "major", 
+        "description": "PROPUESTAS DETALLADAS: Vista completa con TODA la información de las propuestas de direcciones"
+      },
+      {
+        "type": "improvement", 
+        "description": "Propuestas de NUEVA dirección: Muestra dirección, género, referencia, notas y coordenadas completas"
+      },
+      {
+        "type": "improvement", 
+        "description": "Propuestas de EDICIÓN: Comparativa visual (antes vs después) de todos los campos modificados"
+      },
+      {
+        "type": "improvement", 
+        "description": "Información completa: fecha de propuesta, razón detallada y datos del territorio"
+      },
       {
         "type": "cleanup", 
         "description": "LIMPIEZA COMPLETA: Eliminados TODOS los logs de debugging de LazyModals.jsx - consola 100% limpia"
@@ -123,6 +139,22 @@
       }
     ],
     "admin": [
+      {
+        "type": "major",
+        "description": "PROPUESTAS CON INFORMACIÓN COMPLETA - Ahora muestra TODOS los datos de las propuestas para tomar decisiones informadas"
+      },
+      {
+        "type": "improvement",
+        "description": "Vista detallada de nuevas direcciones: dirección completa, género, referencia, notas y coordenadas"
+      },
+      {
+        "type": "improvement",
+        "description": "Vista comparativa de ediciones: muestra datos actuales vs propuestos con códigos de color"
+      },
+      {
+        "type": "improvement",
+        "description": "Información contextual: fecha de propuesta, territorio y razón completa del publicador"
+      },
       {
         "type": "redesign",
         "description": "PANEL DE ADMINISTRADOR COMPLETAMENTE REDISEÑADO - diseño profesional, elegante y 100% optimizado para móviles"
