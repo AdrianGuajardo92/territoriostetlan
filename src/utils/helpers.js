@@ -59,4 +59,26 @@ export const normalizeText = (text) => {
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9\s]/g, '')
         .trim();
+};
+
+// Función para quitar acentos de texto para búsqueda inteligente
+export const removeAccents = (text) => {
+  if (!text) return '';
+  
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Quitar diacríticos
+    .replace(/[ñ]/g, 'n')
+    .replace(/[ç]/g, 'c');
+};
+
+// Función de búsqueda inteligente que ignora acentos
+export const smartSearch = (searchTerm, targetText) => {
+  if (!searchTerm || !targetText) return false;
+  
+  const cleanSearchTerm = removeAccents(searchTerm.trim());
+  const cleanTargetText = removeAccents(targetText);
+  
+  return cleanTargetText.includes(cleanSearchTerm);
 }; 

@@ -261,13 +261,14 @@ function AppContent() {
     // El historial ahora lo maneja automáticamente useModalHistory
   };
 
-  const handleSelectTerritory = (territory) => {
-    setSelectedTerritory(territory);
+  const handleSelectTerritory = (territory, addressIdToHighlight = null) => {
+    setSelectedTerritory({...territory, highlightedAddressId: addressIdToHighlight});
     // Agregar entrada específica al historial para el territorio
     window.history.pushState({ 
       app: 'territorios', 
       level: 'territory', 
-      territory: territory.id 
+      territory: territory.id,
+      highlightedAddressId: addressIdToHighlight
     }, '', window.location.href);
   };
 
@@ -342,7 +343,12 @@ function AppContent() {
 
       {/* CORRECCIÓN: Modales sin Suspense - Ya optimizados ⚡ */}
       {activeModal === 'search' && (
-        <SearchModal isOpen onClose={handleCloseModal} modalId="search-modal" />
+        <SearchModal 
+          isOpen 
+          onClose={handleCloseModal} 
+          onNavigateToTerritory={handleSelectTerritory}
+          modalId="search-modal" 
+        />
       )}
       {activeModal === 'stats' && (
         <LazyStatsModal isOpen onClose={handleCloseModal} modalId="stats-modal" />

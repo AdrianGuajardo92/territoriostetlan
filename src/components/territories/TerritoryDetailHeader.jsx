@@ -274,22 +274,97 @@ const TerritoryDetailHeader = ({
               </svg>
             </button>
 
-            {/* Menú desplegable simplificado */}
+            {/* ✨ MENÚ REDISEÑADO DISCRETO Y ELEGANTE */}
             {isMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                {/* Controles de vista */}
-                <div className="px-3 py-2 border-b border-gray-100">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Vista</p>
-                  <div className="flex items-center space-x-2">
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
+                {/* Header discreto */}
+                <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+                  <h3 className="text-gray-900 font-semibold text-sm flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                    </svg>
+                    Opciones
+                  </h3>
+                </div>
+
+                {/* 🛡️ MODO ADMINISTRADOR - PRIORITARIO Y DESTACADO */}
+                {isAdmin && (
+                  <div className="p-3 border-b border-gray-100">
+                    <div className="flex items-center mb-3">
+                      <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-800">Administración</span>
+                      {adminEditMode && (
+                        <div className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                          ACTIVO
+                        </div>
+                      )}
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        onToggleAdminMode?.();
+                        setIsMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border-2 ${
+                        adminEditMode 
+                          ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-300 text-orange-800 shadow-sm' 
+                          : 'border-blue-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${
+                          adminEditMode ? 'bg-orange-200' : 'bg-blue-100'
+                        }`}>
+                          <svg className={`w-5 h-5 ${
+                            adminEditMode ? 'text-orange-700' : 'text-blue-600'
+                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium">
+                            {adminEditMode ? 'Desactivar Modo Admin' : 'Activar Modo Admin'}
+                          </p>
+                          <p className={`text-xs ${
+                            adminEditMode ? 'text-orange-600' : 'text-gray-500'
+                          }`}>
+                            {adminEditMode ? 'Toca para salir del modo edición' : 'Habilitar controles avanzados'}
+                          </p>
+                        </div>
+                      </div>
+                      <svg className={`w-5 h-5 ${
+                        adminEditMode ? 'text-orange-500' : 'text-blue-500'
+                      }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+
+                {/* 👁️ VISTA - Secundario */}
+                <div className="p-3">
+                  <div className="flex items-center mb-2">
+                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700">Vista</span>
+                  </div>
+                  
+                  <div className="flex gap-2">
                     <button 
                       onClick={() => {
                         viewControls.setViewMode('grid-full');
                         setIsMenuOpen(false);
                       }}
-                      className={`flex-1 p-2 rounded-lg text-sm font-medium transition-all ${
+                      className={`flex-1 p-2 rounded-lg text-xs transition-all ${
                         viewControls.viewMode === 'grid-full' 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-gray-100 text-gray-800 font-medium' 
+                        : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
                       <svg className="w-4 h-4 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,17 +373,18 @@ const TerritoryDetailHeader = ({
                         <rect x="14" y="14" width="7" height="7" rx="1"></rect>
                         <rect x="3" y="14" width="7" height="7" rx="1"></rect>
                       </svg>
-                      <span className="block">Tarjetas</span>
+                      Tarjetas
                     </button>
+                    
                     <button 
                       onClick={() => {
                         viewControls.setViewMode('list');
                         setIsMenuOpen(false);
                       }}
-                      className={`flex-1 p-2 rounded-lg text-sm font-medium transition-all ${
+                      className={`flex-1 p-2 rounded-lg text-xs transition-all ${
                         viewControls.viewMode === 'list' 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-gray-100 text-gray-800 font-medium' 
+                        : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
                       <svg className="w-4 h-4 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,56 +395,10 @@ const TerritoryDetailHeader = ({
                         <line x1="3" y1="12" x2="3.01" y2="12"></line>
                         <line x1="3" y1="18" x2="3.01" y2="18"></line>
                       </svg>
-                      <span className="block">Lista</span>
+                      Lista
                     </button>
                   </div>
                 </div>
-
-                {/* Ordenamiento */}
-                <div className="px-3 py-2">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Ordenamiento</p>
-                  
-                  {sortControls.sortOrder !== 'alpha' && (
-                    <button 
-                      onClick={() => {
-                        sortControls.onResetSort();
-                        setIsMenuOpen(false);
-                      }}
-                      className="w-full flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
-                    >
-                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      <span>Restaurar orden original</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Modo Administrador - Solo para admins */}
-                {isAdmin && (
-                  <div className="px-3 py-2 border-t border-gray-100">
-                    <p className="text-xs font-medium text-gray-500 mb-2">Modo Administrador</p>
-                    <button 
-                      onClick={() => {
-                        onToggleAdminMode?.();
-                        setIsMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-all ${
-                        adminEditMode 
-                          ? 'bg-orange-50 text-orange-700 border border-orange-200' 
-                          : 'text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      <span>{adminEditMode ? 'Desactivar edición' : 'Activar edición'}</span>
-                      {adminEditMode && (
-                        <div className="ml-auto w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                      )}
-                    </button>
-                  </div>
-                )}
               </div>
             )}
           </div>

@@ -253,16 +253,18 @@ const AddressCard = memo(({
     // VISTA DE LISTA COMPACTA
     if (viewMode === 'list') {
         return (
-            <div className={`
-                group relative
-                bg-gradient-to-r ${config.bgGradient}
-                border-2 ${config.borderColor} ${config.hoverBorder}
-                rounded-xl overflow-hidden
-                shadow-md ${config.hoverShadow}
-                hover:shadow-xl hover:scale-[1.02]
-                transition-all duration-300 ease-out
-                ${navigatingClass}
-            `}>
+            <div 
+                id={`address-card-${address.id}`}
+                className={`
+                    group relative
+                    bg-gradient-to-r ${config.bgGradient}
+                    border-2 ${config.borderColor} ${config.hoverBorder}
+                    rounded-xl overflow-hidden
+                    shadow-md ${config.hoverShadow}
+                    hover:shadow-xl hover:scale-[1.02]
+                    transition-all duration-300 ease-out
+                    ${navigatingClass}
+                `}>
                 {/* Contenido principal */}
                 <div className="p-4">
                     <div className="flex items-center justify-between gap-3">
@@ -343,16 +345,18 @@ const AddressCard = memo(({
 
     // VISTA DE TARJETA COMPLETA
     return (
-        <div className={`
-            group relative cursor-default
-            bg-gradient-to-br ${config.bgGradient}
-            border-2 ${config.borderColor} ${config.hoverBorder}
-            rounded-2xl overflow-hidden
-            shadow-lg ${config.hoverShadow}
-            hover:shadow-2xl hover:scale-[1.01]
-            transition-all duration-300 ease-out
-            ${navigatingClass}
-        `}>
+        <div 
+            id={`address-card-${address.id}`}
+            className={`
+                group relative cursor-default
+                bg-gradient-to-br ${config.bgGradient}
+                border-2 ${config.borderColor} ${config.hoverBorder}
+                rounded-2xl overflow-hidden
+                shadow-lg ${config.hoverShadow}
+                hover:shadow-2xl hover:scale-[1.01]
+                transition-all duration-300 ease-out
+                ${navigatingClass}
+            `}>
             {/* Encabezado con gradiente */}
             <div className="relative px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-white/40">
                 <div className="flex items-center justify-between gap-3">

@@ -59,6 +59,39 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }));
   }, []);
 
+  // Manejar highlight cuando se navega desde el buscador
+  useEffect(() => {
+    if (territory.highlightedAddressId) {
+      // Activar highlight para la dirección específica
+      setNavigatingAddressId(territory.highlightedAddressId);
+      setIsNavigatingHighlightActive(true);
+      
+      // Scroll hacia la dirección destacada después de un pequeño delay
+      setTimeout(() => {
+        const addressElement = document.getElementById(`address-card-${territory.highlightedAddressId}`);
+        if (addressElement) {
+          addressElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 500);
+      
+      // Auto-desactivar highlight después de 10 segundos
+      const timer = setTimeout(() => {
+        setIsNavigatingHighlightActive(false);
+        setNavigatingAddressId(null);
+      }, 10000);
+      
+      highlightTimerRef.current = timer;
+      
+      // Limpiar timer al desmontar o cambiar territorio
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
+    }
+  }, [territory.highlightedAddressId]);
+
   // Actualizar la referencia cuando cambie el modo admin
   useEffect(() => {
     adminModeRef.current = adminEditMode;
