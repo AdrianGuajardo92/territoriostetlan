@@ -341,11 +341,16 @@ export const AppProvider = ({ children }) => {
           reason: `Dirección desmarcada por ${currentUser?.name || 'Usuario'}`
         });
 
+        // Evitar duplicación de "Territorio" en el nombre
+        const territoryDisplayName = territoryData.name.toLowerCase().startsWith('territorio') 
+          ? territoryData.name 
+          : territoryData.name;
+          
         const message = newAssignee === currentUser?.name 
-          ? `📍 ${territoryData.name} reasignado a ${currentUser?.name}`
-          : `📍 ${territoryData.name} reactivado - sigue asignado a ${newAssignee}`;
+          ? `📍 ${territoryDisplayName} reasignado a ${currentUser?.name}`
+          : `📍 ${territoryDisplayName} reactivado - sigue asignado a ${newAssignee}`;
         
-        showToast(message, 'info', 3000);
+        showToast(message, 'info');
       }
       
     } catch (error) {
@@ -389,7 +394,18 @@ export const AppProvider = ({ children }) => {
   }, [addresses, currentUser]);
 
   // 🏢 TERRITORY FUNCTIONS  
-  const handleAssignTerritory = async (territoryId, publisherName) => {
+  const handleAssignTerritory = useCallback(async (territoryId, publisherName) => {
+    // Prevenir doble llamada con debouncing
+    const callKey = `assign_${territoryId}_${publisherName}`;
+    if (window.assignmentInProgress && window.assignmentInProgress.has(callKey)) {
+      console.log('🚫 Llamada duplicada prevenida:', callKey);
+      return;
+    }
+    
+    // Marcar como en progreso
+    if (!window.assignmentInProgress) window.assignmentInProgress = new Set();
+    window.assignmentInProgress.add(callKey);
+    
     try {
       // Verificar si es reasignación
       const territory = territories.find(t => t.id === territoryId);
@@ -410,19 +426,40 @@ export const AppProvider = ({ children }) => {
         assignedDate: serverTimestamp()
       });
 
+      // Evitar duplicación de "Territorio" en el nombre
       const territoryName = territory?.name || territoryId;
+      const displayName = territoryName.toLowerCase().startsWith('territorio') 
+        ? territoryName 
+        : `Territorio ${territoryName}`;
+        
       const message = isReassignment 
-        ? `Territorio ${territoryName} reasignado a ${publisherName}`
-        : `Territorio ${territoryName} asignado a ${publisherName}`;
+        ? `${displayName} reasignado a ${publisherName}`
+        : `${displayName} asignado a ${publisherName}`;
       showToast(message, 'success');
     } catch (error) {
       console.error('Error assigning territory:', error);
       showToast('Error al asignar territorio', 'error');
       throw error;
+    } finally {
+      // Limpiar después de 2 segundos para permitir nuevas asignaciones
+      setTimeout(() => {
+        window.assignmentInProgress?.delete(callKey);
+      }, 2000);
     }
-  };
+  }, [territories]);
 
-  const handleReturnTerritory = async (territoryId) => {
+  const handleReturnTerritory = useCallback(async (territoryId) => {
+    // Prevenir doble llamada con debouncing
+    const callKey = `return_${territoryId}`;
+    if (window.returnInProgress && window.returnInProgress.has(callKey)) {
+      console.log('🚫 Llamada duplicada prevenida:', callKey);
+      return;
+    }
+    
+    // Marcar como en progreso
+    if (!window.returnInProgress) window.returnInProgress = new Set();
+    window.returnInProgress.add(callKey);
+    
     try {
       const territory = territories.find(t => t.id === territoryId);
       
@@ -443,15 +480,37 @@ export const AppProvider = ({ children }) => {
         });
       }
 
-      showToast(`Territorio ${territory?.name || territoryId} devuelto`, 'success');
+      // Evitar duplicación de "Territorio" en el nombre
+      const territoryName = territory?.name || territoryId;
+      const displayName = territoryName.toLowerCase().startsWith('territorio') 
+        ? territoryName 
+        : `Territorio ${territoryName}`;
+        
+      showToast(`${displayName} devuelto`, 'success');
     } catch (error) {
       console.error('Error returning territory:', error);
       showToast('Error al devolver territorio', 'error');
       throw error;
+    } finally {
+      // Limpiar después de 2 segundos
+      setTimeout(() => {
+        window.returnInProgress?.delete(callKey);
+      }, 2000);
     }
-  };
+  }, [territories]);
 
-  const handleCompleteTerritory = async (territoryId) => {
+  const handleCompleteTerritory = useCallback(async (territoryId) => {
+    // Prevenir doble llamada con debouncing
+    const callKey = `complete_${territoryId}`;
+    if (window.completeInProgress && window.completeInProgress.has(callKey)) {
+      console.log('🚫 Llamada duplicada prevenida:', callKey);
+      return;
+    }
+    
+    // Marcar como en progreso
+    if (!window.completeInProgress) window.completeInProgress = new Set();
+    window.completeInProgress.add(callKey);
+    
     try {
       const territory = territories.find(t => t.id === territoryId);
       
@@ -473,13 +532,24 @@ export const AppProvider = ({ children }) => {
         });
       }
 
-      showToast(`Territorio ${territory?.name || territoryId} completado`, 'success');
+      // Evitar duplicación de "Territorio" en el nombre
+      const territoryName = territory?.name || territoryId;
+      const displayName = territoryName.toLowerCase().startsWith('territorio') 
+        ? territoryName 
+        : `Territorio ${territoryName}`;
+        
+      showToast(`${displayName} completado`, 'success');
     } catch (error) {
       console.error('Error completing territory:', error);
       showToast('Error al completar territorio', 'error');
       throw error;
+    } finally {
+      // Limpiar después de 2 segundos
+      setTimeout(() => {
+        window.completeInProgress?.delete(callKey);
+      }, 2000);
     }
-  };
+  }, [territories, currentUser]);
 
   // 📝 PROPOSAL FUNCTIONS
   const handleProposeAddressChange = async (addressId, changes, reason) => {
@@ -588,7 +658,12 @@ export const AppProvider = ({ children }) => {
       }
       const territoryName = territoryDoc.data().name;
       
-      showToast(`Reiniciando territorio ${territoryName}...`, 'info');
+      // Evitar duplicación de "Territorio" en el nombre para la notificación de progreso
+      const displayName = territoryName.toLowerCase().startsWith('territorio') 
+        ? territoryName 
+        : `Territorio ${territoryName}`;
+      
+      showToast(`Reiniciando ${displayName.toLowerCase()}...`, 'info');
 
       const territoryRef = doc(db, 'territories', territoryId);
       const addressesQuery = query(
@@ -621,7 +696,7 @@ export const AppProvider = ({ children }) => {
         assignedTo: currentUser?.name || 'Admin'
       });
 
-      showToast(`Territorio ${territoryName} ha sido reiniciado.`, 'success');
+      showToast(`${displayName} ha sido reiniciado.`, 'success');
     } catch (error) {
       console.error("Error al reiniciar el territorio:", error);
       showToast('Ocurrió un error al reiniciar el territorio.', 'error');

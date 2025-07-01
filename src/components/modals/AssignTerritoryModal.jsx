@@ -49,13 +49,6 @@ const AssignTerritoryModal = ({
     try {
       await onAssign(selectedPublisher);
       
-      // Mostrar notificación de éxito
-      showToast(
-        `¡Territorio asignado exitosamente a ${selectedPublisher}!`, 
-        'success', 
-        2000
-      );
-      
       // Limpiar y cerrar modal
       setSelectedPublisher('');
       setSearchTerm('');
@@ -64,8 +57,7 @@ const AssignTerritoryModal = ({
       // Mostrar notificación de error
       showToast(
         'Error al asignar el territorio. Intenta nuevamente.', 
-        'error', 
-        2000
+        'error'
       );
     } finally {
       setIsProcessing(false);

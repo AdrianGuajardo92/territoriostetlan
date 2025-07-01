@@ -7830,7 +7830,7 @@ const handleLogout = () => {
                 assignedDate: firebase.firestore.FieldValue.serverTimestamp()
             });
         });
-        showToast(`Territorio ${territoryData.name} asignado a ${publisherNameToAssign}`, 'success');
+        // showToast(`Territorio ${territoryData.name} asignado a ${publisherNameToAssign}`, 'success'); // DESACTIVADO - DUPLICA NOTIFICACIONES
     };
     
     const handleToggleAddressStatus = async (addressId, currentStatus) => {
@@ -7958,7 +7958,7 @@ const handleLogout = () => {
                 assignedTo: currentUser.name 
             });
 
-            showToast(`Territorio ${territoryName} ahora está disponible.`, 'success');
+            // showToast(`Territorio ${territoryName} ahora está disponible.`, 'success'); // DESACTIVADO - DUPLICA NOTIFICACIONES
 
         } catch (error) {
             console.error("Error al devolver el territorio:", error);

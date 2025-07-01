@@ -8014,29 +8014,10 @@ const handleLogout = () => {
         };
     }, [db, currentUser]);
 
+    // FUNCIÓN DESACTIVADA - CAUSA NOTIFICACIONES DUPLICADAS CON EL SISTEMA REACT
     const handleAssignTerritory = async (territoryId, publisherNameToAssign) => {
-        const territoryRef = db.collection('territories').doc(territoryId);
-        const historyRef = db.collection('territoryHistory');
-        const territoryDoc = await territoryRef.get();
-        const territoryData = territoryDoc.data();
-
-        await db.runTransaction(async (transaction) => {
-            transaction.update(territoryRef, {
-                status: 'En uso',
-                assignedTo: publisherNameToAssign,
-                assignedDate: firebase.firestore.FieldValue.serverTimestamp(),
-                lastCompletedBy: null
-            });
-
-            transaction.set(historyRef.doc(), {
-                territoryId: territoryId,
-                territoryName: territoryData.name,
-                assignedTo: publisherNameToAssign,
-                status: 'Asignado',
-                assignedDate: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        });
-        showToast(`Territorio ${territoryData.name} asignado a ${publisherNameToAssign}`, 'success');
+        console.log('Función handleAssignTerritory desactivada - usar sistema React moderno');
+        return; // No ejecutar nada
     };
     
     const handleToggleAddressStatus = async (addressId, currentStatus) => {
@@ -8124,52 +8105,10 @@ const handleLogout = () => {
         }
     };
 
+    // FUNCIÓN DESACTIVADA - CAUSA NOTIFICACIONES DUPLICADAS CON EL SISTEMA REACT
     const handleReturnTerritory = async (territoryId) => {
-        if (!db) return showToast('La base de datos no está lista.', 'error');
-        
-        const territoryDoc = await db.collection('territories').doc(territoryId).get();
-        if (!territoryDoc.exists) {
-            showToast('Error: No se encontró el territorio.', 'error');
-            return;
-        }
-        const territoryName = territoryDoc.data().name;
-        
-        showToast(`Devolviendo territorio ${territoryName}...`, 'info');
-
-        try {
-            const territoryRef = db.collection('territories').doc(territoryId);
-            const addressesRef = db.collection('addresses');
-            
-            const addressesSnapshot = await addressesRef.where('territoryId', '==', territoryId).get();
-
-            const batch = db.batch();
-
-            batch.update(territoryRef, {
-                status: 'Disponible',
-                assignedTo: null,
-                assignedDate: null
-            });
-
-            addressesSnapshot.docs.forEach(doc => {
-                batch.update(doc.ref, { isVisited: false });
-            });
-            
-            await batch.commit();
-            
-            await db.collection('territoryHistory').add({
-                territoryId: territoryId,
-                territoryName: territoryName,
-                status: 'Devuelto',
-                assignedDate: firebase.firestore.FieldValue.serverTimestamp(),
-                assignedTo: currentUser.name 
-            });
-
-            showToast(`Territorio ${territoryName} ahora está disponible.`, 'success');
-
-        } catch (error) {
-            console.error("Error al devolver el territorio:", error);
-            showToast('Ocurrió un error al devolver el territorio.', 'error');
-        }
+        console.log('Función handleReturnTerritory desactivada - usar sistema React moderno');
+        return; // No ejecutar nada
     };
     
     const handleResetSingleTerritory = async (territoryId) => {
