@@ -377,9 +377,9 @@ const StatsModal = ({ isOpen, onClose }) => {
   
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" size="2xl">
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full max-h-[85vh]">
         {/* Header personalizado */}
-        <div className="bg-gray-50 border-b border-gray-200 p-6 pb-0">
+        <div className="bg-gray-50 border-b border-gray-200 p-6 pb-0 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-800">Estadísticas para Administradores</h2>
             <div className="flex items-center gap-2">
@@ -433,7 +433,7 @@ const StatsModal = ({ isOpen, onClose }) => {
         </div>
         
         {/* Contenido scrolleable */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto min-h-0 p-6" style={{ maxHeight: 'calc(85vh - 140px)' }}>
           {selectedStat === 'overview' && (
             <div className="space-y-6">
               {/* Sección 1: Estadísticas Generales */}

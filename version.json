@@ -1,17 +1,21 @@
 {
-  "version": "2.7.9",
+  "version": "2.8.0",
   "releaseDate": "2024-12-27",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
       {
-        "type": "improvement", 
-        "description": "Integradas estadísticas completas en el panel de administración con filtros y exportación"
+        "type": "fix", 
+        "description": "Corregido error de ícono 'trophy' no encontrado - agregado al mapeo de íconos"
       },
       {
         "type": "fix", 
-        "description": "Corregido problema de scroll en modales - agregada altura máxima y scroll funcional"
+        "description": "Corregido problema de scroll en estadísticas para administradores - scroll completamente funcional"
+      },
+      {
+        "type": "improvement", 
+        "description": "Integradas estadísticas completas en el panel de administración con filtros y exportación"
       },
       {
         "type": "fix", 

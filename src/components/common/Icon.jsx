@@ -84,6 +84,7 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "", ...prop
         'dollarSign': 'DollarSign',
         'percent': 'Percent',
         'award': 'Award',
+        'trophy': 'Trophy',
         'gift': 'Gift',
         'trendingUp': 'TrendingUp',
         'trendingDown': 'TrendingDown',
