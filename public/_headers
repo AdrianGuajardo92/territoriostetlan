@@ -6,13 +6,13 @@
 /assets/*.js
   Content-Type: application/javascript; charset=utf-8
 
-/assets/*.jsx
+/assets/*-*.js
   Content-Type: application/javascript; charset=utf-8
 
 /*.js
   Content-Type: application/javascript; charset=utf-8
 
-/*.jsx
+*.js
   Content-Type: application/javascript; charset=utf-8
 
 /version.json

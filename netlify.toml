@@ -31,17 +31,4 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
-[[headers]]
-  for = "*.jsx"
-  [headers.values]
-    Content-Type = "application/javascript"
-
-[[headers]]
-  for = "/assets/*.jsx"
-  [headers.values]
-    Content-Type = "application/javascript"
-
-[[headers]]
-  for = "*.js"
-  [headers.values]
-    Content-Type = "application/javascript" 
+ 

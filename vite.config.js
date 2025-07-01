@@ -42,13 +42,10 @@ export default defineConfig({
           ]
         },
         
-        // Optimizar chunks para carga rápida
-        chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId 
-            ? chunkInfo.facadeModuleId.split('/').pop().replace('.jsx', '').replace('.js', '')
-            : 'chunk';
-          return `assets/${facadeModuleId}-[hash].js`;
-        }
+        // Optimizar chunks para carga rápida - nombres seguros
+        chunkFileNames: `assets/[name]-[hash].js`,
+        entryFileNames: `assets/[name]-[hash].js`,
+        assetFileNames: `assets/[name]-[hash].[ext]`
       }
     },
     
