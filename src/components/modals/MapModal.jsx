@@ -118,6 +118,12 @@ const TerritoryMapModal = ({
     
     // Función para obtener el color basado en el estado de la dirección (igual que las tarjetas)
     const getAddressColor = useCallback((address) => {
+        // Prioridad 1: Morado para revisitas o estudios (independiente del estado de visitado)
+        if ((address.isRevisita && address.revisitaBy) || (address.isEstudio && address.estudioBy)) {
+            return '#9333ea'; // Morado - purple-600
+        }
+        
+        // Prioridad 2: Estado normal de visitado/pendiente
         if (address.isVisited) return '#ef4444'; // Rojo - Visitada
         return '#22c55e'; // Verde - Pendiente
     }, []);
@@ -325,7 +331,7 @@ const TerritoryMapModal = ({
                         : validMarkersCount;
                     
                     // Color actualizado basado en el nuevo estado
-                    const newColor = updatedAddress.isVisited ? '#ef4444' : '#22c55e'; // Rojo: Visitada, Verde: Pendiente
+                    const newColor = getAddressColor(updatedAddress);
                     
                     // Crear nuevo marcador con estado actualizado
                     const markerHtml = `

@@ -299,7 +299,7 @@ const AddressCard = memo(({
                                         </span>
                                     )}
                                     {address.isEstudio && address.estudioBy && (
-                                        <span className="text-xs font-bold text-blue-600">
+                                        <span className="text-xs font-bold text-purple-600">
                                             <i className="fas fa-book-open mr-1"></i>
                                             Estudio: {address.estudioBy}
                                         </span>
@@ -408,7 +408,7 @@ const AddressCard = memo(({
                                 </span>
                             )}
                             {address.isEstudio && address.estudioBy && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
                                     <i className="fas fa-book-open mr-1.5"></i>
                                     Estudio: {address.estudioBy}
                                 </span>
@@ -490,7 +490,7 @@ const AddressCard = memo(({
                                 </span>
                             )}
                             {address.isEstudio && address.estudioBy && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
                                     <i className="fas fa-book-open mr-1.5"></i>
                                     Estudio: {address.estudioBy}
                                 </span>

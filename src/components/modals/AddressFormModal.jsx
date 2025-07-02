@@ -110,22 +110,28 @@ const AddressFormModal = ({
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
       
-      // Limpiar campos relacionados cuando se desmarca
+      // Lógica exclusiva: Solo se puede marcar Revisita O Estudio, no ambos
+      if (field === 'isRevisita' && value) {
+        // Si se marca Revisita, desmarcar Estudio
+        newData.isEstudio = false;
+        newData.estudioBy = '';
+        newData.revisitaBy = currentUser?.name || '';
+        console.log('✅ Revisita asignada automáticamente a:', currentUser?.name);
+      }
+      if (field === 'isEstudio' && value) {
+        // Si se marca Estudio, desmarcar Revisita
+        newData.isRevisita = false;
+        newData.revisitaBy = '';
+        newData.estudioBy = currentUser?.name || '';
+        console.log('✅ Estudio asignado automáticamente a:', currentUser?.name);
+      }
+      
+      // Limpiar campos cuando se desmarca
       if (field === 'isRevisita' && !value) {
         newData.revisitaBy = '';
       }
       if (field === 'isEstudio' && !value) {
         newData.estudioBy = '';
-      }
-      
-      // Auto-llenar con el nombre del usuario actual cuando se marca (para todos los usuarios)
-      if (field === 'isRevisita' && value && currentUser?.name) {
-        newData.revisitaBy = currentUser.name;
-        console.log('✅ Revisita asignada automáticamente a:', currentUser.name);
-      }
-      if (field === 'isEstudio' && value && currentUser?.name) {
-        newData.estudioBy = currentUser.name;
-        console.log('✅ Estudio asignado automáticamente a:', currentUser.name);
       }
       
       return newData;
@@ -331,10 +337,11 @@ const AddressFormModal = ({
                             )}
                             
                             {/* Campo simple para todos los usuarios */}
-                            <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                              <div className="flex items-center text-blue-800 text-sm">
+                            <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
+                              <div className="flex items-center text-purple-800 text-sm">
                                 <i className="fas fa-info-circle mr-2"></i>
-                                <span>Esta revisita será asignada automáticamente a: <strong>{currentUser?.name}</strong></span>
+                                <span>Este estudio será asignado automáticamente a: <strong>{currentUser?.name}</strong></span>
+                                <span className="ml-2 text-xs opacity-75">(Se desmarcará "Revisita" automáticamente)</span>
                               </div>
                             </div>
                           </div>
@@ -382,6 +389,7 @@ const AddressFormModal = ({
                               <div className="flex items-center text-purple-800 text-sm">
                                 <i className="fas fa-info-circle mr-2"></i>
                                 <span>Este estudio será asignado automáticamente a: <strong>{currentUser?.name}</strong></span>
+                                <span className="ml-2 text-xs opacity-75">(Se desmarcará "Revisita" automáticamente)</span>
                               </div>
                             </div>
                           </div>
