@@ -1,15 +1,12 @@
 // Service Worker Ultra-Simplificado para Móviles - Territorios LS
-const CACHE_NAME = 'territorios-tetlan-v2.25.5';
-const STATIC_CACHE = 'static-v2.25.5';
-const DYNAMIC_CACHE = 'dynamic-v2.25.5';
+const CACHE_NAME = 'territorios-tetlan-v2.25.6';
+const STATIC_CACHE = 'static-v2.25.6';
+const DYNAMIC_CACHE = 'dynamic-v2.25.6';
 
-// Archivos estáticos para cachear
+// Archivos estáticos para cachear - SOLO LO ESENCIAL
 const STATIC_FILES = [
   '/',
-  '/index.html',
-  '/manifest.json',
-  '/version.json',
-  '/offline.html'
+  '/version.json'
 ];
 
 // URLs que NO deben ser cacheadas
@@ -21,7 +18,7 @@ const EXCLUDED_URLS = [
   'firestore'
 ];
 
-// 🚀 INSTALACIÓN DEL SERVICE WORKER
+// 🚀 INSTALACIÓN DEL SERVICE WORKER - NUNCA FALLA
 self.addEventListener('install', (event) => {
   console.log('🔧 Service Worker: Instalando...');
   
@@ -29,14 +26,24 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then(cache => {
         console.log('📦 Service Worker: Cacheando archivos estáticos');
-        return cache.addAll(STATIC_FILES);
+        // Cachear cada archivo individualmente para no fallar si uno no existe
+        const cachePromises = STATIC_FILES.map(url => 
+          cache.add(url).catch(err => {
+            console.warn(`⚠️ No se pudo cachear ${url}:`, err.message);
+            // NO fallar la instalación por un archivo
+            return Promise.resolve();
+          })
+        );
+        return Promise.all(cachePromises);
       })
       .then(() => {
-        console.log('✅ Service Worker: Instalación completada');
+        console.log('✅ Service Worker: Instalación completada (con o sin cache)');
         return self.skipWaiting();
       })
       .catch(error => {
-        console.error('❌ Service Worker: Error en instalación:', error);
+        console.error('❌ Service Worker: Error crítico:', error);
+        // Aún así, activar el SW
+        return self.skipWaiting();
       })
   );
 });
@@ -230,4 +237,4 @@ async function checkForUpdates() {
   }
 }
 
-console.log('🚀 Service Worker v2.25.5 cargado correctamente');
+console.log('🚀 Service Worker v2.25.6 cargado correctamente - NUNCA FALLA');
