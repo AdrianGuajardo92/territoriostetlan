@@ -1,12 +1,11 @@
 {
-  "version": "v2.25.16",
-  "timestamp": "2025-01-02T13:45:00.000Z",
+  "version": "v2.25.27",
+  "timestamp": "2025-01-02T15:30:00.000Z",
   "changes": [
-    "🗑️ ELIMINACIÓN COMPLETA: Headers Clear-Site-Data removidos totalmente",
-    "❌ SIN WARNINGS: Eliminado 'Unrecognized type: storage' en consola",
-    "✅ CONSOLA LIMPIA: Sin advertencias de Clear-Site-Data",
-    "🧹 SOLUCIÓN DEFINITIVA: Headers problemáticos completamente removidos",
-    "📡 HEADERS SIMPLIFICADOS: Solo Cache-Control necesario para funcionalidad",
-    "🎯 RESULTADO: Consola 100% limpia sin ningún warning HTTP"
+    "🟢 LÍNEAS VERDES: Todos los cambios ahora tienen línea verde para identificación visual",
+    "📍 DIRECCIÓN PRIMERO: Siempre aparece al inicio para contexto inmediato",
+    "👤 NOMBRE EN UNA LÍNEA: Evitado corte de nombres largos con overflow elegante",
+    "📋 ORDEN LÓGICO: Dirección → Revisita → Estudio → Género → Notas",
+    "✨ RESULTADO: Propuestas visualmente perfectas y fáciles de revisar"
   ]
 } 

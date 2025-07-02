@@ -255,16 +255,44 @@ export const AppProvider = ({ children }) => {
         newData.longitude = addressData.longitude;
       }
 
-      await addDoc(collection(db, 'addresses'), newData);
+      // 🚀 ACTUALIZACIÓN OPTIMISTA: Generar ID temporal y agregar inmediatamente al estado local
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const optimisticAddress = {
+        ...newData,
+        id: tempId,
+        createdAt: new Date(),
+        lastUpdated: new Date()
+      };
+
+      setAddresses(prevAddresses => [...prevAddresses, optimisticAddress]);
+
+      // Luego guardar en Firebase
+      const docRef = await addDoc(collection(db, 'addresses'), newData);
+      
+      // 🔄 ACTUALIZAR con el ID real de Firebase
+      setAddresses(prevAddresses => 
+        prevAddresses.map(addr => 
+          addr.id === tempId 
+            ? { ...addr, id: docRef.id }
+            : addr
+        )
+      );
       
       if (newData.latitude && newData.longitude) {
         showToast('Dirección agregada con ubicación en el mapa', 'success');
-    } else {
+      } else {
         showToast('Dirección agregada correctamente', 'success');
       }
       
     } catch (error) {
       console.error('Error adding address:', error);
+      
+      // 🔄 REVERTIR CAMBIOS OPTIMISTAS en caso de error
+      // Eliminar la dirección temporal del estado local
+      setAddresses(prevAddresses => 
+        prevAddresses.filter(addr => !addr.id.startsWith('temp_'))
+      );
+      
       showToast('Error al agregar dirección', 'error');
       throw error;
     }
@@ -272,14 +300,28 @@ export const AppProvider = ({ children }) => {
 
   const handleUpdateAddress = async (addressId, updates) => {
     try {
+      // 🚀 ACTUALIZACIÓN OPTIMISTA: Actualizar inmediatamente el estado local
+      setAddresses(prevAddresses => 
+        prevAddresses.map(addr => 
+          addr.id === addressId 
+            ? { ...addr, ...updates, updatedAt: new Date() }
+            : addr
+        )
+      );
+
+      // Luego actualizar Firebase
       await updateDoc(doc(db, 'addresses', addressId), {
         ...updates,
         updatedAt: serverTimestamp(),
         updatedBy: currentUser?.id || 'unknown'
       });
+      
       showToast('Dirección actualizada correctamente', 'success');
     } catch (error) {
       console.error('Error updating address:', error);
+      
+      // 🔄 REVERTIR CAMBIOS OPTIMISTAS en caso de error
+      // El listener de Firebase se encargará de restaurar el estado correcto
       showToast('Error al actualizar dirección', 'error');
       throw error;
     }
@@ -397,6 +439,16 @@ export const AppProvider = ({ children }) => {
     try {
       const newVisitedStatus = !currentStatus;
       
+      // 🚀 ACTUALIZACIÓN OPTIMISTA: Actualizar inmediatamente el estado local
+      setAddresses(prevAddresses => 
+        prevAddresses.map(addr => 
+          addr.id === addressId 
+            ? { ...addr, isVisited: newVisitedStatus, lastUpdated: new Date() }
+            : addr
+        )
+      );
+      
+      // Luego actualizar Firebase
       const addressRef = doc(db, 'addresses', addressId);
       await updateDoc(addressRef, {
         isVisited: newVisitedStatus,
@@ -422,6 +474,16 @@ export const AppProvider = ({ children }) => {
 
     } catch (error) {
       console.error("Error en handleToggleAddressStatus:", error);
+      
+      // 🔄 REVERTIR CAMBIOS OPTIMISTAS en caso de error
+      setAddresses(prevAddresses => 
+        prevAddresses.map(addr => 
+          addr.id === addressId 
+            ? { ...addr, isVisited: currentStatus, lastUpdated: new Date() }
+            : addr
+        )
+      );
+      
       showToast('Error al actualizar estado de dirección.', 'error');
       throw error;
     }

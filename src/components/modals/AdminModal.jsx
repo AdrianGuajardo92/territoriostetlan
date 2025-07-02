@@ -387,209 +387,196 @@ const AdminModal = (props = {}) => {
                     : null;
                   
                   return (
-                    <div key={proposal.id} className="bg-gradient-to-br from-white to-orange-50/30 rounded-2xl shadow-lg p-6 border-2 border-orange-100 hover:shadow-xl transition-all duration-300">
-                      {/* Header de la propuesta */}
-                      <div className="flex items-start justify-between mb-6">
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-r from-orange-400 to-amber-500 rounded-xl flex items-center justify-center shadow-md">
-                            <i className={`fas ${proposal.type === 'new' ? 'fa-plus' : 'fa-edit'} text-white`}></i>
+                    <div key={proposal.id} className="bg-gradient-to-br from-white to-orange-50/30 rounded-2xl shadow-lg p-4 sm:p-6 border-2 border-orange-100 hover:shadow-xl transition-all duration-300">
+                      {/* Header de la propuesta - Optimizado para móvil */}
+                      <div className="flex items-start justify-between mb-4 sm:mb-6">
+                        <div className="flex items-start gap-3 sm:gap-4 flex-1">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-orange-400 to-amber-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                            <i className={`fas ${proposal.type === 'new' ? 'fa-plus' : 'fa-edit'} text-white text-sm sm:text-base`}></i>
                           </div>
-                        <div>
-                            <h4 className="text-xl font-bold text-gray-900 mb-1">
-                            {proposal.type === 'new' ? 'Nueva Dirección' : 'Editar Dirección'}
-                          </h4>
-                            <p className="text-sm text-gray-600 flex items-center">
-                              <i className="fas fa-user mr-2 text-gray-400"></i>
-                              Propuesta por <span className="font-medium ml-1">{proposal.proposedByName}</span>
-                            </p>
-                            <p className="text-xs text-gray-500 flex items-center mt-1">
-                              <i className="fas fa-clock mr-2"></i>
-                              {proposal.createdAt?.toDate ? proposal.createdAt.toDate().toLocaleDateString('es-MX') : 'Fecha no disponible'}
-                            </p>
+                        <div className="w-full">
+                            {/* OPCIÓN A - Header limpio sin etiqueta duplicada */}
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-lg sm:text-xl font-bold text-gray-900 flex-1 mr-3 truncate">
+                                👤 {proposal.proposedByName}
+                              </h4>
+                              <p className="text-xs text-gray-500 flex items-center flex-shrink-0">
+                                <i className="fas fa-calendar mr-1"></i>
+                                <span className="hidden sm:inline">
+                                  {proposal.createdAt?.toDate ? proposal.createdAt.toDate().toLocaleDateString('es-MX') : 'Fecha no disponible'}
+                                </span>
+                                <span className="sm:hidden">
+                                  {proposal.createdAt?.toDate ? proposal.createdAt.toDate().toLocaleDateString('es-MX', { month: 'short', day: 'numeric' }) : 'Sin fecha'}
+                                </span>
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                🏷️ Territorio {territory?.name?.replace(/territorio\s*/i, '') || proposal.territoryId}
+                              </span>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ml-2 ${
+                                proposal.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                proposal.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {proposal.status === 'pending' ? '⏳ Pendiente' :
+                                 proposal.status === 'approved' ? '✅ Aprobada' :
+                                 '❌ Rechazada'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                         
-                        {/* Estado dinámico de la propuesta */}
-                        <div className={`px-3 py-2 rounded-xl border ${
-                          proposal.status === 'pending' 
-                            ? 'bg-gradient-to-r from-yellow-100 to-amber-100 border-yellow-200' :
-                          proposal.status === 'approved'
-                            ? 'bg-gradient-to-r from-green-100 to-emerald-100 border-green-200' :
-                            'bg-gradient-to-r from-red-100 to-pink-100 border-red-200'
-                        }`}>
-                          <span className={`text-xs font-bold flex items-center ${
-                            proposal.status === 'pending' ? 'text-yellow-800' :
-                            proposal.status === 'approved' ? 'text-green-800' :
-                            'text-red-800'
-                          }`}>
-                            <i className={`${
-                              proposal.status === 'pending' ? 'fas fa-clock' :
-                              proposal.status === 'approved' ? 'fas fa-check' :
-                              'fas fa-times'
-                            } mr-1.5`}></i>
-                            {proposal.status === 'pending' ? 'Pendiente' :
-                             proposal.status === 'approved' ? 'Aprobada' :
-                             'Rechazada'}
-                        </span>
-                        </div>
-                      </div>
-                      
-                      {/* Información del territorio */}
-                      <div className="bg-blue-50/50 rounded-xl p-4 mb-4 border border-blue-200/50">
-                        <p className="text-sm font-semibold text-blue-800 flex items-center">
-                          <i className="fas fa-map-marked-alt mr-2"></i>
-                          Territorio: {territory?.name || 'Desconocido'}
-                        </p>
+
                       </div>
 
-                      {/* Contenido detallado según el tipo */}
-                      {proposal.type === 'new' && proposal.addressData && (
-                        <div className="space-y-4">
-                          <h5 className="text-lg font-bold text-gray-800 flex items-center">
-                            <i className="fas fa-home mr-2 text-green-600"></i>
-                            Datos de la Nueva Dirección:
-                          </h5>
-                          
-                          <div className="bg-green-50/70 rounded-xl p-4 border border-green-200/50">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* Dirección */}
-                              <div className="md:col-span-2">
-                                <p className="text-sm font-medium text-gray-700">
-                                  <i className="fas fa-map-marker-alt mr-2 text-green-600"></i>
-                                  <span className="font-semibold">Dirección:</span>
+
+                      {/* NUEVO DISEÑO LIMPIO Y ENFOCADO */}
+                      <div className="space-y-4">
+                        <h5 className="text-lg font-bold text-gray-800 flex items-center">
+                          <i className="fas fa-edit mr-2 text-blue-600"></i>
+                          🔄 CAMBIOS PROPUESTOS:
+                        </h5>
+                        
+                        <div className="space-y-3">
+                          {/* Para propuestas nuevas - mostrar datos principales */}
+                          {proposal.type === 'new' && proposal.addressData && (
+                            <>
+                              {/* 1. DIRECCIÓN NUEVA SIEMPRE PRIMERO */}
+                              <div className="bg-white rounded-lg p-3 border-l-4 border-green-400">
+                                <p className="text-sm font-semibold text-gray-700 mb-2">
+                                  📍 Nueva dirección:
                                 </p>
-                                <p className="text-sm text-gray-800 ml-6 bg-white p-2 rounded-lg mt-1">
+                                <p className="text-sm text-gray-800 break-words">
                                   {proposal.addressData.address || 'No especificada'}
                                 </p>
                               </div>
-
-                              {/* Género */}
+                              
+                              {/* 2. REVISITA - Formato como notas */}
+                              {proposal.addressData.isRevisita && proposal.addressData.revisitaBy && (
+                                <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                  <p className="text-sm font-semibold text-green-700 mb-1">📖 Revisita:</p>
+                                  <p className="text-sm text-gray-800 break-words">
+                                    {proposal.addressData.revisitaBy}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {/* 3. ESTUDIO - Formato como notas */}
+                              {proposal.addressData.isEstudio && proposal.addressData.estudioBy && (
+                                <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                  <p className="text-sm font-semibold text-green-700 mb-1">📚 Estudio:</p>
+                                  <p className="text-sm text-gray-800 break-words">
+                                    {proposal.addressData.estudioBy}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {/* 4. GÉNERO - Formato como notas */}
                               {proposal.addressData.gender && (
-                                <div>
-                                  <p className="text-sm font-medium text-gray-700">
-                                    <i className="fas fa-venus-mars mr-2 text-green-600"></i>
-                                    <span className="font-semibold">Género:</span>
+                                <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                  <p className="text-sm font-semibold text-green-700 mb-1">👥 Género:</p>
+                                  <p className="text-sm text-gray-800 break-words">
+                                    {proposal.addressData.gender}
                                   </p>
-                                  <p className="text-sm text-gray-800 ml-6">{proposal.addressData.gender}</p>
                                 </div>
                               )}
-
-                              {/* Referencia */}
-                              {proposal.addressData.referencia && (
-                                <div>
-                                  <p className="text-sm font-medium text-gray-700">
-                                    <i className="fas fa-compass mr-2 text-green-600"></i>
-                                    <span className="font-semibold">Referencia:</span>
-                                  </p>
-                                  <p className="text-sm text-gray-800 ml-6">{proposal.addressData.referencia}</p>
-                                </div>
-                              )}
-
-                              {/* Notas */}
+                              
+                              {/* 5. NOTAS - Barra verde individual */}
                               {proposal.addressData.notes && (
-                                <div className="md:col-span-2">
-                                  <p className="text-sm font-medium text-gray-700">
-                                    <i className="fas fa-sticky-note mr-2 text-green-600"></i>
-                                    <span className="font-semibold">Notas:</span>
-                                  </p>
-                                  <p className="text-sm text-gray-800 ml-6 bg-white p-2 rounded-lg mt-1">
-                                    {proposal.addressData.notes}
+                                <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                  <p className="text-sm font-semibold text-green-700 mb-1">📝 Notas:</p>
+                                  <p className="text-sm text-gray-800 italic break-words">
+                                    "{proposal.addressData.notes}"
                                   </p>
                                 </div>
                               )}
-
-                              {/* Coordenadas */}
-                              {(proposal.addressData.latitude && proposal.addressData.longitude) && (
-                                <div className="md:col-span-2">
-                                  <p className="text-sm font-medium text-gray-700">
-                                    <i className="fas fa-crosshairs mr-2 text-green-600"></i>
-                                    <span className="font-semibold">Coordenadas:</span>
-                                  </p>
-                                  <p className="text-sm text-gray-800 ml-6">
-                                    Lat: {proposal.addressData.latitude}, Lng: {proposal.addressData.longitude}
+                              
+                              {/* Razón del cambio - Barra verde individual */}
+                              {proposal.reason && (
+                                <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                  <p className="text-sm font-semibold text-green-700 mb-1">💬 Razón del cambio:</p>
+                                  <p className="text-sm text-gray-800 italic break-words">
+                                    "{proposal.reason}"
                                   </p>
                                 </div>
                               )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {proposal.type === 'edit' && proposal.changes && currentAddress && (
-                        <div className="space-y-4">
-                          <h5 className="text-lg font-bold text-gray-800 flex items-center">
-                            <i className="fas fa-edit mr-2 text-blue-600"></i>
-                            Cambios Propuestos:
-                          </h5>
-                          
-                          {/* Dirección actual */}
-                          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                            <h6 className="font-semibold text-gray-700 mb-2 flex items-center">
-                              <i className="fas fa-info-circle mr-2 text-gray-500"></i>
-                              Dirección Actual:
-                            </h6>
-                            <p className="text-sm text-gray-800 bg-white p-2 rounded-lg">
-                              {currentAddress.address}
-                            </p>
-                          </div>
-
-                          {/* Cambios propuestos */}
-                          <div className="bg-blue-50/70 rounded-xl p-4 border border-blue-200/50">
-                            <h6 className="font-semibold text-blue-800 mb-3 flex items-center">
-                              <i className="fas fa-arrow-right mr-2"></i>
-                              Cambios Solicitados:
-                            </h6>
-                            <div className="space-y-3">
-                              {Object.entries(proposal.changes).map(([field, newValue]) => {
-                                const currentValue = currentAddress[field];
-                                const fieldLabels = {
-                                  'address': 'Dirección',
-                                  'gender': 'Género',
-                                  'referencia': 'Referencia',
-                                  'notes': 'Notas',
-                                  'latitude': 'Latitud',
-                                  'longitude': 'Longitud'
-                                };
-                                
-                                return (
-                                  <div key={field} className="bg-white rounded-lg p-3 border border-blue-200">
-                                    <p className="text-sm font-semibold text-blue-800 mb-2">
-                                      {fieldLabels[field] || field}:
-                                    </p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                      <div>
-                                        <p className="text-xs text-gray-500 mb-1">Actual:</p>
-                                        <p className="text-sm text-gray-700 bg-red-50 p-2 rounded border-l-4 border-red-400">
-                                          {currentValue || 'Sin valor'}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs text-gray-500 mb-1">Propuesto:</p>
-                                        <p className="text-sm text-gray-800 bg-green-50 p-2 rounded border-l-4 border-green-400">
-                                          {newValue || 'Sin valor'}
-                                        </p>
-                                      </div>
+                            </>
+                          )}
+                            
+                                                        {/* Para ediciones - mostrar solo cambios EN ORDEN ESPECÍFICO */}
+                            {proposal.type === 'edit' && proposal.changes && currentAddress && (
+                              <>
+                                {/* 1. DIRECCIÓN SIEMPRE PRIMERO - si hay cambio */}
+                                {proposal.changes.address && (
+                                  <div className="bg-white rounded-lg p-3 border-l-4 border-green-400">
+                                    <p className="text-sm font-semibold text-gray-700 mb-2">📍 Dirección:</p>
+                                    <div className="space-y-2">
+                                      <p className="text-xs text-gray-500">Antes:</p>
+                                      <p className="text-sm text-gray-700 bg-red-50 p-2 rounded border-l-4 border-red-400 break-words">
+                                        {currentAddress.address || 'Sin valor'}
+                                      </p>
+                                      <p className="text-xs text-gray-500">Después:</p>
+                                      <p className="text-sm text-gray-800 bg-green-50 p-2 rounded border-l-4 border-green-400 break-words">
+                                        {proposal.changes.address || 'Sin valor'}
+                                      </p>
                                     </div>
                                   </div>
-                                );
-                              })}
-                            </div>
+                                )}
+                                
+                                {/* 2. REVISITA - Formato como notas */}
+                                {proposal.changes.isRevisita && (
+                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                    <p className="text-sm font-semibold text-green-700 mb-1">📖 Revisita:</p>
+                                    <p className="text-sm text-gray-800 break-words">
+                                      {proposal.changes.revisitaBy || ''}
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {/* 3. ESTUDIO - Formato como notas */}
+                                {proposal.changes.isEstudio && (
+                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                    <p className="text-sm font-semibold text-green-700 mb-1">📚 Estudio:</p>
+                                    <p className="text-sm text-gray-800 break-words">
+                                      {proposal.changes.estudioBy || ''}
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {/* 4. GÉNERO - Formato como notas */}
+                                {proposal.changes.gender && (
+                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                    <p className="text-sm font-semibold text-green-700 mb-1">👥 Género:</p>
+                                    <p className="text-sm text-gray-800 break-words">
+                                      {proposal.changes.gender}
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {/* 5. NOTAS - Barra verde individual */}
+                                {proposal.changes.notes && (
+                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                    <p className="text-sm font-semibold text-green-700 mb-1">📝 Notas:</p>
+                                    <p className="text-sm text-gray-800 italic break-words">
+                                      "{proposal.changes.notes}"
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {/* Razón del cambio - Barra verde individual */}
+                                {proposal.reason && (
+                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
+                                    <p className="text-sm font-semibold text-green-700 mb-1">💬 Razón del cambio:</p>
+                                    <p className="text-sm text-gray-800 italic break-words">
+                                      "{proposal.reason}"
+                                    </p>
+                                  </div>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
-                      )}
-
-                      {/* Razón del publicador */}
-                        {proposal.reason && (
-                        <div className="bg-amber-50/70 rounded-xl p-4 border border-amber-200/50 mt-4">
-                          <h6 className="font-semibold text-amber-800 mb-2 flex items-center">
-                            <i className="fas fa-comment-alt mr-2"></i>
-                            Razón del Publicador:
-                          </h6>
-                          <p className="text-sm text-amber-900 bg-white p-3 rounded-lg border border-amber-200">
-                            "{proposal.reason}"
-                          </p>
-                        </div>
-                      )}
 
                       {/* Información de procesamiento para propuestas aprobadas/rechazadas */}
                       {proposal.status !== 'pending' && (
@@ -642,24 +629,24 @@ const AdminModal = (props = {}) => {
                         </div>
                       )}
                       
-                      {/* Botones de acción solo para propuestas pendientes */}
+                      {/* Botones de acción solo para propuestas pendientes - Optimizados para móvil */}
                       {proposal.status === 'pending' && (
-                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-orange-200">
-                        <button
-                          onClick={() => setSelectedProposal(proposal)}
-                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 rounded-xl hover:from-red-200 hover:to-pink-200 transition-all transform hover:scale-105 font-medium shadow-md border border-red-200"
-                        >
+                        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-orange-200">
+                          <button
+                            onClick={() => setSelectedProposal(proposal)}
+                            className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 rounded-xl hover:from-red-200 hover:to-pink-200 transition-all transform hover:scale-105 font-medium shadow-md border border-red-200 w-full sm:w-auto"
+                          >
                             <i className="fas fa-times"></i>
-                          Rechazar
-                        </button>
-                        <button
-                          onClick={() => handleApprove(proposal)}
-                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-md"
-                        >
+                            <span>Rechazar</span>
+                          </button>
+                          <button
+                            onClick={() => handleApprove(proposal)}
+                            className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-md w-full sm:w-auto"
+                          >
                             <i className="fas fa-check"></i>
-                          Aprobar
-                        </button>
-                      </div>
+                            <span>Aprobar</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   );

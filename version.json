@@ -1,14 +1,14 @@
 {
-  "version": "v2.25.16",
-  "timestamp": "2025-01-02T13:45:00.000Z",
-  "releaseDate": "2025-01-01",
+  "version": "v2.25.27",
+  "timestamp": "2025-01-02T15:30:00.000Z",
+  "releaseDate": "2025-01-02",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "Reimplementación de Service Worker para ser 100% Offline-First.",
-    "Corregido bucle infinito de recarga.",
-    "Estrategia de 'Cache First' para todos los recursos.",
-    "Ciclo de vida de SW estabilizado para evitar errores de activación."
+    "🟢 LÍNEAS VERDES: Todos los cambios ahora tienen línea verde para identificación visual",
+    "📍 DIRECCIÓN PRIMERO: Siempre aparece al inicio para contexto inmediato",
+    "👤 NOMBRE EN UNA LÍNEA: Evitado corte de nombres largos con overflow elegante",
+    "📋 ORDEN LÓGICO: Dirección → Revisita → Estudio → Género → Notas"
   ],
   "lastUpdated": "2024-12-27",
   "changelog": [

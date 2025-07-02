@@ -73,7 +73,11 @@ const AddressCard = memo(({
     };
 
     const config = statusConfig[address.isVisited ? 'visited' : 'notVisited'];
-    const isEditEnabled = isAdmin || isAssignedToMe;
+    
+    // ✅ TODOS los usuarios pueden editar direcciones:
+    // - Admins: Edición directa 
+    // - Publicadores: Envío de propuestas para revisión
+    const isEditEnabled = true;
     
     // Permisos estrictos para marcar/desmarcar direcciones
     const canToggleStatus = isAssignedToMe || (isAdmin && globalAdminEditMode);

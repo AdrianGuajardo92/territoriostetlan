@@ -1,5 +1,5 @@
-// Service Worker OFFLINE-FIRST SIN WARNINGS - Territorios LS v2.25.16
-const VERSION = 'v2.25.16';
+// Service Worker OFFLINE-FIRST SIN WARNINGS - Territorios LS v2.25.22
+const VERSION = 'v2.25.22';
 const DYNAMIC_CACHE = `dynamic-${VERSION}`;
 
 console.log(`🚀 Service Worker ${VERSION} iniciando...`);
