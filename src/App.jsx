@@ -62,10 +62,40 @@ function AppContent() {
     }).length;
   };
 
-  // DESACTIVADO TEMPORALMENTE - Service Worker manual solamente
-  // useEffect(() => {
-  //   console.log('🚫 Service Worker registro automático DESACTIVADO');
-  // }, []);
+  // Sistema de Service Worker OFFLINE-FIRST
+  useEffect(() => {
+    // Registrar el SW solo en producción para evitar conflictos con HMR de Vite
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      const registerSW = async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          console.log(`✅ SW: Registrado con scope: ${registration.scope}`);
+
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            console.log('🔄 SW: Nueva versión encontrada, instalando...');
+            
+            newWorker.addEventListener('statechange', () => {
+              console.log(`📡 SW: Estado del nuevo worker: ${newWorker.state}`);
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Notificar al usuario que hay una nueva versión lista para activar.
+                // Podríamos mostrar un toast aquí.
+                console.log('✨ SW: Nueva versión lista para ser activada.');
+                showToast('Nueva versión disponible. Recarga para actualizar.', 'info', { duration: 10000 });
+              }
+            });
+          });
+        } catch (error) {
+          console.error('❌ SW: Error durante el registro:', error);
+        }
+      };
+
+      // Esperar a que la ventana esté completamente cargada para no interferir
+      // con la carga inicial de la aplicación.
+      window.addEventListener('load', registerSW);
+      return () => window.removeEventListener('load', registerSW);
+    }
+  }, [showToast]);
 
   // Función simplificada para limpiar cache
   const handleClearCache = () => {

@@ -1,104 +1,142 @@
-// Service Worker ULTRA SIMPLE - Territorios LS v2.25.10
-const VERSION = 'v2.25.10';
-const CACHE_NAME = `territorios-tetlan-${VERSION}`;
+// Service Worker OFFLINE-FIRST - Territorios LS v2.25.11
+const VERSION = 'v2.25.11';
+const STATIC_CACHE = `static-${VERSION}`;
+const DYNAMIC_CACHE = `dynamic-${VERSION}`;
+
+// ❗ ARCHIVOS ESENCIALES PARA EL FUNCIONAMIENTO OFFLINE
+// Estos son los archivos que la aplicación necesita para arrancar.
+const APP_SHELL = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/offline.html',
+  // Los siguientes archivos son placeholders, el build los reemplazará
+  // por los nombres correctos con hashes. Si no, necesitaríamos un
+  // script que inyecte aquí los nombres de archivo generados.
+  // Por ahora, confiamos en el cache dinámico.
+  '/assets/main.js',
+  '/assets/main.css',
+  '/assets/vendor.js'
+];
 
 console.log(`🚀 Service Worker ${VERSION} iniciando...`);
 
-// ✅ INSTALACIÓN SIMPLE - TOMA CONTROL INMEDIATO
-self.addEventListener('install', (event) => {
+// 1️⃣ INSTALACIÓN: Cachear el App Shell
+self.addEventListener('install', event => {
   console.log(`🔧 SW ${VERSION}: Instalando...`);
-  console.log(`✅ SW ${VERSION}: Instalación completada - Tomando control inmediato`);
-  self.skipWaiting(); // Activarse inmediatamente
+  event.waitUntil(
+    caches.open(STATIC_CACHE)
+      .then(cache => {
+        console.log(`📦 SW ${VERSION}: Cacheando App Shell...`);
+        // Usamos addAll. Si un archivo falla, la instalación entera falla.
+        // Esto es intencional para garantizar la integridad del modo offline.
+        // Usamos .catch en cada add individual para prevenir que un archivo no esencial
+        // (como un ícono que cambió de nombre) rompa la instalación.
+        const cachePromises = APP_SHELL.map(url => {
+          return cache.add(url).catch(err => {
+            console.warn(`⚠️ No se pudo cachear ${url}. Esto es opcional.`);
+          });
+        });
+        return Promise.all(cachePromises);
+      })
+      .then(() => {
+        console.log(`✅ SW ${VERSION}: App Shell cacheado. Activación pendiente.`);
+        // Forzar al nuevo Service Worker a activarse inmediatamente.
+        return self.skipWaiting();
+      })
+      .catch(error => {
+        console.error(`❌ SW ${VERSION}: Falló la instalación.`, error);
+      })
+  );
 });
 
-// ✅ ACTIVACIÓN SIMPLE - SIN VERIFICACIONES COMPLEJAS
-self.addEventListener('activate', (event) => {
+// 2️⃣ ACTIVACIÓN: Limpiar caches antiguos y tomar control
+self.addEventListener('activate', event => {
   console.log(`🎯 SW ${VERSION}: Activando...`);
-  
   event.waitUntil(
-    // Limpiar caches antiguos y tomar control
-    caches.keys()
-      .then(cacheNames => {
+    Promise.all([
+      // Tomar control de todos los clientes (páginas) abiertos.
+      self.clients.claim(),
+      // Eliminar los caches de versiones anteriores.
+      caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames
-            .filter(cacheName => cacheName !== CACHE_NAME)
-            .map(cacheName => {
-              console.log(`🗑️ SW: Eliminando cache antiguo: ${cacheName}`);
-              return caches.delete(cacheName);
+            .filter(name => name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
+            .map(name => {
+              console.log(`🗑️ SW ${VERSION}: Eliminando cache antiguo: ${name}`);
+              return caches.delete(name);
             })
         );
       })
-      .then(() => {
-        console.log(`✅ SW ${VERSION}: Limpieza completada`);
-        return self.clients.claim(); // Tomar control sin verificaciones
-      })
-      .then(() => {
-        console.log(`🎯 SW ${VERSION}: ACTIVADO Y CONTROLANDO - LISTO`);
-        
-        // Notificar a todos los clientes
-        return self.clients.matchAll().then(clients => {
-          clients.forEach(client => {
-            client.postMessage({
-              type: 'SW_ACTIVATED',
-              version: VERSION,
-              timestamp: Date.now()
-            });
+    ]).then(() => {
+      console.log(`✅ SW ${VERSION}: ¡Activado y controlando!`);
+      // Notificar a los clientes que la nueva versión está lista.
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => client.postMessage({ type: 'SW_ACTIVATED', version: VERSION }));
+      });
+    }).catch(error => {
+      console.error(`❌ SW ${VERSION}: Falló la activación.`, error);
+    })
+  );
+});
+
+
+// 3️⃣ FETCH: Servir desde el cache primero (Cache First)
+self.addEventListener('fetch', event => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Ignorar peticiones a Firebase y extensiones del navegador.
+  if (url.protocol.startsWith('chrome-extension') || url.href.includes('firestore')) {
+    return;
+  }
+  
+  // Ignorar peticiones que no sean GET.
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // Estrategia: Cache First
+  event.respondWith(
+    caches.match(request)
+      .then(cachedResponse => {
+        // Si la respuesta está en el cache, la devolvemos.
+        if (cachedResponse) {
+          // console.log(`⚡️ SW: Sirviendo desde cache: ${url.pathname}`);
+          return cachedResponse;
+        }
+
+        // Si no está en el cache, vamos a la red.
+        return fetch(request)
+          .then(networkResponse => {
+            // Si la respuesta de la red es válida, la guardamos en el cache dinámico.
+            if (networkResponse.ok) {
+              return caches.open(DYNAMIC_CACHE).then(cache => {
+                cache.put(request, networkResponse.clone());
+                // Devolvemos la respuesta de la red.
+                return networkResponse;
+              });
+            }
+            // Si la respuesta no es 'ok', simplemente la retornamos sin cachear.
+            return networkResponse;
+          })
+          .catch(() => {
+            // Si la red falla, y era una navegación a una página,
+            // mostramos la página offline de fallback.
+            if (request.destination === 'document') {
+              return caches.match('/offline.html');
+            }
+            // Para otros tipos de assets, no hay fallback.
           });
-        });
-      })
-      .catch(error => {
-        console.error('❌ SW: Error en activación:', error);
-        // Aún así, intentar tomar control
-        return self.clients.claim();
       })
   );
 });
 
-// 📡 MANEJO DE PETICIONES - ULTRA SIMPLE
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-  
-  // Solo interceptar GET requests
-  if (request.method !== 'GET') {
-    return;
+// 4️⃣ COMUNICACIÓN: Manejar mensajes desde la app.
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({ version: VERSION });
   }
-  
-  // Ignorar URLs problemáticas
-  const excludedPatterns = [
-    'chrome-extension:',
-    'moz-extension:',
-    'firebase',
-    'firestore',
-    '/api/',
-    'hot-update'
-  ];
-  
-  if (excludedPatterns.some(pattern => request.url.includes(pattern))) {
-    return;
-  }
-  
-  // Para todo lo demás: Network First simple
-  event.respondWith(
-    fetch(request)
-      .then(response => {
-        // Si la respuesta es válida, cacheamos opcionalmente
-        if (response.ok && response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(request, responseClone);
-          }).catch(() => {
-            // Ignorar errores de cache
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        // En caso de error de red, intentar desde cache
-        return caches.match(request).then(cachedResponse => {
-          return cachedResponse || new Response('Network Error', { status: 503 });
-        });
-      })
-  );
 });
 
 // 💬 COMUNICACIÓN CON LA APP
@@ -109,15 +147,6 @@ self.addEventListener('message', (event) => {
     case 'SKIP_WAITING':
       console.log('🔄 SW: Recibido SKIP_WAITING - Activando inmediatamente');
       self.skipWaiting();
-      break;
-      
-    case 'GET_VERSION':
-      console.log('📋 SW: Enviando versión');
-      event.ports[0]?.postMessage({
-        version: VERSION,
-        status: 'active',
-        timestamp: Date.now()
-      });
       break;
       
     case 'CLEAR_CACHE':
