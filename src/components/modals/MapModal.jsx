@@ -498,8 +498,11 @@ const TerritoryMapModal = ({
             routeCoords.push([sortState.userLocation.lat, sortState.userLocation.lng]);
         }
         
-        // Añadir coordenadas de las direcciones en orden
-        addressesWithCoords.forEach(address => {
+        // ✅ SOLO DIRECCIONES PENDIENTES (no visitadas) para la línea de ruta
+        const pendingAddresses = addressesWithCoords.filter(address => !address.isVisited);
+        
+        // Añadir coordenadas de las direcciones pendientes en orden
+        pendingAddresses.forEach(address => {
             if (address.coordinates) {
                 routeCoords.push([address.coordinates.lat, address.coordinates.lng]);
             }
@@ -528,10 +531,10 @@ const TerritoryMapModal = ({
                 lineCap: 'round'
             }).addTo(mapInstanceRef.current);
             
-            // Añadir tooltip con información de la ruta
-            const addressCount = routeCoordinates.length - (sortState.userLocation ? 1 : 0);
+            // Añadir tooltip con información de la ruta (solo direcciones pendientes)
+            const pendingCount = routeCoordinates.length - (sortState.userLocation ? 1 : 0);
             routeLineRef.current.bindTooltip(
-                `Ruta optimizada: ${addressCount} direcciones`, 
+                `Ruta optimizada: ${pendingCount} direcciones pendientes`, 
                 { permanent: false, direction: 'center' }
             );
         }

@@ -232,9 +232,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         allTerritoryAddresses.map(addr => [addr.id, addr])
       );
 
-      const orderedAddresses = sortState.optimizedRoute.map((staleRouteAddress, index) => {
+      // ✅ DIRECCIONES PENDIENTES OPTIMIZADAS (con routeOrder)
+      const orderedPendingAddresses = sortState.optimizedRoute.map((staleRouteAddress, index) => {
         const liveAddress = liveAddressesMap.get(staleRouteAddress.id);
-        if (liveAddress) {
+        if (liveAddress && !liveAddress.isVisited) { // Solo si sigue siendo pendiente
           liveAddressesMap.delete(staleRouteAddress.id);
           return { 
             ...liveAddress, 
@@ -245,8 +246,13 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         return null;
       }).filter(Boolean);
 
-      const remainingAddresses = Array.from(liveAddressesMap.values());
-      return [...orderedAddresses, ...remainingAddresses];
+      // ✅ DIRECCIONES VISITADAS (al final, sin routeOrder)
+      const visitedAddresses = allTerritoryAddresses.filter(addr => addr.isVisited);
+      
+      // ✅ DIRECCIONES RESTANTES (pendientes que no estaban en la optimización)
+      const remainingPendingAddresses = Array.from(liveAddressesMap.values()).filter(addr => !addr.isVisited);
+
+      return [...orderedPendingAddresses, ...remainingPendingAddresses, ...visitedAddresses];
     }
     
     return [...allTerritoryAddresses].sort((a, b) => 
@@ -445,7 +451,16 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         lng: position.coords.longitude
       };
 
-      const optimizedAddresses = await optimizeRoute(territoryAddresses, userLocation);
+      // ✅ FILTRAR DIRECCIONES VISITADAS - Solo optimizar las pendientes
+      const pendingAddresses = territoryAddresses.filter(address => !address.isVisited);
+      
+      if (pendingAddresses.length === 0) {
+        showToast('No hay direcciones pendientes para optimizar', 'info');
+        setSortState(prev => ({ ...prev, isCalculatingRoute: false }));
+        return;
+      }
+
+      const optimizedAddresses = await optimizeRoute(pendingAddresses, userLocation);
 
       setSortState({
         sortOrder: 'optimized',

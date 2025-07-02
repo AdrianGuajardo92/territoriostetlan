@@ -1,10 +1,26 @@
 {
-  "version": "2.16.1",
+  "version": "2.17.0",
   "releaseDate": "2025-01-01",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "major", 
+        "description": "🎯 OPTIMIZACIÓN DE RUTAS INTELIGENTE: Las direcciones ya visitadas (rojas) se excluyen automáticamente de la ruta optimizada"
+      },
+      {
+        "type": "improvement", 
+        "description": "🗺️ NAVEGACIÓN MÁS EFICIENTE: La ruta optimizada solo conecta direcciones pendientes, ahorrando tiempo y combustible"
+      },
+      {
+        "type": "improvement", 
+        "description": "📍 VISUALIZACIÓN MEJORADA: La línea de ruta azul solo muestra el camino entre direcciones que necesitas visitar"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎯 PRIMERA PARADA INTELIGENTE: Siempre empieza por la dirección pendiente más cercana a tu ubicación actual"
+      },
       {
         "type": "critical", 
         "description": "🔧 ERRORES CRÍTICOS SOLUCIONADOS: Corregido error de React Hooks que impedía acceder al panel de administración"
@@ -293,6 +309,22 @@
     "publisher": [
       {
         "type": "major",
+        "description": "🎯 RUTAS MÁS INTELIGENTES: ¡La ruta optimizada ya no incluye direcciones que ya visitaste (rojas)!"
+      },
+      {
+        "type": "improvement",
+        "description": "⏰ AHORRA TIEMPO: Solo te lleva a las direcciones que realmente necesitas visitar"
+      },
+      {
+        "type": "improvement",
+        "description": "🗺️ MAPA MÁS CLARO: La línea azul solo conecta las direcciones pendientes (verdes)"
+      },
+      {
+        "type": "improvement",
+        "description": "📍 INICIO PERFECTO: Siempre empiezas por la dirección pendiente más cercana a ti"
+      },
+      {
+        "type": "major",
         "description": "🎉 ACTUALIZAR ES SÚPER FÁCIL: ¡Sistema perfecto que cualquier persona puede usar sin problemas!"
       },
       {
@@ -353,6 +385,18 @@
       }
     ],
     "admin": [
+      {
+        "type": "major",
+        "description": "🎯 OPTIMIZACIÓN DE RUTAS MEJORADA: Sistema inteligente que excluye direcciones visitadas de la ruta optimizada"
+      },
+      {
+        "type": "improvement",
+        "description": "📊 ANÁLISIS MÁS PRECISOS: Los publicadores ahora pueden crear rutas más eficientes automáticamente"
+      },
+      {
+        "type": "improvement",
+        "description": "🗺️ MAPAS OPTIMIZADOS: Líneas de ruta más claras que solo muestran direcciones pendientes"
+      },
       {
         "type": "critical",
         "description": "🔧 PANEL DE ADMINISTRACIÓN REPARADO: Solucionado error crítico que impedía acceso a funciones administrativas"

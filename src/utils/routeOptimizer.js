@@ -223,6 +223,8 @@ const twoOpt = (route, addresses, keepFirstFixed = true) => {
 };
 
 // Función principal para optimizar ruta
+// ✅ NOTA: Esta función recibe solo direcciones PENDIENTES (no visitadas)
+// Las direcciones visitadas se excluyen antes de llamar a esta función
 export const optimizeRoute = async (addresses, userLocation = null) => {
   try {
     // Filtrar solo direcciones con coordenadas válidas
