@@ -265,50 +265,71 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.supported = true;
       
       try {
-        // NO esperar ready - muy lento
-        // Verificación ULTRA RÁPIDA
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        const registration = registrations[0];
+        // VERIFICACIÓN REAL - No depender de getRegistrations que puede fallar
+        // Verificar directamente el controlador activo
+        const hasController = !!navigator.serviceWorker.controller;
         
-        sw.registered = !!registration;
-        
-        if (registration) {
-          // Estado simple
-          if (registration.active) {
-            sw.status = 'Activo';
-            sw.state = registration.active.state;
-            sw.scriptURL = registration.active.scriptURL;
-          } else if (registration.installing) {
-            sw.status = 'Instalando';
-            sw.state = 'installing';
-          } else if (registration.waiting) {
-            sw.status = 'Esperando';
-            sw.state = 'waiting';
-          } else {
-            sw.status = 'Sin worker activo';
-            sw.state = 'none';
-          }
-          
-          sw.scope = registration.scope;
+        if (hasController) {
+          // HAY UN SW ACTIVO
+          sw.registered = true;
+          sw.status = 'Activo';
+          sw.state = 'activated';
+          sw.controller = true;
+          sw.communication = 'Con controlador';
+          sw.scriptURL = navigator.serviceWorker.controller.scriptURL;
+          sw.scope = navigator.serviceWorker.controller.scope || '/';
         } else {
-          sw.status = 'No registrado';
-          sw.state = 'unregistered';
+          // NO HAY SW ACTIVO - Verificar registros
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          
+          if (registrations.length > 0) {
+            const registration = registrations[0];
+            sw.registered = true;
+            
+            if (registration.installing) {
+              sw.status = 'Instalando';
+              sw.state = 'installing';
+            } else if (registration.waiting) {
+              sw.status = 'Esperando activación';
+              sw.state = 'waiting';
+            } else if (registration.active) {
+              sw.status = 'Registrado pero sin controlar';
+              sw.state = 'activated';
+            } else {
+              sw.status = 'Registrado sin worker';
+              sw.state = 'none';
+            }
+            
+            sw.controller = false;
+            sw.communication = 'Sin controlador';
+            sw.scope = registration.scope;
+            sw.scriptURL = registration.active?.scriptURL || 'N/A';
+          } else {
+            // NO HAY NADA
+            sw.registered = false;
+            sw.status = 'No registrado';
+            sw.state = 'unregistered';
+            sw.controller = false;
+            sw.communication = 'Sin controlador';
+          }
         }
         
-        // Verificar controlador
-        sw.controller = !!navigator.serviceWorker.controller;
-        sw.communication = sw.controller ? 'Con controlador' : 'Sin controlador';
-        
-        // Versión simple
+        // Versión
         sw.version = 'v2.25.7';
         
       } catch (e) {
         sw.error = e.message;
         sw.status = 'Error: ' + e.message;
+        sw.registered = false;
+        sw.controller = false;
+        sw.communication = 'Error';
       }
     } else {
       sw.supported = false;
       sw.status = 'No soportado';
+      sw.registered = false;
+      sw.controller = false;
+      sw.communication = 'No soportado';
     }
 
     return sw;
