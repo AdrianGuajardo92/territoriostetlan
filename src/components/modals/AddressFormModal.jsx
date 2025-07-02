@@ -219,35 +219,57 @@ const AddressFormModal = ({
     console.log('🔍 Estado ANTES - formData.revisitaBy:', formData.revisitaBy);
     console.log('🔍 Estado ANTES - revisitaSearch:', revisitaSearch);
     
+    // Actualizar ambos estados de forma sincronizada
     setFormData(prev => {
       const newData = { ...prev, revisitaBy: publisherName };
       console.log('🔄 Nuevo formData completo:', newData);
       return newData;
     });
+    
+    // Actualizar el campo de búsqueda para que coincida
     setRevisitaSearch(publisherName);
+    
+    // Cerrar el dropdown
     setShowRevisitaDropdown(false);
     
     console.log('✅ Estados actualizados - revisitaBy debería ser:', publisherName);
+    
+    // Forzar un re-render después de un pequeño delay para asegurar la actualización
+    setTimeout(() => {
+      console.log('🔄 Verificación post-actualización - formData.revisitaBy:', formData.revisitaBy);
+    }, 100);
   };
 
   // Manejar selección de publicador para estudio
   const handleEstudioSelect = (publisherName) => {
     console.log('✅ Publicador seleccionado para estudio:', publisherName);
+    
+    // Actualizar ambos estados de forma sincronizada
     setFormData(prev => ({ ...prev, estudioBy: publisherName }));
+    
+    // Actualizar el campo de búsqueda para que coincida
     setEstudioSearch(publisherName);
+    
+    // Cerrar el dropdown
     setShowEstudioDropdown(false);
+    
+    console.log('✅ Estados actualizados - estudioBy debería ser:', publisherName);
   };
 
   // Manejar cambio en campo de búsqueda revisita
   const handleRevisitaSearchChange = (value) => {
+    console.log('📝 Cambio manual en búsqueda revisita:', value);
     setRevisitaSearch(value);
-    setFormData(prev => ({ ...prev, revisitaBy: value }));
+    // NO actualizar formData aquí para evitar conflictos
+    // setFormData(prev => ({ ...prev, revisitaBy: value }));
   };
 
   // Manejar cambio en campo de búsqueda estudio
   const handleEstudioSearchChange = (value) => {
+    console.log('📝 Cambio manual en búsqueda estudio:', value);
     setEstudioSearch(value);
-    setFormData(prev => ({ ...prev, estudioBy: value }));
+    // NO actualizar formData aquí para evitar conflictos
+    // setFormData(prev => ({ ...prev, estudioBy: value }));
   };
 
   const handleDelete = () => {
