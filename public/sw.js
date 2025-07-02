@@ -1,172 +1,233 @@
 // Service Worker Ultra-Simplificado para Móviles - Territorios LS
-const CACHE_NAME = 'territorio-ls-v2.15.5-ultra-simple';
-const RUNTIME_CACHE = 'territorio-runtime-v2.15.5-ultra-simple';
+const CACHE_NAME = 'territorios-tetlan-v2.25.0';
+const STATIC_CACHE = 'static-v2.25.0';
+const DYNAMIC_CACHE = 'dynamic-v2.25.0';
 
-// Solo recursos básicos que sabemos que existen
-const CRITICAL_RESOURCES = [
+// Archivos estáticos para cachear
+const STATIC_FILES = [
   '/',
-  '/index.html'
-];
-
-// Recursos que nunca deben cachearse
-const NEVER_CACHE = [
+  '/index.html',
+  '/manifest.json',
   '/version.json',
-  'version.json'
+  '/offline.html'
 ];
 
-// Instalación ultra-simple y tolerante a errores
-self.addEventListener('install', event => {
-  console.log('[SW Ultra-Simple] Instalando...');
+// URLs que NO deben ser cacheadas
+const EXCLUDED_URLS = [
+  '/api/',
+  'chrome-extension://',
+  'moz-extension://',
+  'firebase',
+  'firestore'
+];
+
+// 🚀 INSTALACIÓN DEL SERVICE WORKER
+self.addEventListener('install', (event) => {
+  console.log('🔧 Service Worker: Instalando...');
   
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.open(STATIC_CACHE)
       .then(cache => {
-        console.log('[SW Ultra-Simple] Intentando cachear recursos básicos...');
-        // Cachear cada recurso individualmente para evitar que uno falle todos
-        const cachePromises = CRITICAL_RESOURCES.map(url => 
-          cache.add(new Request(url, { cache: 'reload' }))
-            .catch(error => {
-              console.log(`[SW Ultra-Simple] No se pudo cachear ${url}:`, error);
-              // No fallar si un recurso no se puede cachear
-              return Promise.resolve();
-            })
-        );
-        
-        return Promise.all(cachePromises);
+        console.log('📦 Service Worker: Cacheando archivos estáticos');
+        return cache.addAll(STATIC_FILES);
       })
       .then(() => {
-        console.log('[SW Ultra-Simple] Instalación completa');
+        console.log('✅ Service Worker: Instalación completada');
         return self.skipWaiting();
       })
       .catch(error => {
-        console.log('[SW Ultra-Simple] Error en instalación (continuando):', error);
-        // Continuar aunque haya errores
-        return self.skipWaiting();
+        console.error('❌ Service Worker: Error en instalación:', error);
       })
   );
 });
 
-// Activación simple
-self.addEventListener('activate', event => {
-  console.log('[SW Ultra-Simple] Activando...');
+// 🔄 ACTIVACIÓN DEL SERVICE WORKER
+self.addEventListener('activate', (event) => {
+  console.log('🎯 Service Worker: Activando...');
   
   event.waitUntil(
-    caches.keys()
-      .then(cacheNames => {
-        const deletePromises = cacheNames
-          .filter(cacheName => {
-            return cacheName !== CACHE_NAME && 
-                   cacheName !== RUNTIME_CACHE &&
-                   cacheName.includes('territorio-ls');
+    Promise.all([
+      // Limpiar caches antiguos
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+              console.log('🗑️ Service Worker: Eliminando cache antiguo:', cacheName);
+              return caches.delete(cacheName);
+            }
           })
-          .map(cacheName => {
-            console.log('[SW Ultra-Simple] Eliminando cache antiguo:', cacheName);
-            return caches.delete(cacheName).catch(() => {
-              // Ignorar errores al eliminar cache
-              console.log('[SW Ultra-Simple] No se pudo eliminar cache:', cacheName);
-            });
-          });
-        
-        return Promise.all(deletePromises);
-      })
-      .then(() => {
-        console.log('[SW Ultra-Simple] Activado y tomando control');
-        return self.clients.claim();
-      })
-      .catch(error => {
-        console.log('[SW Ultra-Simple] Error en activación (continuando):', error);
-        return self.clients.claim();
-      })
+        );
+      }),
+      // Tomar control de todas las páginas
+      self.clients.claim()
+    ]).then(() => {
+      console.log('✅ Service Worker: Activación completada');
+    })
   );
 });
 
-// Estrategia de fetch ultra-simplificada
-self.addEventListener('fetch', event => {
-  const { request } = event;
+// 📡 INTERCEPTAR PETICIONES DE RED
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
   const url = new URL(request.url);
   
-  // Ignorar extensiones y URLs irrelevantes
-  if (url.protocol === 'chrome-extension:' || 
-      url.hostname === 'localhost' ||
-      request.method !== 'GET') {
+  // Ignorar URLs excluidas
+  if (EXCLUDED_URLS.some(excluded => request.url.includes(excluded))) {
     return;
   }
   
-  // Nunca cachear version.json y similar
-  if (NEVER_CACHE.some(path => request.url.includes(path))) {
-    event.respondWith(
-      fetch(request, { cache: 'no-store' })
-        .catch(() => new Response('{"version":"0.0.0"}', {
-          headers: { 'Content-Type': 'application/json' }
-        }))
-    );
+  // Ignorar peticiones que no sean GET
+  if (request.method !== 'GET') {
     return;
   }
   
-  // Para recursos de la app, estrategia network-first simple
-  if (url.origin === location.origin) {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          // Si la respuesta es exitosa, intentar cachear (pero no fallar si no se puede)
-          if (response && response.status === 200) {
-            const responseToCache = response.clone();
-            caches.open(RUNTIME_CACHE)
-              .then(cache => cache.put(request, responseToCache))
-              .catch(() => {
-                // Ignorar errores de cache
-                console.log('[SW Ultra-Simple] No se pudo cachear:', request.url);
-              });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Si falla la red, intentar buscar en cache
-          return caches.match(request)
-            .then(cachedResponse => {
-              if (cachedResponse) {
-                console.log('[SW Ultra-Simple] Sirviendo desde cache:', request.url);
-                return cachedResponse;
-              }
-              
-              // Si es navegación y no hay cache, servir index
-              if (request.mode === 'navigate') {
-                return caches.match('/index.html')
-                  .then(indexResponse => indexResponse || new Response('App no disponible offline', { status: 503 }));
-              }
-              
-              return new Response('Recurso no disponible', { status: 503 });
-            });
-        })
-    );
-  }
+  event.respondWith(
+    handleFetchRequest(request)
+  );
 });
 
-// Manejar mensajes básicos
-self.addEventListener('message', event => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    console.log('[SW Ultra-Simple] Recibido SKIP_WAITING');
-    self.skipWaiting();
+// 🎯 MANEJAR PETICIONES
+async function handleFetchRequest(request) {
+  const url = new URL(request.url);
+  
+  try {
+    // Para archivos estáticos: Cache First
+    if (STATIC_FILES.some(file => url.pathname === file || url.pathname.endsWith(file))) {
+      return await cacheFirst(request);
+    }
+    
+    // Para version.json: Network First (siempre actualizado)
+    if (url.pathname.includes('version.json')) {
+      return await networkFirst(request);
+    }
+    
+    // Para otros recursos: Network First con fallback
+    return await networkFirst(request);
+    
+  } catch (error) {
+    console.error('❌ Service Worker: Error en fetch:', error);
+    
+    // Fallback a página offline si es una navegación
+    if (request.destination === 'document') {
+      return caches.match('/offline.html');
+    }
+    
+    // Para otros recursos, devolver respuesta vacía
+    return new Response('', { status: 408, statusText: 'Request Timeout' });
+  }
+}
+
+// 📦 ESTRATEGIA CACHE FIRST
+async function cacheFirst(request) {
+  const cachedResponse = await caches.match(request);
+  
+  if (cachedResponse) {
+    return cachedResponse;
   }
   
-  if (event.data?.type === 'CLEAR_CACHE') {
-    console.log('[SW Ultra-Simple] Limpiando cache...');
-    caches.keys()
-      .then(cacheNames => {
-        const deletePromises = cacheNames.map(cacheName => 
-          caches.delete(cacheName).catch(() => {
-            console.log('[SW Ultra-Simple] No se pudo eliminar:', cacheName);
-          })
-        );
-        return Promise.all(deletePromises);
-      })
-      .then(() => {
-        event.ports[0]?.postMessage({ success: true });
-      })
-      .catch(() => {
-        event.ports[0]?.postMessage({ success: false });
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// 🌐 ESTRATEGIA NETWORK FIRST
+async function networkFirst(request) {
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    const cachedResponse = await caches.match(request);
+    
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    throw error;
+  }
+}
+
+// 💬 MENSAJES DESDE LA APLICACIÓN
+self.addEventListener('message', (event) => {
+  const { type, payload } = event.data;
+  
+  switch (type) {
+    case 'SKIP_WAITING':
+      self.skipWaiting();
+      break;
+      
+    case 'GET_VERSION':
+      event.ports[0].postMessage({
+        version: CACHE_NAME,
+        status: 'active'
       });
+      break;
+      
+    case 'CLEAR_CACHE':
+      clearAllCaches().then(() => {
+        event.ports[0].postMessage({ success: true });
+      });
+      break;
+      
+    case 'UPDATE_CACHE':
+      updateCache().then(() => {
+        event.ports[0].postMessage({ success: true });
+      });
+      break;
   }
 });
 
-console.log('[SW Ultra-Simple] Service Worker ultra-simplificado cargado');
+// 🗑️ LIMPIAR TODOS LOS CACHES
+async function clearAllCaches() {
+  const cacheNames = await caches.keys();
+  await Promise.all(
+    cacheNames.map(cacheName => caches.delete(cacheName))
+  );
+  console.log('🧹 Service Worker: Todos los caches eliminados');
+}
+
+// 🔄 ACTUALIZAR CACHE
+async function updateCache() {
+  const cache = await caches.open(STATIC_CACHE);
+  await cache.addAll(STATIC_FILES);
+  console.log('🔄 Service Worker: Cache actualizado');
+}
+
+// 📊 NOTIFICACIÓN DE ACTUALIZACIÓN
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CHECK_UPDATE') {
+    // Verificar si hay una nueva versión disponible
+    checkForUpdates().then(hasUpdate => {
+      event.ports[0].postMessage({ hasUpdate });
+    });
+  }
+});
+
+// 🔍 VERIFICAR ACTUALIZACIONES
+async function checkForUpdates() {
+  try {
+    const response = await fetch('/version.json?t=' + Date.now());
+    const data = await response.json();
+    
+    return data.version !== CACHE_NAME.split('-v')[1];
+  } catch (error) {
+    console.error('❌ Service Worker: Error verificando actualizaciones:', error);
+    return false;
+  }
+}
+
+console.log('🚀 Service Worker v2.25.0 cargado correctamente');
