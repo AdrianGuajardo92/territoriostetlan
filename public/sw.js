@@ -1,34 +1,24 @@
-// Service Worker DEFINITIVO - Territorios LS v2.25.9
-const VERSION = 'v2.25.9';
+// Service Worker ULTRA SIMPLE - Territorios LS v2.25.10
+const VERSION = 'v2.25.10';
 const CACHE_NAME = `territorios-tetlan-${VERSION}`;
 
 console.log(`🚀 Service Worker ${VERSION} iniciando...`);
 
-// ✅ INSTALACIÓN GARANTIZADA - NUNCA FALLA
+// ✅ INSTALACIÓN SIMPLE - TOMA CONTROL INMEDIATO
 self.addEventListener('install', (event) => {
   console.log(`🔧 SW ${VERSION}: Instalando...`);
-  
-  event.waitUntil(
-    Promise.resolve()
-      .then(() => {
-        console.log(`✅ SW ${VERSION}: Instalación completada`);
-        // NO usar skipWaiting aquí - causa el bucle
-        // return self.skipWaiting();
-      })
-      .catch(error => {
-        console.error('❌ SW: Error en instalación:', error);
-      })
-  );
+  console.log(`✅ SW ${VERSION}: Instalación completada - Tomando control inmediato`);
+  self.skipWaiting(); // Activarse inmediatamente
 });
 
-// ✅ ACTIVACIÓN CONTROLADA
+// ✅ ACTIVACIÓN SIMPLE - SIN VERIFICACIONES COMPLEJAS
 self.addEventListener('activate', (event) => {
   console.log(`🎯 SW ${VERSION}: Activando...`);
   
   event.waitUntil(
-    Promise.all([
-      // Limpiar caches antiguos
-      caches.keys().then(cacheNames => {
+    // Limpiar caches antiguos y tomar control
+    caches.keys()
+      .then(cacheNames => {
         return Promise.all(
           cacheNames
             .filter(cacheName => cacheName !== CACHE_NAME)
@@ -38,34 +28,29 @@ self.addEventListener('activate', (event) => {
             })
         );
       })
-    ])
-    .then(() => {
-      console.log(`✅ SW ${VERSION}: Limpieza completada`);
-      
-      // Solo hacer claim si realmente somos el worker activo
-      if (self.registration.active === self) {
-        return self.clients.claim().then(() => {
-          console.log(`🎯 SW ${VERSION}: ACTIVADO Y CONTROLANDO`);
-          
-          // Notificar a todos los clientes UNA SOLA VEZ
-          return self.clients.matchAll().then(clients => {
-            clients.forEach(client => {
-              client.postMessage({
-                type: 'SW_ACTIVATED',
-                version: VERSION,
-                timestamp: Date.now()
-              });
+      .then(() => {
+        console.log(`✅ SW ${VERSION}: Limpieza completada`);
+        return self.clients.claim(); // Tomar control sin verificaciones
+      })
+      .then(() => {
+        console.log(`🎯 SW ${VERSION}: ACTIVADO Y CONTROLANDO - LISTO`);
+        
+        // Notificar a todos los clientes
+        return self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'SW_ACTIVATED',
+              version: VERSION,
+              timestamp: Date.now()
             });
           });
         });
-      } else {
-        console.log(`⏳ SW ${VERSION}: Esperando ser el worker activo`);
-      }
-    })
-    .catch(error => {
-      console.error('❌ SW: Error en activación:', error);
-      // No hacer claim si hay error
-    })
+      })
+      .catch(error => {
+        console.error('❌ SW: Error en activación:', error);
+        // Aún así, intentar tomar control
+        return self.clients.claim();
+      })
   );
 });
 
@@ -92,7 +77,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Para todo lo demás: Network First con fallback
+  // Para todo lo demás: Network First simple
   event.respondWith(
     fetch(request)
       .then(response => {
@@ -110,17 +95,7 @@ self.addEventListener('fetch', (event) => {
       .catch(() => {
         // En caso de error de red, intentar desde cache
         return caches.match(request).then(cachedResponse => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // Si es una navegación y no hay cache, devolver página offline
-          if (request.destination === 'document') {
-            return caches.match('/offline.html').then(offlinePage => {
-              return offlinePage || new Response('Offline', { status: 503 });
-            });
-          }
-          // Para otros recursos, devolver error
-          return new Response('Network Error', { status: 503 });
+          return cachedResponse || new Response('Network Error', { status: 503 });
         });
       })
   );
@@ -185,19 +160,14 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// 🎯 EVENTOS DE CICLO DE VIDA ADICIONALES
-self.addEventListener('controllerchange', () => {
-  console.log('🔄 SW: Controller cambió');
-});
-
+// 🎯 MANEJO DE ERRORES
 self.addEventListener('error', (event) => {
   console.error('❌ SW: Error global:', event.error);
 });
 
 self.addEventListener('unhandledrejection', (event) => {
   console.error('❌ SW: Promise rechazada:', event.reason);
-  // Prevenir que el error se propague y cause problemas
   event.preventDefault();
 });
 
-console.log(`✅ Service Worker ${VERSION} cargado correctamente - REGISTRO GARANTIZADO`);
+console.log(`✅ Service Worker ${VERSION} cargado correctamente - SIMPLE Y FUNCIONAL`);

@@ -62,88 +62,45 @@ function AppContent() {
     }).length;
   };
 
-  // Sistema de Service Worker DEFINITIVO - SIN BUCLES
+  // Sistema de Service Worker ULTRA SIMPLE - DEFINITIVO
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       const registerSW = async () => {
         try {
-          console.log('🚀 Iniciando registro de Service Worker v2.25.9...');
+          console.log('🚀 Registro SIMPLE de Service Worker v2.25.10...');
           
-          // VERIFICAR SI YA HAY UN SW ACTIVO ANTES DE LIMPIAR
-          const existingRegistrations = await navigator.serviceWorker.getRegistrations();
-          const hasActiveController = !!navigator.serviceWorker.controller;
-          
-          // Solo limpiar si NO hay controlador activo o si hay múltiples registros
-          if (!hasActiveController || existingRegistrations.length > 1) {
-            console.log('🧹 Limpiando registros anteriores...');
-            for (const registration of existingRegistrations) {
-              console.log('🗑️ Desregistrando SW:', registration.scope);
-              await registration.unregister();
-            }
-          } else {
-            console.log('✅ SW ya activo, no se necesita limpiar');
-            return; // Salir si ya hay un SW funcionando
-          }
-          
-          // Registrar nuevo SW SOLO si no hay uno activo
+          // REGISTRO DIRECTO - SIN VERIFICACIONES COMPLEJAS
           const registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/',
             updateViaCache: 'none'
           });
           
-          console.log('✅ Service Worker v2.25.9 registrado:', registration.scope);
+          console.log('✅ Service Worker v2.25.10 registrado exitosamente');
           
-          // Escuchar mensajes del SW (solo una vez)
-          const messageHandler = (event) => {
+          // Escuchar mensajes del SW
+          navigator.serviceWorker.addEventListener('message', (event) => {
             const { type, version } = event.data || {};
             if (type === 'SW_ACTIVATED') {
               console.log(`🎯 Service Worker ${version} ACTIVADO Y CONTROLANDO`);
               showToast(`Service Worker ${version} activado`, 'success');
-              // Remover listener después del primer mensaje para evitar duplicados
-              navigator.serviceWorker.removeEventListener('message', messageHandler);
             }
-          };
-          
-          navigator.serviceWorker.addEventListener('message', messageHandler);
-          
-          // Monitorear cambios de estado (sin causar bucles)
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            console.log('🔄 Nueva versión de SW detectada');
-            
-            newWorker.addEventListener('statechange', () => {
-              console.log(`📡 SW State: ${newWorker.state}`);
-              if (newWorker.state === 'activated' && !navigator.serviceWorker.controller) {
-                console.log('✅ Nuevo SW activado, recargando página...');
-                // Solo recargar si no hay controlador previo
-                window.location.reload();
-              }
-            });
           });
           
         } catch (error) {
-          console.error('❌ Error crítico registrando Service Worker:', error);
+          console.error('❌ Error registrando Service Worker:', error);
         }
       };
 
-      // Registrar SOLO UNA VEZ cuando la página esté lista
-      let hasRegistered = false;
-      const doRegister = () => {
-        if (!hasRegistered) {
-          hasRegistered = true;
-          registerSW();
-        }
-      };
-
+      // Registrar cuando la página esté lista
       if (document.readyState === 'complete') {
-        doRegister();
+        registerSW();
       } else {
-        window.addEventListener('load', doRegister, { once: true });
+        window.addEventListener('load', registerSW, { once: true });
       }
     } else {
       console.warn('⚠️ Service Workers no soportados en este navegador');
     }
-  }, []); // Remover showToast de dependencias para evitar re-ejecuciones
+  }, [showToast]);
 
   // Función simplificada para limpiar cache
   const handleClearCache = () => {
