@@ -296,7 +296,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
             
             if (response.type === 'PONG') {
               sw.communication = 'Funcional';
-              sw.version = response.version || 'v2.25.8';
+              sw.version = response.version || 'v2.25.9';
             }
           } catch (commError) {
             sw.communication = 'Sin respuesta';
@@ -344,7 +344,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         }
         
         // Información adicional
-        sw.version = sw.version || 'v2.25.8';
+        sw.version = sw.version || 'v2.25.9';
         sw.updateViaCache = 'none';
         
       } catch (e) {
@@ -354,7 +354,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         sw.registered = false;
         sw.controller = false;
         sw.communication = 'Error';
-        sw.version = 'v2.25.8';
+        sw.version = 'v2.25.9';
       }
     } else {
       sw.supported = false;

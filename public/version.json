@@ -1,5 +1,5 @@
 {
-  "version": "v2.25.8",
+  "version": "v2.25.9",
   "timestamp": "2025-01-02T13:45:00.000Z",
   "changes": [
     "Service Worker completamente reescrito para garantizar registro",

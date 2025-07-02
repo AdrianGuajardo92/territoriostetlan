@@ -62,73 +62,88 @@ function AppContent() {
     }).length;
   };
 
-  // Sistema de Service Worker DEFINITIVO
+  // Sistema de Service Worker DEFINITIVO - SIN BUCLES
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       const registerSW = async () => {
         try {
-          console.log('🚀 Iniciando registro de Service Worker v2.25.8...');
+          console.log('🚀 Iniciando registro de Service Worker v2.25.9...');
           
-          // Limpiar registros anteriores
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (const registration of registrations) {
-            console.log('🗑️ Desregistrando SW anterior:', registration.scope);
-            await registration.unregister();
+          // VERIFICAR SI YA HAY UN SW ACTIVO ANTES DE LIMPIAR
+          const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+          const hasActiveController = !!navigator.serviceWorker.controller;
+          
+          // Solo limpiar si NO hay controlador activo o si hay múltiples registros
+          if (!hasActiveController || existingRegistrations.length > 1) {
+            console.log('🧹 Limpiando registros anteriores...');
+            for (const registration of existingRegistrations) {
+              console.log('🗑️ Desregistrando SW:', registration.scope);
+              await registration.unregister();
+            }
+          } else {
+            console.log('✅ SW ya activo, no se necesita limpiar');
+            return; // Salir si ya hay un SW funcionando
           }
           
-          // Registrar nuevo SW con configuración optimizada
+          // Registrar nuevo SW SOLO si no hay uno activo
           const registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/',
             updateViaCache: 'none'
           });
           
-          console.log('✅ Service Worker v2.25.8 registrado:', registration.scope);
+          console.log('✅ Service Worker v2.25.9 registrado:', registration.scope);
           
-          // Escuchar mensajes del SW
-          navigator.serviceWorker.addEventListener('message', (event) => {
+          // Escuchar mensajes del SW (solo una vez)
+          const messageHandler = (event) => {
             const { type, version } = event.data || {};
             if (type === 'SW_ACTIVATED') {
               console.log(`🎯 Service Worker ${version} ACTIVADO Y CONTROLANDO`);
               showToast(`Service Worker ${version} activado`, 'success');
+              // Remover listener después del primer mensaje para evitar duplicados
+              navigator.serviceWorker.removeEventListener('message', messageHandler);
             }
-          });
+          };
           
-          // Monitorear cambios de estado
+          navigator.serviceWorker.addEventListener('message', messageHandler);
+          
+          // Monitorear cambios de estado (sin causar bucles)
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             console.log('🔄 Nueva versión de SW detectada');
             
             newWorker.addEventListener('statechange', () => {
               console.log(`📡 SW State: ${newWorker.state}`);
-              if (newWorker.state === 'activated') {
-                console.log('✅ Nuevo SW activado');
+              if (newWorker.state === 'activated' && !navigator.serviceWorker.controller) {
+                console.log('✅ Nuevo SW activado, recargando página...');
+                // Solo recargar si no hay controlador previo
+                window.location.reload();
               }
             });
           });
           
         } catch (error) {
           console.error('❌ Error crítico registrando Service Worker:', error);
-          // Intentar registro básico como fallback
-          try {
-            await navigator.serviceWorker.register('/sw.js');
-            console.log('✅ SW registrado con configuración básica');
-          } catch (fallbackError) {
-            console.error('❌ Fallback también falló:', fallbackError);
-          }
         }
       };
 
-      // Registrar cuando la página esté completamente cargada
+      // Registrar SOLO UNA VEZ cuando la página esté lista
+      let hasRegistered = false;
+      const doRegister = () => {
+        if (!hasRegistered) {
+          hasRegistered = true;
+          registerSW();
+        }
+      };
+
       if (document.readyState === 'complete') {
-        registerSW();
+        doRegister();
       } else {
-        window.addEventListener('load', registerSW);
-        return () => window.removeEventListener('load', registerSW);
+        window.addEventListener('load', doRegister, { once: true });
       }
     } else {
       console.warn('⚠️ Service Workers no soportados en este navegador');
     }
-  }, [showToast]);
+  }, []); // Remover showToast de dependencias para evitar re-ejecuciones
 
   // Función simplificada para limpiar cache
   const handleClearCache = () => {

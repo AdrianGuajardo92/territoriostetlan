@@ -1,5 +1,5 @@
-// Service Worker DEFINITIVO - Territorios LS v2.25.8
-const VERSION = 'v2.25.8';
+// Service Worker DEFINITIVO - Territorios LS v2.25.9
+const VERSION = 'v2.25.9';
 const CACHE_NAME = `territorios-tetlan-${VERSION}`;
 
 console.log(`🚀 Service Worker ${VERSION} iniciando...`);
@@ -12,18 +12,16 @@ self.addEventListener('install', (event) => {
     Promise.resolve()
       .then(() => {
         console.log(`✅ SW ${VERSION}: Instalación completada`);
-        // Saltar espera para activarse inmediatamente
-        return self.skipWaiting();
+        // NO usar skipWaiting aquí - causa el bucle
+        // return self.skipWaiting();
       })
       .catch(error => {
         console.error('❌ SW: Error en instalación:', error);
-        // Aún así, continuar
-        return self.skipWaiting();
       })
   );
 });
 
-// ✅ ACTIVACIÓN GARANTIZADA
+// ✅ ACTIVACIÓN CONTROLADA
 self.addEventListener('activate', (event) => {
   console.log(`🎯 SW ${VERSION}: Activando...`);
   
@@ -39,28 +37,34 @@ self.addEventListener('activate', (event) => {
               return caches.delete(cacheName);
             })
         );
-      }),
-      // Tomar control INMEDIATAMENTE
-      self.clients.claim()
+      })
     ])
     .then(() => {
-      console.log(`✅ SW ${VERSION}: ACTIVADO Y CONTROLANDO`);
+      console.log(`✅ SW ${VERSION}: Limpieza completada`);
       
-      // Notificar a todos los clientes que el SW está activo
-      return self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-          client.postMessage({
-            type: 'SW_ACTIVATED',
-            version: VERSION,
-            timestamp: Date.now()
+      // Solo hacer claim si realmente somos el worker activo
+      if (self.registration.active === self) {
+        return self.clients.claim().then(() => {
+          console.log(`🎯 SW ${VERSION}: ACTIVADO Y CONTROLANDO`);
+          
+          // Notificar a todos los clientes UNA SOLA VEZ
+          return self.clients.matchAll().then(clients => {
+            clients.forEach(client => {
+              client.postMessage({
+                type: 'SW_ACTIVATED',
+                version: VERSION,
+                timestamp: Date.now()
+              });
+            });
           });
         });
-      });
+      } else {
+        console.log(`⏳ SW ${VERSION}: Esperando ser el worker activo`);
+      }
     })
     .catch(error => {
       console.error('❌ SW: Error en activación:', error);
-      // Aún así, tomar control
-      return self.clients.claim();
+      // No hacer claim si hay error
     })
   );
 });
@@ -75,7 +79,6 @@ self.addEventListener('fetch', (event) => {
   }
   
   // Ignorar URLs problemáticas
-  const url = new URL(request.url);
   const excludedPatterns = [
     'chrome-extension:',
     'moz-extension:',
@@ -129,7 +132,7 @@ self.addEventListener('message', (event) => {
   
   switch (type) {
     case 'SKIP_WAITING':
-      console.log('🔄 SW: Recibido SKIP_WAITING');
+      console.log('🔄 SW: Recibido SKIP_WAITING - Activando inmediatamente');
       self.skipWaiting();
       break;
       
@@ -193,6 +196,8 @@ self.addEventListener('error', (event) => {
 
 self.addEventListener('unhandledrejection', (event) => {
   console.error('❌ SW: Promise rechazada:', event.reason);
+  // Prevenir que el error se propague y cause problemas
+  event.preventDefault();
 });
 
 console.log(`✅ Service Worker ${VERSION} cargado correctamente - REGISTRO GARANTIZADO`);
