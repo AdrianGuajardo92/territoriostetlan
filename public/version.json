@@ -1,5 +1,5 @@
 {
-  "version": "2.20.0",
+  "version": "2.21.0",
   "buildDate": "2025-01-01",
-  "description": "Acordeones expandibles en gestión de usuarios - información instantánea sin salir del panel"
+  "description": "Panel administrativo simplificado - eliminada gestión de territorios innecesaria"
 } 

@@ -59,14 +59,6 @@ const AdminModal = (props = {}) => {
       action: () => setView('users') 
     },
     { 
-      id: 'territories', 
-      title: 'Gestión de Territorios', 
-      description: 'Administrar territorios', 
-      icon: 'fas fa-map-marked-alt', 
-      color: 'green',
-      action: () => setView('territories') 
-    },
-    { 
       id: 'reports', 
       title: 'Reportes del Sistema', 
       description: 'Generar informes detallados y exportaciones', 
@@ -198,8 +190,8 @@ const AdminModal = (props = {}) => {
               <p className="text-gray-600 max-w-md mx-auto">Gestiona todos los aspectos del sistema desde este panel central</p>
             </div>
 
-            {/* Grid de opciones elegantes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Grid de opciones elegantes - Perfecto 2x2 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {adminOptions.map(option => {
                 const config = colorConfig[option.color] || colorConfig.blue;
                 
@@ -871,191 +863,7 @@ const AdminModal = (props = {}) => {
           </div>
         );
       
-      case 'territories':
-        const availableTerritories = territories.filter(t => t.status === 'Disponible');
-        const inUseTerritories = territories.filter(t => t.status === 'En uso');
-        const completedTerritories = territories.filter(t => t.status === 'Completado' || t.status === 'Terminado');
-        
-        // Función para obtener configuración de colores por estado
-        const getStatusConfig = (status) => {
-          switch (status) {
-            case 'Disponible':
-              return {
-                bg: 'from-green-50 to-emerald-100',
-                iconBg: 'bg-green-500',
-                text: 'text-green-700',
-                border: 'border-green-200',
-                badge: 'bg-green-500'
-              };
-            case 'En uso':
-              return {
-                bg: 'from-yellow-50 to-amber-100',
-                iconBg: 'bg-yellow-500',
-                text: 'text-yellow-700',
-                border: 'border-yellow-200',
-                badge: 'bg-yellow-500'
-              };
-            default: // Completado/Terminado
-              return {
-                bg: 'from-gray-50 to-slate-100',
-                iconBg: 'bg-gray-500',
-                text: 'text-gray-700',
-                border: 'border-gray-200',
-                badge: 'bg-gray-500'
-              };
-          }
-        };
-        
-        return (
-          <div className="space-y-6">
-            {/* Header de la sección */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <i className="fas fa-map-marked-alt text-white text-xl"></i>
-            </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800">Gestión de Territorios</h3>
-                  <p className="text-gray-600 text-sm">
-                    {territories.length} territorio{territories.length !== 1 ? 's' : ''} en total
-                  </p>
-                </div>
-              </div>
-              
-              {/* Badge contador */}
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-2xl shadow-lg">
-                <span className="font-bold text-lg">{territories.length}</span>
-              </div>
-            </div>
-            
-            {/* Estadísticas rápidas */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-4 border-2 border-green-200">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center mr-3">
-                    <i className="fas fa-check-circle text-white"></i>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-green-700">{availableTerritories.length}</p>
-                    <p className="text-sm text-green-600 font-medium">Disponibles</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-yellow-50 to-amber-100 rounded-2xl p-4 border-2 border-yellow-200">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-yellow-500 rounded-xl flex items-center justify-center mr-3">
-                    <i className="fas fa-clock text-white"></i>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-700">{inUseTerritories.length}</p>
-                    <p className="text-sm text-yellow-600 font-medium">En Uso</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-2xl p-4 border-2 border-gray-200">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gray-500 rounded-xl flex items-center justify-center mr-3">
-                    <i className="fas fa-flag text-white"></i>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-700">{completedTerritories.length}</p>
-                    <p className="text-sm text-gray-600 font-medium">Completados</p>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Lista de territorios elegante */}
-            {territories.length === 0 ? (
-              <div className="flex items-center justify-center py-16">
-                <div className="text-center max-w-md">
-                  <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
-                    <i className="fas fa-map-plus text-4xl text-green-500"></i>
-                  </div>
-                  <h4 className="text-2xl font-bold text-gray-800 mb-3">No hay territorios</h4>
-                  <p className="text-gray-600 leading-relaxed">
-                    Aún no se han configurado territorios en el sistema.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {territories.map(territory => {
-                  const config = getStatusConfig(territory.status);
-                  const addressesCount = addresses.filter(a => a.territoryId === territory.id).length;
-                  const visitedCount = addresses.filter(a => a.territoryId === territory.id && a.isVisited).length;
-                  const progress = addressesCount > 0 ? Math.round((visitedCount / addressesCount) * 100) : 0;
-                  
-                  return (
-                    <div key={territory.id} className={`bg-gradient-to-br ${config.bg} rounded-2xl shadow-lg p-6 border-2 ${config.border} hover:shadow-xl hover:scale-[1.02] transition-all duration-300`}>
-                      {/* Header del territorio */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 ${config.iconBg} rounded-xl flex items-center justify-center shadow-lg`}>
-                            <i className="fas fa-map text-white text-lg"></i>
-                          </div>
-                          <div>
-                            <h4 className="text-lg font-bold text-gray-900">{territory.name}</h4>
-                            <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold ${config.badge} text-white`}>
-                              <i className={`fas ${territory.status === 'Disponible' ? 'fa-check' : territory.status === 'En uso' ? 'fa-clock' : 'fa-flag'} mr-1`}></i>
-                              {territory.status}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Información del territorio */}
-                      <div className="space-y-3">
-                        {/* Progreso */}
-                        <div>
-                          <div className="flex justify-between text-sm font-medium text-gray-700 mb-1">
-                            <span>Progreso</span>
-                            <span>{progress}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full transition-all duration-500 ${config.badge}`}
-                              style={{ width: `${progress}%` }}
-                            ></div>
-                          </div>
-                          <p className="text-xs text-gray-600 mt-1">
-                            {visitedCount} de {addressesCount} direcciones
-                          </p>
-                        </div>
-                        
-                        {/* Asignación */}
-                        {territory.assignedTo ? (
-                          <div className="bg-white/70 rounded-lg p-3 border border-white/50">
-                            <p className="text-sm font-medium text-gray-700 flex items-center">
-                              <i className="fas fa-user mr-2 text-gray-500"></i>
-                              Asignado a: <span className="ml-1 font-bold">{territory.assignedTo}</span>
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="bg-white/70 rounded-lg p-3 border border-white/50">
-                            <p className="text-sm text-gray-600 flex items-center">
-                              <i className="fas fa-user-slash mr-2 text-gray-400"></i>
-                              Sin asignar
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Botón de acción */}
-                      <button className="w-full mt-4 py-2 px-4 bg-white/70 hover:bg-white border border-white/50 text-gray-700 rounded-xl transition-colors font-medium flex items-center justify-center gap-2">
-                        <i className="fas fa-edit"></i>
-                        Gestionar
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      
 
       
       default:

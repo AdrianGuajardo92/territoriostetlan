@@ -1,10 +1,22 @@
 {
-  "version": "2.20.0",
+  "version": "2.21.0",
   "releaseDate": "2025-01-01",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "improvement", 
+        "description": "🗑️ PANEL ADMINISTRATIVO SIMPLIFICADO: Eliminada 'Gestión de Territorios' innecesaria - panel más limpio y enfocado en funciones esenciales"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎨 DISEÑO OPTIMIZADO: Grid 2x2 perfecto con 4 opciones principales - interfaz más profesional y menos saturada"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎯 FLUJO DE TRABAJO MEJORADO: Eliminada funcionalidad duplicada - territorios se gestionan desde la vista principal y estadísticas"
+      },
       {
         "type": "major", 
         "description": "🎯 ACORDEONES EXPANDIBLES EN GESTIÓN DE USUARIOS: Tarjetas interactivas que muestran la lista completa de administradores y publicadores al hacer clic"
