@@ -31,4 +31,10 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
+# 🚀 FASE 1: Headers para archivos JS - Forzar actualización
+[[headers]]
+  for = "/assets/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
  
