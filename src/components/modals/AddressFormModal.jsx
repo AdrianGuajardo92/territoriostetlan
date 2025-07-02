@@ -91,16 +91,7 @@ const AddressFormModal = ({
   }, [publishers, estudioSearch, isAdmin]);
 
   useEffect(() => {
-    console.log('🔄 useEffect ejecutándose - address:', address, 'isOpen:', isOpen);
-    
     if (address) {
-      console.log('📄 Cargando dirección existente:', {
-        isRevisita: address.isRevisita,
-        revisitaBy: address.revisitaBy,
-        isEstudio: address.isEstudio,
-        estudioBy: address.estudioBy
-      });
-      
       setFormData({
         address: address.address || '',
         phone: address.phone || '',
@@ -121,13 +112,7 @@ const AddressFormModal = ({
       // Inicializar campos de búsqueda con valores existentes
       setRevisitaSearch(address.revisitaBy || '');
       setEstudioSearch(address.estudioBy || '');
-      
-      console.log('✅ Estados de búsqueda inicializados:', {
-        revisitaSearch: address.revisitaBy || '',
-        estudioSearch: address.estudioBy || ''
-      });
     } else {
-      console.log('📝 Creando nueva dirección');
       // Reset form for new address
       setFormData({
         address: '',
@@ -230,36 +215,18 @@ const AddressFormModal = ({
 
   // Manejar selección de publicador para revisita
   const handleRevisitaSelect = (publisherName) => {
-    console.log('🔄 Seleccionando publicador para revisita:', publisherName);
-    console.log('📊 Estado actual revisitaSearch:', revisitaSearch);
-    console.log('📊 Estado actual formData.revisitaBy:', formData.revisitaBy);
-    
-    setFormData(prev => {
-      const newData = { ...prev, revisitaBy: publisherName };
-      console.log('📝 Nuevo formData para revisita:', newData);
-      return newData;
-    });
+    console.log('✅ Publicador seleccionado para revisita:', publisherName);
+    setFormData(prev => ({ ...prev, revisitaBy: publisherName }));
     setRevisitaSearch(publisherName);
     setShowRevisitaDropdown(false);
-    
-    console.log('✅ Después de actualizar - revisitaSearch será:', publisherName);
   };
 
   // Manejar selección de publicador para estudio
   const handleEstudioSelect = (publisherName) => {
-    console.log('🔄 Seleccionando publicador para estudio:', publisherName);
-    console.log('📊 Estado actual estudioSearch:', estudioSearch);
-    console.log('📊 Estado actual formData.estudioBy:', formData.estudioBy);
-    
-    setFormData(prev => {
-      const newData = { ...prev, estudioBy: publisherName };
-      console.log('📝 Nuevo formData para estudio:', newData);
-      return newData;
-    });
+    console.log('✅ Publicador seleccionado para estudio:', publisherName);
+    setFormData(prev => ({ ...prev, estudioBy: publisherName }));
     setEstudioSearch(publisherName);
     setShowEstudioDropdown(false);
-    
-    console.log('✅ Después de actualizar - estudioSearch será:', publisherName);
   };
 
   // Manejar cambio en campo de búsqueda revisita
@@ -455,65 +422,78 @@ const AddressFormModal = ({
                           <span className="text-sm font-medium" style={{ color: '#2C3E50' }}>Revisita</span>
                         </div>
                         {formData.isRevisita && (
-                          <div className="relative dropdown-container">
-                            {isAdmin ? (
-                              // Campo con búsqueda para administradores
-                              <div>
-                                {console.log('🖥️ Renderizando campo admin - revisitaSearch:', revisitaSearch, 'formData.revisitaBy:', formData.revisitaBy)}
+                          <div className="space-y-2">
+                            {/* Badge de confirmación visual */}
+                            {formData.revisitaBy && (
+                              <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="flex items-center text-green-800 text-sm">
+                                  <i className="fas fa-check-circle mr-2"></i>
+                                  <span className="font-medium">Asignado a:</span>
+                                  <span className="ml-1 font-semibold">{formData.revisitaBy}</span>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="relative dropdown-container">
+                              {isAdmin ? (
+                                // Campo con búsqueda para administradores
+                                <div>
+                                  <input
+                                    type="text"
+                                    value={revisitaSearch}
+                                    onChange={(e) => {
+                                      handleRevisitaSearchChange(e.target.value);
+                                      setShowRevisitaDropdown(true);
+                                    }}
+                                    onFocus={() => setShowRevisitaDropdown(true)}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                                    style={{ 
+                                      '--tw-ring-color': '#546E7A',
+                                      color: '#1f2937',
+                                      backgroundColor: '#ffffff',
+                                      fontWeight: '500'
+                                    }}
+                                    placeholder={formData.revisitaBy ? "Cambiar publicador..." : "Buscar publicador..."}
+                                    disabled={isProcessing}
+                                  />
+                                  
+                                  {/* Dropdown de publicadores */}
+                                  {showRevisitaDropdown && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                      {filteredRevisitaPublishers.length > 0 ? (
+                                        filteredRevisitaPublishers.map((publisher) => (
+                                          <button
+                                            key={publisher.id}
+                                            type="button"
+                                            onClick={() => handleRevisitaSelect(publisher.name)}
+                                            className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm transition-colors"
+                                            style={{ color: '#2C3E50' }}
+                                          >
+                                            {publisher.name}
+                                          </button>
+                                        ))
+                                      ) : (
+                                        <div className="px-3 py-2 text-sm text-gray-500">
+                                          No se encontraron publicadores
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                // Campo simple para publicadores
                                 <input
                                   type="text"
-                                  value={revisitaSearch}
-                                  onChange={(e) => {
-                                    console.log('📝 Cambiando revisitaSearch de:', revisitaSearch, 'a:', e.target.value);
-                                    handleRevisitaSearchChange(e.target.value);
-                                    setShowRevisitaDropdown(true);
-                                  }}
-                                  onFocus={() => {
-                                    console.log('🎯 Focus en campo revisita, valor actual:', revisitaSearch);
-                                    setShowRevisitaDropdown(true);
-                                  }}
+                                  value={formData.revisitaBy}
+                                  onChange={(e) => handleInputChange('revisitaBy', e.target.value)}
                                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                                   style={{ '--tw-ring-color': '#546E7A' }}
-                                  placeholder="Buscar publicador..."
+                                  placeholder="¿Quién la visita?"
                                   disabled={isProcessing}
+                                  readOnly
                                 />
-                                
-                                {/* Dropdown de publicadores */}
-                                {showRevisitaDropdown && (
-                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                                    {filteredRevisitaPublishers.length > 0 ? (
-                                      filteredRevisitaPublishers.map((publisher) => (
-                                        <button
-                                          key={publisher.id}
-                                          type="button"
-                                          onClick={() => handleRevisitaSelect(publisher.name)}
-                                          className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm transition-colors"
-                                          style={{ color: '#2C3E50' }}
-                                        >
-                                          {publisher.name}
-                                        </button>
-                                      ))
-                                    ) : (
-                                      <div className="px-3 py-2 text-sm text-gray-500">
-                                        No se encontraron publicadores
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              // Campo simple para publicadores
-                              <input
-                                type="text"
-                                value={formData.revisitaBy}
-                                onChange={(e) => handleInputChange('revisitaBy', e.target.value)}
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#546E7A' }}
-                                placeholder="¿Quién la visita?"
-                                disabled={isProcessing}
-                                readOnly
-                              />
-                            )}
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -537,65 +517,78 @@ const AddressFormModal = ({
                           <span className="text-sm font-medium" style={{ color: '#2C3E50' }}>Estudio</span>
                         </div>
                         {formData.isEstudio && (
-                          <div className="relative dropdown-container">
-                            {isAdmin ? (
-                              // Campo con búsqueda para administradores
-                              <div>
-                                {console.log('🖥️ Renderizando campo admin estudio - estudioSearch:', estudioSearch, 'formData.estudioBy:', formData.estudioBy)}
+                          <div className="space-y-2">
+                            {/* Badge de confirmación visual */}
+                            {formData.estudioBy && (
+                              <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div className="flex items-center text-blue-800 text-sm">
+                                  <i className="fas fa-check-circle mr-2"></i>
+                                  <span className="font-medium">Asignado a:</span>
+                                  <span className="ml-1 font-semibold">{formData.estudioBy}</span>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="relative dropdown-container">
+                              {isAdmin ? (
+                                // Campo con búsqueda para administradores
+                                <div>
+                                  <input
+                                    type="text"
+                                    value={estudioSearch}
+                                    onChange={(e) => {
+                                      handleEstudioSearchChange(e.target.value);
+                                      setShowEstudioDropdown(true);
+                                    }}
+                                    onFocus={() => setShowEstudioDropdown(true)}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                                    style={{ 
+                                      '--tw-ring-color': '#546E7A',
+                                      color: '#1f2937',
+                                      backgroundColor: '#ffffff',
+                                      fontWeight: '500'
+                                    }}
+                                    placeholder={formData.estudioBy ? "Cambiar publicador..." : "Buscar publicador..."}
+                                    disabled={isProcessing}
+                                  />
+                                  
+                                  {/* Dropdown de publicadores */}
+                                  {showEstudioDropdown && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                      {filteredEstudioPublishers.length > 0 ? (
+                                        filteredEstudioPublishers.map((publisher) => (
+                                          <button
+                                            key={publisher.id}
+                                            type="button"
+                                            onClick={() => handleEstudioSelect(publisher.name)}
+                                            className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm transition-colors"
+                                            style={{ color: '#2C3E50' }}
+                                          >
+                                            {publisher.name}
+                                          </button>
+                                        ))
+                                      ) : (
+                                        <div className="px-3 py-2 text-sm text-gray-500">
+                                          No se encontraron publicadores
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                // Campo simple para publicadores
                                 <input
                                   type="text"
-                                  value={estudioSearch}
-                                  onChange={(e) => {
-                                    console.log('📝 Cambiando estudioSearch de:', estudioSearch, 'a:', e.target.value);
-                                    handleEstudioSearchChange(e.target.value);
-                                    setShowEstudioDropdown(true);
-                                  }}
-                                  onFocus={() => {
-                                    console.log('🎯 Focus en campo estudio, valor actual:', estudioSearch);
-                                    setShowEstudioDropdown(true);
-                                  }}
+                                  value={formData.estudioBy}
+                                  onChange={(e) => handleInputChange('estudioBy', e.target.value)}
                                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                                   style={{ '--tw-ring-color': '#546E7A' }}
-                                  placeholder="Buscar publicador..."
+                                  placeholder="¿Quién dirige el estudio?"
                                   disabled={isProcessing}
+                                  readOnly
                                 />
-                                
-                                {/* Dropdown de publicadores */}
-                                {showEstudioDropdown && (
-                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                                    {filteredEstudioPublishers.length > 0 ? (
-                                      filteredEstudioPublishers.map((publisher) => (
-                                        <button
-                                          key={publisher.id}
-                                          type="button"
-                                          onClick={() => handleEstudioSelect(publisher.name)}
-                                          className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm transition-colors"
-                                          style={{ color: '#2C3E50' }}
-                                        >
-                                          {publisher.name}
-                                        </button>
-                                      ))
-                                    ) : (
-                                      <div className="px-3 py-2 text-sm text-gray-500">
-                                        No se encontraron publicadores
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              // Campo simple para publicadores
-                              <input
-                                type="text"
-                                value={formData.estudioBy}
-                                onChange={(e) => handleInputChange('estudioBy', e.target.value)}
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#546E7A' }}
-                                placeholder="¿Quién dirige el estudio?"
-                                disabled={isProcessing}
-                                readOnly
-                              />
-                            )}
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
