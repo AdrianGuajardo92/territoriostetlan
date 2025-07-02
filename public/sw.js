@@ -237,4 +237,4 @@ async function checkForUpdates() {
   }
 }
 
-console.log('🚀 Service Worker v2.25.6 cargado correctamente - NUNCA FALLA');
+console.log('🚀 Service Worker v2.25.7 cargado correctamente - ULTRA RÁPIDO');

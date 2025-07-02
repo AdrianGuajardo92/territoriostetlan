@@ -1,5 +1,5 @@
 {
-  "version": "2.25.6",
+  "version": "2.25.7",
   "releaseDate": "2025-01-01",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
@@ -468,6 +468,22 @@
       {
         "type": "improvement",
         "description": "Sistema de cambio de contraseña actualizado y funcional."
+      },
+      {
+        "type": "fix",
+        "description": "🐛 Corregido error 'setIsLoading is not defined' en botón Refrescar SW"
+      },
+      {
+        "type": "improvement",
+        "description": "⚡ Mejorado rendimiento de detección de Service Worker (500ms timeout)"
+      },
+      {
+        "type": "improvement",
+        "description": "🔧 Eliminada espera innecesaria de SW ready para evitar colgadas"
+      },
+      {
+        "type": "improvement",
+        "description": "✨ Optimizada carga de reportes del sistema"
       }
     ],
     "admin": [
@@ -741,6 +757,16 @@
         "🗑️ Headers Clear-Site-Data súper agresivos en Netlify",
         "⚡ Cache busting con timestamps únicos",
         "🔄 Recarga automática después de limpiar cache exitosamente"
+      ]
+    },
+    {
+      "version": "2.25.7",
+      "date": "2025-01-01",
+      "changes": [
+        "🐛 Corregido error 'setIsLoading is not defined' en botón Refrescar SW",
+        "⚡ Mejorado rendimiento de detección de Service Worker (500ms timeout)",
+        "🔧 Eliminada espera innecesaria de SW ready para evitar colgadas",
+        "✨ Optimizada carga de reportes del sistema"
       ]
     }
   ]

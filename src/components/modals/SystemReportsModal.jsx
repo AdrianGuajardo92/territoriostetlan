@@ -71,7 +71,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         ]),
         serviceWorker: Promise.race([
           getServiceWorkerInfo(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout serviceWorker')), 1000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout serviceWorker')), 500))
         ])
       };
       
@@ -265,12 +265,8 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.supported = true;
       
       try {
-        // Esperar un momento para asegurar que el SW esté listo
-        if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-          await navigator.serviceWorker.ready;
-        }
-        
-        // Verificación SIMPLE y DIRECTA
+        // NO esperar ready - muy lento
+        // Verificación ULTRA RÁPIDA
         const registrations = await navigator.serviceWorker.getRegistrations();
         const registration = registrations[0];
         
@@ -304,7 +300,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         sw.communication = sw.controller ? 'Con controlador' : 'Sin controlador';
         
         // Versión simple
-        sw.version = 'v2.25.6';
+        sw.version = 'v2.25.7';
         
       } catch (e) {
         sw.error = e.message;
@@ -1388,17 +1384,12 @@ const ServiceWorkerTab = ({ data }) => (
         <button 
           onClick={async () => {
             console.log('🔄 Refrescando información del Service Worker...');
-            setIsLoading(true);
             
             try {
-              // Esperar a que el SW esté listo
-              if ('serviceWorker' in navigator) {
-                await navigator.serviceWorker.ready;
-                await new Promise(resolve => setTimeout(resolve, 1000));
-              }
-              
-              // Recolectar solo datos del SW
+              // Recolectar solo datos del SW con timeout corto
               const swData = await getServiceWorkerInfo();
+              
+              // Actualizar solo la pestaña de SW
               setSystemData(prev => ({
                 ...prev,
                 serviceWorker: swData
@@ -1407,8 +1398,6 @@ const ServiceWorkerTab = ({ data }) => (
               console.log('✅ Información SW actualizada:', swData);
             } catch (error) {
               console.error('❌ Error actualizando SW:', error);
-            } finally {
-              setIsLoading(false);
             }
           }}
           className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 flex items-center gap-2"
