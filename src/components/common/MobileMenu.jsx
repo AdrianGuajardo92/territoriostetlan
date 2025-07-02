@@ -6,25 +6,56 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
   const { currentUser, CURRENT_VERSION } = useApp();
   const [hoveredItem, setHoveredItem] = useState(null);
   
-  // Iconos específicos para cada item - todos en escala de grises
-  const menuIcons = {
-    search: { icon: 'search' },
-    stats: { icon: 'barChart' },
-    reports: { icon: 'fileText' },
-    myProposals: { icon: 'edit' },
-    admin: { icon: 'settings' },
-    password: { icon: 'key' },
-    install: { icon: 'smartphone' },
-    updates: { icon: 'download' },
-    logout: { icon: 'logOut' }
+  // Configuración de colores vibrantes para cada item del menú
+  const menuColors = {
+    search: { 
+      bg: 'from-blue-500 to-indigo-600', 
+      hover: 'from-blue-600 to-indigo-700',
+      glow: 'shadow-blue-500/30'
+    },
+    myProposals: { 
+      bg: 'from-amber-500 to-orange-600', 
+      hover: 'from-amber-600 to-orange-700',
+      glow: 'shadow-amber-500/30'
+    },
+    admin: { 
+      bg: 'from-rose-500 to-pink-600', 
+      hover: 'from-rose-600 to-pink-700',
+      glow: 'shadow-rose-500/30'
+    },
+    password: { 
+      bg: 'from-slate-500 to-slate-700', 
+      hover: 'from-slate-600 to-slate-800',
+      glow: 'shadow-slate-500/30'
+    },
+    systemReports: { 
+      bg: 'from-emerald-500 to-teal-600', 
+      hover: 'from-emerald-600 to-teal-700',
+      glow: 'shadow-emerald-500/30'
+    },
+    install: { 
+      bg: 'from-violet-500 to-purple-600', 
+      hover: 'from-violet-600 to-purple-700',
+      glow: 'shadow-violet-500/30'
+    },
+    logout: { 
+      bg: 'from-red-500 to-rose-600', 
+      hover: 'from-red-600 to-rose-700',
+      glow: 'shadow-red-500/30'
+    }
   };
   
   return (
     <>
+            {/* Overlay con blur elegante */}
       <div 
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-all duration-300 ${
+        className={`fixed inset-0 bg-black/40 backdrop-blur-md z-40 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`} 
+        }`}
+        style={{
+          transition: 'opacity 2s ease-in-out',
+          touchAction: 'none'
+        }} 
         onClick={() => {
           const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
           const hasModal = urlParams.get('modal');
@@ -32,58 +63,71 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
             onClose();
           }
         }}
-        style={{ touchAction: 'none' }}
       />
       
+      {/* Panel del menú con fondo gris claro elegante */}
       <div 
         data-menu-panel="true"
-        className={`fixed inset-y-0 right-0 w-full max-w-sm shadow-2xl z-50 transition-all duration-300 ease-out transform ${
+        className={`fixed inset-y-0 right-0 w-full max-w-sm z-50 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
-        style={{ backgroundColor: '#2C2C2C' }}
+        style={{
+          transition: 'transform 2s ease-in-out',
+          willChange: 'transform'
+        }}
       >
-        <div className="h-full flex flex-col" style={{ touchAction: 'pan-y' }}>
-          {/* Header minimalista con escala de grises */}
-          <div className="p-6 flex-shrink-0" style={{ backgroundColor: '#1F1F1F' }}>
-            <button 
-              onClick={onClose} 
-              className="absolute top-6 right-6 p-2 transition-colors duration-200"
-              style={{ color: '#B0B0B0' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#FFFFFF'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#B0B0B0'}
-            >
-              <Icon name="x" size={24} />
-            </button>
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#353535' }}>
-                <Icon name="user" size={28} style={{ color: '#D0D0D0' }} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold" style={{ color: '#FFFFFF' }}>{currentUser ? currentUser.name : 'Usuario'}</h3>
-                <span className="inline-flex items-center text-sm" style={{ color: '#A0A0A0' }}>
-                  <Icon name={currentUser?.role === 'admin' ? 'shield' : 'users'} size={14} className="mr-1.5" />
-                  {currentUser?.role === 'admin' ? 'Administrador' : 'Publicador'}
-                </span>
+        <div className="h-full flex flex-col bg-gray-100 shadow-2xl border-l border-gray-200">
+          <div className="relative h-full flex flex-col" style={{ touchAction: 'pan-y' }}>
+            {/* Header con estilo consistente de modales */}
+            <div className="flex-shrink-0 p-6 shadow-xl" style={{ backgroundColor: '#2C3E50' }}>
+              <div className="flex items-center justify-between">
+                {/* Título con ícono */}
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                    <Icon name="user" size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">
+                      {currentUser ? currentUser.name : 'Usuario'}
+                    </h3>
+                    <span className="inline-flex items-center text-sm text-white/70">
+                      <Icon name={currentUser?.role === 'admin' ? 'shield' : 'users'} size={14} className="mr-1.5" />
+                      {currentUser?.role === 'admin' ? 'Administrador' : 'Publicador'}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Botón cerrar elegante */}
+                <button 
+                  onClick={onClose}
+                  className="p-3 rounded-xl transition-all transform hover:scale-105 group"
+                  style={{ backgroundColor: '#34495e' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
+                >
+                  <Icon name="x" size={20} className="text-white group-hover:rotate-90 transition-transform" />
+                </button>
               </div>
             </div>
-          </div>
-          
-          {/* Contenido del menú */}
-          <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#2C2C2C', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
-            <div className="p-4">
+            
+            {/* Contenido del menú */}
+            <div className="flex-1 overflow-y-auto p-4" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
               <nav>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {menuItems.filter(item => !(item.id === 'myProposals' && currentUser?.role === 'admin')).map((item, index) => {
                     const isActive = activeItem === item.id;
                     const isHovered = hoveredItem === item.id;
-                    const iconConfig = menuIcons[item.id] || menuIcons.search;
+                    const colorConfig = menuColors[item.id] || menuColors.search;
                     const isLogout = item.id === 'logout';
                     
                     return (
                       <li 
                         key={item.id}
+                        className={`transition-all duration-500 ease-out ${
+                          isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'
+                        }`}
                         style={{
-                          animation: isOpen ? `fadeIn ${0.2 + index * 0.03}s ease-out` : 'none'
+                          transitionDelay: isOpen ? `${index * 100}ms` : '0ms'
                         }}
                       >
                         <a 
@@ -91,11 +135,10 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                           onClick={(e) => { 
                             e.preventDefault(); 
                             
-                            // ✨ Manejo especial para actualizaciones
                             if (item.action) { 
                               item.action(); 
                               if (item.isUpdateAction) {
-                                // No cerrar menú si es actualización (se recargará la página)
+                                // No cerrar menú si es actualización
                               } else {
                                 onClose(); 
                               }
@@ -108,84 +151,97 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                           }} 
                           onMouseEnter={() => setHoveredItem(item.id)}
                           onMouseLeave={() => setHoveredItem(null)}
-                          className="group flex items-center px-4 py-4 rounded-xl transition-all duration-200 relative"
+                          className={`group flex items-center p-4 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] relative overflow-hidden ${
+                            isActive ? 'shadow-xl' : 'hover:shadow-lg'
+                          }`}
                           style={{
-                            backgroundColor: isActive ? '#4A4A4A' : (isHovered ? '#3A3A3A' : 'transparent'),
-                            minHeight: '60px' // Área táctil más grande para móvil
+                            background: isActive || isHovered 
+                              ? `linear-gradient(135deg, var(--tw-gradient-stops))` 
+                              : 'rgba(255, 255, 255, 0.8)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(0, 0, 0, 0.1)',
+                            minHeight: '70px'
                           }}
                         >
-                          {/* Indicador de página activa */}
-                          {isActive && (
-                            <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full" style={{ backgroundColor: '#EAEAEA' }}></div>
+                          {/* Efecto de brillo en hover */}
+                          {(isActive || isHovered) && (
+                            <div 
+                              className={`absolute inset-0 bg-gradient-to-r ${colorConfig.bg} opacity-90 rounded-2xl`}
+                              style={{ zIndex: -1 }}
+                            />
                           )}
                           
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 transition-colors duration-200 ${
+                          {/* Indicador lateral para item activo */}
+                          {isActive && (
+                            <div className="absolute left-0 top-3 bottom-3 w-1 bg-white rounded-r-full shadow-lg"></div>
+                          )}
+                          
+                          {/* Contenedor del icono con efectos */}
+                          <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center mr-4 transition-all duration-300 ${
                             item.isUpdateAction ? 'bg-gradient-to-r from-blue-500 to-purple-600' :
-                            item.isLoading ? 'bg-gradient-to-r from-gray-400 to-gray-500' : ''
-                          }`}
-                            style={{
-                              backgroundColor: item.isUpdateAction ? undefined : 
-                                               item.isLoading ? undefined :
-                                               isActive ? '#595959' : '#3A3A3A'
-                            }}
-                          >
+                            item.isLoading ? 'bg-gradient-to-r from-gray-400 to-gray-500' : 
+                            (isActive || isHovered) ? 'bg-white/20 backdrop-blur-sm' : 'bg-gray-200'
+                          } ${colorConfig.glow} shadow-lg`}>
                             {item.isLoading ? (
-                              // ✨ Spinner de carga elegante
-                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                             ) : (
-                              <Icon 
-                                name={iconConfig.icon} 
-                                size={20} 
-                                style={{ 
-                                  color: item.isUpdateAction ? '#FFFFFF' :
-                                         isActive ? '#FFFFFF' : 
-                                         (isLogout ? '#F87171' : '#D0D0D0')
-                                }}
+                                                <Icon 
+                    name={item.id === 'systemReports' ? 'barChart' : item.icon} 
+                                size={22} 
+                                className={`transition-all duration-300 ${
+                                  isActive || isHovered ? 'text-white scale-110' : 'text-gray-600'
+                                }`}
                               />
                             )}
+                            
+                            {/* Badge con animación */}
                             {item.hasBadge && (item.badgeCount > 0 || item.badgeText) && !item.isLoading && (
-                              <span className={`absolute -top-1 -right-1 text-xs rounded-full flex items-center justify-center font-medium min-w-[20px] h-5 px-1 shadow-sm ${
-                                item.isUpdateAction ? 'bg-white text-blue-600 animate-pulse' : 'bg-red-600 text-white'
+                              <span className={`absolute -top-2 -right-2 text-xs rounded-full flex items-center justify-center font-bold min-w-[22px] h-6 px-2 shadow-lg animate-bounce ${
+                                item.isUpdateAction ? 'bg-white text-blue-600' : 'bg-red-500 text-white border-2 border-white'
                               }`}>
                                 {item.badgeCount || item.badgeText}
                               </span>
                             )}
                           </div>
+                          
+                          {/* Contenido del texto */}
                           <div className="flex-1 min-w-0">
-                            <p className={`font-medium text-sm transition-colors duration-200 ${
-                              item.isUpdateAction ? 'text-white font-bold' : ''
-                            }`}
-                              style={{ 
-                                color: item.isUpdateAction ? '#FFFFFF' :
-                                       isActive ? '#FFFFFF' : 
-                                       (isLogout ? '#F87171' : '#EAEAEA')
-                              }}
-                            >
+                            <p className={`font-semibold text-base transition-all duration-300 ${
+                              isActive || isHovered ? 'text-white' : 'text-gray-800'
+                            }`}>
                               {item.text}
                               {item.isUpdateAction && (
-                                <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full">¡Nuevo!</span>
+                                <span className="ml-2 text-xs bg-white/30 px-2 py-1 rounded-full animate-pulse">¡Nuevo!</span>
                               )}
                             </p>
                             {item.description && (
-                              <p className={`text-xs mt-0.5 transition-colors duration-200 ${
-                                item.isUpdateAction ? 'text-blue-100' : ''
-                              }`}
-                                style={{ 
-                                  color: item.isUpdateAction ? '#E0E7FF' :
-                                         isActive ? '#D0D0D0' : '#A0A0A0'
-                                }}
-                              >{item.description}</p>
+                              <p className={`text-sm mt-1 transition-all duration-300 ${
+                                isActive || isHovered ? 'text-white/80' : 'text-gray-600'
+                              }`}>
+                                {item.description}
+                              </p>
                             )}
                           </div>
+                          
+                          {/* Flecha indicadora */}
                           <Icon 
                             name="chevronRight" 
-                            size={16} 
-                            className="flex-shrink-0 transition-all duration-200"
-                            style={{ 
-                              color: isActive ? '#FFFFFF' : '#808080',
-                              transform: isActive ? 'translateX(2px)' : 'none'
-                            }}
+                            size={18} 
+                            className={`flex-shrink-0 transition-all duration-300 ${
+                              isActive || isHovered 
+                                ? 'text-white transform translate-x-1 scale-110' 
+                                : 'text-gray-500'
+                            }`}
                           />
+                          
+                          {/* Efecto de partículas en hover */}
+                          {isHovered && (
+                            <div className="absolute inset-0 pointer-events-none">
+                              <div className="absolute top-2 right-4 w-1 h-1 bg-white rounded-full animate-ping"></div>
+                              <div className="absolute bottom-3 left-8 w-1 h-1 bg-white/60 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                              <div className="absolute top-1/2 right-8 w-0.5 h-0.5 bg-white/40 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
+                            </div>
+                          )}
                         </a>
                       </li>
                     );
@@ -193,15 +249,19 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                 </ul>
               </nav>
               
-              {/* Separador */}
-              <div className="my-6 h-px" style={{ backgroundColor: '#404040' }}></div>
+              {/* Separador elegante */}
+              <div className="my-8 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
               
               {/* Footer del menú */}
-              <div className="px-4 pb-6">
-                <div className="rounded-xl p-4 text-center" style={{ backgroundColor: '#3A3A3A', border: '1px solid #4A4A4A' }}>
-                  <Icon name="mapPin" size={24} style={{ color: '#A0A0A0' }} className="mx-auto mb-2" />
-                  <p className="text-sm font-medium" style={{ color: '#D0D0D0' }}>Gestor de Territorios</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#808080' }}>Versión {CURRENT_VERSION}</p>
+              <div className="px-2 pb-6">
+                <div className="relative rounded-2xl p-4 text-center overflow-hidden bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg">
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-gray-100/50"></div>
+                  <div className="relative">
+                    <Icon name="mapPin" size={28} className="text-gray-600 mx-auto mb-3" />
+                    <p className="text-base font-bold text-gray-800">Gestor de Territorios</p>
+                    <p className="text-sm text-gray-600 mt-1">Versión {CURRENT_VERSION}</p>
+                    <div className="mt-2 h-1 bg-gradient-to-r from-gray-300 to-gray-400 rounded-full"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -209,17 +269,18 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
         </div>
       </div>
       
-      {/* Estilos de animación */}
+      {/* Estilos simplificados */}
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        /* Efectos de glassmorphism */
+        [data-menu-panel="true"] {
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+        }
+        
+        /* Hover suave para elementos del menú */
+        .group:hover {
+          transform: scale(1.02);
+          transition: transform 0.2s ease-out;
         }
       `}} />
     </>

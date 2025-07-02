@@ -448,108 +448,102 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
     >
       <div className="flex flex-col h-screen overflow-hidden">
         {/* 🎨 HEADER MÓVIL NATIVO - FIJO */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-slate-700 to-gray-800 text-white p-4 shadow-lg sticky top-0 z-10">
+        <div className="flex-shrink-0 text-white p-4 shadow-lg sticky top-0 z-10" style={{ backgroundColor: '#2C3E50' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
                 <i className="fas fa-chart-line text-lg text-white"></i>
               </div>
               <div>
                 <h2 className="text-xl font-bold">Reportes del Sistema</h2>
-                <p className="text-gray-300 text-xs">Diagnóstico técnico</p>
+                <p className="text-white/70 text-xs">Diagnóstico técnico</p>
               </div>
             </div>
             
             {/* BOTÓN CERRAR MÓVIL */}
             <button
               onClick={onClose}
-              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-colors duration-200"
+              className="p-3 rounded-xl transition-all transform hover:scale-105 group"
+              style={{ backgroundColor: '#34495e' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
             >
-              <i className="fas fa-times text-white text-lg"></i>
+              <i className="fas fa-times text-white group-hover:rotate-90 transition-transform"></i>
             </button>
           </div>
 
           {/* 🔧 ACCIONES MÓVILES */}
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={collectSystemData}
               disabled={isLoading}
-              className="flex-1 min-w-0 px-3 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-lg transition-all duration-200"
+              className="px-2 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 font-medium transition-all duration-200 min-h-[40px]"
             >
-              <i className={`fas fa-sync-alt ${isLoading ? 'animate-spin' : ''}`}></i>
-              <span className="text-sm">{isLoading ? 'Actualizando...' : 'Actualizar'}</span>
+              <i className={`fas fa-sync-alt text-xs ${isLoading ? 'animate-spin' : ''}`}></i>
+              <span className="text-xs truncate">{isLoading ? 'Actualizando...' : 'Actualizar'}</span>
             </button>
             
             <button
               onClick={exportReport}
-              className="flex-1 min-w-0 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 flex items-center justify-center gap-2 font-medium shadow-lg transition-all duration-200"
+              className="px-2 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 flex items-center justify-center gap-1.5 font-medium transition-all duration-200 min-h-[40px]"
             >
-              <i className="fas fa-download"></i>
-              <span className="text-sm">Exportar</span>
+              <i className="fas fa-download text-xs"></i>
+              <span className="text-xs truncate">Exportar</span>
             </button>
             
             <button
               onClick={clearLogs}
-              className="flex-1 min-w-0 px-3 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 flex items-center justify-center gap-2 font-medium shadow-lg transition-all duration-200"
+              className="px-2 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 flex items-center justify-center gap-1.5 font-medium transition-all duration-200 min-h-[40px]"
             >
-              <i className="fas fa-trash"></i>
-              <span className="text-sm">Limpiar</span>
+              <i className="fas fa-trash text-xs"></i>
+              <span className="text-xs truncate">Limpiar</span>
             </button>
             
             <button
               onClick={handleClearCache}
-              className="flex-1 min-w-0 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 flex items-center justify-center gap-2 font-medium shadow-lg transition-all duration-200"
+              className="px-2 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 flex items-center justify-center gap-1.5 font-medium transition-all duration-200 min-h-[40px]"
             >
-              <i className="fas fa-broom"></i>
-              <span className="text-sm">Limpiar Caché</span>
+              <i className="fas fa-broom text-xs"></i>
+              <span className="text-xs truncate">Limpiar Caché</span>
             </button>
           </div>
         </div>
 
         {/* 📱 NAVEGACIÓN DE TABS MÓVIL - FIJA */}
-        <div className="flex-shrink-0 px-4 py-2 bg-white sticky top-0 z-10 shadow-sm">
-          <div className="bg-gray-50 rounded-xl p-2">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-              {tabs.map((tab) => {
-                const config = getTabColorConfig(tab.color);
-                const isActive = activeTab === tab.id;
-                
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`relative p-3 rounded-xl transition-all duration-300 group ${
-                      isActive 
-                        ? `bg-gradient-to-r ${config.bg} text-white shadow-lg scale-105` 
-                        : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800 hover:scale-102'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        isActive ? 'bg-white/20' : 'bg-gray-100 group-hover:bg-gray-200'
-                      }`}>
-                        <i className={`fas fa-${tab.icon} ${isActive ? 'text-white' : config.text}`}></i>
-                      </div>
-                      <div className="text-center">
-                        <div className={`text-xs font-bold ${isActive ? 'text-white' : 'text-gray-700'}`}>
-                          {tab.label}
-                        </div>
-                        <div className={`text-xs mt-1 ${
-                          isActive ? 'text-white/80' : 'text-gray-500'
-                        }`}>
-                          {tab.description}
-                        </div>
-                      </div>
+        <div className="flex-shrink-0 px-4 py-3 bg-white sticky top-0 z-10 shadow-sm">
+          <div className="space-y-2">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-gray-100 text-gray-900 shadow-sm' 
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    isActive ? 'bg-white shadow-sm' : 'bg-gray-100'
+                  }`}>
+                    <i className={`fas fa-${tab.icon} text-sm ${isActive ? 'text-gray-700' : 'text-gray-500'}`}></i>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className={`font-medium text-sm ${isActive ? 'text-gray-900' : 'text-gray-700'}`}>
+                      {tab.label}
                     </div>
-                    
-                    {/* Indicador activo */}
-                    {isActive && (
-                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full shadow-lg"></div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                    <div className={`text-xs ${isActive ? 'text-gray-600' : 'text-gray-500'}`}>
+                      {tab.description}
+                    </div>
+                  </div>
+                  {isActive && (
+                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
