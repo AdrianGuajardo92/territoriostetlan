@@ -62,38 +62,44 @@ function AppContent() {
     }).length;
   };
 
-  // Sistema de Service Worker OFFLINE-FIRST
+  // Sistema de Service Worker ESTABLE - Sin bucles
   useEffect(() => {
-    // Registrar el SW solo en producción para evitar conflictos con HMR de Vite
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator) {
       const registerSW = async () => {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
-          console.log(`✅ SW: Registrado con scope: ${registration.scope}`);
-
+          console.log('🚀 Registrando Service Worker v2.25.12...');
+          
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            updateViaCache: 'none'
+          });
+          
+          console.log('✅ SW registrado correctamente:', registration.scope);
+          
+          // Solo escuchar updatefound, sin forzar actualizaciones
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
-            console.log('🔄 SW: Nueva versión encontrada, instalando...');
+            console.log('🔄 SW: Nueva versión detectada');
             
             newWorker.addEventListener('statechange', () => {
-              console.log(`📡 SW: Estado del nuevo worker: ${newWorker.state}`);
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // Notificar al usuario que hay una nueva versión lista para activar.
-                // Podríamos mostrar un toast aquí.
-                console.log('✨ SW: Nueva versión lista para ser activada.');
+                console.log('✨ SW: Nueva versión lista');
                 showToast('Nueva versión disponible. Recarga para actualizar.', 'info', { duration: 10000 });
               }
             });
           });
+          
         } catch (error) {
-          console.error('❌ SW: Error durante el registro:', error);
+          console.error('❌ SW: Error en registro:', error);
         }
       };
 
-      // Esperar a que la ventana esté completamente cargada para no interferir
-      // con la carga inicial de la aplicación.
-      window.addEventListener('load', registerSW);
-      return () => window.removeEventListener('load', registerSW);
+      // Registrar solo una vez cuando la página esté cargada
+      if (document.readyState === 'complete') {
+        registerSW();
+      } else {
+        window.addEventListener('load', registerSW, { once: true });
+      }
     }
   }, [showToast]);
 
