@@ -1,5 +1,5 @@
 {
-  "version": "2.25.0",
+  "version": "2.25.1",
   "buildDate": "2025-01-01",
-  "description": "Limpiar caché movido a Reportes del Sistema - interfaz simplificada"
+  "description": "Service Worker funcional restaurado - reportes del sistema operativos"
 } 
