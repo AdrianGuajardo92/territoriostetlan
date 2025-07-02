@@ -18,7 +18,30 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
 
   useEffect(() => {
     if (isOpen) {
-      collectSystemData();
+      // ESPERAR a que el Service Worker termine de instalarse antes de recolectar datos
+      const waitForSWAndCollect = async () => {
+        try {
+          console.log('⏳ Esperando que el Service Worker esté listo...');
+          
+          // Esperar a que el SW esté completamente listo
+          if ('serviceWorker' in navigator) {
+            await navigator.serviceWorker.ready;
+            console.log('✅ Service Worker ready detectado');
+            
+            // Esperar un poco más para asegurar que esté completamente activo
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+          
+          console.log('🔄 Iniciando recolección de datos después de SW ready...');
+          collectSystemData();
+        } catch (error) {
+          console.log('⚠️ Error esperando SW, recolectando datos de todos modos:', error);
+          collectSystemData();
+        }
+      };
+      
+      waitForSWAndCollect();
+      
       // 🔒 BLOQUEAR SCROLL DEL BODY
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
@@ -265,13 +288,26 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       try {
         console.log('🔍 Iniciando verificación del Service Worker...');
         
-        // Verificación rápida sin delays largos
+        // Verificar primero si el SW está ready
+        let swReady = false;
+        try {
+          await Promise.race([
+            navigator.serviceWorker.ready.then(() => { swReady = true; }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 3000))
+          ]);
+        } catch (e) {
+          console.log('⚠️ SW ready timeout, continuando con verificación manual');
+        }
+        
+        console.log('📊 Service Worker ready:', swReady);
+        
+        // Verificación del registro
         let registration = await Promise.race([
           navigator.serviceWorker.getRegistration(),
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout getRegistration')), 2000))
         ]);
         
-        // Si no hay registro, verificar registros globales rápidamente
+        // Si no hay registro, verificar registros globales
         if (!registration) {
           console.log('⚠️ No hay registro principal, verificando globales...');
           const registrations = await Promise.race([
@@ -282,7 +318,8 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         }
         
         sw.registered = !!registration;
-        console.log('📊 Registro encontrado:', !!registration);
+        sw.ready = swReady;
+        console.log('📊 Registro encontrado:', !!registration, '| Ready:', swReady);
         
         if (registration) {
           const activeWorker = registration.active;
@@ -1445,6 +1482,38 @@ const ServiceWorkerTab = ({ data }) => (
 
       {/* Acciones */}
       <div className="mt-6 flex flex-wrap gap-3">
+        <button 
+          onClick={async () => {
+            console.log('🔄 Refrescando información del Service Worker...');
+            setIsLoading(true);
+            
+            try {
+              // Esperar a que el SW esté listo
+              if ('serviceWorker' in navigator) {
+                await navigator.serviceWorker.ready;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+              
+              // Recolectar solo datos del SW
+              const swData = await getServiceWorkerInfo();
+              setSystemData(prev => ({
+                ...prev,
+                serviceWorker: swData
+              }));
+              
+              console.log('✅ Información SW actualizada:', swData);
+            } catch (error) {
+              console.error('❌ Error actualizando SW:', error);
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 flex items-center gap-2"
+        >
+          <i className="fas fa-sync-alt"></i>
+          Refrescar SW
+        </button>
+        
         <button 
           onClick={async () => {
             try {

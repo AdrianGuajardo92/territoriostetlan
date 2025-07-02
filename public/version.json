@@ -1,5 +1,5 @@
 {
-  "version": "2.25.4",
+  "version": "2.25.5",
   "buildDate": "2025-01-01",
-  "description": "Reportes NUNCA se cuelgan - timeouts inteligentes + detección rápida SW"
+  "description": "Service Worker SINCRONIZADO - espera a SW ready + botón refrescar + detección mejorada"
 } 
