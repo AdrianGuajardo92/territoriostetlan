@@ -29,6 +29,10 @@ const AdminModal = (props = {}) => {
   const [showUserManagement, setShowUserManagement] = useState(false); // Estado para el modal de gestión de usuarios
   const [proposalFilter, setProposalFilter] = useState('pending'); // Filtro para propuestas: all, pending, approved, rejected
   
+  // Estados para acordeón de usuarios
+  const [expandedAdmins, setExpandedAdmins] = useState(false);
+  const [expandedPublishers, setExpandedPublishers] = useState(false);
+  
   useEffect(() => {
     if (isOpen) {
       setView(currentUser?.role === 'admin' ? 'actions' : 'no_access');
@@ -708,37 +712,120 @@ const AdminModal = (props = {}) => {
               </button>
             </div>
 
-            {/* Vista simplificada - solo mostrar resumen */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Card Administradores */}
-              <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl shadow-lg p-6 border-2 border-purple-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <i className="fas fa-crown text-white text-xl"></i>
+            {/* Vista con acordeones expandibles */}
+            <div className="space-y-6">
+              {/* Acordeón Administradores */}
+              <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl shadow-lg border-2 border-purple-200 overflow-hidden">
+                <button
+                  onClick={() => setExpandedAdmins(!expandedAdmins)}
+                  className="w-full p-6 text-left hover:bg-purple-100/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i className="fas fa-crown text-white text-xl"></i>
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-purple-800">Administradores</h4>
+                        <p className="text-purple-600 text-sm">Usuarios con permisos completos</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
+                        {users.filter(u => u.role === 'admin').length}
+                      </span>
+                      <i className={`fas fa-chevron-${expandedAdmins ? 'up' : 'down'} text-purple-600 transition-transform`}></i>
+                    </div>
                   </div>
-                  <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
-                    {users.filter(u => u.role === 'admin').length}
-                  </span>
-                </div>
-                <h4 className="text-xl font-bold text-purple-800 mb-2">Administradores</h4>
-                <p className="text-purple-600 text-sm">Usuarios con permisos completos</p>
+                </button>
+                
+                {expandedAdmins && (
+                  <div className="px-6 pb-6 border-t border-purple-200/50">
+                    <div className="mt-4 space-y-3">
+                      {users.filter(u => u.role === 'admin').map(admin => (
+                        <div key={admin.id} className="bg-white/70 rounded-xl p-4 border border-purple-200/50 flex items-center justify-between hover:bg-white transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                              <i className="fas fa-user-shield text-white text-sm"></i>
+                            </div>
+                            <div>
+                              <h5 className="font-bold text-gray-900">{admin.name}</h5>
+                              <p className="text-sm text-gray-600">@{admin.accessCode}</p>
+                            </div>
+                          </div>
+                          {admin.id === currentUser?.id && (
+                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                              Tú
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Card Publicadores */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-lg p-6 border-2 border-blue-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <i className="fas fa-users text-white text-xl"></i>
+              {/* Acordeón Publicadores */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-lg border-2 border-blue-200 overflow-hidden">
+                <button
+                  onClick={() => setExpandedPublishers(!expandedPublishers)}
+                  className="w-full p-6 text-left hover:bg-blue-100/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i className="fas fa-users text-white text-xl"></i>
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-blue-800">Publicadores</h4>
+                        <p className="text-blue-600 text-sm">Usuarios estándar del sistema</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
+                        {users.filter(u => u.role !== 'admin').length}
+                      </span>
+                      <i className={`fas fa-chevron-${expandedPublishers ? 'up' : 'down'} text-blue-600 transition-transform`}></i>
+                    </div>
                   </div>
-                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
-                    {users.filter(u => u.role !== 'admin').length}
-                  </span>
-                </div>
-                <h4 className="text-xl font-bold text-blue-800 mb-2">Publicadores</h4>
-                <p className="text-blue-600 text-sm">Usuarios estándar del sistema</p>
+                </button>
+                
+                {expandedPublishers && (
+                  <div className="px-6 pb-6 border-t border-blue-200/50">
+                    <div className="mt-4 space-y-3 max-h-64 overflow-y-auto">
+                      {users.filter(u => u.role !== 'admin').length === 0 ? (
+                        <div className="text-center py-8">
+                          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i className="fas fa-users text-blue-500 text-xl"></i>
+                          </div>
+                          <p className="text-gray-600">No hay publicadores registrados</p>
+                        </div>
+                      ) : (
+                        users.filter(u => u.role !== 'admin').map(publisher => (
+                          <div key={publisher.id} className="bg-white/70 rounded-xl p-4 border border-blue-200/50 flex items-center justify-between hover:bg-white transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                                <i className="fas fa-user text-white text-sm"></i>
+                              </div>
+                              <div>
+                                <h5 className="font-bold text-gray-900">{publisher.name}</h5>
+                                <p className="text-sm text-gray-600">@{publisher.accessCode}</p>
+                              </div>
+                            </div>
+                            {publisher.id === currentUser?.id && (
+                              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                Tú
+                              </span>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Card Total */}
+              {/* Card Total (sin acordeón) */}
               <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg p-6 border-2 border-green-200">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">

@@ -1,10 +1,22 @@
 {
-  "version": "2.19.2",
+  "version": "2.20.0",
   "releaseDate": "2025-01-01",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "major", 
+        "description": "🎯 ACORDEONES EXPANDIBLES EN GESTIÓN DE USUARIOS: Tarjetas interactivas que muestran la lista completa de administradores y publicadores al hacer clic"
+      },
+      {
+        "type": "improvement", 
+        "description": "✨ INFORMACIÓN INSTANTÁNEA: Ve quiénes son los usuarios sin salir del panel principal - acordeón elegante con scroll automático para listas largas"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎨 DISEÑO INTUITIVO: Flechas animadas, hover effects, indicador 'Tú' para usuario actual y scroll optimizado para publicadores"
+      },
       {
         "type": "improvement", 
         "description": "📝 TERMINOLOGÍA ACTUALIZADA: Cambiado 'Código de Acceso' por 'Usuario' en gestión de usuarios para consistencia con el sistema de login"

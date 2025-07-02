@@ -1,5 +1,5 @@
 {
-  "version": "2.19.2",
+  "version": "2.20.0",
   "buildDate": "2025-01-01",
-  "description": "Terminología actualizada: 'Usuario' en lugar de 'Código de Acceso' para consistencia"
+  "description": "Acordeones expandibles en gestión de usuarios - información instantánea sin salir del panel"
 } 
