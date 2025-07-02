@@ -265,71 +265,104 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.supported = true;
       
       try {
-        // VERIFICACIÓN REAL - No depender de getRegistrations que puede fallar
-        // Verificar directamente el controlador activo
+        // MÉTODO 1: Verificar controlador activo (más confiable)
         const hasController = !!navigator.serviceWorker.controller;
         
         if (hasController) {
-          // HAY UN SW ACTIVO
+          // SW ACTIVO Y CONTROLANDO
           sw.registered = true;
-          sw.status = 'Activo';
+          sw.status = 'Activo y Controlando';
           sw.state = 'activated';
           sw.controller = true;
-          sw.communication = 'Con controlador';
+          sw.communication = 'Funcional';
           sw.scriptURL = navigator.serviceWorker.controller.scriptURL;
           sw.scope = navigator.serviceWorker.controller.scope || '/';
+          
+          // Test de comunicación
+          try {
+            const messageChannel = new MessageChannel();
+            navigator.serviceWorker.controller.postMessage(
+              { type: 'PING' }, 
+              [messageChannel.port2]
+            );
+            
+            const response = await new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Timeout')), 1000);
+              messageChannel.port1.onmessage = (event) => {
+                clearTimeout(timeout);
+                resolve(event.data);
+              };
+            });
+            
+            if (response.type === 'PONG') {
+              sw.communication = 'Funcional';
+              sw.version = response.version || 'v2.25.8';
+            }
+          } catch (commError) {
+            sw.communication = 'Sin respuesta';
+          }
+          
         } else {
-          // NO HAY SW ACTIVO - Verificar registros
+          // NO HAY CONTROLADOR - Verificar registros
           const registrations = await navigator.serviceWorker.getRegistrations();
           
           if (registrations.length > 0) {
             const registration = registrations[0];
             sw.registered = true;
+            sw.scope = registration.scope;
             
             if (registration.installing) {
               sw.status = 'Instalando';
               sw.state = 'installing';
+              sw.scriptURL = registration.installing.scriptURL;
             } else if (registration.waiting) {
-              sw.status = 'Esperando activación';
+              sw.status = 'Esperando Activación';
               sw.state = 'waiting';
+              sw.scriptURL = registration.waiting.scriptURL;
             } else if (registration.active) {
-              sw.status = 'Registrado pero sin controlar';
+              sw.status = 'Registrado sin Control';
               sw.state = 'activated';
+              sw.scriptURL = registration.active.scriptURL;
             } else {
-              sw.status = 'Registrado sin worker';
+              sw.status = 'Registro Vacío';
               sw.state = 'none';
+              sw.scriptURL = 'N/A';
             }
             
             sw.controller = false;
             sw.communication = 'Sin controlador';
-            sw.scope = registration.scope;
-            sw.scriptURL = registration.active?.scriptURL || 'N/A';
           } else {
-            // NO HAY NADA
+            // NO HAY REGISTROS
             sw.registered = false;
             sw.status = 'No registrado';
             sw.state = 'unregistered';
             sw.controller = false;
             sw.communication = 'Sin controlador';
+            sw.scriptURL = 'N/A';
+            sw.scope = 'N/A';
           }
         }
         
-        // Versión
-        sw.version = 'v2.25.7';
+        // Información adicional
+        sw.version = sw.version || 'v2.25.8';
+        sw.updateViaCache = 'none';
         
       } catch (e) {
+        console.error('Error obteniendo info SW:', e);
         sw.error = e.message;
         sw.status = 'Error: ' + e.message;
         sw.registered = false;
         sw.controller = false;
         sw.communication = 'Error';
+        sw.version = 'v2.25.8';
       }
     } else {
       sw.supported = false;
-      sw.status = 'No soportado';
+      sw.status = 'No soportado por navegador';
       sw.registered = false;
       sw.controller = false;
       sw.communication = 'No soportado';
+      sw.version = 'N/A';
     }
 
     return sw;

@@ -62,22 +62,73 @@ function AppContent() {
     }).length;
   };
 
-  // Sistema de Service Worker simplificado
+  // Sistema de Service Worker DEFINITIVO
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       const registerSW = async () => {
         try {
-          console.log('🔧 Registrando Service Worker...');
-          const registration = await navigator.serviceWorker.register('/sw.js');
-          console.log('✅ Service Worker registrado:', registration);
+          console.log('🚀 Iniciando registro de Service Worker v2.25.8...');
+          
+          // Limpiar registros anteriores
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            console.log('🗑️ Desregistrando SW anterior:', registration.scope);
+            await registration.unregister();
+          }
+          
+          // Registrar nuevo SW con configuración optimizada
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            updateViaCache: 'none'
+          });
+          
+          console.log('✅ Service Worker v2.25.8 registrado:', registration.scope);
+          
+          // Escuchar mensajes del SW
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            const { type, version } = event.data || {};
+            if (type === 'SW_ACTIVATED') {
+              console.log(`🎯 Service Worker ${version} ACTIVADO Y CONTROLANDO`);
+              showToast(`Service Worker ${version} activado`, 'success');
+            }
+          });
+          
+          // Monitorear cambios de estado
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            console.log('🔄 Nueva versión de SW detectada');
+            
+            newWorker.addEventListener('statechange', () => {
+              console.log(`📡 SW State: ${newWorker.state}`);
+              if (newWorker.state === 'activated') {
+                console.log('✅ Nuevo SW activado');
+              }
+            });
+          });
+          
         } catch (error) {
-          console.error('❌ Error registrando Service Worker:', error);
+          console.error('❌ Error crítico registrando Service Worker:', error);
+          // Intentar registro básico como fallback
+          try {
+            await navigator.serviceWorker.register('/sw.js');
+            console.log('✅ SW registrado con configuración básica');
+          } catch (fallbackError) {
+            console.error('❌ Fallback también falló:', fallbackError);
+          }
         }
       };
 
-      registerSW();
+      // Registrar cuando la página esté completamente cargada
+      if (document.readyState === 'complete') {
+        registerSW();
+      } else {
+        window.addEventListener('load', registerSW);
+        return () => window.removeEventListener('load', registerSW);
+      }
+    } else {
+      console.warn('⚠️ Service Workers no soportados en este navegador');
     }
-  }, []);
+  }, [showToast]);
 
   // Función simplificada para limpiar cache
   const handleClearCache = () => {

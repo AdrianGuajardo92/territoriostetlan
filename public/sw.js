@@ -1,240 +1,198 @@
-// Service Worker Ultra-Simplificado para Móviles - Territorios LS
-const CACHE_NAME = 'territorios-tetlan-v2.25.6';
-const STATIC_CACHE = 'static-v2.25.6';
-const DYNAMIC_CACHE = 'dynamic-v2.25.6';
+// Service Worker DEFINITIVO - Territorios LS v2.25.8
+const VERSION = 'v2.25.8';
+const CACHE_NAME = `territorios-tetlan-${VERSION}`;
 
-// Archivos estáticos para cachear - SOLO LO ESENCIAL
-const STATIC_FILES = [
-  '/',
-  '/version.json'
-];
+console.log(`🚀 Service Worker ${VERSION} iniciando...`);
 
-// URLs que NO deben ser cacheadas
-const EXCLUDED_URLS = [
-  '/api/',
-  'chrome-extension://',
-  'moz-extension://',
-  'firebase',
-  'firestore'
-];
-
-// 🚀 INSTALACIÓN DEL SERVICE WORKER - NUNCA FALLA
+// ✅ INSTALACIÓN GARANTIZADA - NUNCA FALLA
 self.addEventListener('install', (event) => {
-  console.log('🔧 Service Worker: Instalando...');
+  console.log(`🔧 SW ${VERSION}: Instalando...`);
   
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then(cache => {
-        console.log('📦 Service Worker: Cacheando archivos estáticos');
-        // Cachear cada archivo individualmente para no fallar si uno no existe
-        const cachePromises = STATIC_FILES.map(url => 
-          cache.add(url).catch(err => {
-            console.warn(`⚠️ No se pudo cachear ${url}:`, err.message);
-            // NO fallar la instalación por un archivo
-            return Promise.resolve();
-          })
-        );
-        return Promise.all(cachePromises);
-      })
+    Promise.resolve()
       .then(() => {
-        console.log('✅ Service Worker: Instalación completada (con o sin cache)');
+        console.log(`✅ SW ${VERSION}: Instalación completada`);
+        // Saltar espera para activarse inmediatamente
         return self.skipWaiting();
       })
       .catch(error => {
-        console.error('❌ Service Worker: Error crítico:', error);
-        // Aún así, activar el SW
+        console.error('❌ SW: Error en instalación:', error);
+        // Aún así, continuar
         return self.skipWaiting();
       })
   );
 });
 
-// 🔄 ACTIVACIÓN DEL SERVICE WORKER
+// ✅ ACTIVACIÓN GARANTIZADA
 self.addEventListener('activate', (event) => {
-  console.log('🎯 Service Worker: Activando...');
+  console.log(`🎯 SW ${VERSION}: Activando...`);
   
   event.waitUntil(
     Promise.all([
       // Limpiar caches antiguos
       caches.keys().then(cacheNames => {
         return Promise.all(
-          cacheNames.map(cacheName => {
-            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-              console.log('🗑️ Service Worker: Eliminando cache antiguo:', cacheName);
+          cacheNames
+            .filter(cacheName => cacheName !== CACHE_NAME)
+            .map(cacheName => {
+              console.log(`🗑️ SW: Eliminando cache antiguo: ${cacheName}`);
               return caches.delete(cacheName);
-            }
-          })
+            })
         );
       }),
-      // Tomar control de todas las páginas
+      // Tomar control INMEDIATAMENTE
       self.clients.claim()
-    ]).then(() => {
-      console.log('✅ Service Worker: Activación completada');
+    ])
+    .then(() => {
+      console.log(`✅ SW ${VERSION}: ACTIVADO Y CONTROLANDO`);
+      
+      // Notificar a todos los clientes que el SW está activo
+      return self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'SW_ACTIVATED',
+            version: VERSION,
+            timestamp: Date.now()
+          });
+        });
+      });
+    })
+    .catch(error => {
+      console.error('❌ SW: Error en activación:', error);
+      // Aún así, tomar control
+      return self.clients.claim();
     })
   );
 });
 
-// 📡 INTERCEPTAR PETICIONES DE RED
+// 📡 MANEJO DE PETICIONES - ULTRA SIMPLE
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  const url = new URL(request.url);
   
-  // Ignorar URLs excluidas
-  if (EXCLUDED_URLS.some(excluded => request.url.includes(excluded))) {
-    return;
-  }
-  
-  // Ignorar peticiones que no sean GET
+  // Solo interceptar GET requests
   if (request.method !== 'GET') {
     return;
   }
   
+  // Ignorar URLs problemáticas
+  const url = new URL(request.url);
+  const excludedPatterns = [
+    'chrome-extension:',
+    'moz-extension:',
+    'firebase',
+    'firestore',
+    '/api/',
+    'hot-update'
+  ];
+  
+  if (excludedPatterns.some(pattern => request.url.includes(pattern))) {
+    return;
+  }
+  
+  // Para todo lo demás: Network First con fallback
   event.respondWith(
-    handleFetchRequest(request)
+    fetch(request)
+      .then(response => {
+        // Si la respuesta es válida, cacheamos opcionalmente
+        if (response.ok && response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(request, responseClone);
+          }).catch(() => {
+            // Ignorar errores de cache
+          });
+        }
+        return response;
+      })
+      .catch(() => {
+        // En caso de error de red, intentar desde cache
+        return caches.match(request).then(cachedResponse => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Si es una navegación y no hay cache, devolver página offline
+          if (request.destination === 'document') {
+            return caches.match('/offline.html').then(offlinePage => {
+              return offlinePage || new Response('Offline', { status: 503 });
+            });
+          }
+          // Para otros recursos, devolver error
+          return new Response('Network Error', { status: 503 });
+        });
+      })
   );
 });
 
-// 🎯 MANEJAR PETICIONES
-async function handleFetchRequest(request) {
-  const url = new URL(request.url);
-  
-  try {
-    // Para archivos estáticos: Cache First
-    if (STATIC_FILES.some(file => url.pathname === file || url.pathname.endsWith(file))) {
-      return await cacheFirst(request);
-    }
-    
-    // Para version.json: Network First (siempre actualizado)
-    if (url.pathname.includes('version.json')) {
-      return await networkFirst(request);
-    }
-    
-    // Para otros recursos: Network First con fallback
-    return await networkFirst(request);
-    
-  } catch (error) {
-    console.error('❌ Service Worker: Error en fetch:', error);
-    
-    // Fallback a página offline si es una navegación
-    if (request.destination === 'document') {
-      return caches.match('/offline.html');
-    }
-    
-    // Para otros recursos, devolver respuesta vacía
-    return new Response('', { status: 408, statusText: 'Request Timeout' });
-  }
-}
-
-// 📦 ESTRATEGIA CACHE FIRST
-async function cacheFirst(request) {
-  const cachedResponse = await caches.match(request);
-  
-  if (cachedResponse) {
-    return cachedResponse;
-  }
-  
-  try {
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      const cache = await caches.open(STATIC_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    throw error;
-  }
-}
-
-// 🌐 ESTRATEGIA NETWORK FIRST
-async function networkFirst(request) {
-  try {
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    const cachedResponse = await caches.match(request);
-    
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    throw error;
-  }
-}
-
-// 💬 MENSAJES DESDE LA APLICACIÓN
+// 💬 COMUNICACIÓN CON LA APP
 self.addEventListener('message', (event) => {
-  const { type, payload } = event.data;
+  const { type, payload } = event.data || {};
   
   switch (type) {
     case 'SKIP_WAITING':
+      console.log('🔄 SW: Recibido SKIP_WAITING');
       self.skipWaiting();
       break;
       
     case 'GET_VERSION':
-      event.ports[0].postMessage({
-        version: CACHE_NAME,
-        status: 'active'
+      console.log('📋 SW: Enviando versión');
+      event.ports[0]?.postMessage({
+        version: VERSION,
+        status: 'active',
+        timestamp: Date.now()
       });
       break;
       
     case 'CLEAR_CACHE':
-      clearAllCaches().then(() => {
-        event.ports[0].postMessage({ success: true });
+      console.log('🧹 SW: Limpiando cache');
+      caches.keys().then(cacheNames => {
+        return Promise.all(cacheNames.map(name => caches.delete(name)));
+      }).then(() => {
+        event.ports[0]?.postMessage({ success: true });
+      }).catch(error => {
+        event.ports[0]?.postMessage({ success: false, error: error.message });
       });
       break;
       
-    case 'UPDATE_CACHE':
-      updateCache().then(() => {
-        event.ports[0].postMessage({ success: true });
+    case 'PING':
+      console.log('🏓 SW: Respondiendo PING');
+      event.ports[0]?.postMessage({ 
+        type: 'PONG', 
+        version: VERSION,
+        timestamp: Date.now()
       });
       break;
+      
+    default:
+      console.log('❓ SW: Mensaje desconocido:', type);
   }
 });
 
-// 🗑️ LIMPIAR TODOS LOS CACHES
-async function clearAllCaches() {
-  const cacheNames = await caches.keys();
-  await Promise.all(
-    cacheNames.map(cacheName => caches.delete(cacheName))
-  );
-  console.log('🧹 Service Worker: Todos los caches eliminados');
-}
-
-// 🔄 ACTUALIZAR CACHE
-async function updateCache() {
-  const cache = await caches.open(STATIC_CACHE);
-  await cache.addAll(STATIC_FILES);
-  console.log('🔄 Service Worker: Cache actualizado');
-}
-
-// 📊 NOTIFICACIÓN DE ACTUALIZACIÓN
+// 🔔 NOTIFICACIÓN DE ACTUALIZACIÓN
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'CHECK_UPDATE') {
-    // Verificar si hay una nueva versión disponible
-    checkForUpdates().then(hasUpdate => {
-      event.ports[0].postMessage({ hasUpdate });
-    });
+  if (event.data?.type === 'CHECK_UPDATE') {
+    fetch('/version.json?t=' + Date.now())
+      .then(response => response.json())
+      .then(data => {
+        const hasUpdate = data.version !== VERSION;
+        event.ports[0]?.postMessage({ hasUpdate, currentVersion: VERSION, latestVersion: data.version });
+      })
+      .catch(error => {
+        event.ports[0]?.postMessage({ hasUpdate: false, error: error.message });
+      });
   }
 });
 
-// 🔍 VERIFICAR ACTUALIZACIONES
-async function checkForUpdates() {
-  try {
-    const response = await fetch('/version.json?t=' + Date.now());
-    const data = await response.json();
-    
-    return data.version !== CACHE_NAME.split('-v')[1];
-  } catch (error) {
-    console.error('❌ Service Worker: Error verificando actualizaciones:', error);
-    return false;
-  }
-}
+// 🎯 EVENTOS DE CICLO DE VIDA ADICIONALES
+self.addEventListener('controllerchange', () => {
+  console.log('🔄 SW: Controller cambió');
+});
 
-console.log('🚀 Service Worker v2.25.7 cargado correctamente - ULTRA RÁPIDO');
+self.addEventListener('error', (event) => {
+  console.error('❌ SW: Error global:', event.error);
+});
+
+self.addEventListener('unhandledrejection', (event) => {
+  console.error('❌ SW: Promise rechazada:', event.reason);
+});
+
+console.log(`✅ Service Worker ${VERSION} cargado correctamente - REGISTRO GARANTIZADO`);

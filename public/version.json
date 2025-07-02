@@ -1,5 +1,11 @@
 {
-  "version": "2.25.6",
-  "buildDate": "2025-01-01",
-  "description": "SW NUNCA FALLA - instalación garantizada + cache mínimo esencial"
+  "version": "v2.25.8",
+  "timestamp": "2025-01-02T13:45:00.000Z",
+  "changes": [
+    "Service Worker completamente reescrito para garantizar registro",
+    "Eliminación de problemas de cache que impedían activación",
+    "Implementación de activación inmediata con skipWaiting",
+    "Mejora en la comunicación entre SW y aplicación",
+    "Solución definitiva para el estado 'no registrado'"
+  ]
 } 
