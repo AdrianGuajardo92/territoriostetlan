@@ -1,5 +1,5 @@
 {
-  "version": "v2.25.15",
+  "version": "v2.25.16",
   "timestamp": "2025-01-02T13:45:00.000Z",
   "changes": [
     "🗑️ ELIMINACIÓN COMPLETA: Headers Clear-Site-Data removidos totalmente",

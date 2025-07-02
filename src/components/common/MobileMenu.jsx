@@ -76,11 +76,11 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
           willChange: 'transform'
         }}
       >
-        <div className="h-full flex flex-col bg-gray-100 shadow-2xl border-l border-gray-200">
+        <div className="h-full flex flex-col bg-gray-100 shadow-2xl">
           <div className="relative h-full flex flex-col" style={{ touchAction: 'pan-y' }}>
             {/* Header con estilo consistente de modales */}
-            <div className="flex-shrink-0 p-6 shadow-xl" style={{ backgroundColor: '#2C3E50' }}>
-              <div className="flex items-center justify-between">
+            <div className="flex-shrink-0 shadow-xl" style={{ backgroundColor: '#2C3E50' }}>
+              <div className="flex items-center justify-between p-6">
                 {/* Título con ícono */}
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
