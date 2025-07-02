@@ -1,10 +1,22 @@
 {
-  "version": "2.18.0",
+  "version": "2.19.0",
   "releaseDate": "2025-01-01",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "major", 
+        "description": "🚀 GESTIÓN COMPLETA DE USUARIOS FINALIZADA - 100% FUNCIONAL: Interfaz espectacular con diseño moderno, formularios completos y todas las funciones operativas"
+      },
+      {
+        "type": "improvement", 
+        "description": "✨ INTERFAZ PROFESIONAL COMPLETA: Vista de lista con tarjetas diferenciadas por rol, formularios de creación/edición, sistema de reseteo de contraseñas y eliminación segura"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎨 DISEÑO RESPONSIVE OPTIMIZADO: Gradientes elegantes, protecciones contra auto-eliminación, confirmaciones de seguridad y experiencia móvil perfecta"
+      },
       {
         "type": "major", 
         "description": "👥 SISTEMA DE GESTIÓN DE USUARIOS COMPLETO: Crear, editar, eliminar usuarios y resetear contraseñas desde el panel de administración"
