@@ -261,14 +261,38 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
   const getServiceWorkerInfo = async () => {
     const sw = {};
 
+    console.log('🔍 DIAGNÓSTICO SW: Iniciando verificación...');
+
     if ('serviceWorker' in navigator) {
       sw.supported = true;
+      console.log('✅ DIAGNÓSTICO SW: Navegador soporta Service Workers');
       
       try {
-        // VERIFICACIÓN SIMPLE Y DIRECTA
+        // VERIFICACIÓN DETALLADA CON LOGS
         const registrations = await navigator.serviceWorker.getRegistrations();
         const hasController = !!navigator.serviceWorker.controller;
         
+        console.log('🔍 DIAGNÓSTICO SW: Registros encontrados:', registrations.length);
+        console.log('🔍 DIAGNÓSTICO SW: Tiene controlador:', hasController);
+        
+        if (hasController) {
+          console.log('🔍 DIAGNÓSTICO SW: Controller URL:', navigator.serviceWorker.controller.scriptURL);
+          console.log('🔍 DIAGNÓSTICO SW: Controller scope:', navigator.serviceWorker.controller.scope);
+        }
+        
+        if (registrations.length > 0) {
+          registrations.forEach((reg, index) => {
+            console.log(`🔍 DIAGNÓSTICO SW: Registro ${index}:`, {
+              scope: reg.scope,
+              active: !!reg.active,
+              installing: !!reg.installing,
+              waiting: !!reg.waiting,
+              activeURL: reg.active?.scriptURL
+            });
+          });
+        }
+        
+        // LÓGICA DE DETECCIÓN
         if (registrations.length > 0 || hasController) {
           // HAY SERVICE WORKER
           sw.registered = true;
@@ -284,6 +308,8 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
             sw.scriptURL = registrations[0].active?.scriptURL || 'N/A';
             sw.scope = registrations[0].scope;
           }
+          
+          console.log('✅ DIAGNÓSTICO SW: SW DETECTADO COMO ACTIVO');
         } else {
           // NO HAY SERVICE WORKER
           sw.registered = false;
@@ -293,12 +319,16 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
           sw.version = 'v2.25.11';
           sw.scriptURL = 'N/A';
           sw.scope = 'N/A';
+          
+          console.log('❌ DIAGNÓSTICO SW: NO SE DETECTÓ SW');
         }
         
         sw.updateViaCache = 'none';
         
+        console.log('🔍 DIAGNÓSTICO SW: Resultado final:', sw);
+        
       } catch (e) {
-        console.error('Error obteniendo info SW:', e);
+        console.error('❌ DIAGNÓSTICO SW: Error obteniendo info:', e);
         sw.error = e.message;
         sw.status = 'Error: ' + e.message;
         sw.registered = false;
@@ -313,6 +343,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.controller = false;
       sw.communication = 'No soportado';
       sw.version = 'N/A';
+      console.log('❌ DIAGNÓSTICO SW: Navegador no soporta SW');
     }
 
     return sw;
