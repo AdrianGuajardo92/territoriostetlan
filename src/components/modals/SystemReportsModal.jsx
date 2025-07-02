@@ -216,17 +216,67 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         sw.registered = !!registration;
         
         if (registration) {
-          sw.state = registration.active?.state || 'unknown';
-          sw.scriptURL = registration.active?.scriptURL || 'unknown';
-          sw.scope = registration.scope;
+          const activeWorker = registration.active;
+          const installingWorker = registration.installing;
+          const waitingWorker = registration.waiting;
+          
+          // Estado más detallado
+          if (activeWorker) {
+            sw.state = activeWorker.state;
+            sw.scriptURL = activeWorker.scriptURL;
+            sw.scope = registration.scope;
+            sw.status = 'Activo';
+          } else if (waitingWorker) {
+            sw.state = waitingWorker.state;
+            sw.status = 'Esperando activación';
+          } else if (installingWorker) {
+            sw.state = installingWorker.state;
+            sw.status = 'Instalando';
+          } else {
+            sw.state = 'unknown';
+            sw.status = 'Estado desconocido';
+          }
+          
+          // Información adicional
+          sw.updateViaCache = registration.updateViaCache;
+          sw.lastUpdateCheck = registration.lastUpdateCheck || 'Nunca';
+        } else {
+          sw.state = 'unregistered';
+          sw.status = 'No registrado';
         }
         
         sw.controller = !!navigator.serviceWorker.controller;
+        sw.controllerURL = navigator.serviceWorker.controller?.scriptURL || 'Ninguno';
+        
+        // Test de comunicación
+        if (navigator.serviceWorker.controller) {
+          try {
+            const messageChannel = new MessageChannel();
+            navigator.serviceWorker.controller.postMessage({
+              type: 'GET_VERSION'
+            }, [messageChannel.port2]);
+            
+            const response = await new Promise((resolve, reject) => {
+              messageChannel.port1.onmessage = (event) => resolve(event.data);
+              setTimeout(() => reject(new Error('Timeout')), 2000);
+            });
+            
+            sw.communication = 'Funcional';
+            sw.version = response.version || 'Desconocida';
+          } catch (e) {
+            sw.communication = 'Error: ' + e.message;
+          }
+        } else {
+          sw.communication = 'Sin controlador';
+        }
+        
       } catch (e) {
         sw.error = e.message;
+        sw.status = 'Error: ' + e.message;
       }
     } else {
       sw.supported = false;
+      sw.status = 'No soportado por el navegador';
     }
 
     return sw;
@@ -296,6 +346,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
 
   const tabs = [
     { id: 'overview', label: 'Resumen', icon: 'chart-bar', color: 'indigo', description: 'Vista general del sistema' },
+    { id: 'serviceWorker', label: 'Service Worker', icon: 'cogs', color: 'emerald', description: 'Estado del SW' },
     { id: 'performance', label: 'Rendimiento', icon: 'tachometer-alt', color: 'blue', description: 'Métricas de velocidad' },
     { id: 'errors', label: 'Errores', icon: 'exclamation-triangle', color: 'red', description: 'Logs de errores' },
     { id: 'browser', label: 'Navegador', icon: 'globe', color: 'purple', description: 'Info del navegador' },
@@ -313,6 +364,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       red: { bg: 'from-red-500 to-pink-600', text: 'text-red-600', border: 'border-red-500' },
       purple: { bg: 'from-purple-500 to-indigo-600', text: 'text-purple-600', border: 'border-purple-500' },
       green: { bg: 'from-green-500 to-emerald-600', text: 'text-green-600', border: 'border-green-500' },
+      emerald: { bg: 'from-emerald-500 to-green-600', text: 'text-emerald-600', border: 'border-emerald-500' },
       cyan: { bg: 'from-cyan-500 to-blue-600', text: 'text-cyan-600', border: 'border-cyan-500' }
     };
     return configs[color] || configs.indigo;
@@ -467,6 +519,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
             ) : (
               <div className="space-y-4">
                 {activeTab === 'overview' && <OverviewTab data={systemData} />}
+                {activeTab === 'serviceWorker' && <ServiceWorkerTab data={systemData.serviceWorker} />}
                 {activeTab === 'performance' && <PerformanceTab data={systemData.performance} />}
                 {activeTab === 'errors' && <ErrorsTab data={systemData.errors} />}
                 {activeTab === 'browser' && <BrowserTab data={systemData.browser} />}
@@ -496,8 +549,8 @@ const OverviewTab = ({ data }) => {
     },
     {
       title: 'Service Worker',
-      value: data.serviceWorker?.registered ? 'Activo' : 'Inactivo',
-      subtitle: data.serviceWorker?.state || 'Estado desconocido',
+      value: data.serviceWorker?.status || 'Verificando...',
+      subtitle: data.serviceWorker?.communication || 'Estado desconocido',
       icon: 'cogs',
       gradient: data.serviceWorker?.registered ? 'from-green-500 to-emerald-600' : 'from-red-500 to-pink-600',
       bgGradient: data.serviceWorker?.registered ? 'from-green-50 to-emerald-50' : 'from-red-50 to-pink-50',
@@ -1166,6 +1219,165 @@ const NetworkTab = ({ data }) => (
         ) : (
           <div className="text-gray-600 text-sm">Realizando test...</div>
         )}
+      </div>
+    </div>
+  </div>
+);
+
+// 🔧 NUEVA PESTAÑA DE SERVICE WORKER
+const ServiceWorkerTab = ({ data }) => (
+  <div className="space-y-4">
+    <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+      <div className="flex items-center gap-3 mb-6">
+        <div className={`w-12 h-12 bg-gradient-to-br rounded-xl flex items-center justify-center shadow-lg ${
+          data?.registered ? 'from-emerald-400 to-green-500' : 'from-red-400 to-pink-500'
+        }`}>
+          <i className="fas fa-cogs text-xl text-white"></i>
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-gray-800">Service Worker</h3>
+          <p className="text-gray-600 text-sm">Estado y funcionalidad PWA</p>
+        </div>
+      </div>
+
+      {/* Estado Principal */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-gray-700">Estado</span>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              data?.registered ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {data?.status || 'Desconocido'}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-gray-700">Comunicación</span>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              data?.communication === 'Funcional' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+            }`}>
+              {data?.communication || 'Sin probar'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Información Detallada */}
+      {data?.registered && (
+        <div className="space-y-4">
+          <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+            <i className="fas fa-info-circle text-blue-500"></i>
+            Información Técnica
+          </h4>
+          
+          <div className="grid grid-cols-1 gap-3">
+            {data.scriptURL && (
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-blue-800">Script URL</span>
+                  <span className="text-blue-700 text-sm font-mono break-all">{data.scriptURL}</span>
+                </div>
+              </div>
+            )}
+
+            {data.scope && (
+              <div className="bg-purple-50 rounded-lg p-4">
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-purple-800">Scope</span>
+                  <span className="text-purple-700 text-sm font-mono">{data.scope}</span>
+                </div>
+              </div>
+            )}
+
+            {data.version && (
+              <div className="bg-emerald-50 rounded-lg p-4">
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-emerald-800">Versión</span>
+                  <span className="text-emerald-700 text-sm font-mono">{data.version}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-gray-700">Controlador Activo</span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  data.controller ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {data.controller ? 'Sí' : 'No'}
+                </span>
+              </div>
+            </div>
+
+            {data.updateViaCache && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-700">Estrategia de Cache</span>
+                  <span className="text-gray-600 text-sm">{data.updateViaCache}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Soporte del Navegador */}
+      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-gray-700">Soporte del Navegador</span>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            data?.supported ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}>
+            {data?.supported ? 'Soportado' : 'No soportado'}
+          </span>
+        </div>
+      </div>
+
+      {/* Errores */}
+      {data?.error && (
+        <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+          <div className="flex items-center gap-2">
+            <i className="fas fa-exclamation-triangle text-red-500"></i>
+            <span className="font-medium text-red-800">Error Detectado</span>
+          </div>
+          <p className="text-red-700 text-sm mt-1 font-mono">{data.error}</p>
+        </div>
+      )}
+
+      {/* Acciones */}
+      <div className="mt-6 flex flex-wrap gap-3">
+        <button 
+          onClick={() => {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+                .then(() => window.location.reload())
+                .catch(console.error);
+            }
+          }}
+          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 flex items-center gap-2"
+        >
+          <i className="fas fa-sync-alt"></i>
+          Reinstalar SW
+        </button>
+        
+        <button 
+          onClick={() => {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations()
+                .then(registrations => {
+                  registrations.forEach(registration => registration.unregister());
+                  setTimeout(() => window.location.reload(), 1000);
+                });
+            }
+          }}
+          className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 transition-all duration-200 flex items-center gap-2"
+        >
+          <i className="fas fa-trash"></i>
+          Desregistrar SW
+        </button>
       </div>
     </div>
   </div>
