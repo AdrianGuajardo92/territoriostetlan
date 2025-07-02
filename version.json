@@ -1,10 +1,14 @@
 {
-  "version": "2.19.0",
+  "version": "2.19.1",
   "releaseDate": "2025-01-01",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "improvement", 
+        "description": "📱 OPTIMIZACIÓN MÓVIL PERFECTA: Gestión de usuarios 100% optimizada para celulares - tarjetas compactas, botones táctiles y diseño responsive impecable"
+      },
       {
         "type": "major", 
         "description": "🚀 GESTIÓN COMPLETA DE USUARIOS FINALIZADA - 100% FUNCIONAL: Interfaz espectacular con diseño moderno, formularios completos y todas las funciones operativas"

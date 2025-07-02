@@ -167,56 +167,55 @@ const UserManagementModal = ({
     const badgeColor = isAdmin ? 'from-purple-600 to-violet-600' : 'from-blue-500 to-indigo-600';
     
     return (
-      <div key={user.id} className={`bg-gradient-to-br ${cardBg} rounded-2xl shadow-lg p-6 border-2 ${borderColor} hover:shadow-xl hover:scale-[1.02] transition-all duration-300`}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <div className={`w-14 h-14 bg-gradient-to-r ${iconBg} rounded-2xl flex items-center justify-center shadow-lg`}>
-              <Icon name={isAdmin ? "shield" : "user"} className="text-white text-xl" />
-            </div>
-            <div>
-              <h4 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+      <div key={user.id} className={`bg-gradient-to-br ${cardBg} rounded-2xl shadow-lg p-4 border-2 ${borderColor} hover:shadow-xl transition-all duration-300`}>
+        {/* Header de la tarjeta - Optimizado para móvil */}
+        <div className="flex items-start gap-3 mb-4">
+          <div className={`w-12 h-12 bg-gradient-to-r ${iconBg} rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}>
+            <Icon name={isAdmin ? "shield" : "user"} className="text-white text-lg" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="text-base font-bold text-gray-900 truncate">
                 {user.name}
-                {isCurrentUser && (
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                    Tú
-                  </span>
-                )}
               </h4>
-              <p className="text-sm text-gray-600 font-medium flex items-center">
-                <Icon name="key" className="mr-2" />
-                {user.accessCode}
-              </p>
-              <div className="flex items-center mt-1">
-                <span className={`bg-gradient-to-r ${badgeColor} text-white px-3 py-1 rounded-full text-xs font-bold`}>
-                  {isAdmin ? 'ADMINISTRADOR' : 'PUBLICADOR'}
+              {isCurrentUser && (
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+                  Tú
                 </span>
-              </div>
+              )}
             </div>
+            <p className="text-sm text-gray-600 font-medium flex items-center mb-2">
+              <Icon name="key" className="mr-1 text-xs" />
+              <span className="truncate">{user.accessCode}</span>
+            </p>
+            <span className={`inline-block bg-gradient-to-r ${badgeColor} text-white px-2 py-1 rounded-full text-xs font-bold`}>
+              {isAdmin ? 'ADMIN' : 'PUBLICADOR'}
+            </span>
           </div>
         </div>
 
-        {/* Botones de acción */}
-        <div className="flex gap-2 mt-4">
+        {/* Botones de acción - Optimizado para móvil */}
+        <div className="flex gap-1.5">
           <button
             onClick={() => handleEdit(user)}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-white/70 hover:bg-white border border-gray-200 text-gray-700 rounded-xl transition-colors font-medium"
+            className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 bg-white/70 hover:bg-white border border-gray-200 text-gray-700 rounded-lg transition-colors text-sm font-medium"
           >
-            <Icon name="edit" />
-            Editar
+            <Icon name="edit" className="text-sm" />
+            <span className="hidden sm:inline">Editar</span>
           </button>
           <button
             onClick={() => handlePasswordResetClick(user)}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-yellow-100 hover:bg-yellow-200 border border-yellow-200 text-yellow-700 rounded-xl transition-colors font-medium"
+            className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 bg-yellow-100 hover:bg-yellow-200 border border-yellow-200 text-yellow-700 rounded-lg transition-colors text-sm font-medium"
           >
-            <Icon name="key" />
-            Resetear
+            <Icon name="key" className="text-sm" />
+            <span className="hidden sm:inline">Reset</span>
           </button>
           {!isCurrentUser && (
             <button
               onClick={() => handleDeleteClick(user)}
-              className="flex items-center justify-center gap-2 py-2 px-4 bg-red-100 hover:bg-red-200 border border-red-200 text-red-700 rounded-xl transition-colors font-medium"
+              className="flex items-center justify-center py-2.5 px-3 bg-red-100 hover:bg-red-200 border border-red-200 text-red-700 rounded-lg transition-colors text-sm font-medium"
             >
-              <Icon name="trash" />
+              <Icon name="trash" className="text-sm" />
             </button>
           )}
         </div>
@@ -226,14 +225,14 @@ const UserManagementModal = ({
 
   const renderListView = () => (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header - Optimizado para móvil */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-            <Icon name="users-cog" className="text-white text-xl" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Icon name="users-cog" className="text-white text-lg sm:text-xl" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h3>
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-800">Gestión de Usuarios</h3>
             <p className="text-gray-600 text-sm">
               {users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''} en el sistema
             </p>
@@ -242,10 +241,10 @@ const UserManagementModal = ({
         
         <button
           onClick={() => setActiveView('create')}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-lg"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-medium shadow-lg w-full sm:w-auto"
         >
-          <Icon name="plus" />
-          Nuevo Usuario
+          <Icon name="plus" className="text-lg" />
+          <span>Nuevo Usuario</span>
         </button>
       </div>
 
@@ -262,7 +261,7 @@ const UserManagementModal = ({
             </span>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          <div className="grid grid-cols-1 gap-3 mb-8">
             {adminUsers.map(user => renderUserCard(user, true))}
           </div>
         </div>
@@ -291,7 +290,7 @@ const UserManagementModal = ({
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {publisherUsers.map(user => renderUserCard(user, false))}
           </div>
         )}
@@ -301,22 +300,22 @@ const UserManagementModal = ({
 
   const renderFormView = () => (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header - Optimizado para móvil */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => setActiveView('list')}
-          className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors"
+          className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors"
         >
-          <Icon name="arrowLeft" className="text-gray-600" />
+          <Icon name="arrowLeft" className="text-gray-600 text-sm sm:text-base" />
         </button>
-        <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-          <Icon name={activeView === 'create' ? 'plus' : 'edit'} className="text-white text-xl" />
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+          <Icon name={activeView === 'create' ? 'plus' : 'edit'} className="text-white text-lg sm:text-xl" />
         </div>
-        <div>
-          <h3 className="text-2xl font-bold text-gray-800">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg sm:text-2xl font-bold text-gray-800 truncate">
             {activeView === 'create' ? 'Crear Nuevo Usuario' : 'Editar Usuario'}
           </h3>
-          <p className="text-gray-600 text-sm">
+          <p className="text-gray-600 text-sm truncate">
             {activeView === 'create' 
               ? 'Completa los datos para crear un nuevo usuario'
               : `Editando: ${selectedUser?.name}`
@@ -325,9 +324,9 @@ const UserManagementModal = ({
         </div>
       </div>
 
-      {/* Formulario */}
-      <form onSubmit={handleFormSubmit} className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Formulario - Optimizado para móvil */}
+      <form onSubmit={handleFormSubmit} className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -393,19 +392,19 @@ const UserManagementModal = ({
           </div>
         </div>
 
-        {/* Botones */}
-        <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
+        {/* Botones - Optimizado para móvil */}
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={() => setActiveView('list')}
-            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium"
+            className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium order-2 sm:order-1"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={isProcessing}
-            className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
           >
             {isProcessing ? (
               <>
@@ -430,22 +429,22 @@ const UserManagementModal = ({
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
-          {/* Header del modal */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Icon name="users-cog" className="text-2xl" />
-              <h2 className="text-2xl font-bold">Gestión de Usuarios</h2>
+          {/* Header del modal - Optimizado para móvil */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 sm:p-6 flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Icon name="users-cog" className="text-xl sm:text-2xl" />
+              <h2 className="text-lg sm:text-2xl font-bold">Gestión de Usuarios</h2>
             </div>
             <button
               onClick={closeModal}
-              className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
             >
-              <Icon name="times" className="text-xl" />
+              <Icon name="times" className="text-lg sm:text-xl" />
             </button>
           </div>
 
-          {/* Contenido */}
-          <div className="p-6 max-h-[calc(90vh-100px)] overflow-y-auto">
+          {/* Contenido - Optimizado para móvil */}
+          <div className="p-4 sm:p-6 max-h-[calc(90vh-100px)] overflow-y-auto">
             {activeView === 'list' ? renderListView() : renderFormView()}
           </div>
         </div>
