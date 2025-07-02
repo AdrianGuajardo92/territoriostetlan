@@ -3,7 +3,7 @@ import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
-import { LazyStatsModal, LazyReportsModal } from './LazyModals'; // CORRECCIÓN: Usar lazy loading para ambos
+import { LazyStatsModal } from './LazyModals'; // CORRECCIÓN: Usar lazy loading para stats
 import UserManagementModal from './UserManagementModal';
 
 const AdminModal = (props = {}) => {
@@ -25,7 +25,6 @@ const AdminModal = (props = {}) => {
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showStatsModal, setShowStatsModal] = useState(false); // Estado para las estadísticas completas
-  const [showReportsModal, setShowReportsModal] = useState(false); // Estado para el modal de reportes
   const [showUserManagement, setShowUserManagement] = useState(false); // Estado para el modal de gestión de usuarios
   const [proposalFilter, setProposalFilter] = useState('pending'); // Filtro para propuestas: all, pending, approved, rejected
   
@@ -58,14 +57,7 @@ const AdminModal = (props = {}) => {
       color: 'blue',
       action: () => setView('users') 
     },
-    { 
-      id: 'reports', 
-      title: 'Reportes del Sistema', 
-      description: 'Generar informes detallados y exportaciones', 
-      icon: 'fas fa-file-alt', 
-      color: 'indigo',
-      action: () => setShowReportsModal(true) 
-    },
+
     { 
       id: 'stats', 
       title: 'Estadísticas Completas', 
@@ -970,14 +962,7 @@ const AdminModal = (props = {}) => {
         />
       )}
       
-      {/* Modal de Reportes */}
-      {showReportsModal && (
-        <LazyReportsModal 
-          isOpen={showReportsModal} 
-          onClose={() => setShowReportsModal(false)} 
-          modalId="admin-reports-modal"
-        />
-      )}
+
       
       {/* Modal de Gestión de Usuarios */}
       {showUserManagement && (

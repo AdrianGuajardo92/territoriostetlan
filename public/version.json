@@ -1,5 +1,5 @@
 {
-  "version": "2.21.0",
+  "version": "2.25.0",
   "buildDate": "2025-01-01",
-  "description": "Panel administrativo simplificado - eliminada gestión de territorios innecesaria"
+  "description": "Limpiar caché movido a Reportes del Sistema - interfaz simplificada"
 } 

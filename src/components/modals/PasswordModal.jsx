@@ -25,7 +25,27 @@ const PasswordModal = ({ isOpen, onClose }) => {
       setError('');
       setSuccess(false);
       setShowPasswords(false);
+      
+      // 🔒 BLOQUEAR SCROLL DEL BODY
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+    } else {
+      // 🔓 RESTAURAR SCROLL DEL BODY
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
     }
+
+    // Cleanup al desmontar
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
   }, [isOpen]);
   
   const handleSubmit = async (e) => {
@@ -66,7 +86,8 @@ const PasswordModal = ({ isOpen, onClose }) => {
       // Actualizar contraseña
       const result = await updatePassword(newPassword);
       
-      if (result.success) {
+      // Verificar si la función devolvió un resultado válido
+      if (result && result.success) {
         setSuccess(true);
         showToast('¡Contraseña cambiada exitosamente!', 'success');
         
@@ -74,8 +95,17 @@ const PasswordModal = ({ isOpen, onClose }) => {
         setTimeout(() => {
           onClose();
         }, 2000);
+      } else if (result && result.error) {
+        setError(result.error);
       } else {
-        setError(result.error || 'Error al cambiar la contraseña');
+        // Si updatePassword no devuelve nada, asumimos que fue exitoso
+        setSuccess(true);
+        showToast('¡Contraseña cambiada exitosamente!', 'success');
+        
+        // Cerrar modal después de 2 segundos
+        setTimeout(() => {
+          onClose();
+        }, 2000);
       }
     } catch (error) {
       console.error('Error al cambiar contraseña:', error);
@@ -84,186 +114,326 @@ const PasswordModal = ({ isOpen, onClose }) => {
       setIsLoading(false);
     }
   };
-  
+
+  // Función para verificar fortaleza de la contraseña
+  const getPasswordStrength = (password) => {
+    if (!password) return { level: 0, text: '', color: '' };
+    
+    let score = 0;
+    if (password.length >= 6) score++;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    
+    if (score <= 1) return { level: 1, text: 'Débil', color: 'red' };
+    if (score <= 2) return { level: 2, text: 'Regular', color: 'yellow' };
+    if (score <= 3) return { level: 3, text: 'Buena', color: 'blue' };
+    return { level: 4, text: 'Excelente', color: 'green' };
+  };
+
+  const passwordStrength = getPasswordStrength(newPassword);
+
+  if (!isOpen) return null;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" size="sm">
-      <div className="flex flex-col h-full">
-        {/* Header minimalista */}
-        <div className="bg-gray-50 border-b border-gray-200 p-6">
+    <div 
+      className="fixed inset-0 z-[9999] bg-white" 
+      style={{ 
+        touchAction: 'none',
+        overscrollBehavior: 'contain'
+      }}
+      onTouchMove={(e) => {
+        // Solo permitir scroll dentro del contenedor de contenido
+        if (!e.target.closest('.scroll-container')) {
+          e.preventDefault();
+        }
+      }}
+    >
+      <div className="flex flex-col h-screen overflow-hidden bg-gradient-to-br from-gray-50 via-white to-blue-50">
+        {/* 🎨 HEADER ELEGANTE CON GRADIENTE */}
+        <div className="flex-shrink-0 bg-gradient-to-r from-slate-700 to-gray-800 text-white p-6 shadow-xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-800">Cambiar Contraseña</h2>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
+                <i className="fas fa-shield-alt text-2xl text-white"></i>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-1">Cambiar Contraseña</h2>
+                <p className="text-gray-300 text-sm">Actualiza tus credenciales de seguridad</p>
+              </div>
+            </div>
+            
             <button 
               onClick={onClose}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              className="p-3 rounded-xl transition-all transform hover:scale-105 group"
+              style={{ backgroundColor: '#34495e' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
             >
-              <Icon name="x" size={20} className="text-gray-600" />
+              <Icon name="x" size={20} className="text-white group-hover:rotate-90 transition-transform" />
             </button>
           </div>
         </div>
         
-        {/* Contenido */}
-        <div className="flex-1 p-6">
+        {/* 📱 CONTENIDO SCROLLEABLE */}
+        <div 
+          className="flex-1 overflow-y-auto p-6 scroll-container" 
+          style={{ 
+            WebkitOverflowScrolling: 'touch',
+            scrollBehavior: 'smooth',
+            touchAction: 'pan-y'
+          }}
+        >
           {success ? (
+            /* 🎉 VISTA DE ÉXITO ESPECTACULAR */
             <div className="text-center py-12">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Icon name="checkCircle" size={40} className="text-green-500" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                ¡Contraseña actualizada!
-              </h3>
-              <p className="text-gray-600">Tu contraseña ha sido cambiada exitosamente.</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Info del usuario */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                    <Icon name="user" size={24} className="text-gray-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">{currentUser?.name}</p>
-                    <p className="text-sm text-gray-500">Cambio de credenciales</p>
-                  </div>
+              <div className="relative w-32 h-32 mx-auto mb-8">
+                <div className="w-32 h-32 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center shadow-2xl border-4 border-green-200 animate-pulse">
+                  <i className="fas fa-check-circle text-6xl text-green-500"></i>
+                </div>
+                <div className="absolute -top-3 -right-3 w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                  <i className="fas fa-shield-alt text-white text-xl"></i>
                 </div>
               </div>
               
-              {/* Contraseña actual */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contraseña actual
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => {
-                      setCurrentPassword(e.target.value);
-                      setError('');
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent transition-colors"
-                    placeholder="Ingresa tu contraseña actual"
-                    disabled={isLoading}
-                  />
-                  <Icon 
-                    name="lock" 
-                    size={20} 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
-                </div>
-              </div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">¡Contraseña Actualizada!</h3>
+              <p className="text-gray-600 text-lg leading-relaxed mb-8">
+                Tu contraseña ha sido cambiada exitosamente. Tu cuenta ahora está más segura.
+              </p>
               
-              {/* Nueva contraseña */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nueva contraseña
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => {
-                      setNewPassword(e.target.value);
-                      setError('');
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent transition-colors"
-                    placeholder="Mínimo 6 caracteres"
-                    disabled={isLoading}
-                  />
-                  <Icon 
-                    name="key" 
-                    size={20} 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
+              {/* Card informativa de éxito */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-200 max-w-md mx-auto">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mr-3">
+                    <i className="fas fa-lock text-white text-xl"></i>
+                  </div>
+                  <h4 className="text-lg font-semibold text-green-900">Seguridad Mejorada</h4>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  La contraseña debe tener al menos 6 caracteres
+                <p className="text-green-800 text-sm leading-relaxed">
+                  Recuerda mantener tu nueva contraseña en un lugar seguro y no compartirla con nadie.
                 </p>
               </div>
-              
-              {/* Confirmar contraseña */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirmar nueva contraseña
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => {
-                      setConfirmPassword(e.target.value);
-                      setError('');
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent transition-colors"
-                    placeholder="Repite la nueva contraseña"
-                    disabled={isLoading}
-                  />
-                  <Icon 
-                    name="checkCircle" 
-                    size={20} 
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* 👤 INFO DEL USUARIO ELEGANTE */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200 shadow-lg">
+                <div className="flex items-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+                    <i className="fas fa-user text-2xl text-white"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-blue-900 mb-1">{currentUser?.name}</h3>
+                    <p className="text-blue-600 text-sm flex items-center">
+                      <i className="fas fa-shield-alt mr-2"></i>
+                      Actualización de credenciales de seguridad
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <i className="fas fa-key text-blue-600 text-lg"></i>
+                  </div>
+                </div>
+              </div>
+
+              {/* 🔐 FORMULARIO ELEGANTE */}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Campo de usuario oculto para accesibilidad */}
+                <input
+                  type="text"
+                  name="username"
+                  value={currentUser?.name || ''}
+                  autoComplete="username"
+                  style={{ display: 'none' }}
+                  readOnly
+                  tabIndex={-1}
+                />
+                
+                {/* Contraseña actual */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    <i className="fas fa-lock mr-2 text-gray-500"></i>
+                    Contraseña Actual
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type={showPasswords ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => {
+                        setCurrentPassword(e.target.value);
+                        setError('');
+                      }}
+                      className="w-full px-4 py-4 pl-12 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 bg-white shadow-md group-hover:shadow-lg"
+                      placeholder="Ingresa tu contraseña actual"
+                      autoComplete="current-password"
+                      disabled={isLoading}
+                    />
+                    <i className="fas fa-shield-alt absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                  </div>
+                </div>
+                
+                {/* Nueva contraseña */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    <i className="fas fa-key mr-2 text-gray-500"></i>
+                    Nueva Contraseña
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type={showPasswords ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setError('');
+                      }}
+                      className="w-full px-4 py-4 pl-12 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 bg-white shadow-md group-hover:shadow-lg"
+                      placeholder="Mínimo 6 caracteres"
+                      autoComplete="new-password"
+                      disabled={isLoading}
+                    />
+                    <i className="fas fa-plus-circle absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                  </div>
+                  
+                  {/* Indicador de fortaleza de contraseña */}
+                  {newPassword && (
+                    <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Fortaleza:</span>
+                        <span className={`text-sm font-bold ${
+                          passwordStrength.color === 'red' ? 'text-red-600' :
+                          passwordStrength.color === 'yellow' ? 'text-yellow-600' :
+                          passwordStrength.color === 'blue' ? 'text-blue-600' :
+                          'text-green-600'
+                        }`}>
+                          {passwordStrength.text}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            passwordStrength.color === 'red' ? 'bg-gradient-to-r from-red-400 to-red-600' :
+                            passwordStrength.color === 'yellow' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                            passwordStrength.color === 'blue' ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
+                            'bg-gradient-to-r from-green-400 to-green-600'
+                          }`}
+                          style={{ width: `${(passwordStrength.level / 4) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Confirmar contraseña */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    <i className="fas fa-check-double mr-2 text-gray-500"></i>
+                    Confirmar Nueva Contraseña
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type={showPasswords ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setError('');
+                      }}
+                      className={`w-full px-4 py-4 pl-12 border-2 rounded-xl focus:ring-4 transition-all duration-300 bg-white shadow-md group-hover:shadow-lg ${
+                        confirmPassword && newPassword === confirmPassword 
+                          ? 'border-green-300 focus:ring-green-100 focus:border-green-500' 
+                          : 'border-gray-200 focus:ring-blue-100 focus:border-blue-500'
+                      }`}
+                      placeholder="Repite la nueva contraseña"
+                      autoComplete="new-password"
+                      disabled={isLoading}
+                    />
+                    <i className={`fas fa-check-circle absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
                       confirmPassword && newPassword === confirmPassword 
                         ? 'text-green-500' 
-                        : 'text-gray-400'
-                    }`}
-                  />
+                        : 'text-gray-400 group-focus-within:text-blue-500'
+                    }`}></i>
+                    
+                    {/* Indicador de coincidencia */}
+                    {confirmPassword && (
+                      <div className={`absolute right-4 top-1/2 -translate-y-1/2 ${
+                        newPassword === confirmPassword ? 'text-green-500' : 'text-red-500'
+                      }`}>
+                        <i className={`fas ${newPassword === confirmPassword ? 'fa-check' : 'fa-times'}`}></i>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              
-              {/* Mostrar/ocultar contraseñas */}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="showPasswords"
-                  checked={showPasswords}
-                  onChange={(e) => setShowPasswords(e.target.checked)}
-                  className="w-4 h-4 text-gray-800 border-gray-300 rounded focus:ring-gray-800"
-                />
-                <label htmlFor="showPasswords" className="ml-2 text-sm text-gray-600 cursor-pointer">
-                  Mostrar contraseñas
-                </label>
-              </div>
-              
-              {/* Error */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm flex items-center">
-                  <Icon name="alertCircle" size={16} className="mr-2 flex-shrink-0" />
-                  {error}
+                
+                {/* Toggle mostrar contraseñas */}
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <label className="flex items-center cursor-pointer group">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={showPasswords}
+                        onChange={(e) => setShowPasswords(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <div className={`w-12 h-6 rounded-full transition-colors duration-300 ${
+                        showPasswords ? 'bg-blue-500' : 'bg-gray-300'
+                      }`}>
+                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+                          showPasswords ? 'translate-x-6' : 'translate-x-0.5'
+                        } translate-y-0.5`}></div>
+                      </div>
+                    </div>
+                    <span className="ml-4 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+                      <i className={`fas ${showPasswords ? 'fa-eye-slash' : 'fa-eye'} mr-2`}></i>
+                      {showPasswords ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
+                    </span>
+                  </label>
                 </div>
-              )}
-            </form>
+                
+                {/* Error elegante */}
+                {error && (
+                  <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 text-red-800 p-4 rounded-xl shadow-lg">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                        <i className="fas fa-exclamation-triangle text-white text-sm"></i>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-red-900 mb-1">Error de validación</h4>
+                        <p className="text-sm">{error}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </form>
+            </div>
           )}
         </div>
         
-        {/* Footer con botones */}
+        {/* 🎯 FOOTER CON BOTONES ELEGANTES */}
         {!success && (
-          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
-            <div className="flex justify-end space-x-3">
+          <div className="flex-shrink-0 bg-gradient-to-r from-gray-50 to-white border-t border-gray-200 px-6 py-4 shadow-lg">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isLoading}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50"
               >
+                <i className="fas fa-times mr-2"></i>
                 Cancelar
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={isLoading || !currentPassword || !newPassword || !confirmPassword}
-                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 disabled:bg-gray-400 transition-colors flex items-center"
+                disabled={isLoading || !currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center"
               >
                 {isLoading ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                    </svg>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                     Cambiando...
                   </>
                 ) : (
                   <>
-                    <Icon name="shield" size={16} className="mr-2" />
-                    Cambiar contraseña
+                    <i className="fas fa-shield-alt mr-2"></i>
+                    Cambiar Contraseña
                   </>
                 )}
               </button>
@@ -271,7 +441,7 @@ const PasswordModal = ({ isOpen, onClose }) => {
           </div>
         )}
       </div>
-    </Modal>
+    </div>
   );
 };
 

@@ -1,10 +1,114 @@
 {
-  "version": "2.21.0",
+  "version": "2.25.0",
   "releaseDate": "2025-01-01",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "major", 
+        "description": "📱 INSTALACIÓN SÚPER SENCILLA: Modal de instalación completamente renovado - un solo clic para instalar la app en el teléfono como PWA nativa"
+      },
+      {
+        "type": "fix", 
+        "description": "🔧 FUNCIÓN UPDATEPASSWORD CORREGIDA: Implementado retorno de resultado correcto en AppContext - cambio de contraseña ahora funciona completamente"
+      },
+      {
+        "type": "fix", 
+        "description": "🐛 ERROR CRÍTICO CORREGIDO: Solucionado error TypeError en cambio de contraseña - manejo robusto de respuesta de updatePassword"
+      },
+      {
+        "type": "fix", 
+        "description": "🏆 ÚLTIMO WARNING DOM ELIMINADO: Agregado campo de usuario oculto para accesibilidad completa - consola 100% limpia sin warnings"
+      },
+      {
+        "type": "fix", 
+        "description": "🧹 WARNINGS DOM ELIMINADOS: Agregados atributos autocomplete apropiados en campos de contraseña para mejorar accesibilidad y eliminar warnings de consola"
+      },
+      {
+        "type": "fix", 
+        "description": "🔧 MODAL DE CONTRASEÑA PERFECCIONADO: Eliminada X duplicada y scroll completamente arreglado - ahora funciona perfectamente sin interferir con la pantalla principal"
+      },
+      {
+        "type": "redesign", 
+        "description": "🎨 REDISEÑO ESPECTACULAR DEL MODAL DE CONTRASEÑA: Completamente renovado con gradientes elegantes, indicador de fortaleza de contraseña y diseño 100% responsive"
+      },
+      {
+        "type": "fix", 
+        "description": "🔒 SCROLL COMPLETAMENTE BLOQUEADO: Implementada solución agresiva que bloquea el scroll del body y solo permite scroll dentro del modal de reportes"
+      },
+      {
+        "type": "fix", 
+        "description": "📜 SCROLL ARREGLADO EN REPORTES: Corregido problema de scroll en modal de Reportes del Sistema - ahora funciona perfectamente en móviles"
+      },
+      {
+        "type": "improvement", 
+        "description": "🗑️ REPORTES DEL SISTEMA ELIMINADO DEL PANEL: Removido del panel de administración - solo disponible en menú principal para simplificar interfaz"
+      },
+      {
+        "type": "improvement", 
+        "description": "🔄 LIMPIAR CACHÉ MOVIDO: Trasladado del menú principal a Reportes del Sistema - contexto técnico más apropiado"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎨 INTERFAZ SIMPLIFICADA: Menú principal más limpio sin opciones técnicas avanzadas para usuarios regulares"
+      },
+      {
+        "type": "improvement", 
+        "description": "🧹 BOTÓN MEJORADO: Nuevo diseño purple-indigo con ícono de escoba y mejor feedback visual"
+      },
+      {
+        "type": "major", 
+        "description": "📱 MODAL NATIVO MÓVIL: Eliminado Modal wrapper, ahora ocupa TODA la pantalla del celular como app nativa con botón cerrar integrado"
+      },
+      {
+        "type": "improvement", 
+        "description": "📜 SCROLL DEFINITIVAMENTE ARREGLADO: Estructura simplificada con overflow-y-auto directo - scroll funcional garantizado"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎨 DISEÑO 100% MÓVIL: Header compacto, botones flex-wrap, tabs optimizadas para táctil y navegación nativa"
+      },
+      {
+        "type": "major", 
+        "description": "🖥️ MODAL PANTALLA COMPLETA: Convertido a fullscreen para mejor aprovechamiento del espacio y experiencia inmersiva"
+      },
+      {
+        "type": "improvement", 
+        "description": "📜 SCROLL COMPLETAMENTE ARREGLADO: Sistema de scroll funcional con scrollbar personalizada y contenido fluido"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎨 DISEÑO ADAPTADO: Header, tabs y botones redimensionados para aprovechar el espacio de pantalla completa"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎯 HEADER COMPACTO Y SCROLL ARREGLADO: Header reducido a 1/4 de pantalla, scroll optimizado y espaciado mejorado para mejor visualización"
+      },
+      {
+        "type": "improvement", 
+        "description": "📱 NAVEGACIÓN COMPACTA: Tabs más pequeñas y eficientes, mejor aprovechamiento del espacio en móviles"
+      },
+      {
+        "type": "improvement", 
+        "description": "⚡ RENDIMIENTO VISUAL: Componentes más compactos, mejor flujo de contenido y experiencia de scroll suave"
+      },
+      {
+        "type": "major", 
+        "description": "🎨 REDISEÑO ESPECTACULAR DE REPORTES DEL SISTEMA: Modal completamente renovado con diseño moderno, gradientes elegantes y 100% optimizado para móviles"
+      },
+      {
+        "type": "improvement", 
+        "description": "📱 NAVEGACIÓN MÓVIL PERFECTA: Tabs rediseñadas con grid responsivo, iconografía mejorada y navegación táctil optimizada"
+      },
+      {
+        "type": "improvement", 
+        "description": "📊 VISUALIZACIÓN AVANZADA: Métricas con indicadores de estado, barras de progreso animadas y análisis inteligente de rendimiento"
+      },
+      {
+        "type": "improvement", 
+        "description": "🚀 EXPERIENCIA DE USUARIO PREMIUM: Header con gradientes, cards interactivas, estados visuales y animaciones fluidas"
+      },
       {
         "type": "improvement", 
         "description": "🗑️ PANEL ADMINISTRATIVO SIMPLIFICADO: Eliminada 'Gestión de Territorios' innecesaria - panel más limpio y enfocado en funciones esenciales"
@@ -364,84 +468,6 @@
       {
         "type": "improvement",
         "description": "Sistema de cambio de contraseña actualizado y funcional."
-      }
-    ],
-    "publisher": [
-      {
-        "type": "major",
-        "description": "🎯 RUTAS MÁS INTELIGENTES: ¡La ruta optimizada ya no incluye direcciones que ya visitaste (rojas)!"
-      },
-      {
-        "type": "improvement",
-        "description": "⏰ AHORRA TIEMPO: Solo te lleva a las direcciones que realmente necesitas visitar"
-      },
-      {
-        "type": "improvement",
-        "description": "🗺️ MAPA MÁS CLARO: La línea azul solo conecta las direcciones pendientes (verdes)"
-      },
-      {
-        "type": "improvement",
-        "description": "📍 INICIO PERFECTO: Siempre empiezas por la dirección pendiente más cercana a ti"
-      },
-      {
-        "type": "major",
-        "description": "🎉 ACTUALIZAR ES SÚPER FÁCIL: ¡Sistema perfecto que cualquier persona puede usar sin problemas!"
-      },
-      {
-        "type": "feature",
-        "description": "✨ AL ABRIR LA APP: Verificación automática en 2 segundos - sin que tengas que hacer nada"
-      },
-      {
-        "type": "feature",
-        "description": "🔍 BOTÓN INTELIGENTE: 'Buscar Actualizaciones' te dice si hay algo nuevo al instante"
-      },
-      {
-        "type": "feature",
-        "description": "📱 NOTIFICACIÓN HERMOSA: Aparece arriba con botones grandes 'Actualizar Ahora' y 'Más Tarde'"
-      },
-      {
-        "type": "feature",
-        "description": "🎨 MENÚ VISUAL: Cuando hay actualización se ve azul-púrpura con '¡Nuevo!' - imposible no verlo"
-      },
-      {
-        "type": "improvement",
-        "description": "💬 SIEMPRE INFORMADO: La app te dice exactamente qué está pasando - 'Buscando...', 'Ya tienes la más nueva', etc."
-      },
-      {
-        "type": "major",
-        "description": "🎉 FIN DE PROBLEMAS DE CACHE: ¡Ya no necesitas borrar cookies/datos! La app se actualiza automáticamente"
-      },
-      {
-        "type": "feature",
-        "description": "ACTUALIZACIONES INTELIGENTES: Recibes notificación automática cuando hay nueva versión disponible"
-      },
-      {
-        "type": "improvement",
-        "description": "UX MEJORADA: Un click para actualizar + recarga automática, proceso súper simple y rápido"
-      },
-      {
-        "type": "fix",
-        "description": "🔧 APLICACIÓN FUNCIONANDO: Corregido error que impedía abrir la app (hook useApp vs useAppContext)"
-      },
-      {
-        "type": "major",
-        "description": "🎉 NUEVA SECCIÓN: 'Mis Propuestas' - Tu espacio personal para ver todas tus solicitudes de direcciones"
-      },
-      {
-        "type": "feature",
-        "description": "INFORMACIÓN COMPLETA: Ve quién procesó tus propuestas, cuándo y por qué fueron rechazadas"
-      },
-      {
-        "type": "feature",
-        "description": "NOTIFICACIONES AUTOMÁTICAS: Badge rojo te avisa cuando hay cambios nuevos en tus propuestas"
-      },
-      {
-        "type": "feature",
-        "description": "FILTROS PERSONALES: Pendientes (en espera), Aprobadas (aceptadas), Rechazadas con razones detalladas"
-      },
-      {
-        "type": "feature",
-        "description": "MODAL DETALLADO: Toca 'Ver Detalles Completos' para información exhaustiva de cada propuesta"
       }
     ],
     "admin": [

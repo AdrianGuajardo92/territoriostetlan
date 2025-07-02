@@ -19,7 +19,26 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
   useEffect(() => {
     if (isOpen) {
       collectSystemData();
+      // 🔒 BLOQUEAR SCROLL DEL BODY
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+    } else {
+      // 🔓 RESTAURAR SCROLL DEL BODY
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
     }
+
+    // Cleanup al desmontar
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
   }, [isOpen]);
 
   const collectSystemData = async () => {
@@ -259,93 +278,194 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
     collectSystemData();
   };
 
+  // Función para limpiar caché y recargar aplicación
+  const handleClearCache = () => {
+    if ('caches' in window) {
+      caches.keys().then(cacheNames => {
+        Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)))
+          .then(() => {
+            showToast('Caché limpiado correctamente', 'success');
+            setTimeout(() => window.location.reload(), 1500);
+          });
+      });
+    } else {
+      showToast('Recargando aplicación...', 'info');
+      setTimeout(() => window.location.reload(), 1000);
+    }
+  };
+
   const tabs = [
-    { id: 'overview', label: 'Resumen', icon: 'chart-bar' },
-    { id: 'performance', label: 'Rendimiento', icon: 'tachometer-alt' },
-    { id: 'errors', label: 'Errores', icon: 'exclamation-triangle' },
-    { id: 'browser', label: 'Navegador', icon: 'globe' },
-    { id: 'storage', label: 'Almacenamiento', icon: 'database' },
-    { id: 'network', label: 'Red', icon: 'wifi' }
+    { id: 'overview', label: 'Resumen', icon: 'chart-bar', color: 'indigo', description: 'Vista general del sistema' },
+    { id: 'performance', label: 'Rendimiento', icon: 'tachometer-alt', color: 'blue', description: 'Métricas de velocidad' },
+    { id: 'errors', label: 'Errores', icon: 'exclamation-triangle', color: 'red', description: 'Logs de errores' },
+    { id: 'browser', label: 'Navegador', icon: 'globe', color: 'purple', description: 'Info del navegador' },
+    { id: 'storage', label: 'Almacenamiento', icon: 'database', color: 'green', description: 'Uso de memoria' },
+    { id: 'network', label: 'Red', icon: 'wifi', color: 'cyan', description: 'Estado de conexión' }
   ];
 
   if (!isOpen) return null;
 
+  // Configuración de colores para tabs
+  const getTabColorConfig = (color) => {
+    const configs = {
+      indigo: { bg: 'from-indigo-500 to-purple-600', text: 'text-indigo-600', border: 'border-indigo-500' },
+      blue: { bg: 'from-blue-500 to-cyan-600', text: 'text-blue-600', border: 'border-blue-500' },
+      red: { bg: 'from-red-500 to-pink-600', text: 'text-red-600', border: 'border-red-500' },
+      purple: { bg: 'from-purple-500 to-indigo-600', text: 'text-purple-600', border: 'border-purple-500' },
+      green: { bg: 'from-green-500 to-emerald-600', text: 'text-green-600', border: 'border-green-500' },
+      cyan: { bg: 'from-cyan-500 to-blue-600', text: 'text-cyan-600', border: 'border-cyan-500' }
+    };
+    return configs[color] || configs.indigo;
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title="📊 Reportes del Sistema"
-      size="xl"
-      modalId={modalId}
+    <div 
+      className="fixed inset-0 z-[9999] bg-white" 
+      style={{ 
+        touchAction: 'none',
+        overscrollBehavior: 'contain'
+      }}
+      onTouchMove={(e) => {
+        // Solo permitir scroll dentro del contenedor de contenido
+        if (!e.target.closest('.scroll-container')) {
+          e.preventDefault();
+        }
+      }}
     >
-      {/* CORRECCIÓN: Estructura con scroll optimizada */}
-      <div className="flex flex-col h-full max-h-[85vh]">
-        {/* Header con acciones - FIJO */}
-        <div className="flex-shrink-0 pb-4 border-b border-gray-200">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex space-x-2">
-              <button
-                onClick={collectSystemData}
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-              >
-                <i className={`fas fa-sync-alt ${isLoading ? 'animate-spin' : ''}`}></i>
-                {isLoading ? 'Actualizando...' : 'Actualizar'}
-              </button>
-              
-              <button
-                onClick={exportReport}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-              >
-                <i className="fas fa-download"></i>
-                Exportar
-              </button>
-              
-              <button
-                onClick={clearLogs}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
-              >
-                <i className="fas fa-trash"></i>
-                Limpiar Logs
-              </button>
+      <div className="flex flex-col h-screen overflow-hidden">
+        {/* 🎨 HEADER MÓVIL NATIVO - FIJO */}
+        <div className="flex-shrink-0 bg-gradient-to-r from-slate-700 to-gray-800 text-white p-4 shadow-lg sticky top-0 z-10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+                <i className="fas fa-chart-line text-lg text-white"></i>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Reportes del Sistema</h2>
+                <p className="text-gray-300 text-xs">Diagnóstico técnico</p>
+              </div>
             </div>
             
-            <div className="text-sm text-gray-500">
-              Última actualización: {new Date().toLocaleTimeString()}
-            </div>
+            {/* BOTÓN CERRAR MÓVIL */}
+            <button
+              onClick={onClose}
+              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-colors duration-200"
+            >
+              <i className="fas fa-times text-white text-lg"></i>
+            </button>
           </div>
 
-          {/* Tabs - FIJO */}
-          <nav className="flex space-x-8 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex items-center gap-2 ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <i className={`fas fa-${tab.icon}`}></i>
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+          {/* 🔧 ACCIONES MÓVILES */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={collectSystemData}
+              disabled={isLoading}
+              className="flex-1 min-w-0 px-3 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-lg hover:from-blue-600 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-lg transition-all duration-200"
+            >
+              <i className={`fas fa-sync-alt ${isLoading ? 'animate-spin' : ''}`}></i>
+              <span className="text-sm">{isLoading ? 'Actualizando...' : 'Actualizar'}</span>
+            </button>
+            
+            <button
+              onClick={exportReport}
+              className="flex-1 min-w-0 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 flex items-center justify-center gap-2 font-medium shadow-lg transition-all duration-200"
+            >
+              <i className="fas fa-download"></i>
+              <span className="text-sm">Exportar</span>
+            </button>
+            
+            <button
+              onClick={clearLogs}
+              className="flex-1 min-w-0 px-3 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 flex items-center justify-center gap-2 font-medium shadow-lg transition-all duration-200"
+            >
+              <i className="fas fa-trash"></i>
+              <span className="text-sm">Limpiar</span>
+            </button>
+            
+            <button
+              onClick={handleClearCache}
+              className="flex-1 min-w-0 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 flex items-center justify-center gap-2 font-medium shadow-lg transition-all duration-200"
+            >
+              <i className="fas fa-broom"></i>
+              <span className="text-sm">Limpiar Caché</span>
+            </button>
+          </div>
         </div>
 
-        {/* Content con SCROLL */}
-        <div className="flex-1 overflow-y-auto pt-6 min-h-0">
-          <div className="pr-2"> {/* Padding para el scrollbar */}
+        {/* 📱 NAVEGACIÓN DE TABS MÓVIL - FIJA */}
+        <div className="flex-shrink-0 px-4 py-2 bg-white sticky top-0 z-10 shadow-sm">
+          <div className="bg-gray-50 rounded-xl p-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              {tabs.map((tab) => {
+                const config = getTabColorConfig(tab.color);
+                const isActive = activeTab === tab.id;
+                
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative p-3 rounded-xl transition-all duration-300 group ${
+                      isActive 
+                        ? `bg-gradient-to-r ${config.bg} text-white shadow-lg scale-105` 
+                        : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800 hover:scale-102'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        isActive ? 'bg-white/20' : 'bg-gray-100 group-hover:bg-gray-200'
+                      }`}>
+                        <i className={`fas fa-${tab.icon} ${isActive ? 'text-white' : config.text}`}></i>
+                      </div>
+                      <div className="text-center">
+                        <div className={`text-xs font-bold ${isActive ? 'text-white' : 'text-gray-700'}`}>
+                          {tab.label}
+                        </div>
+                        <div className={`text-xs mt-1 ${
+                          isActive ? 'text-white/80' : 'text-gray-500'
+                        }`}>
+                          {tab.description}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Indicador activo */}
+                    {isActive && (
+                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full shadow-lg"></div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 📊 CONTENIDO CON SCROLL MÓVIL - SCROLLEABLE */}
+        <div 
+          className="flex-1 overflow-y-auto overscroll-contain scroll-container" 
+          style={{ 
+            WebkitOverflowScrolling: 'touch',
+            scrollBehavior: 'smooth',
+            touchAction: 'pan-y'
+          }}
+        >
+          <div className="p-4 pb-8">
             {isLoading ? (
-              <div className="flex items-center justify-center h-64">
+              <div className="flex items-center justify-center min-h-[50vh]">
                 <div className="text-center">
-                  <i className="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-                  <p className="text-gray-600">Recolectando datos del sistema...</p>
+                  <div className="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+                    <i className="fas fa-spinner fa-spin text-2xl text-white"></i>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Analizando Sistema</h3>
+                  <p className="text-gray-600 text-sm">Recolectando datos técnicos...</p>
+                  <div className="mt-3 w-32 h-1.5 bg-gray-200 rounded-full mx-auto overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full animate-pulse"></div>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {activeTab === 'overview' && <OverviewTab data={systemData} />}
                 {activeTab === 'performance' && <PerformanceTab data={systemData.performance} />}
                 {activeTab === 'errors' && <ErrorsTab data={systemData.errors} />}
@@ -357,170 +477,464 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
           </div>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 };
 
-// Componentes de tabs
-const OverviewTab = ({ data }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <div className="bg-blue-50 p-4 rounded-lg">
-      <div className="flex items-center gap-3">
-        <i className="fas fa-tachometer-alt text-blue-600 text-xl"></i>
-        <div>
-          <h3 className="font-semibold text-blue-900">Rendimiento</h3>
-          <p className="text-blue-700">{data.performance?.loadTime || 0}ms de carga</p>
-        </div>
-      </div>
-    </div>
-    
-    <div className="bg-green-50 p-4 rounded-lg">
-      <div className="flex items-center gap-3">
-        <i className="fas fa-check-circle text-green-600 text-xl"></i>
-        <div>
-          <h3 className="font-semibold text-green-900">Service Worker</h3>
-          <p className="text-green-700">{data.serviceWorker?.registered ? 'Activo' : 'Inactivo'}</p>
-        </div>
-      </div>
-    </div>
-    
-    <div className="bg-yellow-50 p-4 rounded-lg">
-      <div className="flex items-center gap-3">
-        <i className="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
-        <div>
-          <h3 className="font-semibold text-yellow-900">Errores</h3>
-          <p className="text-yellow-700">{data.errors?.length || 0} registrados</p>
-        </div>
-      </div>
-    </div>
-    
-    <div className="bg-purple-50 p-4 rounded-lg">
-      <div className="flex items-center gap-3">
-        <i className="fas fa-globe text-purple-600 text-xl"></i>
-        <div>
-          <h3 className="font-semibold text-purple-900">Navegador</h3>
-          <p className="text-purple-700">{data.browser?.browser || 'Desconocido'}</p>
-        </div>
-      </div>
-    </div>
-    
-    <div className="bg-indigo-50 p-4 rounded-lg">
-      <div className="flex items-center gap-3">
-        <i className="fas fa-wifi text-indigo-600 text-xl"></i>
-        <div>
-          <h3 className="font-semibold text-indigo-900">Conexión</h3>
-          <p className="text-indigo-700">{data.network?.online ? 'Online' : 'Offline'}</p>
-        </div>
-      </div>
-    </div>
-    
-    <div className="bg-gray-50 p-4 rounded-lg">
-      <div className="flex items-center gap-3">
-        <i className="fas fa-database text-gray-600 text-xl"></i>
-        <div>
-          <h3 className="font-semibold text-gray-900">Cache</h3>
-          <p className="text-gray-700">{data.cache?.caches || 0} caches</p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+// 🎨 COMPONENTES DE TABS REDISEÑADOS - MÓVIL FIRST
+const OverviewTab = ({ data }) => {
+  const metrics = [
+    {
+      title: 'Rendimiento',
+      value: `${data.performance?.loadTime || 0}ms`,
+      subtitle: 'Tiempo de carga',
+      icon: 'tachometer-alt',
+      gradient: 'from-blue-500 to-cyan-600',
+      bgGradient: 'from-blue-50 to-cyan-50',
+      textColor: 'text-blue-700',
+      status: data.performance?.loadTime < 1000 ? 'excellent' : data.performance?.loadTime < 3000 ? 'good' : 'warning'
+    },
+    {
+      title: 'Service Worker',
+      value: data.serviceWorker?.registered ? 'Activo' : 'Inactivo',
+      subtitle: data.serviceWorker?.state || 'Estado desconocido',
+      icon: 'cogs',
+      gradient: data.serviceWorker?.registered ? 'from-green-500 to-emerald-600' : 'from-red-500 to-pink-600',
+      bgGradient: data.serviceWorker?.registered ? 'from-green-50 to-emerald-50' : 'from-red-50 to-pink-50',
+      textColor: data.serviceWorker?.registered ? 'text-green-700' : 'text-red-700',
+      status: data.serviceWorker?.registered ? 'excellent' : 'error'
+    },
+    {
+      title: 'Errores',
+      value: data.errors?.length || 0,
+      subtitle: 'Registrados en logs',
+      icon: 'exclamation-triangle',
+      gradient: data.errors?.length === 0 ? 'from-green-500 to-emerald-600' : 'from-yellow-500 to-orange-600',
+      bgGradient: data.errors?.length === 0 ? 'from-green-50 to-emerald-50' : 'from-yellow-50 to-orange-50',
+      textColor: data.errors?.length === 0 ? 'text-green-700' : 'text-yellow-700',
+      status: data.errors?.length === 0 ? 'excellent' : data.errors?.length < 5 ? 'warning' : 'error'
+    },
+    {
+      title: 'Navegador',
+      value: data.browser?.browser || 'Desconocido',
+      subtitle: `Versión ${data.browser?.version || 'N/A'}`,
+      icon: 'globe',
+      gradient: 'from-purple-500 to-indigo-600',
+      bgGradient: 'from-purple-50 to-indigo-50',
+      textColor: 'text-purple-700',
+      status: 'info'
+    },
+    {
+      title: 'Conexión',
+      value: data.network?.online ? 'Online' : 'Offline',
+      subtitle: data.network?.connection?.effectiveType || 'Tipo desconocido',
+      icon: 'wifi',
+      gradient: data.network?.online ? 'from-indigo-500 to-blue-600' : 'from-gray-500 to-slate-600',
+      bgGradient: data.network?.online ? 'from-indigo-50 to-blue-50' : 'from-gray-50 to-slate-50',
+      textColor: data.network?.online ? 'text-indigo-700' : 'text-gray-700',
+      status: data.network?.online ? 'excellent' : 'error'
+    },
+    {
+      title: 'Cache',
+      value: `${data.cache?.caches || 0}`,
+      subtitle: 'Caches disponibles',
+      icon: 'database',
+      gradient: 'from-gray-500 to-slate-600',
+      bgGradient: 'from-gray-50 to-slate-50',
+      textColor: 'text-gray-700',
+      status: 'info'
+    }
+  ];
 
-const PerformanceTab = ({ data }) => (
-  <div className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="bg-white p-4 rounded-lg border">
-        <h3 className="font-semibold mb-3 flex items-center gap-2">
-          <i className="fas fa-clock text-blue-600"></i>
-          Tiempos de Carga
-        </h3>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span>Tiempo total:</span>
-            <span className="font-mono">{data.loadTime || 0}ms</span>
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'excellent': return 'fas fa-check-circle text-green-500';
+      case 'good': return 'fas fa-thumbs-up text-blue-500';
+      case 'warning': return 'fas fa-exclamation-triangle text-yellow-500';
+      case 'error': return 'fas fa-times-circle text-red-500';
+      default: return 'fas fa-info-circle text-gray-500';
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* 🏆 ESTADO GENERAL DEL SISTEMA */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-4 text-white shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-2xl font-bold mb-2">Estado General</h3>
+            <p className="text-indigo-100">Sistema funcionando correctamente</p>
           </div>
-          <div className="flex justify-between">
-            <span>DOM Content Loaded:</span>
-            <span className="font-mono">{data.domContentLoaded || 0}ms</span>
+          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+            <i className="fas fa-heartbeat text-3xl text-white"></i>
           </div>
-          <div className="flex justify-between">
-            <span>First Paint:</span>
-            <span className="font-mono">{Math.round(data.firstPaint || 0)}ms</span>
+        </div>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold">{data.performance?.loadTime < 1000 ? '✅' : '⚠️'}</div>
+            <div className="text-sm text-indigo-100">Velocidad</div>
           </div>
-          <div className="flex justify-between">
-            <span>First Contentful Paint:</span>
-            <span className="font-mono">{Math.round(data.firstContentfulPaint || 0)}ms</span>
+          <div className="text-center">
+            <div className="text-2xl font-bold">{data.serviceWorker?.registered ? '✅' : '❌'}</div>
+            <div className="text-sm text-indigo-100">SW</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold">{data.errors?.length === 0 ? '✅' : '⚠️'}</div>
+            <div className="text-sm text-indigo-100">Errores</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold">{data.network?.online ? '✅' : '❌'}</div>
+            <div className="text-sm text-indigo-100">Red</div>
           </div>
         </div>
       </div>
-      
-      <div className="bg-white p-4 rounded-lg border">
-        <h3 className="font-semibold mb-3 flex items-center gap-2">
-          <i className="fas fa-memory text-green-600"></i>
-          Recursos del Sistema
-        </h3>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span>Memoria del dispositivo:</span>
-            <span className="font-mono">{data.memoryUsage}GB</span>
+
+      {/* 📊 MÉTRICAS DETALLADAS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {metrics.map((metric, index) => (
+          <div key={index} className={`bg-gradient-to-br ${metric.bgGradient} rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/50`}>
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-12 h-12 bg-gradient-to-r ${metric.gradient} rounded-xl flex items-center justify-center shadow-lg`}>
+                <i className={`fas fa-${metric.icon} text-white text-lg`}></i>
+              </div>
+              <i className={getStatusIcon(metric.status)}></i>
+            </div>
+            
+            <div>
+              <h4 className={`font-bold text-lg ${metric.textColor} mb-1`}>{metric.title}</h4>
+              <p className={`text-2xl font-bold ${metric.textColor} mb-2`}>{metric.value}</p>
+              <p className="text-sm text-gray-600">{metric.subtitle}</p>
+            </div>
           </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const PerformanceTab = ({ data }) => {
+  const getPerformanceStatus = (value, thresholds) => {
+    if (value <= thresholds.excellent) return { status: 'excellent', color: 'text-green-600', bg: 'bg-green-100' };
+    if (value <= thresholds.good) return { status: 'good', color: 'text-blue-600', bg: 'bg-blue-100' };
+    if (value <= thresholds.fair) return { status: 'fair', color: 'text-yellow-600', bg: 'bg-yellow-100' };
+    return { status: 'poor', color: 'text-red-600', bg: 'bg-red-100' };
+  };
+
+  const loadTimeStatus = getPerformanceStatus(data.loadTime || 0, { excellent: 1000, good: 3000, fair: 5000 });
+  const fcpStatus = getPerformanceStatus(data.firstContentfulPaint || 0, { excellent: 1800, good: 3000, fair: 4000 });
+
+  return (
+    <div className="space-y-4">
+      {/* 🚀 RESUMEN DE RENDIMIENTO */}
+      <div className="bg-gradient-to-r from-blue-500 to-cyan-600 rounded-2xl p-4 text-white shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-2xl font-bold mb-2">Análisis de Rendimiento</h3>
+            <p className="text-blue-100">Métricas de velocidad y optimización</p>
+          </div>
+          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+            <i className="fas fa-rocket text-3xl text-white"></i>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+          <div className="text-center">
+            <div className="text-2xl font-bold">{loadTimeStatus.status === 'excellent' ? '🚀' : loadTimeStatus.status === 'good' ? '⚡' : '⚠️'}</div>
+            <div className="text-sm text-blue-100">Carga</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold">{fcpStatus.status === 'excellent' ? '🎨' : fcpStatus.status === 'good' ? '🖼️' : '🐌'}</div>
+            <div className="text-sm text-blue-100">Pintura</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold">{data.memoryUsage ? '💾' : '❓'}</div>
+            <div className="text-sm text-blue-100">Memoria</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold">{data.connection ? '📡' : '❓'}</div>
+            <div className="text-sm text-blue-100">Red</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ⏱️ MÉTRICAS DE TIEMPO */}
+      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 border border-blue-200 shadow-lg">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
+            <i className="fas fa-clock text-white text-sm"></i>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-blue-900">Tiempos de Carga</h3>
+            <p className="text-blue-600 text-xs">Métricas de velocidad</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl p-4 shadow-md">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-700 font-medium">Tiempo Total</span>
+              <span className={`px-2 py-1 rounded-lg text-xs font-bold ${loadTimeStatus.bg} ${loadTimeStatus.color}`}>
+                {loadTimeStatus.status.toUpperCase()}
+              </span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">{data.loadTime || 0}ms</div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full bg-gradient-to-r ${loadTimeStatus.status === 'excellent' ? 'from-green-400 to-green-600' : loadTimeStatus.status === 'good' ? 'from-blue-400 to-blue-600' : 'from-yellow-400 to-yellow-600'}`}
+                style={{ width: `${Math.min((data.loadTime || 0) / 50, 100)}%` }}
+              ></div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl p-4 shadow-md">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-700 font-medium">DOM Content Loaded</span>
+              <i className="fas fa-code text-gray-500"></i>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{data.domContentLoaded || 0}ms</div>
+          </div>
+          
+          <div className="bg-white rounded-xl p-4 shadow-md">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-700 font-medium">First Paint</span>
+              <i className="fas fa-paint-brush text-gray-500"></i>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{Math.round(data.firstPaint || 0)}ms</div>
+          </div>
+          
+          <div className="bg-white rounded-xl p-4 shadow-md">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-700 font-medium">First Contentful Paint</span>
+              <span className={`px-2 py-1 rounded-lg text-xs font-bold ${fcpStatus.bg} ${fcpStatus.color}`}>
+                {fcpStatus.status.toUpperCase()}
+              </span>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{Math.round(data.firstContentfulPaint || 0)}ms</div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div 
+                className={`h-2 rounded-full bg-gradient-to-r ${fcpStatus.status === 'excellent' ? 'from-green-400 to-green-600' : fcpStatus.status === 'good' ? 'from-blue-400 to-blue-600' : 'from-yellow-400 to-yellow-600'}`}
+                style={{ width: `${Math.min((data.firstContentfulPaint || 0) / 40, 100)}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 💾 RECURSOS DEL SISTEMA */}
+      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200 shadow-lg">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+            <i className="fas fa-microchip text-white text-lg"></i>
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-green-900">Recursos del Sistema</h3>
+            <p className="text-green-600 text-sm">Memoria y conectividad disponible</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl p-4 shadow-md">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-700 font-medium">Memoria</span>
+              <i className="fas fa-memory text-gray-500"></i>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{data.memoryUsage || 'N/A'}</div>
+            <div className="text-sm text-gray-600">GB disponibles</div>
+          </div>
+          
           {data.connection && (
             <>
-              <div className="flex justify-between">
-                <span>Tipo de conexión:</span>
-                <span className="font-mono">{data.connection.effectiveType}</span>
+              <div className="bg-white rounded-xl p-4 shadow-md">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-700 font-medium">Tipo de Red</span>
+                  <i className="fas fa-signal text-gray-500"></i>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{data.connection.effectiveType}</div>
+                <div className="text-sm text-gray-600">Tipo efectivo</div>
               </div>
-              <div className="flex justify-between">
-                <span>Velocidad de descarga:</span>
-                <span className="font-mono">{data.connection.downlink}Mbps</span>
+              
+              <div className="bg-white rounded-xl p-4 shadow-md">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-700 font-medium">Velocidad</span>
+                  <i className="fas fa-download text-gray-500"></i>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{data.connection.downlink}</div>
+                <div className="text-sm text-gray-600">Mbps de descarga</div>
               </div>
-              <div className="flex justify-between">
-                <span>Latencia:</span>
-                <span className="font-mono">{data.connection.rtt}ms</span>
+              
+              <div className="bg-white rounded-xl p-4 shadow-md">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-700 font-medium">Latencia</span>
+                  <i className="fas fa-clock text-gray-500"></i>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{data.connection.rtt}</div>
+                <div className="text-sm text-gray-600">ms de respuesta</div>
               </div>
             </>
           )}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
-const ErrorsTab = ({ data }) => (
-  <div className="space-y-4">
-    {data && data.length > 0 ? (
-      data.map((error, index) => (
-        <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <i className="fas fa-exclamation-circle text-red-600 mt-1 flex-shrink-0"></i>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="font-semibold text-red-900 truncate">{error.type || 'Error'}</h4>
-                <span className="text-sm text-red-600 flex-shrink-0 ml-2">{error.timestamp}</span>
+const ErrorsTab = ({ data }) => {
+  const errorsByType = data ? data.reduce((acc, error) => {
+    const type = error.type || 'Error genérico';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {}) : {};
+
+  return (
+    <div className="space-y-6">
+      {data && data.length > 0 ? (
+        <>
+          {/* 📊 RESUMEN DE ERRORES */}
+          <div className="bg-gradient-to-r from-red-500 to-pink-600 rounded-2xl p-6 text-white shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-2xl font-bold mb-2">Registro de Errores</h3>
+                <p className="text-red-100">{data.length} error{data.length !== 1 ? 'es' : ''} detectado{data.length !== 1 ? 's' : ''}</p>
               </div>
-              <p className="text-red-800 mb-2 break-words">{error.message}</p>
-              {error.stack && (
-                <details className="text-sm">
-                  <summary className="cursor-pointer text-red-700 hover:text-red-900">
-                    Ver stack trace
-                  </summary>
-                  <pre className="mt-2 p-2 bg-red-100 rounded text-xs overflow-x-auto max-h-40 overflow-y-auto">
-                    {error.stack}
-                  </pre>
-                </details>
-              )}
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                <i className="fas fa-bug text-3xl text-white"></i>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{data.length}</div>
+                <div className="text-sm text-red-100">Total</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{Object.keys(errorsByType).length}</div>
+                <div className="text-sm text-red-100">Tipos</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{data.filter(e => e.timestamp && new Date(e.timestamp) > new Date(Date.now() - 24*60*60*1000)).length}</div>
+                <div className="text-sm text-red-100">Hoy</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{data.length > 10 ? '🚨' : data.length > 5 ? '⚠️' : '✅'}</div>
+                <div className="text-sm text-red-100">Estado</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 📈 ESTADÍSTICAS POR TIPO */}
+          {Object.keys(errorsByType).length > 0 && (
+            <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl p-6 border border-red-200 shadow-lg">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <i className="fas fa-chart-bar text-white text-lg"></i>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-red-900">Tipos de Errores</h3>
+                  <p className="text-red-600 text-sm">Distribución por categoría</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(errorsByType).map(([type, count]) => (
+                  <div key={type} className="bg-white rounded-xl p-4 shadow-md">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gray-700 font-medium truncate">{type}</span>
+                      <span className="bg-red-100 text-red-700 px-2 py-1 rounded-lg text-xs font-bold">
+                        {count}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="h-2 rounded-full bg-gradient-to-r from-red-400 to-pink-500"
+                        style={{ width: `${(count / data.length) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 🔍 LISTA DETALLADA DE ERRORES */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-pink-600 rounded-lg flex items-center justify-center">
+                <i className="fas fa-list text-white text-sm"></i>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Errores Detallados</h3>
+            </div>
+            
+            {data.map((error, index) => (
+              <div key={index} className="bg-white rounded-2xl shadow-lg border border-red-100 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div className="bg-gradient-to-r from-red-500 to-pink-600 p-4">
+                  <div className="flex items-start justify-between text-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                        <i className="fas fa-exclamation-triangle text-lg"></i>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-lg">{error.type || 'Error'}</h4>
+                        <p className="text-red-100 text-sm">{error.timestamp || 'Fecha desconocida'}</p>
+                      </div>
+                    </div>
+                    <span className="bg-white/20 px-3 py-1 rounded-lg text-xs font-bold">
+                      #{index + 1}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  <div className="mb-4">
+                    <h5 className="font-semibold text-gray-900 mb-2">Mensaje:</h5>
+                    <p className="text-gray-700 bg-gray-50 p-3 rounded-lg break-words">
+                      {error.message || 'Sin mensaje específico'}
+                    </p>
+                  </div>
+                  
+                  {error.stack && (
+                    <details className="group">
+                      <summary className="cursor-pointer text-red-600 hover:text-red-800 font-medium flex items-center gap-2 p-2 bg-red-50 rounded-lg transition-colors">
+                        <i className="fas fa-code text-sm"></i>
+                        <span>Ver Stack Trace</span>
+                        <i className="fas fa-chevron-down text-xs group-open:rotate-180 transition-transform"></i>
+                      </summary>
+                      <div className="mt-3 bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+                        <pre className="text-xs leading-relaxed max-h-60 overflow-y-auto">
+                          {error.stack}
+                        </pre>
+                      </div>
+                    </details>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center max-w-md">
+            <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl">
+              <i className="fas fa-check-circle text-4xl text-white"></i>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-3">¡Sistema Limpio!</h3>
+            <p className="text-gray-600 leading-relaxed">
+              No se han detectado errores en el sistema. 
+              <br />
+              Todo funciona correctamente.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <div className="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium">
+                <i className="fas fa-shield-alt mr-2"></i>
+                Estado: Excelente
+              </div>
             </div>
           </div>
         </div>
-      ))
-    ) : (
-      <div className="text-center py-8">
-        <i className="fas fa-check-circle text-green-600 text-4xl mb-4"></i>
-        <p className="text-gray-600">No hay errores registrados</p>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
 const BrowserTab = ({ data }) => (
   <div className="space-y-6">

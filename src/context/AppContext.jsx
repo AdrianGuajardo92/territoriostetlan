@@ -188,7 +188,9 @@ export const AppProvider = ({ children }) => {
 
   const updatePassword = async (newPassword) => {
     try {
-      if (!currentUser) throw new Error('No hay usuario autenticado');
+      if (!currentUser) {
+        return { success: false, error: 'No hay usuario autenticado' };
+      }
       
       // Actualizar contraseña en Firestore
       await updateDoc(doc(db, 'users', currentUser.id), {
@@ -196,10 +198,17 @@ export const AppProvider = ({ children }) => {
         lastPasswordUpdate: serverTimestamp()
       });
       
+      // Actualizar también el estado local del usuario
+      setCurrentUser(prev => ({
+        ...prev,
+        password: newPassword
+      }));
+      
       console.log('✅ Contraseña actualizada correctamente');
+      return { success: true };
     } catch (error) {
       console.error('❌ Error updating password:', error);
-      throw error;
+      return { success: false, error: error.message || 'Error al actualizar contraseña' };
     }
   };
 

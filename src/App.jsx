@@ -275,13 +275,7 @@ function AppContent() {
       modal: 'password',
       description: 'Actualizar credenciales'
     },
-    {
-      id: 'updates',
-      text: 'Limpiar Cache',
-      icon: 'sync-alt',
-      description: 'Limpiar cache y recargar aplicación',
-      action: handleClearCache
-    },
+
     {
       id: 'systemReports',
       text: 'Reportes del Sistema',
