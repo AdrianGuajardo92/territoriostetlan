@@ -265,6 +265,11 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.supported = true;
       
       try {
+        // Esperar un momento para asegurar que el SW esté listo
+        if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+          await navigator.serviceWorker.ready;
+        }
+        
         // Verificación SIMPLE y DIRECTA
         const registrations = await navigator.serviceWorker.getRegistrations();
         const registration = registrations[0];
@@ -299,7 +304,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         sw.communication = sw.controller ? 'Con controlador' : 'Sin controlador';
         
         // Versión simple
-        sw.version = 'v2.25.5';
+        sw.version = 'v2.25.6';
         
       } catch (e) {
         sw.error = e.message;

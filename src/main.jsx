@@ -67,7 +67,7 @@ const registerServiceWorker = async () => {
     // Verificar si hay una versión más nueva del SW disponible
     setTimeout(async () => {
       try {
-                 const currentVersion = 'v2.25.5'; // Versión actual esperada
+                 const currentVersion = 'v2.25.6'; // Versión actual esperada
         
         // Obtener versión del SW actual
         if (navigator.serviceWorker.controller) {
@@ -85,7 +85,7 @@ const registerServiceWorker = async () => {
           console.log('🔍 Versión SW actual:', swVersion, '| Versión esperada:', currentVersion);
           
           // Si las versiones no coinciden, forzar actualización
-          if (!swVersion.includes('2.25.5')) {
+          if (!swVersion.includes('2.25.6')) {
             console.log('🔄 Versión SW obsoleta, forzando actualización...');
             registration.update();
             
