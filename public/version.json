@@ -1,5 +1,5 @@
 {
-  "version": "2.17.0",
+  "version": "2.18.0",
   "buildDate": "2025-01-01",
-  "description": "Optimización de rutas inteligente - excluye direcciones visitadas"
+  "description": "Sistema de gestión de usuarios implementado - crear, editar, eliminar y resetear contraseñas"
 } 

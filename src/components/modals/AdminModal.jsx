@@ -4,6 +4,7 @@ import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import { LazyStatsModal, LazyReportsModal } from './LazyModals'; // CORRECCIÓN: Usar lazy loading para ambos
+import UserManagementModal from './UserManagementModal';
 
 const AdminModal = (props = {}) => {
   const { isOpen = false, onClose = () => {} } = props;
@@ -25,6 +26,7 @@ const AdminModal = (props = {}) => {
   const [rejectReason, setRejectReason] = useState('');
   const [showStatsModal, setShowStatsModal] = useState(false); // Estado para las estadísticas completas
   const [showReportsModal, setShowReportsModal] = useState(false); // Estado para el modal de reportes
+  const [showUserManagement, setShowUserManagement] = useState(false); // Estado para el modal de gestión de usuarios
   const [proposalFilter, setProposalFilter] = useState('pending'); // Filtro para propuestas: all, pending, approved, rejected
   
   useEffect(() => {
@@ -680,9 +682,6 @@ const AdminModal = (props = {}) => {
         );
       
       case 'users':
-        const adminUsers = users.filter(u => u.role === 'admin');
-        const publisherUsers = users.filter(u => u.role !== 'admin');
-        
         return (
           <div className="space-y-6">
             {/* Header de la sección */}
@@ -699,106 +698,89 @@ const AdminModal = (props = {}) => {
                 </div>
               </div>
               
-              {/* Badge contador */}
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-2xl shadow-lg">
-                <span className="font-bold text-lg">{users.length}</span>
-              </div>
+              {/* Botón para abrir gestión completa */}
+              <button
+                onClick={() => setShowUserManagement(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-lg"
+              >
+                <i className="fas fa-cogs"></i>
+                Gestión Completa
+              </button>
             </div>
 
-            {/* Sección de Administradores */}
-            {adminUsers.length > 0 && (
-              <div>
-                <div className="flex items-center mb-4">
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-violet-600 rounded-lg flex items-center justify-center mr-3">
-                    <i className="fas fa-crown text-white text-sm"></i>
+            {/* Vista simplificada - solo mostrar resumen */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Card Administradores */}
+              <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl shadow-lg p-6 border-2 border-purple-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <i className="fas fa-crown text-white text-xl"></i>
                   </div>
-                  <h4 className="text-lg font-bold text-gray-800">Administradores</h4>
-                  <span className="ml-2 bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                    {adminUsers.length}
+                  <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
+                    {users.filter(u => u.role === 'admin').length}
                   </span>
                 </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                  {adminUsers.map(user => (
-                    <div key={user.id} className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl shadow-lg p-6 border-2 border-purple-200 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-                  <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg">
-                            <i className="fas fa-user-shield text-white text-xl"></i>
-                          </div>
-                    <div>
-                            <h4 className="text-lg font-bold text-gray-900">{user.name}</h4>
-                            <p className="text-sm text-purple-700 font-medium flex items-center">
-                              <i className="fas fa-key mr-2"></i>
-                              {user.accessCode}
-                            </p>
-                            <div className="flex items-center mt-1">
-                              <span className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-3 py-1 rounded-full text-xs font-bold">
-                                ADMINISTRADOR
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <button className="p-3 text-purple-600 hover:bg-purple-100 rounded-xl transition-colors">
-                          <i className="fas fa-edit text-lg"></i>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <h4 className="text-xl font-bold text-purple-800 mb-2">Administradores</h4>
+                <p className="text-purple-600 text-sm">Usuarios con permisos completos</p>
               </div>
-            )}
 
-            {/* Sección de Publicadores */}
-            <div>
-              <div className="flex items-center mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
-                  <i className="fas fa-users text-white text-sm"></i>
+              {/* Card Publicadores */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-lg p-6 border-2 border-blue-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <i className="fas fa-users text-white text-xl"></i>
+                  </div>
+                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
+                    {users.filter(u => u.role !== 'admin').length}
+                  </span>
                 </div>
-                <h4 className="text-lg font-bold text-gray-800">Publicadores</h4>
-                <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                  {publisherUsers.length}
+                <h4 className="text-xl font-bold text-blue-800 mb-2">Publicadores</h4>
+                <p className="text-blue-600 text-sm">Usuarios estándar del sistema</p>
+              </div>
+
+              {/* Card Total */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg p-6 border-2 border-green-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <i className="fas fa-users-cog text-white text-xl"></i>
+                  </div>
+                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
+                    {users.length}
+                  </span>
+                </div>
+                <h4 className="text-xl font-bold text-green-800 mb-2">Total Usuarios</h4>
+                <p className="text-green-600 text-sm">Registrados en el sistema</p>
+              </div>
+            </div>
+
+            {/* Mensaje informativo */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-info text-white text-sm"></i>
+                </div>
+                <h5 className="text-lg font-bold text-blue-800">Gestión Completa de Usuarios</h5>
+              </div>
+              <p className="text-blue-700 mb-4">
+                Para crear, editar, eliminar usuarios o resetear contraseñas, utiliza el botón "Gestión Completa" arriba.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                  ✅ Crear usuarios
+                </span>
+                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                  ✅ Editar información
+                </span>
+                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                  ✅ Resetear contraseñas
+                </span>
+                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                  ✅ Eliminar usuarios
                 </span>
               </div>
-              
-              {publisherUsers.length === 0 ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center max-w-md">
-                    <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <i className="fas fa-user-plus text-3xl text-blue-500"></i>
-                    </div>
-                    <h4 className="text-xl font-bold text-gray-800 mb-2">No hay publicadores</h4>
-                    <p className="text-gray-600">Aún no se han registrado publicadores en el sistema.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {publisherUsers.map(user => (
-                    <div key={user.id} className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-lg p-6 border-2 border-blue-200 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                          <i className="fas fa-user text-white text-2xl"></i>
-                        </div>
-                        <h4 className="text-lg font-bold text-gray-900 mb-2">{user.name}</h4>
-                        <p className="text-sm text-blue-700 font-medium flex items-center justify-center mb-3">
-                          <i className="fas fa-key mr-2"></i>
-                          {user.accessCode}
-                        </p>
-                        <div className="flex items-center justify-center mb-4">
-                          <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold">
-                            PUBLICADOR
-                          </span>
-                        </div>
-                        <button className="w-full py-2 px-4 bg-white/70 hover:bg-white border border-blue-200 text-blue-700 rounded-xl transition-colors font-medium flex items-center justify-center gap-2">
-                          <i className="fas fa-edit"></i>
-                          Editar
-                        </button>
-                  </div>
-                </div>
-              ))}
-                </div>
-              )}
             </div>
+
+
           </div>
         );
       
@@ -1099,6 +1081,15 @@ const AdminModal = (props = {}) => {
           isOpen={showReportsModal} 
           onClose={() => setShowReportsModal(false)} 
           modalId="admin-reports-modal"
+        />
+      )}
+      
+      {/* Modal de Gestión de Usuarios */}
+      {showUserManagement && (
+        <UserManagementModal
+          isOpen={showUserManagement}
+          onClose={() => setShowUserManagement(false)}
+          modalId="user-management-modal"
         />
       )}
     </>

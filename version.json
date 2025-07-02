@@ -1,10 +1,26 @@
 {
-  "version": "2.17.0",
+  "version": "2.18.0",
   "releaseDate": "2025-01-01",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "major", 
+        "description": "👥 SISTEMA DE GESTIÓN DE USUARIOS COMPLETO: Crear, editar, eliminar usuarios y resetear contraseñas desde el panel de administración"
+      },
+      {
+        "type": "improvement", 
+        "description": "🔐 FUNCIONES ADMINISTRATIVAS AVANZADAS: Validaciones de códigos únicos, protección contra auto-eliminación y verificación de territorios asignados"
+      },
+      {
+        "type": "improvement", 
+        "description": "🎨 INTERFAZ ELEGANTE: Modal dedicado con formularios intuitivos, confirmaciones de seguridad y diseño responsive"
+      },
+      {
+        "type": "improvement", 
+        "description": "⚡ INTEGRACIÓN PERFECTA: Acceso desde el panel de administración con vista previa de estadísticas de usuarios"
+      },
       {
         "type": "major", 
         "description": "🎯 OPTIMIZACIÓN DE RUTAS INTELIGENTE: Las direcciones ya visitadas (rojas) se excluyen automáticamente de la ruta optimizada"
@@ -385,6 +401,22 @@
       }
     ],
     "admin": [
+      {
+        "type": "major",
+        "description": "👥 GESTIÓN COMPLETA DE USUARIOS: Crear, editar, eliminar usuarios y resetear contraseñas con validaciones avanzadas"
+      },
+      {
+        "type": "improvement",
+        "description": "🔐 SEGURIDAD MEJORADA: Validación de códigos únicos, protección contra auto-eliminación y verificación de dependencias"
+      },
+      {
+        "type": "improvement",
+        "description": "📊 VISTA PREVIA INTELIGENTE: Resumen de usuarios por rol antes de acceder a la gestión completa"
+      },
+      {
+        "type": "improvement",
+        "description": "🎨 INTERFAZ PROFESIONAL: Modal dedicado con diseño elegante y formularios intuitivos"
+      },
       {
         "type": "major",
         "description": "🎯 OPTIMIZACIÓN DE RUTAS MEJORADA: Sistema inteligente que excluye direcciones visitadas de la ruta optimizada"

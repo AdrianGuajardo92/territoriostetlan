@@ -674,6 +674,111 @@ export const AppProvider = ({ children }) => {
     setAdminEditMode(false);
   }, []);
 
+  // 👥 USER MANAGEMENT FUNCTIONS
+  const handleCreateUser = async (userData) => {
+    try {
+      // Validar que no exista ya un usuario con el mismo código de acceso
+      const existingUserQuery = query(
+        collection(db, 'users'),
+        where('accessCode', '==', userData.accessCode)
+      );
+      const existingUserSnapshot = await getDocs(existingUserQuery);
+      
+      if (!existingUserSnapshot.empty) {
+        throw new Error('Ya existe un usuario con este código de acceso');
+      }
+
+      const newUserData = {
+        name: userData.name,
+        accessCode: userData.accessCode,
+        password: userData.password,
+        role: userData.role || 'user',
+        createdAt: serverTimestamp(),
+        createdBy: currentUser?.id || 'admin',
+        lastPasswordUpdate: serverTimestamp()
+      };
+
+      await addDoc(collection(db, 'users'), newUserData);
+      showToast(`Usuario ${userData.name} creado exitosamente`, 'success');
+    } catch (error) {
+      console.error('Error creating user:', error);
+      showToast(error.message || 'Error al crear usuario', 'error');
+      throw error;
+    }
+  };
+
+  const handleUpdateUser = async (userId, updates) => {
+    try {
+      // Si se está actualizando el código de acceso, validar que no exista
+      if (updates.accessCode) {
+        const existingUserQuery = query(
+          collection(db, 'users'),
+          where('accessCode', '==', updates.accessCode)
+        );
+        const existingUserSnapshot = await getDocs(existingUserQuery);
+        
+        // Verificar que no sea el mismo usuario
+        const existingUser = existingUserSnapshot.docs.find(doc => doc.id !== userId);
+        if (existingUser) {
+          throw new Error('Ya existe otro usuario con este código de acceso');
+        }
+      }
+
+      const updateData = {
+        ...updates,
+        updatedAt: serverTimestamp(),
+        updatedBy: currentUser?.id || 'admin'
+      };
+
+      await updateDoc(doc(db, 'users', userId), updateData);
+      showToast('Usuario actualizado exitosamente', 'success');
+    } catch (error) {
+      console.error('Error updating user:', error);
+      showToast(error.message || 'Error al actualizar usuario', 'error');
+      throw error;
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    try {
+      // Verificar que no sea el usuario actual
+      if (userId === currentUser?.id) {
+        throw new Error('No puedes eliminar tu propio usuario');
+      }
+
+      // Verificar si el usuario tiene territorios asignados
+      const userToDelete = users.find(u => u.id === userId);
+      if (userToDelete) {
+        const assignedTerritories = territories.filter(t => t.assignedTo === userToDelete.name);
+        if (assignedTerritories.length > 0) {
+          throw new Error(`No se puede eliminar: ${userToDelete.name} tiene ${assignedTerritories.length} territorio(s) asignado(s)`);
+        }
+      }
+
+      await deleteDoc(doc(db, 'users', userId));
+      showToast('Usuario eliminado exitosamente', 'success');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      showToast(error.message || 'Error al eliminar usuario', 'error');
+      throw error;
+    }
+  };
+
+  const handleResetUserPassword = async (userId, newPassword) => {
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        password: newPassword,
+        lastPasswordUpdate: serverTimestamp(),
+        passwordResetBy: currentUser?.id || 'admin'
+      });
+      showToast('Contraseña actualizada exitosamente', 'success');
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      showToast('Error al actualizar contraseña', 'error');
+      throw error;
+    }
+  };
+
   const handleResetSingleTerritory = async (territoryId) => {
     try {
       const territoryDoc = await getDoc(doc(db, 'territories', territoryId));
@@ -974,6 +1079,12 @@ export const AppProvider = ({ children }) => {
     // Admin functions
     handleToggleAdminMode,
     resetAdminModeQuietly,
+    
+    // User management functions
+    handleCreateUser,
+    handleUpdateUser,
+    handleDeleteUser,
+    handleResetUserPassword,
     
     // Sync functions
     syncTerritoryStatus
