@@ -68,18 +68,20 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
       {/* Panel del menú con fondo gris claro elegante */}
       <div 
         data-menu-panel="true"
-        className={`fixed inset-y-0 right-0 w-full max-w-sm z-50 ${
+        className={`fixed inset-y-0 right-0 z-50 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{
+          width: '75%',
+          maxWidth: '320px',
           transition: 'transform 2s ease-in-out',
           willChange: 'transform'
         }}
       >
-        <div className="h-full flex flex-col bg-gray-100 shadow-2xl">
+        <div className="h-full flex flex-col bg-gray-100 shadow-2xl rounded-l-2xl">
           <div className="relative h-full flex flex-col" style={{ touchAction: 'pan-y' }}>
             {/* Header con estilo consistente de modales */}
-            <div className="flex-shrink-0 shadow-xl" style={{ backgroundColor: '#2C3E50' }}>
+            <div className="flex-shrink-0 shadow-xl rounded-tl-2xl" style={{ backgroundColor: '#2C3E50' }}>
               <div className="flex items-center justify-between p-6">
                 {/* Título con ícono */}
                 <div className="flex items-center gap-3">
@@ -206,7 +208,7 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                           
                           {/* Contenido del texto */}
                           <div className="flex-1 min-w-0">
-                            <p className={`font-semibold text-base transition-all duration-300 ${
+                            <p className={`font-semibold text-base transition-all duration-300 whitespace-nowrap ${
                               isActive || isHovered ? 'text-white' : 'text-gray-800'
                             }`}>
                               {item.text}
@@ -215,7 +217,7 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                               )}
                             </p>
                             {item.description && (
-                              <p className={`text-sm mt-1 transition-all duration-300 ${
+                              <p className={`text-sm mt-1 transition-all duration-300 whitespace-nowrap overflow-hidden text-ellipsis ${
                                 isActive || isHovered ? 'text-white/80' : 'text-gray-600'
                               }`}>
                                 {item.description}
