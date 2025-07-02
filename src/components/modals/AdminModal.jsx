@@ -3,8 +3,7 @@ import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
-import StatsModal from './StatsModal'; // Importar el componente completo de estadísticas
-import { LazyReportsModal } from './LazyModals'; // Importar el componente de reportes
+import { LazyStatsModal, LazyReportsModal } from './LazyModals'; // CORRECCIÓN: Usar lazy loading para ambos
 
 const AdminModal = (props = {}) => {
   const { isOpen = false, onClose = () => {} } = props;
@@ -1087,10 +1086,10 @@ const AdminModal = (props = {}) => {
       )}
       
       {/* Modal de Estadísticas Completas */}
-      {showStatsModal && (
-        <StatsModal 
-          isOpen={showStatsModal} 
-          onClose={() => setShowStatsModal(false)} 
+            {showStatsModal && (
+        <LazyStatsModal
+          isOpen={showStatsModal}
+          onClose={() => setShowStatsModal(false)}
         />
       )}
       

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider, useToast } from './hooks/useToast';
+import './utils/errorLogger'; // Inicializar el sistema de captura de errores
 import LoginView from './components/auth/LoginView';
 import MobileMenu from './components/common/MobileMenu';
 import TerritoriesView from './pages/TerritoriesView';
@@ -20,6 +21,7 @@ import {
   LazyAdminModal, 
   LazyReportsModal
 } from './components/modals/LazyModals';
+import SystemReportsModal from './components/modals/SystemReportsModal';
 
 
 
@@ -281,6 +283,13 @@ function AppContent() {
       action: handleClearCache
     },
     {
+      id: 'systemReports',
+      text: 'Reportes del Sistema',
+      icon: 'chart-line',
+      modal: 'systemReports',
+      description: 'Ver métricas técnicas y diagnósticos'
+    },
+    {
       id: 'install',
       text: 'Instalar App',
       icon: 'smartphone',
@@ -451,6 +460,9 @@ function AppContent() {
       )}
       {activeModal === 'install' && (
         <InstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
+      )}
+      {activeModal === 'systemReports' && (
+        <SystemReportsModal isOpen onClose={handleCloseModal} modalId="system-reports-modal" />
       )}
     </div>
   );

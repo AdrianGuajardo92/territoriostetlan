@@ -3,7 +3,6 @@ import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
-import * as XLSX from 'xlsx';
 
 const StatsModal = ({ isOpen, onClose }) => {
   const { territories, addresses, users, territoryHistory = [] } = useApp();
@@ -152,8 +151,11 @@ const StatsModal = ({ isOpen, onClose }) => {
   if (!stats) return null;
   
   // Función para exportar a Excel
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     try {
+      // CORRECCIÓN: Importación dinámica de XLSX para evitar error 504
+      const XLSX = await import('xlsx');
+      
       // Crear un nuevo libro
       const wb = XLSX.utils.book_new();
       

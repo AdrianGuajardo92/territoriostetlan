@@ -1,110 +1,176 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
-const ToastContext = createContext();
+// Contexto simple y robusto
+const ToastContext = createContext(undefined);
 
+// Hook principal con fallback completo
 export const useToast = () => {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within ToastProvider');
+  try {
+    const context = useContext(ToastContext);
+    if (context === undefined) {
+      // Fallback seguro sin throw
+      console.warn('useToast: No ToastProvider encontrado, usando fallback');
+      return {
+        showToast: (message, type = 'info') => {
+          console.log(`[Toast Fallback] ${type.toUpperCase()}: ${message}`);
+        },
+        removeToast: () => {}
+      };
+    }
+    return context;
+  } catch (error) {
+    console.error('Error en useToast:', error);
+    // Fallback de emergencia
+    return {
+      showToast: (message, type = 'info') => {
+        console.log(`[Toast Emergency] ${type.toUpperCase()}: ${message}`);
+      },
+      removeToast: () => {}
+    };
   }
-  return context;
 };
 
+// Provider ultra-simplificado
 export const ToastProvider = ({ children }) => {
+  // Estado inicial vacío
   const [toasts, setToasts] = useState([]);
 
-  const showToast = useCallback((message, type = 'info', duration = 1500) => {
-    const id = Date.now() + Math.random();
-    const newToast = { id, message, type };
+  // Función para mostrar toast
+  const showToast = useCallback((message, type = 'info', duration = 3000) => {
+    if (!message) return;
     
-    setToasts(prev => {
-      const filtered = prev.slice(-2);
-      return [...filtered, newToast];
-    });
-    
-    const timeoutId = setTimeout(() => {
-      setToasts(prev => {
-        const remaining = prev.filter(toast => toast.id !== id);
-        console.log(`🗑️ Toast ${id} eliminado automáticamente`);
-        return remaining;
+    try {
+      const id = `toast_${Date.now()}_${Math.random()}`;
+      const newToast = {
+        id,
+        message: String(message),
+        type: String(type),
+        createdAt: Date.now()
+      };
+
+      // Actualizar estado de forma segura
+      setToasts(currentToasts => {
+        const validToasts = Array.isArray(currentToasts) ? currentToasts : [];
+        const filteredToasts = validToasts.slice(-2); // Máximo 3 toasts
+        return [...filteredToasts, newToast];
       });
-    }, duration);
-    
-    setTimeout(() => {
-      setToasts(prev => prev.filter(toast => toast.id !== id));
-    }, duration + 1000);
-    
-    return () => clearTimeout(timeoutId);
+
+      // Auto-remover
+      setTimeout(() => {
+        setToasts(currentToasts => {
+          const validToasts = Array.isArray(currentToasts) ? currentToasts : [];
+          return validToasts.filter(t => t.id !== id);
+        });
+      }, duration);
+
+    } catch (error) {
+      console.error('Error en showToast:', error);
+      // Fallback a console
+      console.log(`[Toast Error Fallback] ${type}: ${message}`);
+    }
   }, []);
 
+  // Función para remover toast
   const removeToast = useCallback((id) => {
-    console.log(`🗑️ Toast ${id} eliminado manualmente`);
-    setToasts(prev => prev.filter(toast => toast.id !== id));
+    try {
+      setToasts(currentToasts => {
+        const validToasts = Array.isArray(currentToasts) ? currentToasts : [];
+        return validToasts.filter(t => t.id !== id);
+      });
+    } catch (error) {
+      console.error('Error en removeToast:', error);
+    }
   }, []);
+
+  // Valor del contexto
+  const contextValue = {
+    showToast,
+    removeToast
+  };
 
   return (
-    <ToastContext.Provider value={{ showToast, removeToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </ToastContext.Provider>
   );
 };
 
-const ToastContainer = ({ toasts, removeToast }) => {
+// Contenedor de toasts
+const ToastContainer = ({ toasts, onRemove }) => {
+  const validToasts = Array.isArray(toasts) ? toasts : [];
+
+  if (validToasts.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-3">
-      {toasts.map(toast => (
-        <Toast key={toast.id} {...toast} onClose={() => removeToast(toast.id)} />
+    <div className="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
+      {validToasts.map(toast => (
+        <ToastItem
+          key={toast.id}
+          toast={toast}
+          onRemove={onRemove}
+        />
       ))}
     </div>
   );
 };
 
-const Toast = ({ message, type, onClose }) => {
-  const bgColors = {
-    success: 'bg-gradient-to-r from-green-500 to-green-600',
-    error: 'bg-gradient-to-r from-red-500 to-red-600',
-    warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600',
-    info: 'bg-gradient-to-r from-blue-500 to-blue-600'
+// Componente individual de toast
+const ToastItem = ({ toast, onRemove }) => {
+  const { id, message, type } = toast;
+
+  // Auto-remover después de mostrar
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (onRemove) {
+        onRemove(id);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [id, onRemove]);
+
+  // Configuración de estilos por tipo
+  const getStyles = (toastType) => {
+    switch (toastType) {
+      case 'success':
+        return {
+          bg: 'bg-green-500',
+          icon: '✓'
+        };
+      case 'error':
+        return {
+          bg: 'bg-red-500',
+          icon: '✕'
+        };
+      case 'warning':
+        return {
+          bg: 'bg-yellow-500',
+          icon: '⚠'
+        };
+      default:
+        return {
+          bg: 'bg-blue-500',
+          icon: 'ℹ'
+        };
+    }
   };
 
-  const icons = {
-    success: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    error: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    warning: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    info: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    )
-  };
+  const styles = getStyles(type);
 
   return (
-    <div className={`${bgColors[type]} text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 min-w-[320px] max-w-md animate-slide-in-from-right border border-white/20 backdrop-blur-sm`}>
-      <div className="bg-white/20 p-1.5 rounded-full">
-        {icons[type]}
-      </div>
-      <span className="flex-1 font-medium text-sm">{message}</span>
-      <button 
-        onClick={onClose}
-        className="hover:bg-white/20 rounded-full p-1.5 transition-colors ml-2"
-        aria-label="Cerrar notificación"
+    <div className={`${styles.bg} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px] max-w-md pointer-events-auto animate-slide-in-from-right`}>
+      <span className="text-lg font-bold">{styles.icon}</span>
+      <span className="flex-1 text-sm font-medium">{message}</span>
+      <button
+        onClick={() => onRemove(id)}
+        className="text-white/80 hover:text-white text-lg leading-none"
+        type="button"
+        aria-label="Cerrar"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        ×
       </button>
     </div>
   );

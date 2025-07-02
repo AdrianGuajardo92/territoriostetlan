@@ -57,6 +57,8 @@ export const AppProvider = ({ children }) => {
 
   // Referencias para cleanup
   const unsubscribesRef = useRef([]);
+  
+  // CORRECCIÓN: Mover useToast DENTRO del componente
   const { showToast } = useToast();
 
   // Estado para la versión dinámica
