@@ -212,7 +212,18 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.supported = true;
       
       try {
-        const registration = await navigator.serviceWorker.getRegistration();
+        // Esperar un poco para que el SW se registre si está en proceso
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Verificar múltiples veces para asegurar detección
+        let registration = await navigator.serviceWorker.getRegistration();
+        
+        // Si no hay registro, verificar registros globales
+        if (!registration) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          registration = registrations[0]; // Tomar el primero si existe
+        }
+        
         sw.registered = !!registration;
         
         if (registration) {
@@ -229,26 +240,35 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
           } else if (waitingWorker) {
             sw.state = waitingWorker.state;
             sw.status = 'Esperando activación';
+            sw.scriptURL = waitingWorker.scriptURL;
+            sw.scope = registration.scope;
           } else if (installingWorker) {
             sw.state = installingWorker.state;
             sw.status = 'Instalando';
+            sw.scriptURL = installingWorker.scriptURL;
+            sw.scope = registration.scope;
           } else {
             sw.state = 'unknown';
             sw.status = 'Estado desconocido';
+            sw.scope = registration.scope;
           }
           
           // Información adicional
           sw.updateViaCache = registration.updateViaCache;
           sw.lastUpdateCheck = registration.lastUpdateCheck || 'Nunca';
+          
+          // Información de instalación
+          sw.installTime = registration.installing ? 'Instalando ahora' : 'Instalado';
         } else {
           sw.state = 'unregistered';
           sw.status = 'No registrado';
         }
         
+        // Verificar controlador con múltiples intentos
         sw.controller = !!navigator.serviceWorker.controller;
         sw.controllerURL = navigator.serviceWorker.controller?.scriptURL || 'Ninguno';
         
-        // Test de comunicación
+        // Test de comunicación mejorado
         if (navigator.serviceWorker.controller) {
           try {
             const messageChannel = new MessageChannel();
@@ -258,7 +278,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
             
             const response = await new Promise((resolve, reject) => {
               messageChannel.port1.onmessage = (event) => resolve(event.data);
-              setTimeout(() => reject(new Error('Timeout')), 2000);
+              setTimeout(() => reject(new Error('Timeout')), 3000); // Más tiempo
             });
             
             sw.communication = 'Funcional';
@@ -267,8 +287,16 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
             sw.communication = 'Error: ' + e.message;
           }
         } else {
-          sw.communication = 'Sin controlador';
+          // Si no hay controlador, intentar detectar SW activo de otra forma
+          if (registration && registration.active) {
+            sw.communication = 'SW activo pero sin controlador';
+          } else {
+            sw.communication = 'Sin controlador';
+          }
         }
+        
+        // Información adicional de debugging
+        sw.ready = await navigator.serviceWorker.ready.then(() => true).catch(() => false);
         
       } catch (e) {
         sw.error = e.message;
@@ -279,6 +307,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.status = 'No soportado por el navegador';
     }
 
+    console.log('🔍 Información SW detectada:', sw);
     return sw;
   };
 

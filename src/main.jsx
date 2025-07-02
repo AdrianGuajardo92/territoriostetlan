@@ -45,10 +45,23 @@ const registerServiceWorker = async () => {
     if (registration.waiting) {
       console.log('⏳ Service Worker esperando activación...');
       registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      // Esperar a que se active
+      await new Promise((resolve) => {
+        navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
+        setTimeout(resolve, 3000); // Timeout de seguridad
+      });
     }
     
     if (registration.active) {
       console.log('✅ Service Worker activo:', registration.active.state);
+    }
+    
+    // Verificar que el controlador esté disponible
+    if (!navigator.serviceWorker.controller) {
+      console.log('⚠️ No hay controlador, forzando reload...');
+      setTimeout(() => window.location.reload(), 2000);
+    } else {
+      console.log('✅ Controlador SW disponible:', navigator.serviceWorker.controller.scriptURL);
     }
     
     // Verificar actualizaciones cada 5 minutos

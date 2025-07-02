@@ -1,5 +1,5 @@
 {
-  "version": "2.25.2",
+  "version": "2.25.3",
   "buildDate": "2025-01-01",
-  "description": "Service Worker COMPLETAMENTE FUNCIONAL - registro automático + diagnóstico avanzado"
+  "description": "Service Worker registro AGRESIVO - detección mejorada + botón forzar registro"
 } 
