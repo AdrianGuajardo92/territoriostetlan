@@ -69,10 +69,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
           getCacheInfo(),
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout cache')), 3000))
         ]),
-        serviceWorker: Promise.race([
-          getServiceWorkerInfo(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout serviceWorker')), 5000))
-        ])
+
       };
       
       // Resolver todas las promesas con manejo de errores individual
@@ -82,8 +79,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         dataPromises.browser,
         dataPromises.storage,
         dataPromises.network,
-        dataPromises.cache,
-        dataPromises.serviceWorker
+        dataPromises.cache
       ]);
       
       const data = {
@@ -92,8 +88,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         browser: results[2].status === 'fulfilled' ? results[2].value : { error: 'Error' },
         storage: results[3].status === 'fulfilled' ? results[3].value : { error: 'Timeout' },
         network: results[4].status === 'fulfilled' ? results[4].value : { error: 'Timeout' },
-        cache: results[5].status === 'fulfilled' ? results[5].value : { error: 'Timeout' },
-        serviceWorker: results[6].status === 'fulfilled' ? results[6].value : { error: 'Timeout', supported: false }
+        cache: results[5].status === 'fulfilled' ? results[5].value : { error: 'Timeout' }
       };
       
       console.log('✅ Recolección completada:', data);
@@ -109,8 +104,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         browser: { error: 'Error de carga' },
         storage: { error: 'Error de carga' },
         network: { error: 'Error de carga' },
-        cache: { error: 'Error de carga' },
-        serviceWorker: { error: 'Error de carga', supported: false }
+        cache: { error: 'Error de carga' }
       });
     } finally {
       setIsLoading(false);
@@ -413,7 +407,6 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
 
   const tabs = [
     { id: 'overview', label: 'Resumen', icon: 'chart-bar', color: 'indigo', description: 'Vista general del sistema' },
-    { id: 'serviceWorker', label: 'Service Worker', icon: 'cogs', color: 'emerald', description: 'Estado del SW' },
     { id: 'performance', label: 'Rendimiento', icon: 'tachometer-alt', color: 'blue', description: 'Métricas de velocidad' },
     { id: 'errors', label: 'Errores', icon: 'exclamation-triangle', color: 'red', description: 'Logs de errores' },
     { id: 'browser', label: 'Navegador', icon: 'globe', color: 'purple', description: 'Info del navegador' },
@@ -586,7 +579,6 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
             ) : (
               <div className="space-y-4">
                 {activeTab === 'overview' && <OverviewTab data={systemData} />}
-                {activeTab === 'serviceWorker' && <ServiceWorkerTab data={systemData.serviceWorker} />}
                 {activeTab === 'performance' && <PerformanceTab data={systemData.performance} />}
                 {activeTab === 'errors' && <ErrorsTab data={systemData.errors} />}
                 {activeTab === 'browser' && <BrowserTab data={systemData.browser} />}

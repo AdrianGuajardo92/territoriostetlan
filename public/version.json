@@ -1,5 +1,5 @@
 {
-  "version": "v2.25.11",
+  "version": "v2.25.12",
   "timestamp": "2025-01-02T13:45:00.000Z",
   "changes": [
     "Reimplementación de Service Worker para ser 100% Offline-First.",
