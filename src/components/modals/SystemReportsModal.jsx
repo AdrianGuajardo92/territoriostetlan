@@ -1464,36 +1464,61 @@ const ServiceWorkerTab = ({ data }) => (
           onClick={async () => {
             try {
               if ('serviceWorker' in navigator) {
-                console.log('🔄 Forzando registro del Service Worker...');
+                console.log('🔄 REGISTRO MANUAL del Service Worker v2.25.10...');
                 
-                // Desregistrar cualquier SW anterior
+                // PASO 1: Limpiar TODO completamente
                 const registrations = await navigator.serviceWorker.getRegistrations();
                 for (const registration of registrations) {
                   console.log('🗑️ Desregistrando:', registration.scope);
                   await registration.unregister();
                 }
                 
-                // Registrar nuevo SW
+                // PASO 2: Limpiar caches
+                const cacheNames = await caches.keys();
+                for (const cacheName of cacheNames) {
+                  console.log('🧹 Eliminando cache:', cacheName);
+                  await caches.delete(cacheName);
+                }
+                
+                console.log('✅ Limpieza completa terminada');
+                
+                // PASO 3: Esperar un momento
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // PASO 4: Registrar SW limpio
+                console.log('🚀 Registrando SW limpio...');
                 const registration = await navigator.serviceWorker.register('/sw.js', { 
                   scope: '/',
                   updateViaCache: 'none' 
                 });
                 
-                console.log('✅ SW registrado:', registration);
+                console.log('✅ SW registrado exitosamente:', registration.scope);
                 
-                // Esperar un momento y recargar
-                setTimeout(() => {
-                  window.location.reload();
-                }, 2000);
+                // PASO 5: Esperar activación y recargar
+                registration.addEventListener('updatefound', () => {
+                  const newWorker = registration.installing;
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'activated') {
+                      console.log('✅ SW activado, recargando...');
+                      setTimeout(() => window.location.reload(), 1000);
+                    }
+                  });
+                });
+                
+                // Si ya está activo, recargar directamente
+                if (registration.active) {
+                  setTimeout(() => window.location.reload(), 2000);
+                }
               }
             } catch (error) {
-              console.error('❌ Error:', error);
+              console.error('❌ Error en registro manual:', error);
+              alert('Error en registro: ' + error.message);
             }
           }}
           className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all duration-200 flex items-center gap-2"
         >
           <i className="fas fa-rocket"></i>
-          Forzar Registro
+          Registro Manual
         </button>
         
         <button 
@@ -1511,19 +1536,39 @@ const ServiceWorkerTab = ({ data }) => (
         </button>
         
         <button 
-          onClick={() => {
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations()
-                .then(registrations => {
-                  registrations.forEach(registration => registration.unregister());
-                  setTimeout(() => window.location.reload(), 1000);
-                });
+          onClick={async () => {
+            try {
+              if ('serviceWorker' in navigator) {
+                console.log('🗑️ DESACTIVANDO completamente Service Worker...');
+                
+                // Desregistrar todos los SW
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                  console.log('🗑️ Desregistrando SW:', registration.scope);
+                  await registration.unregister();
+                }
+                
+                // Limpiar todos los caches
+                const cacheNames = await caches.keys();
+                for (const cacheName of cacheNames) {
+                  console.log('🧹 Eliminando cache:', cacheName);
+                  await caches.delete(cacheName);
+                }
+                
+                console.log('✅ Service Worker completamente DESACTIVADO');
+                alert('Service Worker desactivado. La página se recargará.');
+                
+                setTimeout(() => window.location.reload(), 1000);
+              }
+            } catch (error) {
+              console.error('❌ Error desactivando SW:', error);
+              alert('Error: ' + error.message);
             }
           }}
           className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 transition-all duration-200 flex items-center gap-2"
         >
-          <i className="fas fa-trash"></i>
-          Desregistrar SW
+          <i className="fas fa-power-off"></i>
+          DESACTIVAR SW
         </button>
         
         <button 

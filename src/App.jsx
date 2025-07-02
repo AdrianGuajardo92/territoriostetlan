@@ -62,45 +62,10 @@ function AppContent() {
     }).length;
   };
 
-  // Sistema de Service Worker ULTRA SIMPLE - DEFINITIVO
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      const registerSW = async () => {
-        try {
-          console.log('🚀 Registro SIMPLE de Service Worker v2.25.10...');
-          
-          // REGISTRO DIRECTO - SIN VERIFICACIONES COMPLEJAS
-          const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/',
-            updateViaCache: 'none'
-          });
-          
-          console.log('✅ Service Worker v2.25.10 registrado exitosamente');
-          
-          // Escuchar mensajes del SW
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            const { type, version } = event.data || {};
-            if (type === 'SW_ACTIVATED') {
-              console.log(`🎯 Service Worker ${version} ACTIVADO Y CONTROLANDO`);
-              showToast(`Service Worker ${version} activado`, 'success');
-            }
-          });
-          
-        } catch (error) {
-          console.error('❌ Error registrando Service Worker:', error);
-        }
-      };
-
-      // Registrar cuando la página esté lista
-      if (document.readyState === 'complete') {
-        registerSW();
-      } else {
-        window.addEventListener('load', registerSW, { once: true });
-      }
-    } else {
-      console.warn('⚠️ Service Workers no soportados en este navegador');
-    }
-  }, [showToast]);
+  // DESACTIVADO TEMPORALMENTE - Service Worker manual solamente
+  // useEffect(() => {
+  //   console.log('🚫 Service Worker registro automático DESACTIVADO');
+  // }, []);
 
   // Función simplificada para limpiar cache
   const handleClearCache = () => {
