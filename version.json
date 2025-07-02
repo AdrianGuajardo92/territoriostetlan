@@ -1,17 +1,41 @@
 {
-  "version": "v2.25.27",
-  "timestamp": "2025-01-02T15:30:00.000Z",
+  "version": "v2.25.28",
+  "timestamp": "2025-01-02T21:00:00.000Z",
   "releaseDate": "2025-01-02",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "🟢 LÍNEAS VERDES: Todos los cambios ahora tienen línea verde para identificación visual",
-    "📍 DIRECCIÓN PRIMERO: Siempre aparece al inicio para contexto inmediato",
-    "👤 NOMBRE EN UNA LÍNEA: Evitado corte de nombres largos con overflow elegante",
-    "📋 ORDEN LÓGICO: Dirección → Revisita → Estudio → Género → Notas"
+    "🎨 REDISEÑO COMPLETO MIS PROPUESTAS: Vista completamente renovada con formato de barras verdes",
+    "📱 100% OPTIMIZADO MÓVIL: Diseño responsive perfecto, filtros táctiles, header limpio",
+    "🟢 FORMATO CONSISTENTE: Barras verdes individuales como AdminModal, eliminada información redundante",
+    "🏷️ ETIQUETAS LIMPIAS: Solo una etiqueta de estado por tarjeta, territorio con formato correcto",
+    "📊 FILTROS MEJORADOS: Contadores visuales, estados claros (Pendientes/Aprobadas/Rechazadas)"
   ],
-  "lastUpdated": "2024-12-27",
+  "lastUpdated": "2025-01-02",
   "changelog": [
+    {
+      "version": "2.25.28",
+      "date": "2025-01-02",
+      "changes": [
+        "🎨 REDISEÑO COMPLETO MIS PROPUESTAS: Vista completamente renovada con formato de barras verdes",
+        "📱 100% OPTIMIZADO MÓVIL: Diseño responsive perfecto, filtros táctiles, header limpio", 
+        "🟢 FORMATO CONSISTENTE: Barras verdes individuales como AdminModal, eliminada información redundante",
+        "🏷️ ETIQUETAS LIMPIAS: Solo una etiqueta de estado por tarjeta, territorio con formato correcto",
+        "📊 FILTROS MEJORADOS: Contadores visuales, estados claros (Pendientes/Aprobadas/Rechazadas)",
+        "🗑️ MODAL ELIMINADO: Removido modal de detalles, toda información visible en tarjeta principal",
+        "⚡ CARGA OPTIMIZADA: Mejor rendimiento, menos componentes, interfaz más fluida"
+      ]
+    },
+    {
+      "version": "2.25.27",
+      "date": "2025-01-02",
+      "changes": [
+        "🟢 LÍNEAS VERDES: Todos los cambios ahora tienen línea verde para identificación visual",
+        "📍 DIRECCIÓN PRIMERO: Siempre aparece al inicio para contexto inmediato",
+        "👤 NOMBRE EN UNA LÍNEA: Evitado corte de nombres largos con overflow elegante",
+        "📋 ORDEN LÓGICO: Dirección → Revisita → Estudio → Género → Notas"
+      ]
+    },
     {
       "version": "2.16.1",
       "date": "2025-01-01",
