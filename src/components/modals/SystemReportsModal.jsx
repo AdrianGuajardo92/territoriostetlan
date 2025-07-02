@@ -1350,6 +1350,42 @@ const ServiceWorkerTab = ({ data }) => (
       {/* Acciones */}
       <div className="mt-6 flex flex-wrap gap-3">
         <button 
+          onClick={async () => {
+            try {
+              if ('serviceWorker' in navigator) {
+                console.log('🔄 Forzando registro del Service Worker...');
+                
+                // Desregistrar cualquier SW anterior
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                  console.log('🗑️ Desregistrando:', registration.scope);
+                  await registration.unregister();
+                }
+                
+                // Registrar nuevo SW
+                const registration = await navigator.serviceWorker.register('/sw.js', { 
+                  scope: '/',
+                  updateViaCache: 'none' 
+                });
+                
+                console.log('✅ SW registrado:', registration);
+                
+                // Esperar un momento y recargar
+                setTimeout(() => {
+                  window.location.reload();
+                }, 2000);
+              }
+            } catch (error) {
+              console.error('❌ Error:', error);
+            }
+          }}
+          className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all duration-200 flex items-center gap-2"
+        >
+          <i className="fas fa-rocket"></i>
+          Forzar Registro
+        </button>
+        
+        <button 
           onClick={() => {
             if ('serviceWorker' in navigator) {
               navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
@@ -1377,6 +1413,16 @@ const ServiceWorkerTab = ({ data }) => (
         >
           <i className="fas fa-trash"></i>
           Desregistrar SW
+        </button>
+        
+        <button 
+          onClick={() => {
+            collectSystemData();
+          }}
+          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all duration-200 flex items-center gap-2"
+        >
+          <i className="fas fa-refresh"></i>
+          Actualizar Datos
         </button>
       </div>
     </div>
