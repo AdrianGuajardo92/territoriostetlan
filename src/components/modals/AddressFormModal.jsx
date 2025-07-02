@@ -91,6 +91,9 @@ const AddressFormModal = ({
   }, [publishers, estudioSearch, isAdmin]);
 
   useEffect(() => {
+    // Solo ejecutar cuando el modal se abre por primera vez o cambia la dirección
+    if (!isOpen) return;
+    
     if (address) {
       setFormData({
         address: address.address || '',
@@ -139,7 +142,7 @@ const AddressFormModal = ({
     setShowEstudioDropdown(false);
     // Siempre contraer la ubicación al abrir/cambiar
     setIsLocationExpanded(false);
-  }, [address, isOpen]);
+  }, [address?.id, isOpen]); // Solo depender del ID de la dirección y si se abre el modal
 
   // Cerrar dropdowns al hacer clic fuera
   useEffect(() => {
@@ -219,9 +222,14 @@ const AddressFormModal = ({
     console.log('🔍 Estado ANTES - formData.revisitaBy:', formData.revisitaBy);
     console.log('🔍 Estado ANTES - revisitaSearch:', revisitaSearch);
     
-    // Actualizar ambos estados de forma sincronizada
+    // Actualizar ambos estados de forma sincronizada usando callback para asegurar la actualización
     setFormData(prev => {
-      const newData = { ...prev, revisitaBy: publisherName };
+      const newData = { 
+        ...prev, 
+        revisitaBy: publisherName,
+        // Asegurar que isRevisita esté marcado
+        isRevisita: true
+      };
       console.log('🔄 Nuevo formData completo:', newData);
       return newData;
     });
@@ -234,10 +242,17 @@ const AddressFormModal = ({
     
     console.log('✅ Estados actualizados - revisitaBy debería ser:', publisherName);
     
-    // Forzar un re-render después de un pequeño delay para asegurar la actualización
+    // Verificación más robusta con múltiples checks
     setTimeout(() => {
       console.log('🔄 Verificación post-actualización - formData.revisitaBy:', formData.revisitaBy);
+      if (!formData.revisitaBy) {
+        console.error('❌ ERROR: El estado se perdió después de la actualización');
+      }
     }, 100);
+    
+    setTimeout(() => {
+      console.log('🔄 Verificación final (500ms):', formData.revisitaBy);
+    }, 500);
   };
 
   // Manejar selección de publicador para estudio
