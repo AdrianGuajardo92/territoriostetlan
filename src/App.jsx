@@ -9,6 +9,9 @@ import TerritoryDetailView from './pages/TerritoryDetailView';
 import MyProposalsView from './pages/MyProposalsView';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
+// 📱 FASE 2: Optimizaciones móviles
+import { initializeMobileOptimizations } from './utils/mobileOptimizer';
+
 // 🚀 LAZY LOADING INTELIGENTE - Solo cargar cuando se necesite
 const SearchModal = lazy(() => import('./components/modals/SearchModal'));
 const PasswordModal = lazy(() => import('./components/modals/PasswordModal'));
@@ -51,6 +54,24 @@ function AppContent() {
   const [activeModal, setActiveModal] = useState(null);
   const [showMyProposals, setShowMyProposals] = useState(false);
   
+  // 📱 FASE 2: Inicializar optimizaciones móviles
+  const [mobileOptimized, setMobileOptimized] = useState(false);
+  
+  // 📱 FASE 2: Inicializar optimizaciones móviles al cargar la app
+  useEffect(() => {
+    if (!mobileOptimized) {
+      console.log('📱 FASE 2: Inicializando optimizaciones móviles...');
+      const deviceInfo = initializeMobileOptimizations();
+      setMobileOptimized(true);
+      
+      // Log para debugging
+      console.log('📱 Dispositivo:', deviceInfo.isMobile ? 'Móvil' : 'Desktop');
+      console.log('📱 OS:', deviceInfo.isIOS ? 'iOS' : deviceInfo.isAndroid ? 'Android' : 'Otro');
+      console.log('📱 Memoria:', deviceInfo.deviceMemory + 'GB');
+      console.log('📱 Conexión:', deviceInfo.connection?.effectiveType || 'Desconocida');
+    }
+  }, [mobileOptimized]);
+
   // 🎯 PRELOAD INTELIGENTE - Precargar modales según el rol del usuario
   useEffect(() => {
     if (currentUser) {

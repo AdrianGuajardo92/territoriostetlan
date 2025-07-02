@@ -1,17 +1,43 @@
 {
-  "version": "v2.26.0-FASE1",
-  "timestamp": "2025-01-02T13:45:00.000Z",
-  "releaseDate": "2025-01-01",
+  "version": "v2.27.0-FASE2",
+  "timestamp": "2025-01-02T15:30:00.000Z",
+  "releaseDate": "2025-01-02",
   "forceUpdate": false,
-  "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
+  "_comment": "FASE 2: Optimización Móvil - Gestos táctiles, navegación optimizada y performance mejorada para dispositivos móviles.",
   "changes": [
-    "Reimplementación de Service Worker para ser 100% Offline-First.",
-    "Corregido bucle infinito de recarga.",
-    "Estrategia de 'Cache First' para todos los recursos.",
-    "Ciclo de vida de SW estabilizado para evitar errores de activación."
+    "📱 Sistema completo de gestos táctiles (swipe, tap, long press)",
+    "🧭 Navegación móvil con auto-hide en scroll",
+    "📊 Indicador de conectividad en tiempo real",
+    "⚡ Optimizaciones específicas para dispositivos lentos",
+    "🎴 Tarjetas optimizadas para touch con feedback táctil",
+    "🔍 Detección automática de dispositivo y adaptación de UX"
   ],
   "lastUpdated": "2024-12-27",
   "changelog": [
+    {
+      "version": "v2.27.0-FASE2",
+      "date": "2025-01-02",
+      "changes": [
+        "📱 OPTIMIZACIÓN MÓVIL COMPLETA: Sistema de gestos táctiles con swipe en 4 direcciones, tap, doble tap y long press",
+        "🧭 NAVEGACIÓN INTELIGENTE: Auto-hide en scroll para maximizar espacio en pantalla, botones optimizados para touch (44px mínimo)",
+        "📊 CONECTIVIDAD EN TIEMPO REAL: Indicador visual de estado de conexión (offline, 2G, 3G, 4G) con colores adaptativos",
+        "⚡ PERFORMANCE ADAPTATIVA: Detección automática de capacidad del dispositivo y optimización de animaciones/memoria según hardware",
+        "🎴 TARJETAS TÁCTILES: TerritoryCard optimizado con gestos, vibración táctil, altura mínima y eliminación de highlight azul en iOS",
+        "🔍 DETECCIÓN INTELIGENTE: Identificación automática iOS/Android con configuraciones específicas y adaptación de UX"
+      ]
+    },
+    {
+      "version": "v2.26.0-FASE1",
+      "date": "2025-01-01",
+      "changes": [
+        "🚀 OPTIMIZACIÓN FASE 1: Login ultra rápido con cache local (50ms vs 1000ms+)",
+        "📦 BUNDLE SPLITTING: Reducción de Firebase bundle 23% (320KB → 247KB)",
+        "⚡ LAZY LOADING: Modales cargan solo cuando se necesitan, preload inteligente por rol",
+        "📊 MONITOREO AVANZADO: Sistema de métricas en tiempo real con panel de diagnóstico",
+        "🔥 ÍNDICES FIREBASE: Queries optimizadas para búsquedas más rápidas",
+        "✅ CONSOLA LIMPIA: 100% sin errores, Service Worker estabilizado"
+      ]
+    },
     {
       "version": "2.16.1",
       "date": "2025-01-01",
