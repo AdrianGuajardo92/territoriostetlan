@@ -1,85 +1,174 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
-// Contexto simple
-const ToastContext = createContext(null);
+// Contexto simple y robusto
+const ToastContext = createContext(undefined);
 
-// Hook simplificado
+// Hook principal con fallback completo
 export const useToast = () => {
-  const context = useContext(ToastContext);
-  
-  if (!context) {
-    // Fallback simple que siempre funciona
+  try {
+    const context = useContext(ToastContext);
+    if (context === undefined) {
+      // Fallback seguro sin throw
+      console.warn('useToast: No ToastProvider encontrado, usando fallback');
+      return {
+        showToast: (message, type = 'info') => {
+          console.log(`[Toast Fallback] ${type.toUpperCase()}: ${message}`);
+        },
+        removeToast: () => {}
+      };
+    }
+    return context;
+  } catch (error) {
+    console.error('Error en useToast:', error);
+    // Fallback de emergencia
     return {
       showToast: (message, type = 'info') => {
-        console.log(`[Toast] ${type.toUpperCase()}: ${message}`);
+        console.log(`[Toast Emergency] ${type.toUpperCase()}: ${message}`);
       },
       removeToast: () => {}
     };
   }
-  
-  return context;
 };
 
-// Provider ultra-simple
+// Provider ultra-simplificado
 export const ToastProvider = ({ children }) => {
+  // Estado inicial vacío
   const [toasts, setToasts] = useState([]);
 
-  const showToast = useCallback((message, type = 'info') => {
-    const id = Date.now();
-    const newToast = { id, message, type };
+  // Función para mostrar toast
+  const showToast = useCallback((message, type = 'info', duration = 3000) => {
+    if (!message) return;
     
-    setToasts(prev => [...prev.slice(-2), newToast]);
-    
-    // Auto-remover después de 3 segundos
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3000);
+    try {
+      const id = `toast_${Date.now()}_${Math.random()}`;
+      const newToast = {
+        id,
+        message: String(message),
+        type: String(type),
+        createdAt: Date.now()
+      };
+
+      // Actualizar estado de forma segura
+      setToasts(currentToasts => {
+        const validToasts = Array.isArray(currentToasts) ? currentToasts : [];
+        const filteredToasts = validToasts.slice(-2); // Máximo 3 toasts
+        return [...filteredToasts, newToast];
+      });
+
+      // Auto-remover
+      setTimeout(() => {
+        setToasts(currentToasts => {
+          const validToasts = Array.isArray(currentToasts) ? currentToasts : [];
+          return validToasts.filter(t => t.id !== id);
+        });
+      }, duration);
+
+    } catch (error) {
+      console.error('Error en showToast:', error);
+      // Fallback a console
+      console.log(`[Toast Error Fallback] ${type}: ${message}`);
+    }
   }, []);
 
+  // Función para remover toast
   const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    try {
+      setToasts(currentToasts => {
+        const validToasts = Array.isArray(currentToasts) ? currentToasts : [];
+        return validToasts.filter(t => t.id !== id);
+      });
+    } catch (error) {
+      console.error('Error en removeToast:', error);
+    }
   }, []);
+
+  // Valor del contexto
+  const contextValue = {
+    showToast,
+    removeToast
+  };
 
   return (
-    <ToastContext.Provider value={{ showToast, removeToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </ToastContext.Provider>
   );
 };
 
-// Contenedor simple
+// Contenedor de toasts
 const ToastContainer = ({ toasts, onRemove }) => {
-  if (!toasts || toasts.length === 0) return null;
+  const validToasts = Array.isArray(toasts) ? toasts : [];
+
+  if (validToasts.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
-      {toasts.map(toast => (
-        <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
+    <div className="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
+      {validToasts.map(toast => (
+        <ToastItem
+          key={toast.id}
+          toast={toast}
+          onRemove={onRemove}
+        />
       ))}
     </div>
   );
 };
 
-// Toast individual
+// Componente individual de toast
 const ToastItem = ({ toast, onRemove }) => {
   const { id, message, type } = toast;
 
-  const getStyles = () => {
-    switch (type) {
-      case 'success': return 'bg-green-500';
-      case 'error': return 'bg-red-500';
-      case 'warning': return 'bg-yellow-500';
-      default: return 'bg-blue-500';
+  // Auto-remover después de mostrar
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (onRemove) {
+        onRemove(id);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [id, onRemove]);
+
+  // Configuración de estilos por tipo
+  const getStyles = (toastType) => {
+    switch (toastType) {
+      case 'success':
+        return {
+          bg: 'bg-green-500',
+          icon: '✓'
+        };
+      case 'error':
+        return {
+          bg: 'bg-red-500',
+          icon: '✕'
+        };
+      case 'warning':
+        return {
+          bg: 'bg-yellow-500',
+          icon: '⚠'
+        };
+      default:
+        return {
+          bg: 'bg-blue-500',
+          icon: 'ℹ'
+        };
     }
   };
 
+  const styles = getStyles(type);
+
   return (
-    <div className={`${getStyles()} text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px]`}>
-      <span className="text-sm">{message}</span>
+    <div className={`${styles.bg} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px] max-w-md pointer-events-auto animate-slide-in-from-right`}>
+      <span className="text-lg font-bold">{styles.icon}</span>
+      <span className="flex-1 text-sm font-medium">{message}</span>
       <button
         onClick={() => onRemove(id)}
-        className="ml-4 text-white/80 hover:text-white"
+        className="text-white/80 hover:text-white text-lg leading-none"
+        type="button"
+        aria-label="Cerrar"
       >
         ×
       </button>

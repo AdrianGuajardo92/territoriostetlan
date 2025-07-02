@@ -1,12 +1,12 @@
 {
-  "version": "v2.26.0-FASE1",
+  "version": "v2.25.15",
   "timestamp": "2025-01-02T13:45:00.000Z",
   "changes": [
-    "🚀 FASE 1 COMPLETADA: Optimizaciones inmediatas implementadas",
-    "⚡ LOGIN OPTIMIZADO: Cache local para logins 10x más rápidos",
-    "📦 BUNDLE REDUCIDO: Firebase optimizado (-23% tamaño)",
-    "🎯 LAZY LOADING: Modales cargan solo cuando se necesitan",
-    "📊 MONITOREO: Sistema de métricas de performance integrado",
-    "🔧 DIAGNÓSTICO: Panel de testing FASE 1 para admins"
+    "🗑️ ELIMINACIÓN COMPLETA: Headers Clear-Site-Data removidos totalmente",
+    "❌ SIN WARNINGS: Eliminado 'Unrecognized type: storage' en consola",
+    "✅ CONSOLA LIMPIA: Sin advertencias de Clear-Site-Data",
+    "🧹 SOLUCIÓN DEFINITIVA: Headers problemáticos completamente removidos",
+    "📡 HEADERS SIMPLIFICADOS: Solo Cache-Control necesario para funcionalidad",
+    "🎯 RESULTADO: Consola 100% limpia sin ningún warning HTTP"
   ]
 } 

@@ -1,0 +1,13 @@
+{
+  "cleanupTime": "2025-07-02T17:44:03.066Z",
+  "packageVersion": "2.28.0",
+  "appVersion": "v2.28.0-FASE3",
+  "cacheId": "v2.28.0-FASE3-1751478243065",
+  "instructions": [
+    "1. Reiniciar servidor: npm run dev",
+    "2. Abrir localhost:3000 en navegador",
+    "3. Hacer Ctrl+Shift+R para forzar recarga",
+    "4. Verificar que no hay errores en consola",
+    "5. Si persisten errores, reportar inmediatamente"
+  ]
+}

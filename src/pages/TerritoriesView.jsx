@@ -4,7 +4,7 @@ import TerritoryCard from '../components/territories/TerritoryCard';
 import TerritoryFilters from '../components/territories/TerritoryFilters';
 import SkeletonCard from '../components/common/SkeletonCard';
 import Icon from '../components/common/Icon';
-import { useTouchGestures } from '../hooks/useTouchGestures';
+import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
 
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
@@ -120,10 +120,8 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     handleFilterChange(filters[nextIndex]);
   }, [filterStatus, handleFilterChange, swipeFeedback]);
 
-  // 📱 FASE 2: Aplicar gestos táctiles al container principal
-  const touchGestures = useTouchGestures({
-    onSwipeLeft: handleSwipeLeft,
-    onSwipeRight: handleSwipeRight,
+  // Aplicar swipe navigation al container principal
+  const swipeNavRef = useSwipeNavigation(handleSwipeLeft, handleSwipeRight, {
     swipeThreshold: 80 // Más alto para evitar conflictos con scroll
   });
 
@@ -155,7 +153,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
 
   return (
     <div 
-      ref={touchGestures.ref}
+      ref={swipeNavRef}
       className="min-h-screen pb-24 sm:pb-8" 
       style={{ backgroundColor: '#F5F5F5' }}
     >

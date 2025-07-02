@@ -1,178 +1,191 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-// 📱 FASE 2: Hook para gestos táctiles optimizados
-export const useTouchGestures = (options = {}) => {
-  const {
-    onSwipeLeft = null,
-    onSwipeRight = null,
-    onSwipeUp = null,
-    onSwipeDown = null,
-    onTap = null,
-    onDoubleTap = null,
-    onLongPress = null,
-    swipeThreshold = 50,
-    longPressDelay = 500,
-    doubleTapDelay = 300
-  } = options;
+// FASE 3: Hook para Touch Gestures Premium ⚡
+export const useTouchGestures = (element, options = {}) => {
+  const [gesture, setGesture] = useState(null);
+  const touchStartRef = useRef(null);
+  const touchEndRef = useRef(null);
+  const longPressTimerRef = useRef(null);
 
-  const [touchState, setTouchState] = useState({
-    isPressed: false,
-    startX: 0,
-    startY: 0,
-    currentX: 0,
-    currentY: 0,
-    deltaX: 0,
-    deltaY: 0,
-    startTime: 0,
-    lastTap: 0
-  });
+  const defaultOptions = {
+    swipeThreshold: 50,
+    longPressDelay: 500,
+    preventDefault: true,
+    enableSwipe: true,
+    enableLongPress: true,
+    enableDoubleTap: true,
+    ...options
+  };
 
-  const longPressTimer = useRef(null);
-  const elementRef = useRef(null);
+  // Función segura para prevenir default si está habilitado
+  const safePreventDefault = useCallback((e) => {
+    if (defaultOptions.preventDefault && e.preventDefault) {
+      e.preventDefault();
+    }
+  }, [defaultOptions.preventDefault]);
 
-  // 🎯 Optimización: Usar passive listeners para mejor performance
+  // Touch Start - SEGURO
   const handleTouchStart = useCallback((e) => {
+    if (!e.touches || e.touches.length === 0) return;
+
     const touch = e.touches[0];
-    const now = Date.now();
-    
-    setTouchState(prev => ({
-      ...prev,
-      isPressed: true,
-      startX: touch.clientX,
-      startY: touch.clientY,
-      currentX: touch.clientX,
-      currentY: touch.clientY,
-      deltaX: 0,
-      deltaY: 0,
-      startTime: now
-    }));
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now()
+    };
 
-    // 🔥 Long press detection
-    if (onLongPress) {
-      longPressTimer.current = setTimeout(() => {
-        onLongPress(e, {
-          x: touch.clientX,
-          y: touch.clientY
+    // Long press timer
+    if (defaultOptions.enableLongPress) {
+      longPressTimerRef.current = setTimeout(() => {
+        setGesture({
+          type: 'longpress',
+          startX: touchStartRef.current.x,
+          startY: touchStartRef.current.y
         });
-      }, longPressDelay);
+        
+        // Vibración táctil suave si está disponible
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }, defaultOptions.longPressDelay);
     }
-  }, [onLongPress, longPressDelay]);
+  }, [defaultOptions.enableLongPress, defaultOptions.longPressDelay]);
 
+  // Touch Move - SEGURO
   const handleTouchMove = useCallback((e) => {
-    if (!touchState.isPressed) return;
+    if (!touchStartRef.current) return;
 
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - touchState.startX;
-    const deltaY = touch.clientY - touchState.startY;
-
-    setTouchState(prev => ({
-      ...prev,
-      currentX: touch.clientX,
-      currentY: touch.clientY,
-      deltaX,
-      deltaY
-    }));
-
-    // 🚫 Cancelar long press si se mueve mucho
-    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-      }
+    // Cancelar long press si se mueve
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
-  }, [touchState.isPressed, touchState.startX, touchState.startY]);
 
+    safePreventDefault(e);
+  }, [safePreventDefault]);
+
+  // Touch End - SEGURO
   const handleTouchEnd = useCallback((e) => {
-    if (!touchState.isPressed) return;
+    if (!touchStartRef.current) return;
 
-    const now = Date.now();
-    const timeDiff = now - touchState.startTime;
-    const { deltaX, deltaY } = touchState;
-
-    // 🧹 Limpiar long press timer
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
+    // Limpiar long press timer
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
 
-    setTouchState(prev => ({
-      ...prev,
-      isPressed: false,
-      deltaX: 0,
-      deltaY: 0
-    }));
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
 
-    // 🎯 Detectar tipo de gesto
-    const isSwipe = Math.abs(deltaX) > swipeThreshold || Math.abs(deltaY) > swipeThreshold;
-    const isTap = !isSwipe && timeDiff < 300;
+    const touch = e.changedTouches[0];
+    touchEndRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now()
+    };
 
-    if (isSwipe) {
-      // 👆 Swipe gestures
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Swipe horizontal
-        if (deltaX > 0 && onSwipeRight) {
-          onSwipeRight(e, { deltaX, deltaY, timeDiff });
-        } else if (deltaX < 0 && onSwipeLeft) {
-          onSwipeLeft(e, { deltaX, deltaY, timeDiff });
+    const deltaX = touchEndRef.current.x - touchStartRef.current.x;
+    const deltaY = touchEndRef.current.y - touchStartRef.current.y;
+    const deltaTime = touchEndRef.current.time - touchStartRef.current.time;
+
+    // Detectar swipe si está habilitado
+    if (defaultOptions.enableSwipe) {
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+
+      if (absX > defaultOptions.swipeThreshold || absY > defaultOptions.swipeThreshold) {
+        let direction;
+        if (absX > absY) {
+          direction = deltaX > 0 ? 'right' : 'left';
+        } else {
+          direction = deltaY > 0 ? 'down' : 'up';
         }
-      } else {
-        // Swipe vertical
-        if (deltaY > 0 && onSwipeDown) {
-          onSwipeDown(e, { deltaX, deltaY, timeDiff });
-        } else if (deltaY < 0 && onSwipeUp) {
-          onSwipeUp(e, { deltaX, deltaY, timeDiff });
-        }
-      }
-    } else if (isTap) {
-      // 👆 Tap gestures
-      const timeSinceLastTap = now - touchState.lastTap;
-      
-      if (timeSinceLastTap < doubleTapDelay && onDoubleTap) {
-        // Double tap
-        onDoubleTap(e, {
-          x: touchState.currentX,
-          y: touchState.currentY
+
+        setGesture({
+          type: 'swipe',
+          direction,
+          deltaX,
+          deltaY,
+          velocity: Math.sqrt(deltaX * deltaX + deltaY * deltaY) / deltaTime
         });
-        setTouchState(prev => ({ ...prev, lastTap: 0 }));
-      } else {
-        // Single tap
-        if (onTap) {
-          onTap(e, {
-            x: touchState.currentX,
-            y: touchState.currentY
-          });
+
+        // Feedback táctil muy sutil
+        if (navigator.vibrate) {
+          navigator.vibrate(20);
         }
-        setTouchState(prev => ({ ...prev, lastTap: now }));
       }
     }
-  }, [touchState, swipeThreshold, doubleTapDelay, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, onTap, onDoubleTap]);
 
-  // 🎯 Configurar event listeners optimizados
+    // Detectar tap simple
+    if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10 && deltaTime < 300) {
+      setGesture({
+        type: 'tap',
+        x: touchEndRef.current.x,
+        y: touchEndRef.current.y
+      });
+    }
+
+    // Reset
+    touchStartRef.current = null;
+    touchEndRef.current = null;
+  }, [defaultOptions.enableSwipe, defaultOptions.swipeThreshold]);
+
+  // Agregar event listeners de forma segura
   useEffect(() => {
-    const element = elementRef.current;
-    if (!element) return;
+    const target = element?.current || element;
+    if (!target) return;
 
-    // 🚀 Passive listeners para mejor performance en móviles
-    const options = { passive: false };
+    const options = { passive: true };
     
-    element.addEventListener('touchstart', handleTouchStart, options);
-    element.addEventListener('touchmove', handleTouchMove, options);
-    element.addEventListener('touchend', handleTouchEnd, options);
+    target.addEventListener('touchstart', handleTouchStart, options);
+    target.addEventListener('touchmove', handleTouchMove, options);
+    target.addEventListener('touchend', handleTouchEnd, options);
 
     return () => {
-      element.removeEventListener('touchstart', handleTouchStart);
-      element.removeEventListener('touchmove', handleTouchMove);
-      element.removeEventListener('touchend', handleTouchEnd);
+      target.removeEventListener('touchstart', handleTouchStart, options);
+      target.removeEventListener('touchmove', handleTouchMove, options);
+      target.removeEventListener('touchend', handleTouchEnd, options);
+      
+      // Limpiar timer si existe
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
     };
-  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+  }, [element, handleTouchStart, handleTouchMove, handleTouchEnd]);
+
+  // Función para limpiar gesture después de usar
+  const clearGesture = useCallback(() => {
+    setGesture(null);
+  }, []);
 
   return {
-    ref: elementRef,
-    touchState,
-    isPressed: touchState.isPressed,
-    deltaX: touchState.deltaX,
-    deltaY: touchState.deltaY
+    gesture,
+    clearGesture
   };
+};
+
+// Hook simplificado para swipe en listas
+export const useSwipeNavigation = (onSwipeLeft, onSwipeRight, options = {}) => {
+  const elementRef = useRef(null);
+  const { gesture, clearGesture } = useTouchGestures(elementRef, {
+    enableLongPress: false,
+    enableDoubleTap: false,
+    swipeThreshold: 60,
+    ...options
+  });
+
+  useEffect(() => {
+    if (gesture?.type === 'swipe') {
+      if (gesture.direction === 'left' && onSwipeLeft) {
+        onSwipeLeft();
+      } else if (gesture.direction === 'right' && onSwipeRight) {
+        onSwipeRight();
+      }
+      clearGesture();
+    }
+  }, [gesture, onSwipeLeft, onSwipeRight, clearGesture]);
+
+  return elementRef;
 };
 
 export default useTouchGestures; 

@@ -23,42 +23,31 @@ export default defineConfig({
     sourcemap: true,
     // CORRECCIÓN: Copiar archivos adicionales necesarios
     copyPublicDir: true,
-    
-    // 🚀 OPTIMIZACIÓN AGRESIVA PARA MÓVILES
+    // OPTIMIZACIÓN: Splitting agresivo para móviles ⚡
     rollupOptions: {
+      // CORRECCIÓN: Copiar sw.js desde el root
       input: {
         main: './index.html'
       },
       output: {
+        // Forzar extensión .js para todos los archivos
         format: 'es',
         manualChunks: {
-          // 🎯 VENDOR CRÍTICO - Solo React (139KB → 44KB gzipped)
+          // Vendor principal - solo lo crítico
           'vendor-core': ['react', 'react-dom'],
           
-          // 🔥 FIREBASE MÍNIMO - Solo Firestore necesario (320KB → 96KB gzipped)
-          'vendor-firebase': [
-            'firebase/app', 
-            'firebase/firestore'
-            // ❌ Removido: firebase/auth (no lo usamos)
-          ],
+          // Firebase en chunk separado (grande pero necesario)
+          'vendor-firebase': ['firebase/app', 'firebase/firestore', 'firebase/auth'],
           
-          // 📊 XLSX LAZY - Solo cargar cuando se necesite
-          'xlsx': ['xlsx'],
-          
-          // 🗺️ MAPAS LAZY - Solo cargar cuando se abra mapa
-          'maps': ['leaflet', 'react-leaflet'],
-          
-          // 🛠️ UTILS PEQUEÑOS
-          'utils': [
-            './src/utils/helpers.js', 
-            './src/utils/routeOptimizer.js',
-            './src/utils/offlineDB.js'
-          ]
+          // Utils y helpers
+          'utils': ['./src/utils/helpers.js', './src/utils/routeOptimizer.js']
         },
         
+        // CRÍTICO: Forzar nombres de archivo con extensión .js
         chunkFileNames: `assets/[name]-[hash].js`,
         entryFileNames: `assets/[name]-[hash].js`,
         assetFileNames: (assetInfo) => {
+          // Asegurar que ningún archivo tenga extensión .jsx
           const ext = assetInfo.name.split('.').pop();
           if (ext === 'jsx') {
             return `assets/[name]-[hash].js`;
@@ -68,67 +57,39 @@ export default defineConfig({
       }
     },
     
-    // 🎯 CONFIGURACIÓN MÓVIL OPTIMIZADA
-    target: 'es2020',
+    // CRÍTICO: Configuraciones para móviles
+    target: 'es2020', // Soporte móviles modernos
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,        // ❌ Sin console.logs en producción
-        drop_debugger: true,       // ❌ Sin debuggers
-        pure_funcs: [              // ❌ Eliminar funciones específicas
-          'console.log', 
-          'console.warn', 
-          'console.info',
-          'console.debug'
-        ],
-        passes: 2,                 // 🔥 Doble pasada para mejor compresión
-        unsafe: true,              // 🚀 Optimizaciones agresivas
-        unsafe_comps: true,        // 🚀 Comparaciones optimizadas
-        unsafe_math: true,         // 🚀 Matemáticas optimizadas
-        unsafe_proto: true,        // 🚀 Prototipos optimizados
-        keep_fargs: false,         // ❌ Remover argumentos no usados
-        toplevel: true             // 🔥 Optimizaciones top-level
+        drop_console: true, // Eliminar console.logs en producción
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.warn'], // Eliminar funciones específicas
       },
       format: {
-        comments: false            // ❌ Sin comentarios
-      },
-      mangle: {
-        safari10: true,            // 🍎 Compatibilidad Safari
-        toplevel: true             // 🔥 Mangle variables top-level
+        comments: false // Sin comentarios en producción
       }
     },
     
-    // 📏 LÍMITES OPTIMIZADOS PARA MÓVILES
-    chunkSizeWarningLimit: 300,    // ⚠️ Advertir si chunks > 300KB
-    
-    // 🗜️ COMPRESIÓN ADICIONAL
-    assetsInlineLimit: 4096,       // Inline assets < 4KB
-    
-    // 🎯 OPTIMIZACIONES CSS
-    cssCodeSplit: true,            // Split CSS por chunks
-    cssMinify: 'esbuild'           // CSS minificado con esbuild
+    // Límites de chunk optimizados para móviles
+    chunkSizeWarningLimit: 500, // Advertir si chunks > 500KB
   },
   
-  // ⚡ PRE-BUNDLING OPTIMIZADO
   optimizeDeps: {
     include: [
-      'react',
-      'react-dom',
       'firebase/app', 
-      'firebase/firestore'
+      'firebase/firestore', 
+      'firebase/auth',
+      'react',
+      'react-dom'
     ],
-    exclude: [
-      'xlsx',                      // 📊 Lazy load
-      'leaflet',                   // 🗺️ Lazy load
-      'react-leaflet'              // 🗺️ Lazy load
-    ],
+    // Pre-bundle dependencias pesadas
     force: true
   },
   
   define: {
     'process.env': {},
-    __DEV__: false,
-    // 🔥 ELIMINAR CÓDIGO DE DESARROLLO
-    'process.env.NODE_ENV': '"production"'
+    // OPTIMIZACIÓN: Eliminar código de desarrollo
+    __DEV__: false
   }
 }) 

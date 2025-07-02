@@ -1,8 +1,6 @@
 import React, { memo, useMemo, useCallback } from 'react';
 import Icon from '../common/Icon';
 import { formatRelativeTime } from '../../utils/helpers';
-import { useTouchGestures } from '../../hooks/useTouchGestures';
-import { DeviceDetector } from '../../utils/mobileOptimizer';
 
 // OPTIMIZACIÓN FASE 2: TerritoryCard memoizada para evitar re-renders ⚡
 const TerritoryCard = memo(({ territory, onSelect }) => {
@@ -103,35 +101,13 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
     return territory.lastWorked;
   }, [normalizedStatus, territory.completedDate, territory.terminadoDate, territory.lastWorked, territory.assignedDate]);
 
-  // 📱 FASE 2: Detectar dispositivo móvil
-  const isMobile = useMemo(() => DeviceDetector.isMobile(), []);
-
-  // 👆 FASE 2: Configurar gestos táctiles para móviles
-  const touchGestures = useTouchGestures({
-    onTap: (e) => {
-      e.preventDefault();
-      onSelect(territory);
-    },
-    onLongPress: (e) => {
-      // Vibración táctil en long press (solo móviles)
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
-      console.log('🔥 Long press en territorio:', territory.name);
-    }
-  });
-
   // OPTIMIZACIÓN: Memoizar handler de click ⚡
-  const handleClick = useCallback((e) => {
-    // En móviles, los gestos táctiles manejan la interacción
-    if (!isMobile) {
-      onSelect(territory);
-    }
-  }, [onSelect, territory, isMobile]);
+  const handleClick = useCallback(() => {
+    onSelect(territory);
+  }, [onSelect, territory]);
 
   return (
     <div
-      ref={isMobile ? touchGestures.ref : null}
       onClick={handleClick}
       className={`
         relative group cursor-pointer
@@ -143,15 +119,8 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
         active:scale-[0.99]
         transition-all duration-300 ease-out
         touch-feedback btn-premium animate-premium-fade-scale micro-interact glow-effect
-        ${isMobile ? 'touch-manipulation select-none' : ''}
         p-0
       `}
-      style={{
-        // 📱 FASE 2: Optimizaciones específicas para móviles
-        minHeight: isMobile ? '120px' : 'auto',
-        WebkitTapHighlightColor: 'transparent',
-        touchAction: 'manipulation'
-      }}
     >
       {/* Encabezado con gradiente */}
       <div className="relative px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-gray-100">

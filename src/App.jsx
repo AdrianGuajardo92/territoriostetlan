@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider, useToast } from './hooks/useToast';
 import './utils/errorLogger'; // Inicializar el sistema de captura de errores
@@ -9,42 +9,21 @@ import TerritoryDetailView from './pages/TerritoryDetailView';
 import MyProposalsView from './pages/MyProposalsView';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
-// 📱 FASE 2: Optimizaciones móviles
-import { initializeMobileOptimizations } from './utils/mobileOptimizer';
+// CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
+import SearchModal from './components/modals/SearchModal';
+import PasswordModal from './components/modals/PasswordModal';
+import UpdatesModal from './components/modals/UpdatesModal';
+import InstallModal from './components/modals/InstallModal';
 
-// 🚀 LAZY LOADING INTELIGENTE - Solo cargar cuando se necesite
-const SearchModal = lazy(() => import('./components/modals/SearchModal'));
-const PasswordModal = lazy(() => import('./components/modals/PasswordModal'));
-const UpdatesModal = lazy(() => import('./components/modals/UpdatesModal'));
-const InstallModal = lazy(() => import('./components/modals/InstallModal'));
+// Importar modales lazy optimizados
+import { 
+  LazyStatsModal, 
+  LazyAdminModal, 
+  LazyReportsModal
+} from './components/modals/LazyModals';
+import SystemReportsModal from './components/modals/SystemReportsModal';
 
-// 📊 MODALES PESADOS - Lazy load con preload inteligente
-const LazyStatsModal = lazy(() => import('./components/modals/LazyModals').then(module => ({ default: module.LazyStatsModal })));
-const LazyAdminModal = lazy(() => import('./components/modals/LazyModals').then(module => ({ default: module.LazyAdminModal })));
-const LazyReportsModal = lazy(() => import('./components/modals/LazyModals').then(module => ({ default: module.LazyReportsModal })));
 
-// 🗺️ MAPA LAZY - Solo cargar cuando se abra
-const LazyMapModal = lazy(() => import('./components/modals/MapModal'));
-
-// 🛠️ SISTEMA LAZY - Solo para admins
-const SystemReportsModal = lazy(() => import('./components/modals/SystemReportsModal'));
-
-// 📊 FASE 1: Diagnóstico de performance
-import PerformanceDiagnostic from './components/common/PerformanceDiagnostic';
-
-// 💡 COMPONENTE DE LOADING OPTIMIZADO
-const ModalLoader = ({ children }) => (
-  <Suspense fallback={
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 flex items-center space-x-3">
-        <LoadingSpinner size="sm" />
-        <span className="text-gray-600">Cargando...</span>
-      </div>
-    </div>
-  }>
-    {children}
-  </Suspense>
-);
 
 function AppContent() {
   const { currentUser, authLoading, proposals, logout, territories, adminEditMode, handleToggleAdminMode } = useApp();
@@ -54,44 +33,7 @@ function AppContent() {
   const [activeModal, setActiveModal] = useState(null);
   const [showMyProposals, setShowMyProposals] = useState(false);
   
-  // 📱 FASE 2: Inicializar optimizaciones móviles
-  const [mobileOptimized, setMobileOptimized] = useState(false);
-  
-  // 📱 FASE 2: Inicializar optimizaciones móviles al cargar la app
-  useEffect(() => {
-    if (!mobileOptimized) {
-      console.log('📱 FASE 2: Inicializando optimizaciones móviles...');
-      const deviceInfo = initializeMobileOptimizations();
-      setMobileOptimized(true);
-      
-      // Log para debugging
-      console.log('📱 Dispositivo:', deviceInfo.isMobile ? 'Móvil' : 'Desktop');
-      console.log('📱 OS:', deviceInfo.isIOS ? 'iOS' : deviceInfo.isAndroid ? 'Android' : 'Otro');
-      console.log('📱 Memoria:', deviceInfo.deviceMemory + 'GB');
-      console.log('📱 Conexión:', deviceInfo.connection?.effectiveType || 'Desconocida');
-    }
-  }, [mobileOptimized]);
-
-  // 🎯 PRELOAD INTELIGENTE - Precargar modales según el rol del usuario
-  useEffect(() => {
-    if (currentUser) {
-      // ⚡ Preload modales comunes después de 2 segundos
-      setTimeout(() => {
-        import('./components/modals/SearchModal');
-        import('./components/modals/UpdatesModal');
-      }, 2000);
-      
-      // 👑 Preload modales de admin solo para admins
-      if (currentUser.role === 'admin') {
-        setTimeout(() => {
-          import('./components/modals/LazyModals');
-          import('./components/modals/SystemReportsModal');
-        }, 3000);
-      }
-    }
-  }, [currentUser]);
-  
-  // 🚀 OPTIMIZACIÓN: Font loading state para optimizar FOUT
+  // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   // Sistema de notificaciones para propuestas
@@ -366,14 +308,6 @@ function AppContent() {
       description: 'Ver métricas técnicas y diagnósticos'
     },
     {
-      id: 'performanceDiagnostic',
-      text: '📊 Diagnóstico FASE 1',
-      icon: 'zap',
-      modal: 'performanceDiagnostic',
-      description: 'Métricas de performance optimizada',
-      adminOnly: true
-    },
-    {
       id: 'install',
       text: 'Instalar App',
       icon: 'smartphone',
@@ -525,46 +459,29 @@ function AppContent() {
 
       {/* CORRECCIÓN: Modales sin Suspense - Ya optimizados ⚡ */}
       {activeModal === 'search' && (
-        <ModalLoader>
-          <SearchModal 
-            isOpen 
-            onClose={handleCloseModal} 
-            onNavigateToTerritory={handleSelectTerritory}
-            modalId="search-modal" 
-          />
-        </ModalLoader>
+        <SearchModal 
+          isOpen 
+          onClose={handleCloseModal} 
+          onNavigateToTerritory={handleSelectTerritory}
+          modalId="search-modal" 
+        />
       )}
 
       {activeModal === 'admin' && currentUser?.role === 'admin' && (
-        <ModalLoader>
-          <LazyAdminModal isOpen onClose={handleCloseModal} modalId="admin-modal" />
-        </ModalLoader>
+        <LazyAdminModal isOpen onClose={handleCloseModal} modalId="admin-modal" />
       )}
       {activeModal === 'password' && (
-        <ModalLoader>
-          <PasswordModal isOpen onClose={handleCloseModal} modalId="password-modal" />
-        </ModalLoader>
+        <PasswordModal isOpen onClose={handleCloseModal} modalId="password-modal" />
       )}
       {activeModal === 'updates' && (
-        <ModalLoader>
-          <UpdatesModal isOpen onClose={handleCloseModal} modalId="updates-modal" />
-        </ModalLoader>
+        <UpdatesModal isOpen onClose={handleCloseModal} modalId="updates-modal" />
       )}
       {activeModal === 'install' && (
-        <ModalLoader>
-          <InstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
-        </ModalLoader>
+        <InstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
       )}
-              {activeModal === 'systemReports' && (
-          <ModalLoader>
-            <SystemReportsModal isOpen onClose={handleCloseModal} modalId="system-reports-modal" />
-          </ModalLoader>
-        )}
-
-        {/* 📊 FASE 1: Diagnóstico de Performance */}
-        {activeModal === 'performanceDiagnostic' && (
-          <PerformanceDiagnostic isOpen onClose={handleCloseModal} />
-        )}
+      {activeModal === 'systemReports' && (
+        <SystemReportsModal isOpen onClose={handleCloseModal} modalId="system-reports-modal" />
+      )}
     </div>
   );
 }
