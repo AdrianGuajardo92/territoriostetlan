@@ -64,6 +64,43 @@ const registerServiceWorker = async () => {
       console.log('✅ Controlador SW disponible:', navigator.serviceWorker.controller.scriptURL);
     }
     
+    // Verificar si hay una versión más nueva del SW disponible
+    setTimeout(async () => {
+      try {
+        const currentVersion = 'v2.25.4'; // Versión actual esperada
+        
+        // Obtener versión del SW actual
+        if (navigator.serviceWorker.controller) {
+          const messageChannel = new MessageChannel();
+          navigator.serviceWorker.controller.postMessage({
+            type: 'GET_VERSION'
+          }, [messageChannel.port2]);
+          
+          const response = await new Promise((resolve, reject) => {
+            messageChannel.port1.onmessage = (event) => resolve(event.data);
+            setTimeout(() => reject(new Error('Timeout')), 2000);
+          });
+          
+          const swVersion = response.version || 'unknown';
+          console.log('🔍 Versión SW actual:', swVersion, '| Versión esperada:', currentVersion);
+          
+          // Si las versiones no coinciden, forzar actualización
+          if (!swVersion.includes('2.25.4')) {
+            console.log('🔄 Versión SW obsoleta, forzando actualización...');
+            registration.update();
+            
+            // Esperar un poco y recargar para aplicar la nueva versión
+            setTimeout(() => {
+              console.log('🔄 Recargando para aplicar nueva versión SW...');
+              window.location.reload();
+            }, 3000);
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Error verificando versión SW:', error.message);
+      }
+    }, 2000);
+    
     // Verificar actualizaciones cada 5 minutos
     setInterval(() => {
       registration.update();

@@ -1,7 +1,7 @@
 // Service Worker Ultra-Simplificado para Móviles - Territorios LS
-const CACHE_NAME = 'territorios-tetlan-v2.25.3';
-const STATIC_CACHE = 'static-v2.25.3';
-const DYNAMIC_CACHE = 'dynamic-v2.25.3';
+const CACHE_NAME = 'territorios-tetlan-v2.25.4';
+const STATIC_CACHE = 'static-v2.25.4';
+const DYNAMIC_CACHE = 'dynamic-v2.25.4';
 
 // Archivos estáticos para cachear
 const STATIC_FILES = [
@@ -230,4 +230,4 @@ async function checkForUpdates() {
   }
 }
 
-console.log('🚀 Service Worker v2.25.3 cargado correctamente');
+console.log('🚀 Service Worker v2.25.4 cargado correctamente');
