@@ -108,7 +108,10 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "", ...prop
         'folderOpen': 'FolderOpen',
         'clipboard': 'Clipboard',
         'unlock': 'Unlock',
-        'downloadCloud': 'DownloadCloud'
+        'downloadCloud': 'DownloadCloud',
+        'users-cog': 'Settings', // Mapear users-cog a Settings
+        'times': 'X', // Mapear times a X
+        'tools': 'Wrench' // Mapear tools a Wrench
     };
     
     const iconName = iconMap[name] || name;
