@@ -91,7 +91,16 @@ const AddressFormModal = ({
   }, [publishers, estudioSearch, isAdmin]);
 
   useEffect(() => {
+    console.log('🔄 useEffect ejecutándose - address:', address, 'isOpen:', isOpen);
+    
     if (address) {
+      console.log('📄 Cargando dirección existente:', {
+        isRevisita: address.isRevisita,
+        revisitaBy: address.revisitaBy,
+        isEstudio: address.isEstudio,
+        estudioBy: address.estudioBy
+      });
+      
       setFormData({
         address: address.address || '',
         phone: address.phone || '',
@@ -112,7 +121,13 @@ const AddressFormModal = ({
       // Inicializar campos de búsqueda con valores existentes
       setRevisitaSearch(address.revisitaBy || '');
       setEstudioSearch(address.estudioBy || '');
+      
+      console.log('✅ Estados de búsqueda inicializados:', {
+        revisitaSearch: address.revisitaBy || '',
+        estudioSearch: address.estudioBy || ''
+      });
     } else {
+      console.log('📝 Creando nueva dirección');
       // Reset form for new address
       setFormData({
         address: '',
@@ -141,12 +156,35 @@ const AddressFormModal = ({
     setIsLocationExpanded(false);
   }, [address, isOpen]);
 
+  // Cerrar dropdowns al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.dropdown-container')) {
+        setShowRevisitaDropdown(false);
+        setShowEstudioDropdown(false);
+      }
+    };
+
+    if (showRevisitaDropdown || showEstudioDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showRevisitaDropdown, showEstudioDropdown]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.address.trim()) {
       return;
     }
 
+    console.log('💾 Enviando formData:', formData);
+    console.log('🔍 Estados especiales:', {
+      isRevisita: formData.isRevisita,
+      revisitaBy: formData.revisitaBy,
+      isEstudio: formData.isEstudio,
+      estudioBy: formData.estudioBy
+    });
+    
     onSave(formData, changeReason);
   };
 
@@ -192,16 +230,36 @@ const AddressFormModal = ({
 
   // Manejar selección de publicador para revisita
   const handleRevisitaSelect = (publisherName) => {
-    setFormData(prev => ({ ...prev, revisitaBy: publisherName }));
+    console.log('🔄 Seleccionando publicador para revisita:', publisherName);
+    console.log('📊 Estado actual revisitaSearch:', revisitaSearch);
+    console.log('📊 Estado actual formData.revisitaBy:', formData.revisitaBy);
+    
+    setFormData(prev => {
+      const newData = { ...prev, revisitaBy: publisherName };
+      console.log('📝 Nuevo formData para revisita:', newData);
+      return newData;
+    });
     setRevisitaSearch(publisherName);
     setShowRevisitaDropdown(false);
+    
+    console.log('✅ Después de actualizar - revisitaSearch será:', publisherName);
   };
 
   // Manejar selección de publicador para estudio
   const handleEstudioSelect = (publisherName) => {
-    setFormData(prev => ({ ...prev, estudioBy: publisherName }));
+    console.log('🔄 Seleccionando publicador para estudio:', publisherName);
+    console.log('📊 Estado actual estudioSearch:', estudioSearch);
+    console.log('📊 Estado actual formData.estudioBy:', formData.estudioBy);
+    
+    setFormData(prev => {
+      const newData = { ...prev, estudioBy: publisherName };
+      console.log('📝 Nuevo formData para estudio:', newData);
+      return newData;
+    });
     setEstudioSearch(publisherName);
     setShowEstudioDropdown(false);
+    
+    console.log('✅ Después de actualizar - estudioSearch será:', publisherName);
   };
 
   // Manejar cambio en campo de búsqueda revisita
@@ -397,18 +455,23 @@ const AddressFormModal = ({
                           <span className="text-sm font-medium" style={{ color: '#2C3E50' }}>Revisita</span>
                         </div>
                         {formData.isRevisita && (
-                          <div className="relative">
+                          <div className="relative dropdown-container">
                             {isAdmin ? (
                               // Campo con búsqueda para administradores
                               <div>
+                                {console.log('🖥️ Renderizando campo admin - revisitaSearch:', revisitaSearch, 'formData.revisitaBy:', formData.revisitaBy)}
                                 <input
                                   type="text"
                                   value={revisitaSearch}
                                   onChange={(e) => {
+                                    console.log('📝 Cambiando revisitaSearch de:', revisitaSearch, 'a:', e.target.value);
                                     handleRevisitaSearchChange(e.target.value);
                                     setShowRevisitaDropdown(true);
                                   }}
-                                  onFocus={() => setShowRevisitaDropdown(true)}
+                                  onFocus={() => {
+                                    console.log('🎯 Focus en campo revisita, valor actual:', revisitaSearch);
+                                    setShowRevisitaDropdown(true);
+                                  }}
                                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                                   style={{ '--tw-ring-color': '#546E7A' }}
                                   placeholder="Buscar publicador..."
@@ -474,18 +537,23 @@ const AddressFormModal = ({
                           <span className="text-sm font-medium" style={{ color: '#2C3E50' }}>Estudio</span>
                         </div>
                         {formData.isEstudio && (
-                          <div className="relative">
+                          <div className="relative dropdown-container">
                             {isAdmin ? (
                               // Campo con búsqueda para administradores
                               <div>
+                                {console.log('🖥️ Renderizando campo admin estudio - estudioSearch:', estudioSearch, 'formData.estudioBy:', formData.estudioBy)}
                                 <input
                                   type="text"
                                   value={estudioSearch}
                                   onChange={(e) => {
+                                    console.log('📝 Cambiando estudioSearch de:', estudioSearch, 'a:', e.target.value);
                                     handleEstudioSearchChange(e.target.value);
                                     setShowEstudioDropdown(true);
                                   }}
-                                  onFocus={() => setShowEstudioDropdown(true)}
+                                  onFocus={() => {
+                                    console.log('🎯 Focus en campo estudio, valor actual:', estudioSearch);
+                                    setShowEstudioDropdown(true);
+                                  }}
                                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                                   style={{ '--tw-ring-color': '#546E7A' }}
                                   placeholder="Buscar publicador..."
