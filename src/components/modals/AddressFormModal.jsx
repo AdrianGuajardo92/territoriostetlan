@@ -216,9 +216,18 @@ const AddressFormModal = ({
   // Manejar selección de publicador para revisita
   const handleRevisitaSelect = (publisherName) => {
     console.log('✅ Publicador seleccionado para revisita:', publisherName);
-    setFormData(prev => ({ ...prev, revisitaBy: publisherName }));
+    console.log('🔍 Estado ANTES - formData.revisitaBy:', formData.revisitaBy);
+    console.log('🔍 Estado ANTES - revisitaSearch:', revisitaSearch);
+    
+    setFormData(prev => {
+      const newData = { ...prev, revisitaBy: publisherName };
+      console.log('🔄 Nuevo formData completo:', newData);
+      return newData;
+    });
     setRevisitaSearch(publisherName);
     setShowRevisitaDropdown(false);
+    
+    console.log('✅ Estados actualizados - revisitaBy debería ser:', publisherName);
   };
 
   // Manejar selección de publicador para estudio
@@ -423,6 +432,11 @@ const AddressFormModal = ({
                         </div>
                         {formData.isRevisita && (
                           <div className="space-y-2">
+                            {/* DEBUG: Mostrar siempre el estado */}
+                            <div className="px-2 py-1 bg-yellow-100 border border-yellow-300 rounded text-xs">
+                              DEBUG - revisitaBy: "{formData.revisitaBy}" | revisitaSearch: "{revisitaSearch}"
+                            </div>
+                            
                             {/* Badge de confirmación visual */}
                             {formData.revisitaBy && (
                               <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
@@ -518,6 +532,11 @@ const AddressFormModal = ({
                         </div>
                         {formData.isEstudio && (
                           <div className="space-y-2">
+                            {/* DEBUG: Mostrar siempre el estado */}
+                            <div className="px-2 py-1 bg-yellow-100 border border-yellow-300 rounded text-xs">
+                              DEBUG - estudioBy: "{formData.estudioBy}" | estudioSearch: "{estudioSearch}"
+                            </div>
+                            
                             {/* Badge de confirmación visual */}
                             {formData.estudioBy && (
                               <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
