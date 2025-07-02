@@ -1,19 +1,14 @@
-// Service Worker OFFLINE-FIRST SIN WARNINGS - Territorios LS v2.25.22
-const VERSION = 'v2.25.22';
+// Service Worker OFFLINE-FIRST SIN WARNINGS - Territorios LS v2.25.29
+const VERSION = 'v2.25.29';
 const DYNAMIC_CACHE = `dynamic-${VERSION}`;
-
-console.log(`🚀 Service Worker ${VERSION} iniciando...`);
 
 // 1️⃣ INSTALACIÓN: Simple y sin errores
 self.addEventListener('install', event => {
-  console.log(`🔧 SW ${VERSION}: Instalando...`);
-  console.log(`✅ SW ${VERSION}: Instalación completada - Sin pre-cache`);
   self.skipWaiting(); // Activarse inmediatamente
 });
 
 // 2️⃣ ACTIVACIÓN: Limpiar caches antiguos y tomar control
 self.addEventListener('activate', event => {
-  console.log(`🎯 SW ${VERSION}: Activando...`);
   event.waitUntil(
     Promise.all([
       // Tomar control de todos los clientes
@@ -24,13 +19,11 @@ self.addEventListener('activate', event => {
           cacheNames
             .filter(name => !name.includes(VERSION))
             .map(name => {
-              console.log(`🗑️ SW ${VERSION}: Eliminando cache antiguo: ${name}`);
               return caches.delete(name);
             })
         );
       })
     ]).then(() => {
-      console.log(`✅ SW ${VERSION}: ¡Activado y controlando!`);
       // Notificar a los clientes
       self.clients.matchAll().then(clients => {
         clients.forEach(client => client.postMessage({ 
@@ -39,7 +32,7 @@ self.addEventListener('activate', event => {
         }));
       });
     }).catch(error => {
-      console.error(`❌ SW ${VERSION}: Error en activación:`, error);
+      // Error silencioso en producción
     })
   );
 });
@@ -122,12 +115,10 @@ self.addEventListener('message', event => {
 
 // 5️⃣ MANEJO DE ERRORES
 self.addEventListener('error', event => {
-  console.error('❌ SW: Error global:', event.error);
+  // Error silencioso en producción
 });
 
 self.addEventListener('unhandledrejection', event => {
-  console.error('❌ SW: Promise rechazada:', event.reason);
+  // Promise rechazada silenciosa en producción
   event.preventDefault();
 });
-
-console.log(`✅ Service Worker ${VERSION} cargado - LIMPIO Y SIN WARNINGS`);
