@@ -18,29 +18,8 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
 
   useEffect(() => {
     if (isOpen) {
-      // ESPERAR a que el Service Worker termine de instalarse antes de recolectar datos
-      const waitForSWAndCollect = async () => {
-        try {
-          console.log('⏳ Esperando que el Service Worker esté listo...');
-          
-          // Esperar a que el SW esté completamente listo
-          if ('serviceWorker' in navigator) {
-            await navigator.serviceWorker.ready;
-            console.log('✅ Service Worker ready detectado');
-            
-            // Esperar un poco más para asegurar que esté completamente activo
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-          
-          console.log('🔄 Iniciando recolección de datos después de SW ready...');
-          collectSystemData();
-        } catch (error) {
-          console.log('⚠️ Error esperando SW, recolectando datos de todos modos:', error);
-          collectSystemData();
-        }
-      };
-      
-      waitForSWAndCollect();
+      // Recolectar datos inmediatamente sin esperas complejas
+      collectSystemData();
       
       // 🔒 BLOQUEAR SCROLL DEL BODY
       document.body.style.overflow = 'hidden';
@@ -92,7 +71,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         ]),
         serviceWorker: Promise.race([
           getServiceWorkerInfo(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout serviceWorker')), 4000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout serviceWorker')), 1000))
         ])
       };
       
@@ -286,132 +265,51 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.supported = true;
       
       try {
-        console.log('🔍 Iniciando verificación del Service Worker...');
-        
-        // Verificar primero si el SW está ready
-        let swReady = false;
-        try {
-          await Promise.race([
-            navigator.serviceWorker.ready.then(() => { swReady = true; }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 3000))
-          ]);
-        } catch (e) {
-          console.log('⚠️ SW ready timeout, continuando con verificación manual');
-        }
-        
-        console.log('📊 Service Worker ready:', swReady);
-        
-        // Verificación del registro
-        let registration = await Promise.race([
-          navigator.serviceWorker.getRegistration(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout getRegistration')), 2000))
-        ]);
-        
-        // Si no hay registro, verificar registros globales
-        if (!registration) {
-          console.log('⚠️ No hay registro principal, verificando globales...');
-          const registrations = await Promise.race([
-            navigator.serviceWorker.getRegistrations(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout getRegistrations')), 1000))
-          ]);
-          registration = registrations[0];
-        }
+        // Verificación SIMPLE y DIRECTA
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        const registration = registrations[0];
         
         sw.registered = !!registration;
-        sw.ready = swReady;
-        console.log('📊 Registro encontrado:', !!registration, '| Ready:', swReady);
         
         if (registration) {
-          const activeWorker = registration.active;
-          const installingWorker = registration.installing;
-          const waitingWorker = registration.waiting;
-          
-          console.log('🔄 Estados SW:', { 
-            active: !!activeWorker, 
-            installing: !!installingWorker, 
-            waiting: !!waitingWorker 
-          });
-          
-          // Estado más detallado
-          if (activeWorker) {
-            sw.state = activeWorker.state;
-            sw.scriptURL = activeWorker.scriptURL;
-            sw.scope = registration.scope;
+          // Estado simple
+          if (registration.active) {
             sw.status = 'Activo';
-          } else if (waitingWorker) {
-            sw.state = waitingWorker.state;
-            sw.status = 'Esperando activación';
-            sw.scriptURL = waitingWorker.scriptURL;
-            sw.scope = registration.scope;
-          } else if (installingWorker) {
-            sw.state = installingWorker.state;
+            sw.state = registration.active.state;
+            sw.scriptURL = registration.active.scriptURL;
+          } else if (registration.installing) {
             sw.status = 'Instalando';
-            sw.scriptURL = installingWorker.scriptURL;
-            sw.scope = registration.scope;
+            sw.state = 'installing';
+          } else if (registration.waiting) {
+            sw.status = 'Esperando';
+            sw.state = 'waiting';
           } else {
-            sw.state = 'unknown';
-            sw.status = 'Estado desconocido';
-            sw.scope = registration.scope;
+            sw.status = 'Sin worker activo';
+            sw.state = 'none';
           }
           
-          // Información adicional
-          sw.updateViaCache = registration.updateViaCache;
-          sw.lastUpdateCheck = registration.lastUpdateCheck || 'Nunca';
-          sw.installTime = registration.installing ? 'Instalando ahora' : 'Instalado';
+          sw.scope = registration.scope;
         } else {
-          sw.state = 'unregistered';
           sw.status = 'No registrado';
+          sw.state = 'unregistered';
         }
         
-        // Verificar controlador rápidamente
+        // Verificar controlador
         sw.controller = !!navigator.serviceWorker.controller;
-        sw.controllerURL = navigator.serviceWorker.controller?.scriptURL || 'Ninguno';
-        console.log('🎮 Controlador disponible:', sw.controller);
+        sw.communication = sw.controller ? 'Con controlador' : 'Sin controlador';
         
-        // Test de comunicación con timeout corto
-        if (navigator.serviceWorker.controller) {
-          try {
-            const messageChannel = new MessageChannel();
-            navigator.serviceWorker.controller.postMessage({
-              type: 'GET_VERSION'
-            }, [messageChannel.port2]);
-            
-            const response = await Promise.race([
-              new Promise((resolve) => {
-                messageChannel.port1.onmessage = (event) => resolve(event.data);
-              }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout comunicación')), 1500))
-            ]);
-            
-            sw.communication = 'Funcional';
-            sw.version = response.version || 'Desconocida';
-            console.log('✅ Comunicación exitosa:', response);
-          } catch (e) {
-            console.log('⚠️ Error comunicación:', e.message);
-            sw.communication = 'Error: ' + e.message;
-          }
-        } else {
-          // Si no hay controlador, intentar detectar SW activo de otra forma
-          if (registration && registration.active) {
-            sw.communication = 'SW activo pero sin controlador';
-          } else {
-            sw.communication = 'Sin controlador';
-          }
-        }
-        
-        console.log('✅ Verificación SW completada');
+        // Versión simple
+        sw.version = 'v2.25.5';
         
       } catch (e) {
-        console.error('❌ Error verificando SW:', e);
         sw.error = e.message;
         sw.status = 'Error: ' + e.message;
       }
     } else {
       sw.supported = false;
-      sw.status = 'No soportado por el navegador';
+      sw.status = 'No soportado';
     }
 
-    console.log('🔍 Información SW final:', sw);
     return sw;
   };
 
