@@ -1,6 +1,6 @@
 // 🔥 FIREBASE OPTIMIZADO - Solo lo esencial para máximo rendimiento
 import { initializeApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator, enableNetwork, disableNetwork } from 'firebase/firestore';
+import { getFirestore, enableNetwork, disableNetwork } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAyD4lW7uKHw-rcnOqr4YrBLp3oskklO8A",
@@ -16,13 +16,6 @@ const app = initializeApp(firebaseConfig);
 
 // 🎯 FIRESTORE CON CONFIGURACIÓN DE RENDIMIENTO
 const db = getFirestore(app);
-
-// 🔧 CONFIGURACIONES DE RENDIMIENTO
-// Habilitar persistencia offline automáticamente
-if (typeof window !== 'undefined') {
-  // Configurar cache settings para mejor rendimiento
-  db._delegate._databaseId = db._delegate._databaseId;
-}
 
 // 🌐 FUNCIONES DE CONECTIVIDAD
 export const enableFirestoreNetwork = () => enableNetwork(db);
