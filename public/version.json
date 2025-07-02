@@ -1,12 +1,12 @@
 {
-  "version": "v2.25.14",
+  "version": "v2.25.15",
   "timestamp": "2025-01-02T13:45:00.000Z",
   "changes": [
-    "🚨 CORRECCIÓN CRÍTICA: Headers Clear-Site-Data con valores válidos",
-    "❌ ELIMINADO: Warning 'Unrecognized type: cache' en consola",
-    "✅ CORREGIDO: 'cache' → 'storage' en todos los headers",
-    "🧹 CONSOLA 100% LIMPIA: Sin warnings amarillos ni errores rojos",
-    "📡 HEADERS VÁLIDOS: Clear-Site-Data usa solo valores estándar",
-    "🎯 RESULTADO: Consola completamente limpia sin advertencias"
+    "🗑️ ELIMINACIÓN COMPLETA: Headers Clear-Site-Data removidos totalmente",
+    "❌ SIN WARNINGS: Eliminado 'Unrecognized type: storage' en consola",
+    "✅ CONSOLA LIMPIA: Sin advertencias de Clear-Site-Data",
+    "🧹 SOLUCIÓN DEFINITIVA: Headers problemáticos completamente removidos",
+    "📡 HEADERS SIMPLIFICADOS: Solo Cache-Control necesario para funcionalidad",
+    "🎯 RESULTADO: Consola 100% limpia sin ningún warning HTTP"
   ]
 } 
