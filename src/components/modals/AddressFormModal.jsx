@@ -320,11 +320,6 @@ const AddressFormModal = ({
                         </div>
                         {formData.isRevisita && (
                           <div className="space-y-2">
-                            {/* DEBUG: Mostrar siempre el estado */}
-                            <div className="px-2 py-1 bg-yellow-100 border border-yellow-300 rounded text-xs">
-                              DEBUG - revisitaBy: "{formData.revisitaBy}" | Usuario actual: "{currentUser?.name}"
-                            </div>
-                            
                             {/* Badge de confirmación visual */}
                             {formData.revisitaBy && (
                               <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
@@ -340,8 +335,8 @@ const AddressFormModal = ({
                             <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
                               <div className="flex items-center text-purple-800 text-sm">
                                 <i className="fas fa-info-circle mr-2"></i>
-                                <span>Este estudio será asignado automáticamente a: <strong>{currentUser?.name}</strong></span>
-                                <span className="ml-2 text-xs opacity-75">(Se desmarcará "Revisita" automáticamente)</span>
+                                <span>Esta revisita será asignada automáticamente a: <strong>{currentUser?.name}</strong></span>
+                                <span className="ml-2 text-xs opacity-75">(Se desmarcará "Estudio" automáticamente)</span>
                               </div>
                             </div>
                           </div>
@@ -368,11 +363,6 @@ const AddressFormModal = ({
                         </div>
                         {formData.isEstudio && (
                           <div className="space-y-2">
-                            {/* DEBUG: Mostrar siempre el estado */}
-                            <div className="px-2 py-1 bg-yellow-100 border border-yellow-300 rounded text-xs">
-                              DEBUG - estudioBy: "{formData.estudioBy}" | Usuario actual: "{currentUser?.name}"
-                            </div>
-                            
                             {/* Badge de confirmación visual */}
                             {formData.estudioBy && (
                               <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
