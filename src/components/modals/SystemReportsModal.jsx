@@ -45,20 +45,71 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
     setIsLoading(true);
     
     try {
-      const data = {
-        performance: await getPerformanceData(),
-        errors: getErrorLogs(),
-        browser: getBrowserInfo(),
-        storage: await getStorageInfo(),
-        network: await getNetworkInfo(),
-        cache: await getCacheInfo(),
-        serviceWorker: await getServiceWorkerInfo()
+      console.log('🔄 Iniciando recolección de datos del sistema...');
+      
+      // Recolectar datos con timeouts individuales para evitar colgadas
+      const dataPromises = {
+        performance: Promise.race([
+          getPerformanceData(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout performance')), 3000))
+        ]),
+        errors: Promise.resolve(getErrorLogs()), // Síncrono
+        browser: Promise.resolve(getBrowserInfo()), // Síncrono
+        storage: Promise.race([
+          getStorageInfo(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout storage')), 3000))
+        ]),
+        network: Promise.race([
+          getNetworkInfo(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout network')), 5000))
+        ]),
+        cache: Promise.race([
+          getCacheInfo(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout cache')), 3000))
+        ]),
+        serviceWorker: Promise.race([
+          getServiceWorkerInfo(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout serviceWorker')), 4000))
+        ])
       };
       
+      // Resolver todas las promesas con manejo de errores individual
+      const results = await Promise.allSettled([
+        dataPromises.performance,
+        dataPromises.errors,
+        dataPromises.browser,
+        dataPromises.storage,
+        dataPromises.network,
+        dataPromises.cache,
+        dataPromises.serviceWorker
+      ]);
+      
+      const data = {
+        performance: results[0].status === 'fulfilled' ? results[0].value : { error: 'Timeout' },
+        errors: results[1].status === 'fulfilled' ? results[1].value : [],
+        browser: results[2].status === 'fulfilled' ? results[2].value : { error: 'Error' },
+        storage: results[3].status === 'fulfilled' ? results[3].value : { error: 'Timeout' },
+        network: results[4].status === 'fulfilled' ? results[4].value : { error: 'Timeout' },
+        cache: results[5].status === 'fulfilled' ? results[5].value : { error: 'Timeout' },
+        serviceWorker: results[6].status === 'fulfilled' ? results[6].value : { error: 'Timeout', supported: false }
+      };
+      
+      console.log('✅ Recolección completada:', data);
       setSystemData(data);
     } catch (error) {
-      console.error('Error recolectando datos del sistema:', error);
+      console.error('❌ Error recolectando datos del sistema:', error);
       showToast('Error al recolectar datos del sistema', 'error');
+      
+      // Datos de fallback para evitar pantalla en blanco
+      setSystemData({
+        performance: { error: 'Error de carga' },
+        errors: [],
+        browser: { error: 'Error de carga' },
+        storage: { error: 'Error de carga' },
+        network: { error: 'Error de carga' },
+        cache: { error: 'Error de carga' },
+        serviceWorker: { error: 'Error de carga', supported: false }
+      });
     } finally {
       setIsLoading(false);
     }
@@ -212,24 +263,37 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.supported = true;
       
       try {
-        // Esperar un poco para que el SW se registre si está en proceso
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('🔍 Iniciando verificación del Service Worker...');
         
-        // Verificar múltiples veces para asegurar detección
-        let registration = await navigator.serviceWorker.getRegistration();
+        // Verificación rápida sin delays largos
+        let registration = await Promise.race([
+          navigator.serviceWorker.getRegistration(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout getRegistration')), 2000))
+        ]);
         
-        // Si no hay registro, verificar registros globales
+        // Si no hay registro, verificar registros globales rápidamente
         if (!registration) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          registration = registrations[0]; // Tomar el primero si existe
+          console.log('⚠️ No hay registro principal, verificando globales...');
+          const registrations = await Promise.race([
+            navigator.serviceWorker.getRegistrations(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout getRegistrations')), 1000))
+          ]);
+          registration = registrations[0];
         }
         
         sw.registered = !!registration;
+        console.log('📊 Registro encontrado:', !!registration);
         
         if (registration) {
           const activeWorker = registration.active;
           const installingWorker = registration.installing;
           const waitingWorker = registration.waiting;
+          
+          console.log('🔄 Estados SW:', { 
+            active: !!activeWorker, 
+            installing: !!installingWorker, 
+            waiting: !!waitingWorker 
+          });
           
           // Estado más detallado
           if (activeWorker) {
@@ -256,19 +320,18 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
           // Información adicional
           sw.updateViaCache = registration.updateViaCache;
           sw.lastUpdateCheck = registration.lastUpdateCheck || 'Nunca';
-          
-          // Información de instalación
           sw.installTime = registration.installing ? 'Instalando ahora' : 'Instalado';
         } else {
           sw.state = 'unregistered';
           sw.status = 'No registrado';
         }
         
-        // Verificar controlador con múltiples intentos
+        // Verificar controlador rápidamente
         sw.controller = !!navigator.serviceWorker.controller;
         sw.controllerURL = navigator.serviceWorker.controller?.scriptURL || 'Ninguno';
+        console.log('🎮 Controlador disponible:', sw.controller);
         
-        // Test de comunicación mejorado
+        // Test de comunicación con timeout corto
         if (navigator.serviceWorker.controller) {
           try {
             const messageChannel = new MessageChannel();
@@ -276,14 +339,18 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
               type: 'GET_VERSION'
             }, [messageChannel.port2]);
             
-            const response = await new Promise((resolve, reject) => {
-              messageChannel.port1.onmessage = (event) => resolve(event.data);
-              setTimeout(() => reject(new Error('Timeout')), 3000); // Más tiempo
-            });
+            const response = await Promise.race([
+              new Promise((resolve) => {
+                messageChannel.port1.onmessage = (event) => resolve(event.data);
+              }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout comunicación')), 1500))
+            ]);
             
             sw.communication = 'Funcional';
             sw.version = response.version || 'Desconocida';
+            console.log('✅ Comunicación exitosa:', response);
           } catch (e) {
+            console.log('⚠️ Error comunicación:', e.message);
             sw.communication = 'Error: ' + e.message;
           }
         } else {
@@ -295,10 +362,10 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
           }
         }
         
-        // Información adicional de debugging
-        sw.ready = await navigator.serviceWorker.ready.then(() => true).catch(() => false);
+        console.log('✅ Verificación SW completada');
         
       } catch (e) {
+        console.error('❌ Error verificando SW:', e);
         sw.error = e.message;
         sw.status = 'Error: ' + e.message;
       }
@@ -307,7 +374,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.status = 'No soportado por el navegador';
     }
 
-    console.log('🔍 Información SW detectada:', sw);
+    console.log('🔍 Información SW final:', sw);
     return sw;
   };
 

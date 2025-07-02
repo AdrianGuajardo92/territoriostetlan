@@ -1,5 +1,5 @@
 {
-  "version": "2.25.3",
+  "version": "2.25.4",
   "buildDate": "2025-01-01",
-  "description": "Service Worker registro AGRESIVO - detección mejorada + botón forzar registro"
+  "description": "Reportes NUNCA se cuelgan - timeouts inteligentes + detección rápida SW"
 } 
