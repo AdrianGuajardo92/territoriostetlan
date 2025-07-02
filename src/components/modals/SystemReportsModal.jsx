@@ -71,7 +71,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         ]),
         serviceWorker: Promise.race([
           getServiceWorkerInfo(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout serviceWorker')), 500))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout serviceWorker')), 5000))
         ])
       };
       
