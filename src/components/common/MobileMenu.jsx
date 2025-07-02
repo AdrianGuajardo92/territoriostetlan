@@ -134,23 +134,31 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                       >
                         <a 
                           href="#" 
-                          onClick={(e) => { 
-                            e.preventDefault(); 
-                            
-                            if (item.action) { 
-                              item.action(); 
-                              if (item.isUpdateAction) {
-                                // No cerrar menú si es actualización
-                              } else {
+                                                      onClick={(e) => {
+                              e.preventDefault();
+                              console.log('🖱️ Menu item clicked:', item.id);
+                              console.log('📋 Item data:', item);
+                              console.log('🔄 Action type:', item.action ? 'action' : 'modal/view');
+                              
+                              if (item.action) {
+                                console.log('⚡ Executing action function');
+                                item.action();
+                                if (item.isUpdateAction) {
+                                  // No cerrar menú si es actualización
+                                } else {
+                                  onClose(); 
+                                }
+                              } else if (item.isLogout) {
+                                console.log('🚪 Logout clicked');
+                                handleLogout();
                                 onClose(); 
+                              } else {
+                                const modalId = item.view || item.modal || item.id;
+                                console.log('🎯 Modal/View ID to open:', modalId);
+                                console.log('🔗 Calling onOpenModal with:', modalId);
+                                onOpenModal(modalId);
                               }
-                            } else if (item.isLogout) { 
-                              handleLogout(); 
-                              onClose(); 
-                            } else {
-                              onOpenModal(item.id);
-                            }
-                          }} 
+                            }} 
                           onMouseEnter={() => setHoveredItem(item.id)}
                           onMouseLeave={() => setHoveredItem(null)}
                           className={`group flex items-center p-4 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] relative overflow-hidden ${

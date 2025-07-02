@@ -40,25 +40,17 @@ function AppContent() {
   const getUnseenProposalsCount = () => {
     if (!currentUser || currentUser.role === 'admin') return 0;
     
-    const userProposals = proposals.filter(p => p.submittedBy === currentUser.email);
-    const lastViewedTimestamp = localStorage.getItem(`lastProposalsView_${currentUser.email}`);
+    const userProposals = proposals.filter(p => 
+      p.proposedBy === currentUser.id || p.proposedByName === currentUser.name
+    );
+    const lastViewedTimestamp = localStorage.getItem(`lastProposalsView_${currentUser.id}`);
     
-    if (!lastViewedTimestamp) {
-      // Primera vez que accede, mostrar todas las procesadas
-      return userProposals.filter(p => p.status !== 'pending').length;
-    }
+    if (!lastViewedTimestamp) return userProposals.length;
     
     const lastViewed = new Date(lastViewedTimestamp);
-    
-    // Contar propuestas procesadas después de la última visita
     return userProposals.filter(p => {
-      if (p.status === 'pending') return false;
-      
-      const processedAt = p.approvedAt || p.rejectedAt;
-      if (!processedAt) return false;
-      
-      const processedDate = processedAt.toDate ? processedAt.toDate() : new Date(processedAt);
-      return processedDate > lastViewed;
+      const proposalDate = p.createdAt?.toDate?.() || new Date(p.createdAt);
+      return proposalDate > lastViewed;
     }).length;
   };
 
@@ -96,7 +88,7 @@ function AppContent() {
 
       // Registrar solo una vez cuando la página esté cargada
       if (document.readyState === 'complete') {
-        registerSW();
+      registerSW();
       } else {
         window.addEventListener('load', registerSW, { once: true });
       }
@@ -331,22 +323,31 @@ function AppContent() {
   });
 
   const handleOpenModal = (modalId) => {
+    // 🔍 LOGS DE DEBUG DETALLADOS
+    console.log('🚀 handleOpenModal called with:', modalId);
+    console.log('🔍 Menu item clicked, modalId type:', typeof modalId);
+    console.log('📋 All available menu items:', filteredMenuItems.map(item => ({ id: item.id, view: item.view, modal: item.modal })));
+    
     // CERRAR EL MENÚ cuando se abre cualquier modal
     if (isMenuOpen) {
+      console.log('🔐 Cerrando menú...');
       setIsMenuOpen(false);
     }
     
     // Manejar navegación a vistas especiales
     if (modalId === 'proposals') {
+      console.log('✅ Detectado modalId "proposals", ejecutando handleOpenMyProposals...');
       handleOpenMyProposals();
       return;
     }
     
+    console.log('🎯 Setting activeModal to:', modalId);
     setActiveModal(modalId);
     // El historial ahora lo maneja automáticamente useModalHistory
   };
 
   const handleCloseModal = () => {
+    console.log('🔙 handleCloseModal called');
     setActiveModal(null);
     // El historial ahora lo maneja automáticamente useModalHistory
   };
@@ -371,16 +372,27 @@ function AppContent() {
   };
 
   const handleOpenMyProposals = () => {
+    console.log('🎉 handleOpenMyProposals ejecutándose...');
+    console.log('👤 Current user:', currentUser?.name, currentUser?.id);
+    console.log('📊 Show my proposals state before:', showMyProposals);
+    
     setShowMyProposals(true);
+    
+    console.log('📊 Show my proposals state after:', true);
+    
     // Marcar como visto al abrir
     if (currentUser) {
-      localStorage.setItem(`lastProposalsView_${currentUser.email}`, new Date().toISOString());
+      const key = `lastProposalsView_${currentUser.id}`;
+      const timestamp = new Date().toISOString();
+      localStorage.setItem(key, timestamp);
+      console.log('💾 Saved to localStorage:', key, timestamp);
     }
     // Agregar entrada específica al historial
     window.history.pushState({ 
       app: 'territorios', 
       level: 'proposals'
     }, '', window.location.href);
+    console.log('📈 History state pushed');
   };
 
   const handleBackFromMyProposals = () => {
@@ -421,6 +433,14 @@ function AppContent() {
     return <LoginView />;
   }
 
+  // 🔍 DEBUG LOG - Estado de renderizado
+  console.log('🖼️ App render state:', {
+    showMyProposals,
+    selectedTerritory: !!selectedTerritory,
+    activeModal,
+    isMenuOpen
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Indicador de desarrollo */}
@@ -432,9 +452,12 @@ function AppContent() {
 
       {/* Vista principal */}
       {showMyProposals ? (
-        <MyProposalsView
-          onBack={handleBackFromMyProposals}
-        />
+        <>
+          {console.log('✅ Rendering MyProposalsView')}
+          <MyProposalsView
+            onBack={handleBackFromMyProposals}
+          />
+        </>
       ) : selectedTerritory ? (
         <TerritoryDetailView
           territory={selectedTerritory}

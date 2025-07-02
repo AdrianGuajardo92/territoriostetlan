@@ -320,25 +320,14 @@ const AddressFormModal = ({
                         </div>
                         {formData.isRevisita && (
                           <div className="space-y-2">
-                            {/* Badge de confirmación visual */}
+                            {/* Formato simple y directo */}
                             {formData.revisitaBy && (
-                              <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-                                <div className="flex items-center text-green-800 text-sm">
-                                  <i className="fas fa-check-circle mr-2"></i>
-                                  <span className="font-medium">Asignado a:</span>
-                                  <span className="ml-1 font-semibold">{formData.revisitaBy}</span>
-                                </div>
+                              <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                <p className="text-sm text-gray-700">
+                                  Revisita de {formData.revisitaBy}
+                                </p>
                               </div>
                             )}
-                            
-                            {/* Campo simple para todos los usuarios */}
-                            <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
-                              <div className="flex items-center text-purple-800 text-sm">
-                                <i className="fas fa-info-circle mr-2"></i>
-                                <span>Esta revisita será asignada automáticamente a: <strong>{currentUser?.name}</strong></span>
-                                <span className="ml-2 text-xs opacity-75">(Se desmarcará "Estudio" automáticamente)</span>
-                              </div>
-                            </div>
                           </div>
                         )}
                       </div>
@@ -363,25 +352,14 @@ const AddressFormModal = ({
                         </div>
                         {formData.isEstudio && (
                           <div className="space-y-2">
-                            {/* Badge de confirmación visual */}
+                            {/* Formato simple y directo */}
                             {formData.estudioBy && (
-                              <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                                <div className="flex items-center text-blue-800 text-sm">
-                                  <i className="fas fa-check-circle mr-2"></i>
-                                  <span className="font-medium">Asignado a:</span>
-                                  <span className="ml-1 font-semibold">{formData.estudioBy}</span>
-                                </div>
+                              <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                <p className="text-sm text-gray-700">
+                                  Estudia con {formData.estudioBy}
+                                </p>
                               </div>
                             )}
-                            
-                            {/* Campo simple para todos los usuarios */}
-                            <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
-                              <div className="flex items-center text-purple-800 text-sm">
-                                <i className="fas fa-info-circle mr-2"></i>
-                                <span>Este estudio será asignado automáticamente a: <strong>{currentUser?.name}</strong></span>
-                                <span className="ml-2 text-xs opacity-75">(Se desmarcará "Revisita" automáticamente)</span>
-                              </div>
-                            </div>
                           </div>
                         )}
                       </div>

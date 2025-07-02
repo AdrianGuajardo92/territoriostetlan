@@ -67,6 +67,7 @@ export const AppProvider = ({ children }) => {
   // 📋 Cargar versión desde version.json
   const loadAppVersion = async () => {
     try {
+      console.log('🔄 DEBUG - Intentando cargar versión...');
       const response = await fetch('/version.json?t=' + Date.now(), {
         cache: 'no-cache',
         headers: {
@@ -77,9 +78,18 @@ export const AppProvider = ({ children }) => {
       
       if (response.ok) {
         const versionData = await response.json();
+        console.log('✅ DEBUG - Versión cargada:', versionData.version);
         setAppVersion(versionData.version);
+        
+        // Forzar actualización del título de la página
+        if (typeof document !== 'undefined') {
+          document.title = `Territorios - ${versionData.version}`;
+        }
+      } else {
+        console.error('❌ DEBUG - Error al cargar version.json:', response.status);
       }
     } catch (error) {
+      console.error('❌ DEBUG - Error cargando versión:', error);
       // Silenciosamente usar la versión por defecto si hay error
       // No mostrar error en consola para mantenerla limpia
     }
@@ -736,6 +746,51 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // 🗑️ FUNCTIONS FOR DELETING PROPOSALS
+  const handleDeleteProposal = async (proposalId) => {
+    try {
+      await deleteDoc(doc(db, 'proposals', proposalId));
+      showToast('Propuesta eliminada', 'success');
+    } catch (error) {
+      console.error('Error deleting proposal:', error);
+      showToast('Error al eliminar propuesta', 'error');
+      throw error;
+    }
+  };
+
+  const handleDeleteProposalsByStatus = async (status, userId = null) => {
+    try {
+      // Filtrar propuestas a eliminar
+      let proposalsToDelete = proposals.filter(p => p.status === status);
+      
+      // Si se especifica userId, filtrar por usuario (para usuarios normales)
+      if (userId) {
+        proposalsToDelete = proposalsToDelete.filter(p => 
+          p.proposedBy === userId || p.proposedByName === currentUser?.name
+        );
+      }
+
+      if (proposalsToDelete.length === 0) {
+        showToast('No hay propuestas para eliminar', 'info');
+        return;
+      }
+
+      // Eliminar todas las propuestas encontradas
+      const deletePromises = proposalsToDelete.map(proposal => 
+        deleteDoc(doc(db, 'proposals', proposal.id))
+      );
+
+      await Promise.all(deletePromises);
+
+      const statusText = status === 'approved' ? 'aprobadas' : 'rechazadas';
+      showToast(`${proposalsToDelete.length} propuesta${proposalsToDelete.length > 1 ? 's' : ''} ${statusText} eliminada${proposalsToDelete.length > 1 ? 's' : ''}`, 'success');
+    } catch (error) {
+      console.error('Error deleting proposals:', error);
+      showToast('Error al eliminar propuestas', 'error');
+      throw error;
+    }
+  };
+
   // 🛠️ ADMIN FUNCTIONS
   const handleToggleAdminMode = useCallback(() => {
     setAdminEditMode(prev => !prev);
@@ -956,6 +1011,14 @@ export const AppProvider = ({ children }) => {
   // 📋 Cargar versión al iniciar la aplicación
   useEffect(() => {
     loadAppVersion();
+    
+    // Cargar versión cada 30 segundos para asegurar actualización
+    const versionInterval = setInterval(() => {
+      console.log('⏰ DEBUG - Recargando versión...');
+      loadAppVersion();
+    }, 30000);
+    
+    return () => clearInterval(versionInterval);
   }, []); // Solo se ejecuta una vez al montar
 
   // 🚀 INICIALIZACIÓN Y GESTIÓN DE AUTENTICACIÓN PERSONALIZADA
@@ -1050,15 +1113,35 @@ export const AppProvider = ({ children }) => {
           setPublishers(usersData);
         });
 
-        // Suscripción a propuestas (solo para admins)
+        // Suscripción a propuestas
         let unsubProposals = () => {};
         if (currentUser.role === 'admin') {
+          // Admins ven todas las propuestas
           const proposalsQuery = query(collection(db, 'proposals'), orderBy('createdAt', 'desc'));
           unsubProposals = onSnapshot(proposalsQuery, (snapshot) => {
             const proposalsData = snapshot.docs.map(doc => ({
               id: doc.id,
               ...doc.data()
             }));
+            setProposals(proposalsData);
+          });
+        } else {
+          // Usuarios normales solo ven sus propias propuestas
+          const userProposalsQuery = query(
+            collection(db, 'proposals'), 
+            where('proposedBy', '==', currentUser.id)
+          );
+          unsubProposals = onSnapshot(userProposalsQuery, (snapshot) => {
+            const proposalsData = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            // Ordenar en el cliente por fecha de creación
+            proposalsData.sort((a, b) => {
+              const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+              const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+              return dateB - dateA; // Más reciente primero
+            });
             setProposals(proposalsData);
           });
         }
@@ -1146,6 +1229,8 @@ export const AppProvider = ({ children }) => {
     handleProposeNewAddress,
     handleApproveProposal,
     handleRejectProposal,
+    handleDeleteProposal,
+    handleDeleteProposalsByStatus,
 
     // Admin functions
     handleToggleAdminMode,

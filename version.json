@@ -1,29 +1,48 @@
 {
-  "version": "v2.25.28",
-  "timestamp": "2025-01-02T21:00:00.000Z",
+  "version": "v2.25.29",
+  "timestamp": "2025-01-02T22:45:00.000Z",
   "releaseDate": "2025-01-02",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "🎨 REDISEÑO COMPLETO MIS PROPUESTAS: Vista completamente renovada con formato de barras verdes",
-    "📱 100% OPTIMIZADO MÓVIL: Diseño responsive perfecto, filtros táctiles, header limpio",
-    "🟢 FORMATO CONSISTENTE: Barras verdes individuales como AdminModal, eliminada información redundante",
-    "🏷️ ETIQUETAS LIMPIAS: Solo una etiqueta de estado por tarjeta, territorio con formato correcto",
-    "📊 FILTROS MEJORADOS: Contadores visuales, estados claros (Pendientes/Aprobadas/Rechazadas)"
+    "🆕 FORMATO SIMPLE ESTUDIOS/REVISITAS: Cambio a 'Revisita de [nombre]' y 'Estudia con [nombre]'",
+    "🔧 PANEL ADMIN OPTIMIZADO: Solo muestra campos que realmente cambiaron en propuestas",
+    "📊 ANTES/DESPUÉS COMPLETO: Formato antes→después para dirección, género, notas, estudios y revisitas",
+    "🧹 SISTEMA ELIMINACIÓN PROPUESTAS: Borrado individual + masivo con confirmaciones de seguridad",
+    "🗑️ OPCIONES FLEXIBLES: Eliminar una por una o todas de un jalón (aprobadas/rechazadas)",
+    "✅ CORRECCIÓN TELÉFONO: Eliminado campo inexistente del panel de administrador",
+    "🎯 SOLO CAMBIOS RELEVANTES: Panel admin muestra únicamente campos modificados",
+    "🔒 CONFIRMACIONES DOBLES: Modales de seguridad para evitar eliminaciones accidentales"
   ],
   "lastUpdated": "2025-01-02",
   "changelog": [
     {
+      "version": "2.25.29",
+      "date": "2025-01-02",
+      "changes": [
+        "🆕 FORMATO SIMPLE ESTUDIOS/REVISITAS: Cambio a 'Revisita de [nombre]' y 'Estudia con [nombre]' - más directo y claro",
+        "🔧 PANEL ADMIN OPTIMIZADO: Solo muestra campos que realmente cambiaron en propuestas - interface más limpia",
+        "📊 ANTES/DESPUÉS COMPLETO: Formato antes→después para dirección, género, notas, estudios y revisitas",
+        "🧹 SISTEMA ELIMINACIÓN PROPUESTAS: Borrado individual + masivo con confirmaciones de seguridad",
+        "🗑️ OPCIONES FLEXIBLES: Eliminar una por una o todas de un jalón (aprobadas/rechazadas) según necesidad",
+        "✅ CORRECCIÓN TELÉFONO: Eliminado campo inexistente del panel de administrador - bug fix crítico",
+        "🎯 SOLO CAMBIOS RELEVANTES: Panel admin muestra únicamente campos modificados - menos ruido visual",
+        "🔒 CONFIRMACIONES DOBLES: Modales de seguridad para evitar eliminaciones accidentales de propuestas"
+      ]
+    },
+    {
       "version": "2.25.28",
       "date": "2025-01-02",
       "changes": [
-        "🎨 REDISEÑO COMPLETO MIS PROPUESTAS: Vista completamente renovada con formato de barras verdes",
-        "📱 100% OPTIMIZADO MÓVIL: Diseño responsive perfecto, filtros táctiles, header limpio", 
-        "🟢 FORMATO CONSISTENTE: Barras verdes individuales como AdminModal, eliminada información redundante",
-        "🏷️ ETIQUETAS LIMPIAS: Solo una etiqueta de estado por tarjeta, territorio con formato correcto",
-        "📊 FILTROS MEJORADOS: Contadores visuales, estados claros (Pendientes/Aprobadas/Rechazadas)",
-        "🗑️ MODAL ELIMINADO: Removido modal de detalles, toda información visible en tarjeta principal",
-        "⚡ CARGA OPTIMIZADA: Mejor rendimiento, menos componentes, interfaz más fluida"
+        "📱 REDISEÑO COMPLETO MIS PROPUESTAS: Nueva interfaz 100% optimizada para móvil con diseño elegante",
+        "🟢 BARRAS VERDES INDIVIDUALES: Cada campo (dirección, revisita, estudio, género, notas) con línea verde tipo notas",
+        "🏷️ HEADER REORGANIZADO: Nombre del tipo en línea 1, territorio + estado como etiquetas en línea 2",
+        "⏳ FILTROS CON CONTADORES: 3 filtros (Pendientes, Aprobadas, Rechazadas) con contadores visuales",
+        "🎨 TARJETAS ELEGANTES: Gradiente naranja suave, bordes redondeados, sombras y hover effects",
+        "📍 DIRECCIÓN SIEMPRE PRIMERO: Contexto inmediato para identificar rápidamente cada propuesta",
+        "💬 RAZÓN DEL CAMBIO: Formato verde consistente integrado con el resto de campos",
+        "📅 FECHAS COMPACTAS: Formato optimizado móvil (Ene 2, Feb 15) para ahorrar espacio",
+        "✅ ESTADOS PROCESADOS: Información clara de aprobación/rechazo con diseño profesional"
       ]
     },
     {

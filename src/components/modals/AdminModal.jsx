@@ -15,7 +15,9 @@ const AdminModal = (props = {}) => {
     proposals,
     users,
     handleApproveProposal,
-    handleRejectProposal
+    handleRejectProposal,
+    handleDeleteProposal,
+    handleDeleteProposalsByStatus
   } = useApp();
   
   const pendingProposalsCount = proposals.filter(p => p.status === 'pending').length;
@@ -27,6 +29,7 @@ const AdminModal = (props = {}) => {
   const [showStatsModal, setShowStatsModal] = useState(false); // Estado para las estadísticas completas
   const [showUserManagement, setShowUserManagement] = useState(false); // Estado para el modal de gestión de usuarios
   const [proposalFilter, setProposalFilter] = useState('pending'); // Filtro para propuestas: all, pending, approved, rejected
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // Estado para confirmación de eliminación
   
   // Estados para acordeón de usuarios
   const [expandedAdmins, setExpandedAdmins] = useState(false);
@@ -91,6 +94,29 @@ const AdminModal = (props = {}) => {
     } catch (error) {
       showToast('Error al rechazar propuesta', 'error');
     }
+  };
+
+  // Funciones para manejar eliminación de propuestas
+  const handleDeleteSingle = async (proposalId) => {
+    try {
+      await handleDeleteProposal(proposalId);
+      setShowDeleteConfirm(null);
+    } catch (error) {
+      console.error('Error deleting proposal:', error);
+    }
+  };
+
+  const handleDeleteBulk = async (status) => {
+    try {
+      await handleDeleteProposalsByStatus(status); // Sin userId para admins = elimina todas
+      setShowDeleteConfirm(null);
+    } catch (error) {
+      console.error('Error deleting proposals:', error);
+    }
+  };
+
+  const openDeleteConfirm = (type, data) => {
+    setShowDeleteConfirm({ type, ...data });
   };
   
   const renderContent = () => {
@@ -346,6 +372,23 @@ const AdminModal = (props = {}) => {
               </button>
                 ))}
               </div>
+              
+              {/* Botón limpiar todo para propuestas aprobadas/rechazadas */}
+              {(proposalFilter === 'approved' || proposalFilter === 'rejected') && filteredProposals.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => openDeleteConfirm('bulk', { status: proposalFilter })}
+                    className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-all transform hover:scale-105 flex items-center justify-center gap-2 ${
+                      proposalFilter === 'approved' 
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-300' 
+                        : 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-300'
+                    }`}
+                  >
+                    <i className="fas fa-broom text-sm"></i>
+                    <span>Limpiar todas las {proposalFilter === 'approved' ? 'aprobadas' : 'rechazadas'}</span>
+                  </button>
+                </div>
+              )}
             </div>
             
             {filteredProposals.length === 0 ? (
@@ -504,12 +547,12 @@ const AdminModal = (props = {}) => {
                             </>
                           )}
                             
-                                                        {/* Para ediciones - mostrar solo cambios EN ORDEN ESPECÍFICO */}
+                                                        {/* Para ediciones - SOLO CAMPOS QUE CAMBIARON con formato antes/después */}
                             {proposal.type === 'edit' && proposal.changes && currentAddress && (
                               <>
-                                {/* 1. DIRECCIÓN SIEMPRE PRIMERO - si hay cambio */}
-                                {proposal.changes.address && (
-                                  <div className="bg-white rounded-lg p-3 border-l-4 border-green-400">
+                                {/* DIRECCIÓN - Formato antes/después si cambió */}
+                                {proposal.changes.address && proposal.changes.address !== currentAddress.address && (
+                                  <div className="bg-white rounded-lg p-3 border-l-4 border-blue-400">
                                     <p className="text-sm font-semibold text-gray-700 mb-2">📍 Dirección:</p>
                                     <div className="space-y-2">
                                       <p className="text-xs text-gray-500">Antes:</p>
@@ -518,56 +561,95 @@ const AdminModal = (props = {}) => {
                                       </p>
                                       <p className="text-xs text-gray-500">Después:</p>
                                       <p className="text-sm text-gray-800 bg-green-50 p-2 rounded border-l-4 border-green-400 break-words">
-                                        {proposal.changes.address || 'Sin valor'}
+                                        {proposal.changes.address}
                                       </p>
                                     </div>
                                   </div>
                                 )}
                                 
-                                {/* 2. REVISITA - Formato como notas */}
-                                {proposal.changes.isRevisita && (
-                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                                    <p className="text-sm font-semibold text-green-700 mb-1">📖 Revisita:</p>
-                                    <p className="text-sm text-gray-800 break-words">
-                                      {proposal.changes.revisitaBy || ''}
-                                    </p>
+                                {/* GÉNERO - Formato antes/después si cambió */}
+                                {proposal.changes.gender && proposal.changes.gender !== currentAddress.gender && (
+                                  <div className="bg-white rounded-lg p-3 border-l-4 border-blue-400">
+                                    <p className="text-sm font-semibold text-gray-700 mb-2">👥 Género:</p>
+                                    <div className="space-y-2">
+                                      <p className="text-xs text-gray-500">Antes:</p>
+                                      <p className="text-sm text-gray-700 bg-red-50 p-2 rounded border-l-4 border-red-400 break-words">
+                                        {currentAddress.gender || 'Sin valor'}
+                                      </p>
+                                      <p className="text-xs text-gray-500">Después:</p>
+                                      <p className="text-sm text-gray-800 bg-green-50 p-2 rounded border-l-4 border-green-400 break-words">
+                                        {proposal.changes.gender}
+                                      </p>
+                                    </div>
                                   </div>
                                 )}
                                 
-                                {/* 3. ESTUDIO - Formato como notas */}
-                                {proposal.changes.isEstudio && (
-                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                                    <p className="text-sm font-semibold text-green-700 mb-1">📚 Estudio:</p>
-                                    <p className="text-sm text-gray-800 break-words">
-                                      {proposal.changes.estudioBy || ''}
-                                    </p>
+                                {/* NOTAS - Formato antes/después si cambió */}
+                                {proposal.changes.notes !== undefined && proposal.changes.notes !== currentAddress.notes && (
+                                  <div className="bg-white rounded-lg p-3 border-l-4 border-blue-400">
+                                    <p className="text-sm font-semibold text-gray-700 mb-2">📝 Notas:</p>
+                                    <div className="space-y-2">
+                                      <p className="text-xs text-gray-500">Antes:</p>
+                                      <p className="text-sm text-gray-700 bg-red-50 p-2 rounded border-l-4 border-red-400 break-words italic">
+                                        {currentAddress.notes ? `"${currentAddress.notes}"` : 'Sin notas'}
+                                      </p>
+                                      <p className="text-xs text-gray-500">Después:</p>
+                                      <p className="text-sm text-gray-800 bg-green-50 p-2 rounded border-l-4 border-green-400 break-words italic">
+                                        {proposal.changes.notes ? `"${proposal.changes.notes}"` : 'Sin notas'}
+                                      </p>
+                                    </div>
                                   </div>
                                 )}
                                 
-                                {/* 4. GÉNERO - Formato como notas */}
-                                {proposal.changes.gender && (
-                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                                    <p className="text-sm font-semibold text-green-700 mb-1">👥 Género:</p>
-                                    <p className="text-sm text-gray-800 break-words">
-                                      {proposal.changes.gender}
-                                    </p>
+
+                                {/* ESTUDIO - Formato antes/después si cambió */}
+                                {(proposal.changes.isEstudio !== undefined || proposal.changes.estudioBy !== undefined) && 
+                                 (proposal.changes.isEstudio !== currentAddress.isEstudio || proposal.changes.estudioBy !== currentAddress.estudioBy) && (
+                                  <div className="bg-white rounded-lg p-3 border-l-4 border-blue-400">
+                                    <p className="text-sm font-semibold text-gray-700 mb-2">📚 Estudio:</p>
+                                    <div className="space-y-2">
+                                      <p className="text-xs text-gray-500">Antes:</p>
+                                      <p className="text-sm text-gray-700 bg-red-50 p-2 rounded border-l-4 border-red-400 break-words">
+                                        {currentAddress.isEstudio && currentAddress.estudioBy 
+                                          ? `Estudia con ${currentAddress.estudioBy}` 
+                                          : 'Sin estudio'}
+                                      </p>
+                                      <p className="text-xs text-gray-500">Después:</p>
+                                      <p className="text-sm text-gray-800 bg-green-50 p-2 rounded border-l-4 border-green-400 break-words">
+                                        {proposal.changes.isEstudio && proposal.changes.estudioBy 
+                                          ? `Estudia con ${proposal.changes.estudioBy}` 
+                                          : 'Sin estudio'}
+                                      </p>
+                                    </div>
                                   </div>
                                 )}
                                 
-                                {/* 5. NOTAS - Barra verde individual */}
-                                {proposal.changes.notes && (
-                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                                    <p className="text-sm font-semibold text-green-700 mb-1">📝 Notas:</p>
-                                    <p className="text-sm text-gray-800 italic break-words">
-                                      "{proposal.changes.notes}"
-                                    </p>
+                                {/* REVISITA - Formato antes/después si cambió */}
+                                {(proposal.changes.isRevisita !== undefined || proposal.changes.revisitaBy !== undefined) && 
+                                 (proposal.changes.isRevisita !== currentAddress.isRevisita || proposal.changes.revisitaBy !== currentAddress.revisitaBy) && (
+                                  <div className="bg-white rounded-lg p-3 border-l-4 border-blue-400">
+                                    <p className="text-sm font-semibold text-gray-700 mb-2">📖 Revisita:</p>
+                                    <div className="space-y-2">
+                                      <p className="text-xs text-gray-500">Antes:</p>
+                                      <p className="text-sm text-gray-700 bg-red-50 p-2 rounded border-l-4 border-red-400 break-words">
+                                        {currentAddress.isRevisita && currentAddress.revisitaBy 
+                                          ? `Revisita de ${currentAddress.revisitaBy}` 
+                                          : 'Sin revisita'}
+                                      </p>
+                                      <p className="text-xs text-gray-500">Después:</p>
+                                      <p className="text-sm text-gray-800 bg-green-50 p-2 rounded border-l-4 border-green-400 break-words">
+                                        {proposal.changes.isRevisita && proposal.changes.revisitaBy 
+                                          ? `Revisita de ${proposal.changes.revisitaBy}` 
+                                          : 'Sin revisita'}
+                                      </p>
+                                    </div>
                                   </div>
                                 )}
                                 
-                                {/* Razón del cambio - Barra verde individual */}
+                                {/* Razón del cambio - Siempre mostrar si existe */}
                                 {proposal.reason && (
-                                  <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                                    <p className="text-sm font-semibold text-green-700 mb-1">💬 Razón del cambio:</p>
+                                  <div className="bg-amber-50 p-3 rounded-lg border-l-4 border-amber-400">
+                                    <p className="text-sm font-semibold text-amber-700 mb-1">💬 Razón del cambio:</p>
                                     <p className="text-sm text-gray-800 italic break-words">
                                       "{proposal.reason}"
                                     </p>
@@ -629,25 +711,40 @@ const AdminModal = (props = {}) => {
                         </div>
                       )}
                       
-                      {/* Botones de acción solo para propuestas pendientes - Optimizados para móvil */}
-                      {proposal.status === 'pending' && (
-                        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-orange-200">
-                          <button
-                            onClick={() => setSelectedProposal(proposal)}
-                            className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 rounded-xl hover:from-red-200 hover:to-pink-200 transition-all transform hover:scale-105 font-medium shadow-md border border-red-200 w-full sm:w-auto"
-                          >
-                            <i className="fas fa-times"></i>
-                            <span>Rechazar</span>
-                          </button>
-                          <button
-                            onClick={() => handleApprove(proposal)}
-                            className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-md w-full sm:w-auto"
-                          >
-                            <i className="fas fa-check"></i>
-                            <span>Aprobar</span>
-                          </button>
-                        </div>
-                      )}
+                      {/* Botones de acción - Diferentes según el estado */}
+                      <div className="mt-6 pt-4 border-t border-orange-200">
+                        {proposal.status === 'pending' ? (
+                          /* Botones para propuestas pendientes */
+                          <div className="flex flex-col sm:flex-row justify-end gap-3">
+                            <button
+                              onClick={() => setSelectedProposal(proposal)}
+                              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 rounded-xl hover:from-red-200 hover:to-pink-200 transition-all transform hover:scale-105 font-medium shadow-md border border-red-200 w-full sm:w-auto"
+                            >
+                              <i className="fas fa-times"></i>
+                              <span>Rechazar</span>
+                            </button>
+                            <button
+                              onClick={() => handleApprove(proposal)}
+                              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-md w-full sm:w-auto"
+                            >
+                              <i className="fas fa-check"></i>
+                              <span>Aprobar</span>
+                            </button>
+                          </div>
+                        ) : (
+                          /* Botón eliminar para propuestas aprobadas/rechazadas */
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => openDeleteConfirm('single', { id: proposal.id })}
+                              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border border-gray-300 hover:border-red-300"
+                              title="Eliminar propuesta"
+                            >
+                              <i className="fas fa-trash text-sm"></i>
+                              <span className="text-sm">Eliminar</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -958,6 +1055,64 @@ const AdminModal = (props = {}) => {
           onClose={() => setShowUserManagement(false)}
           modalId="user-management-modal"
         />
+      )}
+
+      {/* Modal de confirmación para eliminar propuestas */}
+      {showDeleteConfirm && (
+        <Modal isOpen={true} onClose={() => setShowDeleteConfirm(null)} size="sm">
+          <div className="p-6">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                <i className="fas fa-trash text-red-600 text-lg"></i>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {showDeleteConfirm.type === 'single' ? 'Eliminar Propuesta' : 'Limpiar Propuestas'}
+                </h3>
+                <p className="text-red-600 text-sm">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <p className="text-gray-700 mb-6">
+              {showDeleteConfirm.type === 'single' 
+                ? '¿Estás seguro de que deseas eliminar esta propuesta permanentemente?'
+                : `¿Estás seguro de que deseas eliminar TODAS las propuestas ${showDeleteConfirm.status === 'approved' ? 'aprobadas' : 'rechazadas'} del sistema?`
+              }
+            </p>
+
+            {showDeleteConfirm.type === 'bulk' && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
+                <p className="text-red-800 text-sm font-medium">
+                  Se eliminarán {proposals.filter(p => p.status === showDeleteConfirm.status).length} propuesta{proposals.filter(p => p.status === showDeleteConfirm.status).length > 1 ? 's' : ''} permanentemente
+                </p>
+              </div>
+            )}
+
+            {/* Botones */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  if (showDeleteConfirm.type === 'single') {
+                    handleDeleteSingle(showDeleteConfirm.id);
+                  } else {
+                    handleDeleteBulk(showDeleteConfirm.status);
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-medium"
+              >
+                {showDeleteConfirm.type === 'single' ? 'Sí, eliminar' : 'Sí, limpiar todas'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </>
   );
