@@ -15,14 +15,14 @@
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache", "storage"
+  Clear-Site-Data: "storage"
 
 /index.html
   Content-Type: text/html; charset=utf-8
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache", "storage"
+  Clear-Site-Data: "storage"
 
 # Service Worker - Clear-Site-Data apropiado
 /sw.js
@@ -30,7 +30,7 @@
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache"
+  Clear-Site-Data: "storage"
 
 # Version check - Clear-Site-Data apropiado
 /version.json
@@ -38,7 +38,7 @@
   Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0
   Pragma: no-cache
   Expires: 0
-  Clear-Site-Data: "cache"
+  Clear-Site-Data: "storage"
 
 # Assets JavaScript - SIN Clear-Site-Data para evitar advertencias
 /assets/*.js
