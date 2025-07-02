@@ -12,7 +12,8 @@ import {
   where,
   orderBy,
   getDoc,
-  getDocs
+  getDocs,
+  limit
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useToast } from '../hooks/useToast';
@@ -85,15 +86,61 @@ export const AppProvider = ({ children }) => {
     }
   };
   
-  // 🔐 AUTH FUNCTIONS - SISTEMA PERSONALIZADO CON CÓDIGOS DE ACCESO
+  // 🔐 AUTH FUNCTIONS - SISTEMA OPTIMIZADO PARA VELOCIDAD
   const login = async (accessCode, password) => {
     try {
-      console.log('🔐 Intentando login con código:', accessCode);
+      console.log('🚀 Login optimizado iniciado para:', accessCode);
       
-      // Buscar usuario por código de acceso en Firestore
+      // 🎯 CACHE LOCAL PARA USUARIOS FRECUENTES
+      const cacheKey = `user_cache_${accessCode}`;
+      const cachedUser = localStorage.getItem(cacheKey);
+      
+      if (cachedUser && navigator.onLine) {
+        try {
+          const userData = JSON.parse(cachedUser);
+          // Verificar contraseña en cache local primero
+          if (userData.password === password) {
+            console.log('⚡ Login desde cache local (súper rápido)');
+            
+            // Verificar en background si el usuario sigue existiendo
+            setTimeout(async () => {
+              try {
+                const userDoc = await getDoc(doc(db, 'users', userData.id));
+                if (!userDoc.exists()) {
+                  localStorage.removeItem(cacheKey);
+                  console.log('🧹 Cache limpiado - usuario no existe');
+                }
+              } catch (error) {
+                console.log('⚠️ Error verificando cache en background:', error);
+              }
+            }, 100);
+            
+            const user = {
+              id: userData.id,
+              accessCode: userData.accessCode,
+              name: userData.name,
+              role: userData.role || 'user',
+              ...userData
+            };
+            
+            sessionStorage.setItem('currentUser', JSON.stringify(user));
+            setCurrentUser(user);
+            setAuthLoading(false);
+            
+            return { success: true, user };
+          }
+        } catch (cacheError) {
+          console.log('⚠️ Error en cache, continuando con Firebase');
+          localStorage.removeItem(cacheKey);
+        }
+      }
+      
+      // 🔍 QUERY OPTIMIZADO CON ÍNDICE
+      console.log('🔍 Buscando en Firebase...');
       const usersQuery = query(
         collection(db, 'users'), 
-        where('accessCode', '==', accessCode)
+        where('accessCode', '==', accessCode.toLowerCase().trim()),
+        limit(1) // ⚡ Optimización: solo necesitamos 1 resultado
       );
       
       const querySnapshot = await getDocs(usersQuery);
@@ -109,13 +156,9 @@ export const AppProvider = ({ children }) => {
       const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
       
-      console.log('👤 Usuario encontrado:', {
-        name: userData.name,
-        role: userData.role,
-        hasPassword: !!userData.password
-      });
+      console.log('👤 Usuario encontrado:', userData.name);
 
-      // Validar contraseña
+      // ⚡ VALIDACIÓN RÁPIDA DE CONTRASEÑA
       if (!userData.password || userData.password !== password) {
         console.log('❌ Contraseña incorrecta');
         return { 
@@ -124,30 +167,74 @@ export const AppProvider = ({ children }) => {
         };
       }
 
-      // Login exitoso - crear sesión personalizada
+      // ✅ LOGIN EXITOSO
       const user = {
         id: userDoc.id,
         accessCode: userData.accessCode,
         name: userData.name,
         role: userData.role || 'user',
+        password: userData.password, // Guardar para cache
         ...userData
       };
 
-      console.log('✅ Login exitoso:', user.name);
+      console.log('✅ Login exitoso para:', user.name);
       
-      // Guardar usuario en sessionStorage para persistencia
+              // 💾 GUARDAR EN CACHE LOCAL PARA PRÓXIMAS VECES
+        const userWithTimestamp = {
+          ...user,
+          lastLogin: Date.now(),
+          cacheVersion: '1.0'
+        };
+        localStorage.setItem(cacheKey, JSON.stringify(userWithTimestamp));
+      
+      // 📱 GUARDAR SESIÓN
       sessionStorage.setItem('currentUser', JSON.stringify(user));
       
       setCurrentUser(user);
       setAuthLoading(false);
       
-      return { 
-        success: true, 
-        user 
-      };
+      return { success: true, user };
 
     } catch (error) {
       console.error('❌ Error en login:', error);
+      
+      // 🔄 FALLBACK OFFLINE: intentar con cache si no hay conexión
+      if (!navigator.onLine) {
+        const cacheKey = `user_cache_${accessCode}`;
+        const cachedUser = localStorage.getItem(cacheKey);
+        
+        if (cachedUser) {
+          try {
+            const userData = JSON.parse(cachedUser);
+            if (userData.password === password) {
+              console.log('📱 Login offline exitoso desde cache');
+              
+              const user = {
+                id: userData.id,
+                accessCode: userData.accessCode,
+                name: userData.name,
+                role: userData.role || 'user',
+                ...userData
+              };
+              
+              sessionStorage.setItem('currentUser', JSON.stringify(user));
+              setCurrentUser(user);
+              setAuthLoading(false);
+              
+              showToast('Conectado en modo offline', 'info');
+              return { success: true, user };
+            }
+          } catch (cacheError) {
+            console.log('❌ Error en cache offline');
+          }
+        }
+        
+        return { 
+          success: false, 
+          error: 'Sin conexión y no hay datos guardados' 
+        };
+      }
+      
       return { 
         success: false, 
         error: 'Error de conexión. Verifica tu internet.' 

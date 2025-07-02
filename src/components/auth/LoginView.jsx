@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import Icon from '../common/Icon';
+import { PerformanceMonitor } from '../../utils/performanceOptimizer';
 
 const LoginView = () => {
   const { login } = useApp();
@@ -21,7 +22,17 @@ const LoginView = () => {
     setIsLoading(true);
     setError('');
 
+    // 🚀 FASE 1: Medir tiempo de login
+    const loginStartTime = performance.now();
+    console.log('⚡ FASE 1: Iniciando medición de login...');
+
     const result = await login(formData.accessCode, formData.password);
+    
+    // 📊 FASE 1: Registrar métricas de performance
+    if (result.success) {
+      const loginTime = PerformanceMonitor.measureLoginTime(loginStartTime);
+      console.log(`🎯 FASE 1: Login completado en ${loginTime.toFixed(2)}ms`);
+    }
     
     if (!result.success) {
       setError(result.error || 'Error al iniciar sesión');
