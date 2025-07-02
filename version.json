@@ -1,10 +1,14 @@
 {
-  "version": "2.19.1",
+  "version": "2.19.2",
   "releaseDate": "2025-01-01",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": {
     "all": [
+      {
+        "type": "improvement", 
+        "description": "📝 TERMINOLOGÍA ACTUALIZADA: Cambiado 'Código de Acceso' por 'Usuario' en gestión de usuarios para consistencia con el sistema de login"
+      },
       {
         "type": "improvement", 
         "description": "📱 OPTIMIZACIÓN MÓVIL PERFECTA: Gestión de usuarios 100% optimizada para celulares - tarjetas compactas, botones táctiles y diseño responsive impecable"

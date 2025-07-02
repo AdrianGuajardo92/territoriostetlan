@@ -685,7 +685,7 @@ export const AppProvider = ({ children }) => {
       const existingUserSnapshot = await getDocs(existingUserQuery);
       
       if (!existingUserSnapshot.empty) {
-        throw new Error('Ya existe un usuario con este código de acceso');
+        throw new Error('Ya existe un usuario con este nombre de usuario');
       }
 
       const newUserData = {
@@ -709,7 +709,7 @@ export const AppProvider = ({ children }) => {
 
   const handleUpdateUser = async (userId, updates) => {
     try {
-      // Si se está actualizando el código de acceso, validar que no exista
+              // Si se está actualizando el usuario, validar que no exista
       if (updates.accessCode) {
         const existingUserQuery = query(
           collection(db, 'users'),
@@ -720,7 +720,7 @@ export const AppProvider = ({ children }) => {
         // Verificar que no sea el mismo usuario
         const existingUser = existingUserSnapshot.docs.find(doc => doc.id !== userId);
         if (existingUser) {
-          throw new Error('Ya existe otro usuario con este código de acceso');
+          throw new Error('Ya existe otro usuario con este nombre de usuario');
         }
       }
 

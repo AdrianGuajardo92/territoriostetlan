@@ -70,7 +70,7 @@ const UserManagementModal = ({
       return;
     }
     if (!formData.accessCode.trim()) {
-      showToast('El código de acceso es requerido', 'error');
+      showToast('El usuario es requerido', 'error');
       return;
     }
     if (activeView === 'create' && !formData.password.trim()) {
@@ -185,7 +185,7 @@ const UserManagementModal = ({
               )}
             </div>
             <p className="text-sm text-gray-600 font-medium flex items-center mb-2">
-              <Icon name="key" className="mr-1 text-xs" />
+              <Icon name="user" className="mr-1 text-xs" />
               <span className="truncate">{user.accessCode}</span>
             </p>
             <span className={`inline-block bg-gradient-to-r ${badgeColor} text-white px-2 py-1 rounded-full text-xs font-bold`}>
@@ -343,18 +343,18 @@ const UserManagementModal = ({
             />
           </div>
 
-          {/* Código de acceso */}
+          {/* Usuario */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Icon name="key" className="inline mr-2" />
-              Código de Acceso
+              <Icon name="user" className="inline mr-2" />
+              Usuario
             </label>
             <input
               type="text"
               value={formData.accessCode}
               onChange={(e) => setFormData(prev => ({ ...prev, accessCode: e.target.value }))}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              placeholder="Ej: JP2024"
+              placeholder="Ej: juan.perez"
               required
             />
           </div>
