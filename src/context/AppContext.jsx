@@ -1258,4 +1258,5 @@ export const AppProvider = ({ children }) => {
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
+export { AppContext };
 export default AppContext; 

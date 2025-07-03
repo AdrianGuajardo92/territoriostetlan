@@ -1,11 +1,11 @@
 {
-  "version": "2.26.7",
-  "timestamp": "2025-01-02T23:30:00.000Z",
+  "version": "2.26.8",
+  "timestamp": "2025-01-02T23:45:00.000Z",
   "releaseDate": "2025-01-02",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "🔧 CORRECCIÓN CRÍTICA: Modal de contraseña ahora actualiza correctamente en Firebase",
+    "🔧 CORRECCIÓN NETLIFY: Exportación nombrada de AppContext agregada para compatibilidad con build",
     "🔗 CONEXIÓN CONTEXTO: Integrado con AppContext para usar funciones reales de Firebase",
     "✅ VALIDACIÓN REAL: Verificación de contraseña actual contra datos de Firebase",
     "🔄 ACTUALIZACIÓN FIREBASE: Función updatePassword conectada correctamente",
@@ -22,5 +22,5 @@
     "🎯 MEJORAS UX: Interfaz más intuitiva y fácil de usar"
   ],
   "critical": true,
-  "description": "Corrección crítica del modal de contraseña para que actualice correctamente en Firebase"
+  "description": "Corrección de exportación de AppContext para compatibilidad con Netlify build"
 }
