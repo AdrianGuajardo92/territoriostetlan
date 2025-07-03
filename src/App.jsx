@@ -20,9 +20,9 @@ import InstallModal from './components/modals/InstallModal';
 import { 
   LazyStatsModal, 
   LazyAdminModal, 
-  LazyReportsModal
+  LazyReportsModal,
+  LazySystemReportsModal
 } from './components/modals/LazyModals';
-import SystemReportsModal from './components/modals/SystemReportsModal';
 
 
 
@@ -507,7 +507,7 @@ function AppContent() {
         <InstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
       )}
       {activeModal === 'systemReports' && (
-        <SystemReportsModal isOpen onClose={handleCloseModal} modalId="system-reports-modal" />
+        <LazySystemReportsModal isOpen onClose={handleCloseModal} modalId="system-reports-modal" />
       )}
     </div>
   );
