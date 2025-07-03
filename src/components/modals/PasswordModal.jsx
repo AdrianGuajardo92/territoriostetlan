@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AppContext } from '../../context/AppContext';
 
 const PasswordModal = ({ isOpen, onClose }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -8,6 +9,9 @@ const PasswordModal = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  
+  // Obtener contexto de la aplicación
+  const { currentUser, updatePassword, showToast } = useContext(AppContext);
 
   // Bloquear scroll del body cuando el modal está abierto
   useEffect(() => {
@@ -20,6 +24,18 @@ const PasswordModal = ({ isOpen, onClose }) => {
     return () => {
       document.body.style.overflow = 'unset';
     };
+  }, [isOpen]);
+
+  // Resetear formulario cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setError('');
+      setSuccess(false);
+      setShowPasswords(false);
+    }
   }, [isOpen]);
 
   // Calcular fortaleza de contraseña
@@ -59,22 +75,42 @@ const PasswordModal = ({ isOpen, onClose }) => {
       setError('La nueva contraseña debe tener al menos 6 caracteres');
       return;
     }
+
+    if (currentPassword === newPassword) {
+      setError('La nueva contraseña debe ser diferente a la actual');
+      return;
+    }
     
     setIsLoading(true);
     setError('');
     
     try {
-      // Simular cambio de contraseña
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setSuccess(true);
-      setTimeout(() => {
-        onClose();
-        setSuccess(false);
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      }, 2000);
+      // Verificar contraseña actual
+      if (currentUser.password !== currentPassword) {
+        setError('La contraseña actual es incorrecta');
+        return;
+      }
+
+      // Actualizar contraseña en Firebase usando la función del contexto
+      const result = await updatePassword(newPassword);
+      
+      if (result.success) {
+        setSuccess(true);
+        showToast('¡Contraseña cambiada exitosamente!', 'success');
+        
+        // Cerrar modal después de 2 segundos
+        setTimeout(() => {
+          onClose();
+          setSuccess(false);
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+        }, 2000);
+      } else {
+        setError(result.error || 'Error al cambiar la contraseña');
+      }
     } catch (err) {
+      console.error('Error al cambiar contraseña:', err);
       setError('Error al cambiar la contraseña. Intenta nuevamente.');
     } finally {
       setIsLoading(false);

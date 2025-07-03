@@ -1,146 +1,26 @@
 {
-  "version": "2.26.6",
-  "timestamp": "2025-01-02T23:15:00.000Z",
+  "version": "2.26.7",
+  "timestamp": "2025-01-02T23:30:00.000Z",
   "releaseDate": "2025-01-02",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "🎯 MODAL 100% OPTIMIZADO MÓVILES: Rediseño completo del modal de contraseña para máxima compatibilidad",
-    "📱 BOTONES SIEMPRE VISIBLES: Footer fijo con botones Cancelar y Guardar 100% accesibles en cualquier celular",
-    "🔒 LAYOUT SIMPLIFICADO: Diseño más directo y eficiente sin elementos innecesarios",
-    "⚡ MEJOR ACCESIBILIDAD: Botones más grandes y mejor espaciados para interacción táctil",
-    "🎨 HEADER ELEGANTE: Diseño moderno con gradiente azul y mejor organización visual",
-    "📱 COMPATIBILIDAD UNIVERSAL: Optimizado para todos los dispositivos móviles incluyendo S24 Ultra",
-    "🎯 BOTONES SIEMPRE VISIBLES: Modal de contraseña con botones Cancelar y Guardar 100% visibles en móviles",
+    "🔧 CORRECCIÓN CRÍTICA: Modal de contraseña ahora actualiza correctamente en Firebase",
+    "🔗 CONEXIÓN CONTEXTO: Integrado con AppContext para usar funciones reales de Firebase",
+    "✅ VALIDACIÓN REAL: Verificación de contraseña actual contra datos de Firebase",
+    "🔄 ACTUALIZACIÓN FIREBASE: Función updatePassword conectada correctamente",
+    "🎯 BOTONES SIEMPRE VISIBLES: Modal 100% optimizado para móviles con botones siempre accesibles",
     "📱 COMPATIBILIDAD S24 ULTRA: Optimizado para pantallas altas y dispositivos móviles modernos",
     "🔒 FOOTER STICKY: Botones fijos en la parte inferior con scroll aislado",
     "⚡ BOTONES MÁS GRANDES: Tamaño aumentado (56px altura) para mejor accesibilidad táctil",
     "🎨 MEJOR DISTRIBUCIÓN: Cancelar a la izquierda, Guardar a la derecha con espaciado optimizado",
-    "🆕 FORMATO SIMPLE ESTUDIOS/REVISITAS: Cambio a 'Revisita de [nombre]' y 'Estudia con [nombre]'",
-    "🔧 PANEL ADMIN OPTIMIZADO: Solo muestra campos que realmente cambiaron en propuestas",
-    "📊 ANTES/DESPUÉS COMPLETO: Formato antes→después para dirección, género, notas, estudios y revisitas",
-    "🧹 SISTEMA ELIMINACIÓN PROPUESTAS: Borrado individual + masivo con confirmaciones de seguridad",
-    "🗑️ OPCIONES FLEXIBLES: Eliminar una por una o todas de un jalón (aprobadas/rechazadas)",
-    "✅ CORRECCIÓN TELÉFONO: Eliminado campo inexistente del panel de administrador",
-    "🎯 SOLO CAMBIOS RELEVANTES: Panel admin muestra únicamente campos modificados",
-    "🔒 CONFIRMACIONES DOBLES: Modales de seguridad para evitar eliminaciones accidentales"
+    "🆕 FORMATO SIMPLE ESTUDIOS/REVISITAS: Nueva vista para gestionar estudios y revisitas",
+    "🎨 REDISEÑO COMPLETO: Nueva interfaz moderna y responsiva",
+    "📱 OPTIMIZACIÓN MOBILE: Mejoras significativas en la experiencia móvil",
+    "⚡ RENDIMIENTO: Carga más rápida y mejor respuesta",
+    "🔧 CORRECCIONES: Múltiples bugs solucionados",
+    "🎯 MEJORAS UX: Interfaz más intuitiva y fácil de usar"
   ],
-  "lastUpdated": "2025-01-02",
-  "changelog": [
-    {
-      "version": "2.25.29",
-      "date": "2025-01-02",
-      "changes": [
-        "🆕 FORMATO SIMPLE ESTUDIOS/REVISITAS: Cambio a 'Revisita de [nombre]' y 'Estudia con [nombre]' - más directo y claro",
-        "🔧 PANEL ADMIN OPTIMIZADO: Solo muestra campos que realmente cambiaron en propuestas - interface más limpia",
-        "📊 ANTES/DESPUÉS COMPLETO: Formato antes→después para dirección, género, notas, estudios y revisitas",
-        "🧹 SISTEMA ELIMINACIÓN PROPUESTAS: Borrado individual + masivo con confirmaciones de seguridad",
-        "🗑️ OPCIONES FLEXIBLES: Eliminar una por una o todas de un jalón (aprobadas/rechazadas) según necesidad",
-        "✅ CORRECCIÓN TELÉFONO: Eliminado campo inexistente del panel de administrador - bug fix crítico",
-        "🎯 SOLO CAMBIOS RELEVANTES: Panel admin muestra únicamente campos modificados - menos ruido visual",
-        "🔒 CONFIRMACIONES DOBLES: Modales de seguridad para evitar eliminaciones accidentales de propuestas"
-      ]
-    },
-    {
-      "version": "2.25.28",
-      "date": "2025-01-02",
-      "changes": [
-        "📱 REDISEÑO COMPLETO MIS PROPUESTAS: Nueva interfaz 100% optimizada para móvil con diseño elegante",
-        "🟢 BARRAS VERDES INDIVIDUALES: Cada campo (dirección, revisita, estudio, género, notas) con línea verde tipo notas",
-        "🏷️ HEADER REORGANIZADO: Nombre del tipo en línea 1, territorio + estado como etiquetas en línea 2",
-        "⏳ FILTROS CON CONTADORES: 3 filtros (Pendientes, Aprobadas, Rechazadas) con contadores visuales",
-        "🎨 TARJETAS ELEGANTES: Gradiente naranja suave, bordes redondeados, sombras y hover effects",
-        "📍 DIRECCIÓN SIEMPRE PRIMERO: Contexto inmediato para identificar rápidamente cada propuesta",
-        "💬 RAZÓN DEL CAMBIO: Formato verde consistente integrado con el resto de campos",
-        "📅 FECHAS COMPACTAS: Formato optimizado móvil (Ene 2, Feb 15) para ahorrar espacio",
-        "✅ ESTADOS PROCESADOS: Información clara de aprobación/rechazo con diseño profesional"
-      ]
-    },
-    {
-      "version": "2.25.27",
-      "date": "2025-01-02",
-      "changes": [
-        "🟢 LÍNEAS VERDES: Todos los cambios ahora tienen línea verde para identificación visual",
-        "📍 DIRECCIÓN PRIMERO: Siempre aparece al inicio para contexto inmediato",
-        "👤 NOMBRE EN UNA LÍNEA: Evitado corte de nombres largos con overflow elegante",
-        "📋 ORDEN LÓGICO: Dirección → Revisita → Estudio → Género → Notas"
-      ]
-    },
-    {
-      "version": "2.16.1",
-      "date": "2025-01-01",
-      "changes": [
-        "🔧 ERRORES CRÍTICOS SOLUCIONADOS: Corregido error de React Hooks que impedía acceder al panel de administración",
-        "📊 REPORTES COMPLETAMENTE FUNCIONALES: Eliminado mensaje 'en desarrollo' - sistema de reportes 100% operativo con 6 pestañas",
-        "📜 SCROLL OPTIMIZADO: Modal de reportes del sistema ahora tiene scroll completo y navegación fluida",
-        "🚀 IMPORTACIONES DINÁMICAS: Optimizado carga de librerías pesadas (XLSX) para mejor rendimiento",
-        "🎨 UX MEJORADA: Headers fijos, contenido scrolleable, mejor visualización de errores y User Agent"
-      ]
-    },
-    {
-      "version": "2.16.0",
-      "date": "2025-01-29",
-      "changes": [
-        "🔒 REPORTES EXCLUSIVOS PARA ADMINISTRADORES: Sección de reportes movida del menú público al panel de administración",
-        "🛡️ MAYOR SEGURIDAD: Solo administradores pueden acceder a reportes del sistema",
-        "🎨 PANEL EXPANDIDO: Nueva opción 'Reportes del Sistema' con diseño temático índigo",
-        "📱 GRID ADAPTATIVO: Layout mejorado (1x1 móvil, 2x2 tablet, 3x3 desktop) para 5 opciones",
-        "🧹 MENÚ SIMPLIFICADO: Publicadores ven interfaz más limpia sin opciones administrativas"
-      ]
-    },
-    {
-      "version": "2.15.3",
-      "date": "2025-01-29",
-      "changes": [
-        "🧹 CONSOLA LIMPIA: Eliminados todos los mensajes molestos de Clear-Site-Data",
-        "✅ Headers optimizados: Clear-Site-Data solo en recursos críticos (HTML, SW, version.json)",
-        "🚀 Cache inteligente: Assets con cache largo (7 días) para mejor performance",
-        "🔇 Logs silenciosos: Removidos logs de diagnóstico, errores manejados silenciosamente",
-        "⚡ Balance perfecto: Actualizaciones siguen funcionando pero sin ruido en consola"
-      ]
-    },
-    {
-      "version": "2.15.2",
-      "date": "2025-01-29",
-      "changes": [
-        "🔧 CORRECCIÓN CRÍTICA: Arreglado valor hardcodeado en AppContext.jsx",
-        "🔍 DIAGNÓSTICO AVANZADO: Logs detallados para debuggear carga de versión",
-        "✅ Estado inicial actualizado a 2.15.1 como fallback",
-        "🎯 Identificado y corregido el problema de versión persistente"
-      ]
-    },
-    {
-      "version": "2.15.1",
-      "date": "2025-01-29",
-      "changes": [
-        "✅ SOLUCIÓN NUCLEAR: Cache busting súper agresivo implementado",
-        "🔥 Headers HTTP extremadamente fuertes para forzar actualización",
-        "🚀 Meta tags anti-cache en HTML para romper cache del navegador",
-        "⚡ ETags únicos por versión para invalidación completa",
-        "🗑️ Clear-Site-Data expandido para limpiar cookies y contextos"
-      ]
-    },
-    {
-      "version": "2.15.0",
-      "date": "2025-01-29",
-      "changes": [
-        "🔥 SOLUCIÓN NUCLEAR: Service Worker auto-destruction implementado",
-        "🚀 Script automático para desregistrar todos los Service Workers",
-        "⚡ Limpieza completa de TODOS los caches al detectar nueva versión",
-        "🗑️ Headers Clear-Site-Data súper agresivos en Netlify",
-        "⚡ Cache busting con timestamps únicos",
-        "🔄 Recarga automática después de limpiar cache exitosamente"
-      ]
-    },
-    {
-      "version": "2.25.7",
-      "date": "2025-01-01",
-      "changes": [
-        "🐛 Corregido error 'setIsLoading is not defined' en botón Refrescar SW",
-        "⚡ Mejorado rendimiento de detección de Service Worker (500ms timeout)",
-        "🔧 Eliminada espera innecesaria de SW ready para evitar colgadas",
-        "✨ Optimizada carga de reportes del sistema"
-      ]
-    }
-  ]
+  "critical": true,
+  "description": "Corrección crítica del modal de contraseña para que actualice correctamente en Firebase"
 }
