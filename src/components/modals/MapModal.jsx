@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useToast } from '../../hooks/useToast';
-import { useModalHistory } from '../../hooks/useModalHistory';
 import Icon from '../common/Icon';
 
 const TerritoryMapModal = ({ 
@@ -18,8 +17,6 @@ const TerritoryMapModal = ({
   onToggleAddressStatus,
   modalId = 'territory-map-modal' // ID único para el historial
 }) => {
-    // Hook para manejar historial del navegador consistentemente
-    const { closeModal } = useModalHistory(isOpen, onClose, modalId);
     
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
@@ -957,7 +954,7 @@ const TerritoryMapModal = ({
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
                         <button 
-                            onClick={closeModal} 
+                            onClick={onClose} 
                             className="p-2 hover:bg-gray-200 rounded-full transition-colors mr-2" 
                             aria-label="Cerrar mapa"
                         >
@@ -976,7 +973,7 @@ const TerritoryMapModal = ({
                         </div>
                     </div>
                     <button 
-                        onClick={closeModal} 
+                        onClick={onClose} 
                         className="p-2 hover:bg-gray-200 rounded-lg transition-colors sm:hidden"
                     >
                         <Icon name="x" size={18} className="text-gray-600" />
@@ -1167,7 +1164,7 @@ const TerritoryMapModal = ({
                             <button
                                 onClick={() => {
                                     onEditAddress(selectedAddress);
-                                    closeModal();
+                                    onClose();
                                 }}
                                 className="w-full p-1.5 bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition-colors text-sm border border-gray-200"
                             >
