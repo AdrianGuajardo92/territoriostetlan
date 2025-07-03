@@ -949,16 +949,25 @@ const TerritoryMapModal = ({
     
     return (
         <div className="fixed inset-0 z-[70] bg-white flex flex-col">
+            {/* Botón de cerrar flotante prominente - SOLO EN DESKTOP */}
+            <button 
+                onClick={onClose} 
+                className="hidden sm:flex absolute top-4 right-4 z-30 p-3 hover:bg-red-100 rounded-full transition-colors bg-white shadow-lg border border-gray-200 items-center justify-center"
+                aria-label="Cerrar mapa"
+            >
+                <Icon name="x" size={24} className="text-red-600" />
+            </button>
+            
             {/* Header minimalista optimizado para móvil */}
             <div className="bg-gray-50 border-b border-gray-200 px-3 sm:px-4 py-3">
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
                         <button 
                             onClick={onClose} 
-                            className="p-2 hover:bg-gray-200 rounded-full transition-colors mr-2" 
+                            className="p-3 hover:bg-red-100 rounded-full transition-colors mr-3 bg-white shadow-sm border border-gray-200" 
                             aria-label="Cerrar mapa"
                         >
-                            <Icon name="arrowLeft" size={20} className="text-gray-600" />
+                            <Icon name="arrowLeft" size={24} className="text-red-600" />
                         </button>
                         <div className="flex items-center">
                             <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center mr-2">
@@ -974,25 +983,15 @@ const TerritoryMapModal = ({
                     </div>
                     <button 
                         onClick={onClose} 
-                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors sm:hidden"
+                        className="p-3 hover:bg-red-100 rounded-lg transition-colors sm:hidden bg-white shadow-sm border border-gray-200"
                     >
-                        <Icon name="x" size={18} className="text-gray-600" />
+                        <Icon name="x" size={22} className="text-red-600" />
                     </button>
                 </div>
                 
-                {/* Controles optimizados */}
-                <div className="flex items-center justify-end space-x-2">
-                    {sortState.sortOrder !== 'alpha' && (
-                        <button 
-                            onClick={onResetSort} 
-                            className="px-3 py-1.5 text-xs text-red-600 bg-white rounded-lg shadow-sm border border-red-200 hover:bg-red-50 transition-all"
-                            title="Orden original"
-                        >
-                            <Icon name="x" size={14} className="mr-1" />
-                            Original
-                        </button>
-                    )}
-                    
+                {/* Controles de ruta optimizada - Simplificado */}
+                <div className="mt-3">
+                    {/* Botón único que cambia según el estado */}
                     <button 
                         onClick={() => {
                             if (sortState.sortOrder === 'optimized') {
@@ -1002,7 +1001,6 @@ const TerritoryMapModal = ({
                                 // Si no está activa, crear ruta optimizada
                                 onOptimizedRoute();
                             }
-                            // El useEffect se encargará del resto automáticamente
                         }}
                         onDoubleClick={() => {
                             // Doble clic de emergencia para desbloquear si está atascado
@@ -1011,29 +1009,37 @@ const TerritoryMapModal = ({
                             }
                         }}
                         disabled={sortState.isCalculatingRoute} 
-                        className={`relative px-3 py-1.5 text-xs rounded-lg shadow-sm border transition-all ${
+                        className={`w-full relative px-6 py-3 text-base font-semibold rounded-xl shadow-lg border-2 transition-all transform hover:scale-105 ${
                             sortState.sortOrder === 'optimized' 
-                                ? 'bg-green-600 text-white border-green-700 scale-105' 
-                                : 'bg-white text-green-600 border-green-200 hover:bg-green-50'
-                        } ${sortState.isCalculatingRoute ? 'cursor-wait' : ''}`}
+                                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white border-green-700 shadow-green-200' 
+                                : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-700 shadow-blue-200 hover:from-blue-700 hover:to-indigo-700'
+                        } ${sortState.isCalculatingRoute ? 'cursor-wait opacity-75' : 'hover:shadow-xl'}`}
                         title={
                             sortState.isCalculatingRoute 
-                                ? 'Calculando ruta... (doble clic para resetear si está atascado)' 
+                                ? 'Calculando ruta optimizada... (doble clic para resetear si está atascado)' 
                                 : sortState.sortOrder === 'optimized' 
                                     ? 'Desactivar ruta optimizada' 
-                                    : 'Crear ruta optimizada'
+                                    : 'Crear ruta optimizada para visitar direcciones en el orden más eficiente'
                         }
                     >
                         {sortState.isCalculatingRoute ? (
-                            <div className="animate-spin w-3 h-3 border border-current border-t-transparent rounded-full"></div>
+                            <div className="flex items-center justify-center">
+                                <div className="animate-spin w-5 h-5 border-2 border-current border-t-transparent rounded-full mr-3"></div>
+                                <span>Calculando Ruta...</span>
+                            </div>
                         ) : (
-                            <>
-                                <Icon name="activity" size={14} className="mr-1" />
-                                Ruta
-                            </>
+                            <div className="flex items-center justify-center">
+                                <Icon name="activity" size={20} className="mr-3" />
+                                <span>
+                                    {sortState.sortOrder === 'optimized' ? 'Ruta Optimizada Activa' : 'Crear Ruta Optimizada'}
+                                </span>
+                                {sortState.sortOrder === 'optimized' && (
+                                    <Icon name="checkCircle" size={18} className="ml-2 text-green-200" />
+                                )}
+                            </div>
                         )}
                         {sortState.sortOrder === 'optimized' && !sortState.isCalculatingRoute && (
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
+                            <span className="absolute -top-2 -right-2 w-3 h-3 bg-yellow-400 rounded-full animate-pulse shadow-lg"></span>
                         )}
                     </button>
                 </div>
@@ -1060,6 +1066,32 @@ const TerritoryMapModal = ({
                             </div>
                         )}
                         <div ref={mapRef} className="w-full h-full" style={{ touchAction: 'manipulation' }} />
+                        
+                        {/* Botón de ubicación del usuario - Estilo Google Maps */}
+                        <button
+                            onClick={() => {
+                                if (sortState.userLocation && mapInstanceRef.current) {
+                                    mapInstanceRef.current.setView(
+                                        [sortState.userLocation.lat, sortState.userLocation.lng], 
+                                        16,
+                                        { animate: true, duration: 1 }
+                                    );
+                                    showToast('Centrando en tu ubicación', 'info');
+                                } else {
+                                    showToast('Ubicación no disponible', 'warning');
+                                }
+                            }}
+                            className="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 hover:shadow-2xl transition-all duration-200 flex items-center justify-center group z-20"
+                            title="Ir a mi ubicación"
+                        >
+                            <div className="relative">
+                                <Icon 
+                                    name="mapPin" 
+                                    size={26} 
+                                    className="text-blue-600 group-hover:text-blue-700 transition-colors drop-shadow-md" 
+                                />
+                            </div>
+                        </button>
                     </>
                 )}
             </div>
