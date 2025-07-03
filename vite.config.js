@@ -15,7 +15,12 @@ export default defineConfig({
     port: 3001,
     strictPort: true,
     open: true,
-    host: true  // Permite acceso desde la red local (celular)
+    host: true,  // Permite acceso desde la red local (celular)
+    // SOLUCIÓN: Configuración HMR para evitar problemas de WebSocket
+    hmr: {
+      overlay: false,
+      port: 3001
+    }
     // https: true  // Comentado temporalmente
   },
   build: {

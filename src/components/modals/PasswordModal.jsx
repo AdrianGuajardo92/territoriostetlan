@@ -27,24 +27,65 @@ const PasswordModal = ({ isOpen, onClose }) => {
       setShowPasswords(false);
       
       // 🔒 BLOQUEAR SCROLL DEL BODY
-      document.body.style.overflow = 'hidden';
+      const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
-      document.body.style.height = '100%';
+      document.body.style.overflow = 'hidden';
     } else {
       // 🔓 RESTAURAR SCROLL DEL BODY
-      document.body.style.overflow = '';
+      const scrollY = document.body.style.top;
       document.body.style.position = '';
+      document.body.style.top = '';
       document.body.style.width = '';
-      document.body.style.height = '';
+      document.body.style.overflow = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
-
+    
     // Cleanup al desmontar
     return () => {
-      document.body.style.overflow = '';
       document.body.style.position = '';
+      document.body.style.top = '';
       document.body.style.width = '';
-      document.body.style.height = '';
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+  
+  // Manejar el bloqueo de eventos de scroll/wheel
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleWheel = (e) => {
+      const scrollContainer = e.target.closest('.scroll-container');
+      if (!scrollContainer) {
+        e.preventDefault();
+        return;
+      }
+      
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      const isAtTop = scrollTop === 0;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight;
+      
+      if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
+        e.preventDefault();
+      }
+    };
+    
+    const handleTouchMove = (e) => {
+      if (!e.target.closest('.scroll-container')) {
+        e.preventDefault();
+      }
+    };
+    
+    // Agregar listeners no-pasivos
+    document.addEventListener('wheel', handleWheel, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    
+    return () => {
+      document.removeEventListener('wheel', handleWheel);
+      document.removeEventListener('touchmove', handleTouchMove);
     };
   }, [isOpen]);
   
@@ -141,13 +182,8 @@ const PasswordModal = ({ isOpen, onClose }) => {
       className="fixed inset-0 z-[9999] bg-white" 
       style={{ 
         touchAction: 'none',
-        overscrollBehavior: 'contain'
-      }}
-      onTouchMove={(e) => {
-        // Solo permitir scroll dentro del contenedor de contenido
-        if (!e.target.closest('.scroll-container')) {
-          e.preventDefault();
-        }
+        overscrollBehavior: 'contain',
+        isolation: 'isolate'
       }}
     >
       <div className="flex flex-col h-screen overflow-hidden bg-gradient-to-br from-gray-50 via-white to-blue-50">
