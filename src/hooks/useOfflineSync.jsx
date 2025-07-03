@@ -22,7 +22,7 @@ export const useOfflineSync = (firebaseContext, showToast) => {
   // 🔄 INICIALIZAR SISTEMA OFFLINE
   const initializeOfflineSystem = useCallback(async () => {
     try {
-      console.log('🚀 Inicializando sistema offline...');
+  
       
       // Limpiar timeout previo si existe
       if (initRetryTimeoutRef.current) {
@@ -31,12 +31,12 @@ export const useOfflineSync = (firebaseContext, showToast) => {
 
       // Verificar si la DB está disponible
       await offlineDB.open();
-      console.log('✅ Base de datos offline abierta');
+      
 
       // Crear manager de sincronización
       if (firebaseContext && !syncManagerRef.current) {
         syncManagerRef.current = new OfflineSyncManager(offlineDB, firebaseContext);
-        console.log('✅ Manager de sincronización creado');
+
       }
 
       // Si hay conexión, sincronizar inmediatamente
@@ -49,13 +49,13 @@ export const useOfflineSync = (firebaseContext, showToast) => {
       await updateSyncStatus();
       setIsInitialized(true);
 
-      console.log('🎉 Sistema offline inicializado correctamente');
+      
     } catch (error) {
       console.error('❌ Error inicializando sistema offline:', error);
       
       // Reintentar en 5 segundos
       initRetryTimeoutRef.current = setTimeout(() => {
-        console.log('🔄 Reintentando inicialización offline...');
+
         initializeOfflineSystem();
       }, 5000);
     }

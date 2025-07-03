@@ -156,12 +156,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
                               modalStates.showConfirmComplete;
       
       if (!hasAnyModalOpen) {
-        console.log('✅ TerritoryDetailView - No hay modales abiertos, dejando que App.jsx maneje la navegación');
         return; // Permitir que App.jsx maneje la navegación hacia la lista de territorios
       }
       
       // Si hay modales abiertos, cerrarlos y prevenir navegación adicional
-      console.log('✅ TerritoryDetailView - Cerrando modales locales');
       event.preventDefault();
       event.stopPropagation();
       
@@ -375,7 +373,8 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       
       if (editingAddress) {
         if (currentUser.role === 'admin') {
-          await handleUpdateAddress(editingAddress.id, formData);
+          // Usar showSuccessToast: false para evitar notificación duplicada
+          await handleUpdateAddress(editingAddress.id, formData, { showSuccessToast: false });
           showToast('Dirección actualizada.', 'success');
         } else {
           await handleProposeAddressChange(editingAddress.id, formData, changeReason);
@@ -404,7 +403,8 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const handleDeleteAddressAndClose = async (addressId) => {
     setIsProcessing(true);
     try {
-      await handleDeleteAddress(addressId);
+      // Usar showSuccessToast: false para evitar notificación duplicada
+      await handleDeleteAddress(addressId, { showSuccessToast: false });
       showToast('Dirección eliminada correctamente.', 'success');
       setIsFormModalOpen(false);
       setEditingAddress(null);

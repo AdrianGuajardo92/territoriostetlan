@@ -306,7 +306,7 @@ const TerritoryMapModal = ({
             // Marcar para no recrear
             mapInstanceRef.current._userLocationMarker = userMarker;
             
-            console.log('✅ PIN de ubicación del usuario creado exitosamente');
+    
         }
     }, [getCoordinates, getAddressColor, sortState.sortOrder, sortState.userLocation, addresses]);
     
@@ -735,15 +735,11 @@ const TerritoryMapModal = ({
     useEffect(() => {
         if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
         
-        console.log('🔄 MAPA - UseEffect detectó cambio:', {
-            sortOrder: sortState.sortOrder,
-            hasOptimizedRoute: !!sortState.optimizedRoute,
-            optimizedRouteLength: sortState.optimizedRoute?.length || 0
-        });
+
         
         const forceUpdateMarkers = () => {
             if (sortState.sortOrder === 'optimized' && sortState.optimizedRoute && sortState.optimizedRoute.length > 0) {
-                console.log('✅ MAPA - Actualizando con ruta optimizada:', sortState.optimizedRoute.length, 'direcciones');
+        
                 
                 // Limpiar todos los marcadores existentes PRIMERO
                 Object.values(markersRef.current).forEach(marker => {
@@ -768,7 +764,7 @@ const TerritoryMapModal = ({
                                 : null
                     })).filter(addr => addr.coordinates);
                 
-                console.log('🎯 MAPA - Recreando', reorderedAddresses.length, 'marcadores con orden optimizado');
+    
                 
                 // SOLUCIÓN DIRECTA: Crear marcadores manualmente uno por uno
                 reorderedAddresses.forEach((address, index) => {
@@ -778,7 +774,7 @@ const TerritoryMapModal = ({
                     const displayNumber = address.routeOrder || (index + 1);
                     const color = address.isVisited ? '#ef4444' : '#22c55e';
                     
-                    console.log(`📍 Creando marcador ${displayNumber}: ${address.address}`);
+
                     
                     const markerHtml = `
                         <div style="
@@ -819,10 +815,9 @@ const TerritoryMapModal = ({
                     markersRef.current[address.id] = marker;
                 });
                 
-                console.log('✅ MAPA - Marcadores creados directamente. Total en mapa:', Object.keys(markersRef.current).length);
+
                 
             } else if (sortState.sortOrder === 'alpha') {
-                console.log('🔄 MAPA - Volviendo a orden original');
                 
                 // Limpiar todos los marcadores existentes PRIMERO
                 Object.values(markersRef.current).forEach(marker => {
@@ -850,7 +845,7 @@ const TerritoryMapModal = ({
                     const displayNumber = index + 1; // Orden secuencial original
                     const color = address.isVisited ? '#ef4444' : '#22c55e';
                     
-                    console.log(`📍 Recreando marcador original ${displayNumber}: ${address.address}`);
+
                     
                     const markerHtml = `
                         <div style="
@@ -890,7 +885,7 @@ const TerritoryMapModal = ({
                     markersRef.current[address.id] = marker;
                 });
                 
-                console.log('✅ MAPA - Marcadores originales recreados. Total en mapa:', Object.keys(markersRef.current).length);
+
             }
         };
 
@@ -1003,20 +998,11 @@ const TerritoryMapModal = ({
                     
                     <button 
                         onClick={() => {
-                            console.log('🔍 DEBUG MAPA - Botón presionado. Estado actual:', {
-                                sortOrder: sortState.sortOrder,
-                                optimizedRoute: sortState.optimizedRoute,
-                                addressesCount: addresses.length,
-                                markersCount: Object.keys(markersRef.current).length
-                            });
-                            
                             if (sortState.sortOrder === 'optimized') {
                                 // Si ya está activa, desactivar (resetear)
-                                console.log('🔄 MAPA - Desactivando ruta optimizada');
                                 onResetSort();
                             } else {
                                 // Si no está activa, crear ruta optimizada
-                                console.log('🚀 MAPA - Activando ruta optimizada');
                                 onOptimizedRoute();
                             }
                             // El useEffect se encargará del resto automáticamente

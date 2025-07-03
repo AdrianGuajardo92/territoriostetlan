@@ -22,7 +22,7 @@ const InstallModal = ({ isOpen, onClose }) => {
 
     // Escuchar evento de instalación
     const handleBeforeInstallPrompt = (e) => {
-      console.log('🚀 Evento beforeinstallprompt detectado');
+
       e.preventDefault();
       setDeferredPrompt(e);
       setCanInstall(true);
@@ -30,7 +30,7 @@ const InstallModal = ({ isOpen, onClose }) => {
 
     // Escuchar cuando se instala
     const handleAppInstalled = () => {
-      console.log('✅ App instalada exitosamente');
+      
       setIsInstalled(true);
       setCanInstall(false);
       setDeferredPrompt(null);
@@ -57,7 +57,7 @@ const InstallModal = ({ isOpen, onClose }) => {
     try {
       // Mostrar el prompt de instalación
       const result = await deferredPrompt.prompt();
-      console.log('🎯 Resultado del prompt:', result);
+
 
       // Esperar la decisión del usuario
       const choiceResult = await deferredPrompt.userChoice;

@@ -40,7 +40,7 @@ const UpdatesModal = ({ isOpen, onClose }) => {
   const handleForceUpdate = async () => {
     setIsLoading(true);
     try {
-      console.log('🚀 Forzando actualización completa...');
+
       
       // 1. Limpiar TODO el cache
       if ('caches' in window) {

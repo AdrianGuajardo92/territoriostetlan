@@ -7,6 +7,7 @@ import MobileMenu from './components/common/MobileMenu';
 import TerritoriesView from './pages/TerritoriesView';
 import TerritoryDetailView from './pages/TerritoryDetailView';
 import MyProposalsView from './pages/MyProposalsView';
+import MyStudiesAndRevisitsView from './pages/MyStudiesAndRevisitsView';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
 // CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
@@ -32,6 +33,7 @@ function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [showMyProposals, setShowMyProposals] = useState(false);
+  const [showMyStudiesAndRevisits, setShowMyStudiesAndRevisits] = useState(false);
   
   // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -59,19 +61,19 @@ function AppContent() {
     if ('serviceWorker' in navigator) {
       const registerSW = async () => {
         try {
-          console.log('🚀 Registrando Service Worker v2.25.12...');
+    
           
           const registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/',
             updateViaCache: 'none'
           });
           
-          console.log('✅ SW registrado correctamente:', registration.scope);
+          
           
           // Solo escuchar updatefound, sin forzar actualizaciones
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
-            console.log('🔄 SW: Nueva versión detectada');
+            
             
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
@@ -175,47 +177,42 @@ function AppContent() {
   // Manejar el botón físico de volver
   useEffect(() => {
     const handlePopState = (event) => {
-      console.log('🔄 PopState detectado:', {
-        selectedTerritory: !!selectedTerritory,
-        activeModal,
-        isMenuOpen,
-        state: event.state,
-        currentURL: window.location.href
-      });
+      // PRIORIDAD 1: Si hay vista de revisitas y estudios abierta, volver a lista
+      if (showMyStudiesAndRevisits) {
+        setShowMyStudiesAndRevisits(false);
+        event.preventDefault();
+        return;
+      }
 
-      // PRIORIDAD 1: Si hay vista de propuestas abierta, volver a lista
+      // PRIORIDAD 2: Si hay vista de propuestas abierta, volver a lista
       if (showMyProposals) {
-        console.log('✅ Cerrando mis propuestas, volviendo a lista');
         setShowMyProposals(false);
         event.preventDefault();
         return;
       }
 
-      // PRIORIDAD 2: Si hay territorio seleccionado, volver a lista
+      // PRIORIDAD 3: Si hay territorio seleccionado, volver a lista
       if (selectedTerritory) {
-        console.log('✅ Cerrando territorio, volviendo a lista');
         setSelectedTerritory(null);
         event.preventDefault();
         return;
       }
 
-      // PRIORIDAD 3: Si hay modal activo, cerrarlo
+      // PRIORIDAD 4: Si hay modal activo, cerrarlo
       if (activeModal) {
-        console.log(`🔙 Botón físico de volver - Cerrando modal: ${activeModal}`);
         setActiveModal(null);
         event.preventDefault();
         return;
       }
 
-      // PRIORIDAD 4: Si hay menú abierto, cerrarlo
+      // PRIORIDAD 5: Si hay menú abierto, cerrarlo
       if (isMenuOpen) {
-        console.log('✅ Cerrando menú');
         setIsMenuOpen(false);
         event.preventDefault();
         return;
       }
 
-      // PRIORIDAD 5: Verificar el estado del historial para determinar acción
+      // PRIORIDAD 6: Verificar el estado del historial para determinar acción
       const currentState = event.state;
       
       // Si tenemos un estado específico de la app, manejarlo
@@ -234,12 +231,12 @@ function AppContent() {
         }
       }
 
-      // PRIORIDAD 6: Si hay historial disponible, permitir navegación normal  
+      // PRIORIDAD 7: Si hay historial disponible, permitir navegación normal  
       if (window.history.length > 1) {
         return; // Permitir navegación normal hacia atrás
       }
 
-      // PRIORIDAD 7: Solo mostrar confirmación si realmente no hay a dónde volver
+      // PRIORIDAD 8: Solo mostrar confirmación si realmente no hay a dónde volver
       event.preventDefault();
       
       const shouldExit = window.confirm('¿Quieres salir de la aplicación?');
@@ -254,7 +251,7 @@ function AppContent() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeModal, isMenuOpen, selectedTerritory, showMyProposals]);
+  }, [activeModal, isMenuOpen, selectedTerritory, showMyProposals, showMyStudiesAndRevisits]);
 
   // Menu items configuration
   const menuItems = [
@@ -264,6 +261,13 @@ function AppContent() {
       icon: 'search',
       modal: 'search',
       description: 'Buscar en todos los territorios'
+    },
+    {
+      id: 'myStudiesAndRevisits',
+      text: 'Mis Revisitas y Estudios',
+      icon: 'bookmark',
+      view: 'studiesAndRevisits',
+      description: 'Ver tus asignaciones confirmadas'
     },
     {
       id: 'myProposals',
@@ -318,36 +322,33 @@ function AppContent() {
   const filteredMenuItems = menuItems.filter(item => {
     if (item.id === 'admin' && currentUser?.role !== 'admin') return false;
     if (item.id === 'myProposals' && currentUser?.role === 'admin') return false;
+    // Permitir "Mis Revisitas y Estudios" para todos los usuarios (incluyendo admin)
     if (item.adminOnly && currentUser?.role !== 'admin') return false; // Filtrar items solo para admin
     return true;
   });
 
   const handleOpenModal = (modalId) => {
-    // 🔍 LOGS DE DEBUG DETALLADOS
-    console.log('🚀 handleOpenModal called with:', modalId);
-    console.log('🔍 Menu item clicked, modalId type:', typeof modalId);
-    console.log('📋 All available menu items:', filteredMenuItems.map(item => ({ id: item.id, view: item.view, modal: item.modal })));
-    
     // CERRAR EL MENÚ cuando se abre cualquier modal
     if (isMenuOpen) {
-      console.log('🔐 Cerrando menú...');
       setIsMenuOpen(false);
     }
     
     // Manejar navegación a vistas especiales
     if (modalId === 'proposals') {
-      console.log('✅ Detectado modalId "proposals", ejecutando handleOpenMyProposals...');
       handleOpenMyProposals();
       return;
     }
     
-    console.log('🎯 Setting activeModal to:', modalId);
+    if (modalId === 'studiesAndRevisits') {
+      handleOpenMyStudiesAndRevisits();
+      return;
+    }
+    
     setActiveModal(modalId);
     // El historial ahora lo maneja automáticamente useModalHistory
   };
 
   const handleCloseModal = () => {
-    console.log('🔙 handleCloseModal called');
     setActiveModal(null);
     // El historial ahora lo maneja automáticamente useModalHistory
   };
@@ -372,33 +373,43 @@ function AppContent() {
   };
 
   const handleOpenMyProposals = () => {
-    console.log('🎉 handleOpenMyProposals ejecutándose...');
-    console.log('👤 Current user:', currentUser?.name, currentUser?.id);
-    console.log('📊 Show my proposals state before:', showMyProposals);
-    
     setShowMyProposals(true);
-    
-    console.log('📊 Show my proposals state after:', true);
     
     // Marcar como visto al abrir
     if (currentUser) {
       const key = `lastProposalsView_${currentUser.id}`;
       const timestamp = new Date().toISOString();
       localStorage.setItem(key, timestamp);
-      console.log('💾 Saved to localStorage:', key, timestamp);
     }
     // Agregar entrada específica al historial
     window.history.pushState({ 
       app: 'territorios', 
       level: 'proposals'
     }, '', window.location.href);
-    console.log('📈 History state pushed');
   };
 
   const handleBackFromMyProposals = () => {
     setShowMyProposals(false);
     // Si el estado actual es propuestas, navegar hacia atrás
     if (window.history.state?.level === 'proposals') {
+      window.history.back();
+    }
+  };
+
+  const handleOpenMyStudiesAndRevisits = () => {
+    setShowMyStudiesAndRevisits(true);
+    
+    // Agregar entrada específica al historial
+    window.history.pushState({ 
+      app: 'territorios', 
+      level: 'studiesAndRevisits'
+    }, '', window.location.href);
+  };
+
+  const handleBackFromMyStudiesAndRevisits = () => {
+    setShowMyStudiesAndRevisits(false);
+    // Si el estado actual es estudios y revisitas, navegar hacia atrás
+    if (window.history.state?.level === 'studiesAndRevisits') {
       window.history.back();
     }
   };
@@ -433,14 +444,6 @@ function AppContent() {
     return <LoginView />;
   }
 
-  // 🔍 DEBUG LOG - Estado de renderizado
-  console.log('🖼️ App render state:', {
-    showMyProposals,
-    selectedTerritory: !!selectedTerritory,
-    activeModal,
-    isMenuOpen
-  });
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Indicador de desarrollo */}
@@ -451,13 +454,14 @@ function AppContent() {
       )}
 
       {/* Vista principal */}
-      {showMyProposals ? (
-        <>
-          {console.log('✅ Rendering MyProposalsView')}
-          <MyProposalsView
-            onBack={handleBackFromMyProposals}
-          />
-        </>
+      {showMyStudiesAndRevisits ? (
+        <MyStudiesAndRevisitsView
+          onBack={handleBackFromMyStudiesAndRevisits}
+        />
+      ) : showMyProposals ? (
+        <MyProposalsView
+          onBack={handleBackFromMyProposals}
+        />
       ) : selectedTerritory ? (
         <TerritoryDetailView
           territory={selectedTerritory}

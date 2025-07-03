@@ -12,7 +12,7 @@ export default defineConfig({
     exclude: []
   },
   server: {
-    port: 3000,
+    port: 3001,
     strictPort: true,
     open: true,
     host: true  // Permite acceso desde la red local (celular)

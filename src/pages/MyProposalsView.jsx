@@ -23,12 +23,7 @@ const MyProposalsView = ({ onBack }) => {
   const approvedCount = userProposals.filter(p => p.status === 'approved').length;
   const rejectedCount = userProposals.filter(p => p.status === 'rejected').length;
 
-  // 🔍 DEBUG LOGS simplificados
-  console.log('🎯 MyProposalsView:', {
-    totalProposalsInSystem: proposals.length,
-    userProposals: userProposals.length,
-    counts: { pendingCount, approvedCount, rejectedCount }
-  });
+
   
   // Configuración de filtros con diseño mejorado
   const filterOptions = [
@@ -324,10 +319,7 @@ const MyProposalsView = ({ onBack }) => {
                       </p>
                     </div>
                     <button
-                      onClick={() => {
-                        console.log('🔍 Mostrando instrucciones para crear propuesta...');
-                        setShowInstructions(true);
-                      }}
+                      onClick={() => setShowInstructions(true)}
                       className="w-full mt-3 px-4 py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium transition-all transform hover:scale-105 shadow-sm hover:shadow-md text-sm"
                     >
                       <i className="fas fa-info-circle mr-2"></i>

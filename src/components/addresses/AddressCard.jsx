@@ -15,7 +15,8 @@ const AddressCard = memo(({
     onUpdate = null,
     showToast = null,
     onUnmark = null,
-    territories = []
+    territories = [],
+    showActions = true
 }) => {
     const { 
         handleToggleAddressStatus, 
@@ -319,21 +320,23 @@ const AddressCard = memo(({
                             button_styles={`${config.navActive} shadow-sm`}
                         />
 
-                        {/* Botón de estado */}
-                        <button
-                            onClick={handleToggleStatus}
-                            disabled={isProcessing || !canToggleStatus}
-                            className={`
-                                px-4 py-2 rounded-lg font-medium text-sm
-                                ${canToggleStatus ? config.primaryButton : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                                transition-all transform hover:scale-105 active:scale-95
-                                shadow-lg hover:shadow-xl
-                            `}
-                            title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
-                        >
-                            {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
-                        </button>
+                        {/* Botón de estado - solo mostrar si showActions es true y no es navigation-only */}
+                        {showActions && viewMode !== 'navigation-only' && (
+                            <button
+                                onClick={handleToggleStatus}
+                                disabled={isProcessing || !canToggleStatus}
+                                className={`
+                                    px-4 py-2 rounded-lg font-medium text-sm
+                                    ${canToggleStatus ? config.primaryButton : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+                                    disabled:opacity-50 disabled:cursor-not-allowed
+                                    transition-all transform hover:scale-105 active:scale-95
+                                    shadow-lg hover:shadow-xl
+                                `}
+                                title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
+                            >
+                                {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -344,6 +347,17 @@ const AddressCard = memo(({
                         backgroundImage: `linear-gradient(to right, ${config.accentColor}, ${config.accentColor}dd)`
                     }}
                 />
+
+                {/* Botón discreto de liberar - abajo a la derecha (modo lista) */}
+                {onUnmark && (
+                    <button 
+                        onClick={handleUnmarkClick} 
+                        className="absolute bottom-2 right-2 w-7 h-7 bg-gray-400/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-sm hover:shadow-md opacity-70 hover:opacity-100" 
+                        title="Liberar asignación"
+                    >
+                        <i className="fas fa-trash text-xs"></i>
+                    </button>
+                )}
             </div>
         );
     }
@@ -434,52 +448,45 @@ const AddressCard = memo(({
                         )}
 
                         {/* Navegación y acciones */}
-                        <div className="flex items-center justify-between">
+                        <div className={`flex items-center ${showActions && viewMode !== 'navigation-only' ? 'justify-between' : 'justify-center'}`}>
                             <NavigationButtons 
                                 a_styles="bg-red-50 border-red-200 border shadow-sm"
                                 div_styles="bg-red-300"
                                 button_styles="bg-red-600 text-white hover:bg-red-700 shadow-sm"
                             />
                             
-                            <div className="flex items-center space-x-2">
-                                {/* Botón principal de Desmarcar */}
-                                <button
-                                    onClick={handleToggleStatus}
-                                    disabled={isProcessing || !canToggleStatus}
-                                    className={`
-                                        px-4 py-2 rounded-xl font-semibold text-sm
-                                        ${canToggleStatus ? config.primaryButton : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
-                                        disabled:opacity-50 disabled:cursor-not-allowed
-                                        transition-all transform hover:scale-105 active:scale-95
-                                        shadow-lg hover:shadow-xl
-                                    `}
-                                    title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
-                                >
-                                    {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
-                                </button>
-                                
-                                {/* Botones de acción secundarios */}
+                            {showActions && viewMode !== 'navigation-only' && (
                                 <div className="flex items-center space-x-2">
-                                    {isEditEnabled && (
-                                        <button 
-                                            onClick={handleEditClick} 
-                                            className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" 
-                                            title={isAdmin ? "Editar dirección" : "Proponer cambio"}
-                                        >
-                                            <i className="fas fa-pen-to-square text-sm"></i>
-                                        </button>
-                                    )}
-                                    {onUnmark && (
-                                        <button 
-                                            onClick={handleUnmarkClick} 
-                                            className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" 
-                                            title="Liberar dirección"
-                                        >
-                                            <i className="fas fa-xmark text-lg"></i>
-                                        </button>
-                                    )}
+                                    {/* Botón principal de Desmarcar */}
+                                    <button
+                                        onClick={handleToggleStatus}
+                                        disabled={isProcessing || !canToggleStatus}
+                                        className={`
+                                            px-4 py-2 rounded-xl font-semibold text-sm
+                                            ${canToggleStatus ? config.primaryButton : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+                                            disabled:opacity-50 disabled:cursor-not-allowed
+                                            transition-all transform hover:scale-105 active:scale-95
+                                            shadow-lg hover:shadow-xl
+                                        `}
+                                        title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
+                                    >
+                                        {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
+                                    </button>
+                                    
+                                    {/* Botones de acción secundarios */}
+                                    <div className="flex items-center space-x-2">
+                                        {isEditEnabled && (
+                                            <button 
+                                                onClick={handleEditClick} 
+                                                className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" 
+                                                title={isAdmin ? "Editar dirección" : "Proponer cambio"}
+                                            >
+                                                <i className="fas fa-pen-to-square text-sm"></i>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 ) : (
@@ -516,50 +523,43 @@ const AddressCard = memo(({
                         )}
 
                         {/* Navegación y acciones */}
-                        <div className="flex items-center justify-between">
+                        <div className={`flex items-center ${showActions && viewMode !== 'navigation-only' ? 'justify-between' : 'justify-center'}`}>
                             <NavigationButtons 
                                 a_styles="bg-emerald-50 border-emerald-200 border shadow-sm"
                                 div_styles="bg-emerald-300"
                                 button_styles="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
                             />
                             
-                            <div className="flex items-center space-x-2">
-                                <button
-                                    onClick={handleToggleStatus}
-                                    disabled={isProcessing || !canToggleStatus}
-                                    className={`
-                                        px-4 py-2 rounded-xl font-semibold text-sm
-                                        ${canToggleStatus ? config.primaryButton : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
-                                        disabled:opacity-50 disabled:cursor-not-allowed
-                                        transition-all transform hover:scale-105 active:scale-95
-                                        shadow-lg hover:shadow-xl
-                                    `}
-                                    title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
-                                >
-                                    {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
-                                </button>
-                                
+                            {showActions && viewMode !== 'navigation-only' && (
                                 <div className="flex items-center space-x-2">
-                                    {isEditEnabled && (
-                                        <button 
-                                            onClick={handleEditClick} 
-                                            className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors" 
-                                            title={isAdmin ? "Editar dirección" : "Proponer cambio"}
-                                        >
-                                            <i className="fas fa-pen-to-square text-sm"></i>
-                                        </button>
-                                    )}
-                                    {onUnmark && (
-                                        <button 
-                                            onClick={handleUnmarkClick} 
-                                            className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors" 
-                                            title="Liberar dirección"
-                                        >
-                                            <i className="fas fa-xmark text-lg"></i>
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={handleToggleStatus}
+                                        disabled={isProcessing || !canToggleStatus}
+                                        className={`
+                                            px-4 py-2 rounded-xl font-semibold text-sm
+                                            ${canToggleStatus ? config.primaryButton : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+                                            disabled:opacity-50 disabled:cursor-not-allowed
+                                            transition-all transform hover:scale-105 active:scale-95
+                                            shadow-lg hover:shadow-xl
+                                        `}
+                                        title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
+                                    >
+                                        {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
+                                    </button>
+                                    
+                                    <div className="flex items-center space-x-2">
+                                        {isEditEnabled && (
+                                            <button 
+                                                onClick={handleEditClick} 
+                                                className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors" 
+                                                title={isAdmin ? "Editar dirección" : "Proponer cambio"}
+                                            >
+                                                <i className="fas fa-pen-to-square text-sm"></i>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -572,6 +572,17 @@ const AddressCard = memo(({
                     backgroundImage: `linear-gradient(to right, ${config.accentColor}, ${config.accentColor}dd)`
                 }}
             />
+
+            {/* Botón discreto de liberar - abajo a la derecha */}
+            {onUnmark && (
+                <button 
+                    onClick={handleUnmarkClick} 
+                    className="absolute bottom-3 right-3 w-8 h-8 bg-gray-400/80 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 shadow-sm hover:shadow-md opacity-70 hover:opacity-100" 
+                    title="Liberar asignación"
+                >
+                    <i className="fas fa-trash text-xs"></i>
+                </button>
+            )}
 
             {/* Overlay sutil en hover */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />

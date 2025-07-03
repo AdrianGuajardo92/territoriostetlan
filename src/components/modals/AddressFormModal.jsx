@@ -95,13 +95,7 @@ const AddressFormModal = ({
       return;
     }
 
-    console.log('💾 Enviando formData:', formData);
-    console.log('🔍 Estados especiales:', {
-      isRevisita: formData.isRevisita,
-      revisitaBy: formData.revisitaBy,
-      isEstudio: formData.isEstudio,
-      estudioBy: formData.estudioBy
-    });
+
     
     onSave(formData, changeReason);
   };
@@ -116,14 +110,14 @@ const AddressFormModal = ({
         newData.isEstudio = false;
         newData.estudioBy = '';
         newData.revisitaBy = currentUser?.name || '';
-        console.log('✅ Revisita asignada automáticamente a:', currentUser?.name);
+
       }
       if (field === 'isEstudio' && value) {
         // Si se marca Estudio, desmarcar Revisita
         newData.isRevisita = false;
         newData.revisitaBy = '';
         newData.estudioBy = currentUser?.name || '';
-        console.log('✅ Estudio asignado automáticamente a:', currentUser?.name);
+
       }
       
       // Limpiar campos cuando se desmarca

@@ -23,7 +23,7 @@ export const testFirebaseConnection = async () => {
   try {
     const testQuery = query(collection(db, 'territories'), orderBy('name'), where('name', '!=', null));
     await getDocs(testQuery);
-    console.log('✅ Conexión Firebase exitosa');
+  
     return true;
   } catch (error) {
     console.error('❌ Error de conexión Firebase:', error);
@@ -67,7 +67,7 @@ export const AppProvider = ({ children }) => {
   // 📋 Cargar versión desde version.json
   const loadAppVersion = async () => {
     try {
-      console.log('🔄 DEBUG - Intentando cargar versión...');
+
       const response = await fetch('/version.json?t=' + Date.now(), {
         cache: 'no-cache',
         headers: {
@@ -78,7 +78,7 @@ export const AppProvider = ({ children }) => {
       
       if (response.ok) {
         const versionData = await response.json();
-        console.log('✅ DEBUG - Versión cargada:', versionData.version);
+
         setAppVersion(versionData.version);
         
         // Forzar actualización del título de la página
@@ -98,7 +98,7 @@ export const AppProvider = ({ children }) => {
   // 🔐 AUTH FUNCTIONS - SISTEMA PERSONALIZADO CON CÓDIGOS DE ACCESO
   const login = async (accessCode, password) => {
     try {
-      console.log('🔐 Intentando login con código:', accessCode);
+  
       
       // Buscar usuario por código de acceso en Firestore
       const usersQuery = query(
@@ -143,7 +143,7 @@ export const AppProvider = ({ children }) => {
         ...userData
       };
 
-      console.log('✅ Login exitoso:', user.name);
+      
       
       // Guardar usuario en sessionStorage para persistencia
       sessionStorage.setItem('currentUser', JSON.stringify(user));
@@ -189,7 +189,7 @@ export const AppProvider = ({ children }) => {
       setProposals([]);
       setAdminEditMode(false);
       
-      console.log('✅ Sesión cerrada correctamente');
+
     } catch (error) {
       console.error('❌ Error en logout:', error);
       throw error;
@@ -214,7 +214,7 @@ export const AppProvider = ({ children }) => {
         password: newPassword
       }));
       
-      console.log('✅ Contraseña actualizada correctamente');
+      
       return { success: true };
     } catch (error) {
       console.error('❌ Error updating password:', error);
@@ -308,7 +308,9 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const handleUpdateAddress = async (addressId, updates) => {
+  const handleUpdateAddress = async (addressId, updates, options = {}) => {
+    const { showSuccessToast = true } = options;
+    
     try {
       // 🚀 ACTUALIZACIÓN OPTIMISTA: Actualizar inmediatamente el estado local
       setAddresses(prevAddresses => 
@@ -326,7 +328,9 @@ export const AppProvider = ({ children }) => {
         updatedBy: currentUser?.id || 'unknown'
       });
       
-      showToast('Dirección actualizada correctamente', 'success');
+      if (showSuccessToast) {
+        showToast('Dirección actualizada correctamente', 'success');
+      }
     } catch (error) {
       console.error('Error updating address:', error);
       
@@ -337,10 +341,14 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const handleDeleteAddress = async (addressId) => {
+  const handleDeleteAddress = async (addressId, options = {}) => {
+    const { showSuccessToast = true } = options;
+    
     try {
       await deleteDoc(doc(db, 'addresses', addressId));
-      showToast('Dirección eliminada correctamente', 'success');
+      if (showSuccessToast) {
+        showToast('Dirección eliminada correctamente', 'success');
+      }
     } catch (error) {
       console.error('Error deleting address:', error);
       showToast('Error al eliminar dirección', 'error');
@@ -711,7 +719,8 @@ export const AppProvider = ({ children }) => {
       if (!proposal) return;
 
       if (proposal.type === 'edit') {
-        await handleUpdateAddress(proposal.addressId, proposal.changes);
+        // Usar showSuccessToast: false para evitar notificación duplicada
+        await handleUpdateAddress(proposal.addressId, proposal.changes, { showSuccessToast: false });
       } else if (proposal.type === 'new') {
         await handleAddNewAddress(proposal.territoryId, proposal.addressData);
       }
@@ -1024,7 +1033,7 @@ export const AppProvider = ({ children }) => {
   // 🚀 INICIALIZACIÓN Y GESTIÓN DE AUTENTICACIÓN PERSONALIZADA
   useEffect(() => {
     const initializeAuth = async () => {
-      console.log('🔄 Inicializando autenticación...');
+  
       setAuthLoading(true);
       
       try {
@@ -1049,7 +1058,7 @@ export const AppProvider = ({ children }) => {
             };
             
             setCurrentUser(user);
-            console.log('✅ Sesión restaurada exitosamente');
+  
           } else {
             console.log('⚠️ Usuario no existe, limpiando sesión');
             sessionStorage.removeItem('currentUser');

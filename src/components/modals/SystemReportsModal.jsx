@@ -47,7 +47,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
     setIsLoading(true);
     
     try {
-      console.log('🔄 Iniciando recolección de datos del sistema...');
+  
       
       // Recolectar datos con timeouts individuales para evitar colgadas
       const dataPromises = {
@@ -91,7 +91,7 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
         cache: results[5].status === 'fulfilled' ? results[5].value : { error: 'Timeout' }
       };
       
-      console.log('✅ Recolección completada:', data);
+
       setSystemData(data);
     } catch (error) {
       console.error('❌ Error recolectando datos del sistema:', error);
@@ -255,36 +255,13 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
   const getServiceWorkerInfo = async () => {
     const sw = {};
 
-    console.log('🔍 DIAGNÓSTICO SW: Iniciando verificación...');
-
     if ('serviceWorker' in navigator) {
       sw.supported = true;
-      console.log('✅ DIAGNÓSTICO SW: Navegador soporta Service Workers');
       
       try {
-        // VERIFICACIÓN DETALLADA CON LOGS
+        // VERIFICACIÓN DETALLADA
         const registrations = await navigator.serviceWorker.getRegistrations();
         const hasController = !!navigator.serviceWorker.controller;
-        
-        console.log('🔍 DIAGNÓSTICO SW: Registros encontrados:', registrations.length);
-        console.log('🔍 DIAGNÓSTICO SW: Tiene controlador:', hasController);
-        
-        if (hasController) {
-          console.log('🔍 DIAGNÓSTICO SW: Controller URL:', navigator.serviceWorker.controller.scriptURL);
-          console.log('🔍 DIAGNÓSTICO SW: Controller scope:', navigator.serviceWorker.controller.scope);
-        }
-        
-        if (registrations.length > 0) {
-          registrations.forEach((reg, index) => {
-            console.log(`🔍 DIAGNÓSTICO SW: Registro ${index}:`, {
-              scope: reg.scope,
-              active: !!reg.active,
-              installing: !!reg.installing,
-              waiting: !!reg.waiting,
-              activeURL: reg.active?.scriptURL
-            });
-          });
-        }
         
         // LÓGICA DE DETECCIÓN
         if (registrations.length > 0 || hasController) {
@@ -302,8 +279,6 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
             sw.scriptURL = registrations[0].active?.scriptURL || 'N/A';
             sw.scope = registrations[0].scope;
           }
-          
-          console.log('✅ DIAGNÓSTICO SW: SW DETECTADO COMO ACTIVO');
         } else {
           // NO HAY SERVICE WORKER
           sw.registered = false;
@@ -313,13 +288,9 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
           sw.version = 'v2.25.11';
           sw.scriptURL = 'N/A';
           sw.scope = 'N/A';
-          
-          console.log('❌ DIAGNÓSTICO SW: NO SE DETECTÓ SW');
         }
         
         sw.updateViaCache = 'none';
-        
-        console.log('🔍 DIAGNÓSTICO SW: Resultado final:', sw);
         
       } catch (e) {
         console.error('❌ DIAGNÓSTICO SW: Error obteniendo info:', e);
@@ -337,7 +308,6 @@ const SystemReportsModal = ({ isOpen, onClose, modalId }) => {
       sw.controller = false;
       sw.communication = 'No soportado';
       sw.version = 'N/A';
-      console.log('❌ DIAGNÓSTICO SW: Navegador no soporta SW');
     }
 
     return sw;
@@ -1404,7 +1374,7 @@ const ServiceWorkerTab = ({ data }) => (
       <div className="mt-6 flex flex-wrap gap-3">
         <button 
           onClick={async () => {
-            console.log('🔄 Refrescando información del Service Worker...');
+      
             
             try {
               // Recolectar solo datos del SW con timeout corto
@@ -1416,7 +1386,7 @@ const ServiceWorkerTab = ({ data }) => (
                 serviceWorker: swData
               }));
               
-              console.log('✅ Información SW actualizada:', swData);
+              
             } catch (error) {
               console.error('❌ Error actualizando SW:', error);
             }
@@ -1431,7 +1401,7 @@ const ServiceWorkerTab = ({ data }) => (
           onClick={async () => {
             try {
               if ('serviceWorker' in navigator) {
-                console.log('🔄 REGISTRO MANUAL del Service Worker v2.25.10...');
+        
                 
                 // PASO 1: Limpiar TODO completamente
                 const registrations = await navigator.serviceWorker.getRegistrations();
@@ -1447,26 +1417,26 @@ const ServiceWorkerTab = ({ data }) => (
                   await caches.delete(cacheName);
                 }
                 
-                console.log('✅ Limpieza completa terminada');
+                
                 
                 // PASO 3: Esperar un momento
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 // PASO 4: Registrar SW limpio
-                console.log('🚀 Registrando SW limpio...');
+                
                 const registration = await navigator.serviceWorker.register('/sw.js', { 
                   scope: '/',
                   updateViaCache: 'none' 
                 });
                 
-                console.log('✅ SW registrado exitosamente:', registration.scope);
+                
                 
                 // PASO 5: Esperar activación y recargar
                 registration.addEventListener('updatefound', () => {
                   const newWorker = registration.installing;
                   newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'activated') {
-                      console.log('✅ SW activado, recargando...');
+  
                       setTimeout(() => window.location.reload(), 1000);
                     }
                   });
@@ -1522,7 +1492,7 @@ const ServiceWorkerTab = ({ data }) => (
                   await caches.delete(cacheName);
                 }
                 
-                console.log('✅ Service Worker completamente DESACTIVADO');
+      
                 alert('Service Worker desactivado. La página se recargará.');
                 
                 setTimeout(() => window.location.reload(), 1000);

@@ -136,9 +136,7 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                           href="#" 
                                                       onClick={(e) => {
                               e.preventDefault();
-                              console.log('🖱️ Menu item clicked:', item.id);
-                              console.log('📋 Item data:', item);
-                              console.log('🔄 Action type:', item.action ? 'action' : 'modal/view');
+                              
                               
                               if (item.action) {
                                 console.log('⚡ Executing action function');
@@ -154,8 +152,8 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                                 onClose(); 
                               } else {
                                 const modalId = item.view || item.modal || item.id;
-                                console.log('🎯 Modal/View ID to open:', modalId);
-                                console.log('🔗 Calling onOpenModal with:', modalId);
+                
+              
                                 onOpenModal(modalId);
                               }
                             }} 
