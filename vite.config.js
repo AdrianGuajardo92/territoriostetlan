@@ -13,14 +13,32 @@ export default defineConfig({
   },
   server: {
     port: 3001,
-    strictPort: true,
+    strictPort: false, // Cambiar a false para permitir puertos alternativos
     open: true,
-    host: true,  // Permite acceso desde la red local (celular)
-    // SOLUCIÓN: Configuración HMR para evitar problemas de WebSocket
+    host: '0.0.0.0',  // Cambiar a 0.0.0.0 para mejor compatibilidad
+    // SOLUCIÓN MEJORADA: Configuración HMR más robusta
     hmr: {
       overlay: false,
-      port: 3001
-    }
+      port: 3001,
+      host: 'localhost',
+      protocol: 'ws',
+      timeout: 30000,
+      clientPort: 3001
+    },
+    // Configuraciones adicionales para estabilidad
+    cors: true,
+    force: true,
+    // Configuración para evitar problemas de red
+    network: {
+      host: '0.0.0.0'
+    },
+    // Configuraciones adicionales para WebSocket
+    watch: {
+      usePolling: false,
+      interval: 1000
+    },
+    // Configuración para manejar reconexiones
+    middlewareMode: false
     // https: true  // Comentado temporalmente
   },
   build: {

@@ -976,7 +976,7 @@ const TerritoryMapModal = ({
                         </div>
                     </div>
                     <button 
-                        onClick={onClose} 
+                        onClick={closeModal} 
                         className="p-2 hover:bg-gray-200 rounded-lg transition-colors sm:hidden"
                     >
                         <Icon name="x" size={18} className="text-gray-600" />
@@ -1167,7 +1167,7 @@ const TerritoryMapModal = ({
                             <button
                                 onClick={() => {
                                     onEditAddress(selectedAddress);
-                                    onClose();
+                                    closeModal();
                                 }}
                                 className="w-full p-1.5 bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition-colors text-sm border border-gray-200"
                             >

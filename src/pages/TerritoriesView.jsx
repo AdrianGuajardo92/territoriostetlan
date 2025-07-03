@@ -8,7 +8,15 @@ import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
 
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
-  const { territories, currentUser, proposals, isLoading, publishers } = useApp();
+  const { 
+    territories, 
+    currentUser, 
+    proposals, 
+    isLoading, 
+    publishers,
+    userNotificationsCount, // ✅ NUEVO: Contador de notificaciones del usuario
+    pendingProposalsCount // ✅ NUEVO: Contador de propuestas pendientes para admin
+  } = useApp();
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -20,20 +28,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   // FASE 3: Premium feedback y gestures ⚡
   const { swipeFeedback } = usePremiumFeedback();
 
-  // Calcular contadores
-  const pendingProposalsCount = useMemo(() => {
-    return currentUser?.role === 'admin' 
-      ? proposals.filter(p => p.status === 'pending').length 
-      : 0;
-  }, [proposals, currentUser]);
 
-  const userNotificationsCount = useMemo(() => {
-    if (currentUser?.role === 'admin') return 0;
-    return proposals.filter(p => 
-      p.proposedBy === currentUser?.uid && 
-      (p.status === 'approved' || p.status === 'rejected')
-    ).length;
-  }, [proposals, currentUser]);
 
   // Filtrar y ordenar territorios
   const filteredAndSortedTerritories = useMemo(() => {

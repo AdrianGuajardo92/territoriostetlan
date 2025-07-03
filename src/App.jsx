@@ -31,7 +31,17 @@ import {
 
 
 function AppContent() {
-  const { currentUser, authLoading, proposals, logout, territories, adminEditMode, handleToggleAdminMode } = useApp();
+  const { 
+    currentUser, 
+    authLoading, 
+    proposals, 
+    logout, 
+    territories, 
+    adminEditMode, 
+    handleToggleAdminMode,
+    userNotificationsCount, // ✅ NUEVO: Contador de notificaciones del usuario
+    pendingProposalsCount // ✅ NUEVO: Contador de propuestas pendientes para admin
+  } = useApp();
   const { showToast } = useToast();
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,23 +52,7 @@ function AppContent() {
   // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
-  // Sistema de notificaciones para propuestas
-  const getUnseenProposalsCount = () => {
-    if (!currentUser || currentUser.role === 'admin') return 0;
-    
-    const userProposals = proposals.filter(p => 
-      p.proposedBy === currentUser.id || p.proposedByName === currentUser.name
-    );
-    const lastViewedTimestamp = localStorage.getItem(`lastProposalsView_${currentUser.id}`);
-    
-    if (!lastViewedTimestamp) return userProposals.length;
-    
-    const lastViewed = new Date(lastViewedTimestamp);
-    return userProposals.filter(p => {
-      const proposalDate = p.createdAt?.toDate?.() || new Date(p.createdAt);
-      return proposalDate > lastViewed;
-    }).length;
-  };
+
 
   // Sistema de Service Worker ESTABLE - Sin bucles
   useEffect(() => {
@@ -278,8 +272,8 @@ function AppContent() {
       text: 'Mis Propuestas',
       icon: 'edit',
       view: 'proposals',
-      hasBadge: true,
-      badgeCount: getUnseenProposalsCount(),
+      hasBadge: userNotificationsCount > 0,
+      badgeCount: userNotificationsCount,
       description: 'Ver tus cambios propuestos'
     },
     {
@@ -287,9 +281,8 @@ function AppContent() {
       text: 'Administración',
       icon: 'settings',
       modal: 'admin',
-      hasBadge: currentUser?.role === 'admin',
-      badgeCount: currentUser?.role === 'admin' ? 
-        proposals.filter(p => p.status === 'pending').length : 0,
+      hasBadge: currentUser?.role === 'admin' && pendingProposalsCount > 0,
+      badgeCount: pendingProposalsCount,
       description: 'Panel de control completo'
     },
     {
@@ -379,12 +372,9 @@ function AppContent() {
   const handleOpenMyProposals = () => {
     setShowMyProposals(true);
     
-    // Marcar como visto al abrir
-    if (currentUser) {
-      const key = `lastProposalsView_${currentUser.id}`;
-      const timestamp = new Date().toISOString();
-      localStorage.setItem(key, timestamp);
-    }
+    // ✅ NUEVO: Marcar propuestas como leídas usando la función del contexto
+    // (Esto se maneja automáticamente en MyProposalsView.jsx)
+    
     // Agregar entrada específica al historial
     window.history.pushState({ 
       app: 'territorios', 
@@ -450,12 +440,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Indicador de desarrollo */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-0 left-0 right-0 bg-green-500 text-white text-center py-1 text-xs z-50">
-          MODO DESARROLLO - Los cambios no afectan producción
-        </div>
-      )}
+
 
       {/* Vista principal */}
       {showMyStudiesAndRevisits ? (

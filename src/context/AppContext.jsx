@@ -12,7 +12,8 @@ import {
   where,
   orderBy,
   getDoc,
-  getDocs
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useToast } from '../hooks/useToast';
@@ -54,6 +55,10 @@ export const AppProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [adminEditMode, setAdminEditMode] = useState(false);
+
+  // ✅ NUEVO: Estados para notificaciones
+  const [userNotificationsCount, setUserNotificationsCount] = useState(0);
+  const [pendingProposalsCount, setPendingProposalsCount] = useState(0);
 
   // Referencias para cleanup
   const unsubscribesRef = useRef([]);
@@ -727,7 +732,8 @@ export const AppProvider = ({ children }) => {
       await updateDoc(doc(db, 'proposals', proposalId), {
         status: 'approved',
         approvedBy: currentUser?.id || 'unknown',
-        approvedAt: serverTimestamp()
+        approvedAt: serverTimestamp(),
+        notificationRead: false // ✅ Marcar como no leída para que aparezca notificación
       });
 
       showToast('Propuesta aprobada', 'success');
@@ -744,7 +750,8 @@ export const AppProvider = ({ children }) => {
         status: 'rejected',
         rejectionReason: reason,
         rejectedBy: currentUser?.id || 'unknown',
-        rejectedAt: serverTimestamp()
+        rejectedAt: serverTimestamp(),
+        notificationRead: false // ✅ Marcar como no leída para que aparezca notificación
       });
       showToast('Propuesta rechazada', 'success');
     } catch (error) {
@@ -768,36 +775,89 @@ export const AppProvider = ({ children }) => {
 
   const handleDeleteProposalsByStatus = async (status, userId = null) => {
     try {
-      // Filtrar propuestas a eliminar
-      let proposalsToDelete = proposals.filter(p => p.status === status);
-      
-      // Si se especifica userId, filtrar por usuario (para usuarios normales)
-      if (userId) {
-        proposalsToDelete = proposalsToDelete.filter(p => 
-          p.proposedBy === userId || p.proposedByName === currentUser?.name
-        );
-      }
+      const proposalsToDelete = proposals.filter(p => {
+        if (status && p.status !== status) return false;
+        if (userId && p.proposedBy !== userId) return false;
+        return true;
+      });
 
-      if (proposalsToDelete.length === 0) {
-        showToast('No hay propuestas para eliminar', 'info');
+      const batch = db.batch();
+      proposalsToDelete.forEach(proposal => {
+        const proposalRef = doc(db, 'proposals', proposal.id);
+        batch.delete(proposalRef);
+      });
+
+      await batch.commit();
+      showToast(`${proposalsToDelete.length} propuestas eliminadas`, 'success');
+    } catch (error) {
+      console.error('Error eliminando propuestas:', error);
+      showToast('Error eliminando propuestas', 'error');
+    }
+  };
+
+  // ✅ NUEVO: Funciones para manejar notificaciones
+  const markProposalsAsRead = async () => {
+    if (!currentUser || currentUser.role === 'admin') return;
+    
+    try {
+      console.log('🔍 Buscando propuestas no leídas para:', currentUser.id);
+      
+      const unreadProposals = proposals.filter(p => 
+        p.proposedBy === currentUser.id && 
+        ['approved', 'rejected'].includes(p.status) && 
+        !p.notificationRead
+      );
+
+      console.log('📊 Propuestas no leídas encontradas:', unreadProposals.length);
+
+      if (unreadProposals.length === 0) {
+        console.log('✅ No hay propuestas no leídas para marcar');
         return;
       }
 
-      // Eliminar todas las propuestas encontradas
-      const deletePromises = proposalsToDelete.map(proposal => 
-        deleteDoc(doc(db, 'proposals', proposal.id))
+      // ✅ MEJORA: Actualizar estado local inmediatamente
+      setProposals(prevProposals => 
+        prevProposals.map(proposal => 
+          unreadProposals.some(unread => unread.id === proposal.id)
+            ? { ...proposal, notificationRead: true }
+            : proposal
+        )
       );
 
-      await Promise.all(deletePromises);
+      // ✅ MEJORA: Actualizar contador inmediatamente
+      setUserNotificationsCount(0);
+      console.log('✅ Contador de notificaciones actualizado a 0');
 
-      const statusText = status === 'approved' ? 'aprobadas' : 'rechazadas';
-      showToast(`${proposalsToDelete.length} propuesta${proposalsToDelete.length > 1 ? 's' : ''} ${statusText} eliminada${proposalsToDelete.length > 1 ? 's' : ''}`, 'success');
+      const batch = writeBatch(db);
+      unreadProposals.forEach(proposal => {
+        const proposalRef = doc(db, 'proposals', proposal.id);
+        batch.update(proposalRef, { notificationRead: true });
+      });
+
+      await batch.commit();
+      console.log(`📱 Marcadas ${unreadProposals.length} propuestas como leídas en Firebase`);
     } catch (error) {
-      console.error('Error deleting proposals:', error);
-      showToast('Error al eliminar propuestas', 'error');
-      throw error;
+      console.error('Error marcando propuestas como leídas:', error);
+      // ✅ MEJORA: Revertir cambios locales si hay error
+      showToast('Error al marcar notificaciones como leídas', 'error');
     }
   };
+
+  const getUnreadProposalsCount = useCallback(() => {
+    if (!currentUser || currentUser.role === 'admin') return 0;
+    
+    return proposals.filter(p => 
+      p.proposedBy === currentUser.id && 
+      ['approved', 'rejected'].includes(p.status) && 
+      !p.notificationRead
+    ).length;
+  }, [proposals, currentUser]);
+
+  const getPendingProposalsCount = useCallback(() => {
+    if (!currentUser || currentUser.role !== 'admin') return 0;
+    
+    return proposals.filter(p => p.status === 'pending').length;
+  }, [proposals, currentUser]);
 
   // 🛠️ ADMIN FUNCTIONS
   const handleToggleAdminMode = useCallback(() => {
@@ -1188,6 +1248,27 @@ export const AppProvider = ({ children }) => {
     };
   }, [currentUser]);
 
+  // ✅ NUEVO: Actualizar contadores de notificaciones
+  useEffect(() => {
+    if (!currentUser) {
+      setUserNotificationsCount(0);
+      setPendingProposalsCount(0);
+      return;
+    }
+
+    // Actualizar contador de notificaciones para usuarios normales
+    if (currentUser.role !== 'admin') {
+      const unreadCount = getUnreadProposalsCount();
+      setUserNotificationsCount(unreadCount);
+    }
+
+    // Actualizar contador de propuestas pendientes para admins
+    if (currentUser.role === 'admin') {
+      const pendingCount = getPendingProposalsCount();
+      setPendingProposalsCount(pendingCount);
+    }
+  }, [proposals, currentUser, getUnreadProposalsCount, getPendingProposalsCount]);
+
   // 📊 CALCULAR TERRITORIOS CON CONTEO DE DIRECCIONES
   const territoriesWithCount = useMemo(() => {
     return territories.map(territory => {
@@ -1213,6 +1294,10 @@ export const AppProvider = ({ children }) => {
     authLoading,
     CURRENT_VERSION: appVersion, // Ahora es dinámico desde version.json
     adminEditMode,
+    
+    // ✅ NUEVO: Estados de notificaciones
+    userNotificationsCount,
+    pendingProposalsCount,
     
     // Auth functions
     login,
@@ -1254,7 +1339,12 @@ export const AppProvider = ({ children }) => {
     syncTerritoryStatus,
     
     // Toast function
-    showToast
+    showToast,
+
+    // ✅ NUEVO: Funciones para manejar notificaciones
+    markProposalsAsRead,
+    getUnreadProposalsCount,
+    getPendingProposalsCount
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

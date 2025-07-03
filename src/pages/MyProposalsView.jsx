@@ -7,7 +7,9 @@ const MyProposalsView = ({ onBack }) => {
     proposals, 
     territories, 
     handleDeleteProposal,
-    handleDeleteProposalsByStatus 
+    handleDeleteProposalsByStatus,
+    markProposalsAsRead,
+    userNotificationsCount // ✅ NUEVO: Contador de notificaciones
   } = useApp();
   const [proposalFilter, setProposalFilter] = useState('pending');
   const [showInstructions, setShowInstructions] = useState(false);
@@ -23,8 +25,15 @@ const MyProposalsView = ({ onBack }) => {
   const approvedCount = userProposals.filter(p => p.status === 'approved').length;
   const rejectedCount = userProposals.filter(p => p.status === 'rejected').length;
 
+  // ✅ NUEVO: Marcar propuestas como leídas cuando se abre la vista
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'admin') {
+      // ✅ MEJORA: Ejecutar inmediatamente al montar el componente
+      console.log('📱 Marcando propuestas como leídas al entrar a MyProposalsView');
+      markProposalsAsRead();
+    }
+  }, [currentUser?.id]); // ✅ MEJORA: Ejecutar cuando cambie el usuario actual
 
-  
   // Configuración de filtros con diseño mejorado
   const filterOptions = [
     { 
@@ -221,7 +230,14 @@ const MyProposalsView = ({ onBack }) => {
               <i className="fas fa-arrow-left text-white"></i>
             </button>
             <div>
-              <h1 className="text-xl font-bold text-white">Mis Propuestas</h1>
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                Mis Propuestas
+                {userNotificationsCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse">
+                    {userNotificationsCount}
+                  </span>
+                )}
+              </h1>
               <p className="text-white/70 text-sm">
                 {userProposals.length} propuesta{userProposals.length !== 1 ? 's' : ''} realizadas
               </p>

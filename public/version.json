@@ -1,24 +1,24 @@
 {
-  "version": "2.26.9",
-  "timestamp": "2025-01-03T00:00:00.000Z",
+  "version": "2.28.0",
+  "timestamp": "2025-01-03T04:45:00.000Z",
   "releaseDate": "2025-01-03",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "✅ CORRECCIÓN FINAL: Modal de contraseña completamente funcional con Firebase",
-    "🔧 showToast agregado al contexto para compatibilidad completa",
-    "🎯 BOTONES SIEMPRE VISIBLES: Modal 100% optimizado para móviles con botones siempre accesibles",
-    "📱 COMPATIBILIDAD S24 ULTRA: Optimizado para pantallas altas y dispositivos móviles modernos",
-    "🔒 FOOTER STICKY: Botones fijos en la parte inferior con scroll aislado",
-    "⚡ BOTONES MÁS GRANDES: Tamaño aumentado (56px altura) para mejor accesibilidad táctil",
-    "🎨 MEJOR DISTRIBUCIÓN: Cancelar a la izquierda, Guardar a la derecha con espaciado optimizado",
-    "🆕 FORMATO SIMPLE ESTUDIOS/REVISITAS: Nueva vista para gestionar estudios y revisitas",
-    "🎨 REDISEÑO COMPLETO: Nueva interfaz moderna y responsiva",
-    "📱 OPTIMIZACIÓN MOBILE: Mejoras significativas en la experiencia móvil",
-    "⚡ RENDIMIENTO: Carga más rápida y mejor respuesta",
-    "🔧 CORRECCIONES: Múltiples bugs solucionados",
-    "🎯 MEJORAS UX: Interfaz más intuitiva y fácil de usar"
+    "🔔 NOTIFICACIONES INMEDIATAS: Las notificaciones desaparecen al instante al entrar a Mis Propuestas",
+    "📱 CORRECCIÓN CRÍTICA: Error db.batch() resuelto con writeBatch de Firebase",
+    "✅ ACTUALIZACIÓN INMEDIATA: Estado local se actualiza antes que Firebase para experiencia fluida",
+    "🎯 LOGS DE DEPURACIÓN: Sistema de logs detallado para rastrear el proceso",
+    "⚡ MANEJO DE ERRORES: Toast notifications para errores de Firebase",
+    "🔄 SINCRONIZACIÓN MEJORADA: Actualización inmediata del contador userNotificationsCount",
+    "🎨 EXPERIENCIA FLUIDA: Notificaciones desaparecen sin esperar sincronización de red",
+    "🔧 IMPORTACIÓN CORREGIDA: writeBatch importado correctamente de firebase/firestore",
+    "📊 ESTADO LOCAL OPTIMIZADO: setProposals y setUserNotificationsCount actualizados inmediatamente",
+    "🆕 FUNCIONALIDADES MEJORADAS: markProposalsAsRead con actualización inmediata del estado",
+    "🎯 DEPURACIÓN MEJORADA: Logs detallados para identificar problemas",
+    "⚡ RENDIMIENTO OPTIMIZADO: Actualización local antes que Firebase",
+    "🔒 COMPATIBILIDAD TOTAL: Funciona offline con sincronización automática"
   ],
   "critical": false,
-  "description": "Corrección final del modal de contraseña - completamente funcional"
+  "description": "Corrección crítica de notificaciones inmediatas - Error db.batch() resuelto y experiencia fluida"
 }
