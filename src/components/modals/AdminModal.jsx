@@ -4,7 +4,7 @@ import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import { LazyStatsModal } from './LazyModals'; // CORRECCIÓN: Usar lazy loading para stats
-import UserManagementModal from './UserManagementModal';
+import { LazyUserManagementModal as UserManagementModal } from './LazyModals';
 
 const AdminModal = (props = {}) => {
   const { isOpen = false, onClose = () => {} } = props;
