@@ -4,11 +4,15 @@ import { ToastProvider, useToast } from './hooks/useToast';
 import './utils/errorLogger'; // Inicializar el sistema de captura de errores
 import LoginView from './components/auth/LoginView';
 import MobileMenu from './components/common/MobileMenu';
-import TerritoriesView from './pages/TerritoriesView';
-import TerritoryDetailView from './pages/TerritoryDetailView';
-import MyProposalsView from './pages/MyProposalsView';
-import MyStudiesAndRevisitsView from './pages/MyStudiesAndRevisitsView';
 import LoadingSpinner from './components/common/LoadingSpinner';
+
+// 🚀 PÁGINAS LAZY - CODE SPLITTING MÍTICO 100% ⚡
+import { 
+  LazyTerritoriesView,
+  LazyTerritoryDetailView,
+  LazyMyProposalsView,
+  LazyMyStudiesAndRevisitsView
+} from './components/modals/LazyModals';
 
 // CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
 import { LazyPasswordModal as PasswordModal } from './components/modals/LazyModals';
@@ -455,20 +459,20 @@ function AppContent() {
 
       {/* Vista principal */}
       {showMyStudiesAndRevisits ? (
-        <MyStudiesAndRevisitsView
+        <LazyMyStudiesAndRevisitsView
           onBack={handleBackFromMyStudiesAndRevisits}
         />
       ) : showMyProposals ? (
-        <MyProposalsView
+        <LazyMyProposalsView
           onBack={handleBackFromMyProposals}
         />
       ) : selectedTerritory ? (
-        <TerritoryDetailView
+        <LazyTerritoryDetailView
           territory={selectedTerritory}
           onBack={handleBackFromTerritory}
         />
       ) : (
-        <TerritoriesView
+        <LazyTerritoriesView
           onSelectTerritory={handleSelectTerritory}
           onOpenMenu={handleOpenMenu}
         />

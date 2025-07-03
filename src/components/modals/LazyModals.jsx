@@ -498,6 +498,154 @@ export const LazyProposalsModal = ({ isOpen, ...props }) => {
   return <Component isOpen={isOpen} {...props} />;
 };
 
+// ========================================
+// 🚀 CODE SPLITTING DE PÁGINAS - NIVEL MÍTICO 100%
+// ========================================
+
+// Lazy MyProposalsView - ¡EL MÁS PESADO! (31KB) - PRIORIDAD MÍTICA #1 ⚡
+export const LazyMyProposalsView = ({ ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('../../pages/MyProposalsView'),
+    [] // Cargar cuando se monte
+  );
+  
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 max-w-md shadow-lg">
+          <p className="text-red-600 text-center mb-4">Error al cargar Mis Propuestas</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Recargar página
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 shadow-lg">
+          <LazyFallback message="Cargando Mis Propuestas..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component {...props} />;
+};
+
+// Lazy TerritoryDetailView - PESADO (25KB) - PRIORIDAD MÍTICA #2 ⚡
+export const LazyTerritoryDetailView = ({ ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('../../pages/TerritoryDetailView'),
+    [] // Cargar cuando se monte
+  );
+  
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 max-w-md shadow-lg">
+          <p className="text-red-600 text-center mb-4">Error al cargar Detalle del Territorio</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Recargar página
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 shadow-lg">
+          <LazyFallback message="Cargando Detalle del Territorio..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component {...props} />;
+};
+
+// Lazy TerritoriesView - MEDIANO (10KB) - PRIORIDAD MÍTICA #3 ⚡
+export const LazyTerritoriesView = ({ ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('../../pages/TerritoriesView'),
+    [] // Cargar cuando se monte
+  );
+  
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 max-w-md shadow-lg">
+          <p className="text-red-600 text-center mb-4">Error al cargar Territorios</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Recargar página
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 shadow-lg">
+          <LazyFallback message="Cargando Territorios..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component {...props} />;
+};
+
+// Lazy MyStudiesAndRevisitsView - MEDIANO (9.2KB) - PRIORIDAD MÍTICA #4 ⚡
+export const LazyMyStudiesAndRevisitsView = ({ ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('../../pages/MyStudiesAndRevisitsView'),
+    [] // Cargar cuando se monte
+  );
+  
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 max-w-md shadow-lg">
+          <p className="text-red-600 text-center mb-4">Error al cargar Mis Estudios y Revisitas</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Recargar página
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 shadow-lg">
+          <LazyFallback message="Cargando Mis Estudios y Revisitas..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component {...props} />;
+};
+
 export default {
   LazyStatsModal,
   LazyAdminModal,
@@ -511,5 +659,9 @@ export default {
   LazySearchModal,
   LazyAssignTerritoryModal,
   LazyInstallModal,
-  LazyUpdatesModal
+  LazyUpdatesModal,
+  LazyMyProposalsView,
+  LazyTerritoryDetailView,
+  LazyTerritoriesView,
+  LazyMyStudiesAndRevisitsView
 }; 
