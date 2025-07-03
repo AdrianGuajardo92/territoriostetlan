@@ -6,10 +6,8 @@ export default defineConfig({
   // CORRECCIÓN: Configurar directorio público para archivos estáticos
   publicDir: 'public',
   esbuild: {
-    // Forzar que todos los archivos JSX se transpilen a JS
-    loader: 'jsx',
-    include: /src\/.*\.jsx?$/,
-    exclude: []
+    // Configuración correcta para JSX
+    loader: 'jsx'
   },
   server: {
     port: 3001,
