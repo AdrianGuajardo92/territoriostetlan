@@ -11,7 +11,6 @@ import MyStudiesAndRevisitsView from './pages/MyStudiesAndRevisitsView';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
 // CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
-import SearchModal from './components/modals/SearchModal';
 import { LazyPasswordModal as PasswordModal } from './components/modals/LazyModals';
 import UpdatesModal from './components/modals/UpdatesModal';
 import InstallModal from './components/modals/InstallModal';
@@ -21,7 +20,8 @@ import {
   LazyStatsModal, 
   LazyAdminModal, 
   LazyReportsModal,
-  LazySystemReportsModal
+  LazySystemReportsModal,
+  LazySearchModal
 } from './components/modals/LazyModals';
 
 
@@ -486,7 +486,7 @@ function AppContent() {
 
       {/* CORRECCIÓN: Modales sin Suspense - Ya optimizados ⚡ */}
       {activeModal === 'search' && (
-        <SearchModal 
+        <LazySearchModal 
           isOpen 
           onClose={handleCloseModal} 
           onNavigateToTerritory={handleSelectTerritory}
