@@ -1,10 +1,15 @@
 {
-  "version": "2.26.3",
-  "timestamp": "2025-01-02T22:45:00.000Z",
+  "version": "2.26.5",
+  "timestamp": "2025-01-02T23:00:00.000Z",
   "releaseDate": "2025-01-02",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
+    "🎯 BOTONES SIEMPRE VISIBLES: Modal de contraseña con botones Cancelar y Guardar 100% visibles en móviles",
+    "📱 COMPATIBILIDAD S24 ULTRA: Optimizado para pantallas altas y dispositivos móviles modernos",
+    "🔒 FOOTER STICKY: Botones fijos en la parte inferior con scroll aislado",
+    "⚡ BOTONES MÁS GRANDES: Tamaño aumentado (56px altura) para mejor accesibilidad táctil",
+    "🎨 MEJOR DISTRIBUCIÓN: Cancelar a la izquierda, Guardar a la derecha con espaciado optimizado",
     "🆕 FORMATO SIMPLE ESTUDIOS/REVISITAS: Cambio a 'Revisita de [nombre]' y 'Estudia con [nombre]'",
     "🔧 PANEL ADMIN OPTIMIZADO: Solo muestra campos que realmente cambiaron en propuestas",
     "📊 ANTES/DESPUÉS COMPLETO: Formato antes→después para dirección, género, notas, estudios y revisitas",
