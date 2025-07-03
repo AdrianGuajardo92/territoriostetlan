@@ -5,7 +5,7 @@ import TerritoryDetailHeader from '../components/territories/TerritoryDetailHead
 import AddressCard from '../components/addresses/AddressCard';
 import AddressFormModal from '../components/modals/AddressFormModal';
 import AssignTerritoryModal from '../components/modals/AssignTerritoryModal';
-import MapModal from '../components/modals/MapModal';
+import { LazyMapModal as MapModal } from '../components/modals/LazyModals';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
 import { optimizeRoute, getCurrentLocation, calculateRouteStats } from '../utils/routeOptimizer';

@@ -118,6 +118,44 @@ export const LazyReportsModal = ({ isOpen, ...props }) => {
   return <Component isOpen={isOpen} {...props} />;
 };
 
+// Lazy MapModal - MUY PESADO (56KB) - PRIORIDAD #1 ⚡
+export const LazyMapModal = ({ isOpen, ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('./MapModal'),
+    [isOpen] // Solo cargar cuando se abra
+  );
+
+  if (!isOpen) return null;
+  
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md">
+          <p className="text-red-600">Error al cargar mapa</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6">
+          <LazyFallback message="Cargando mapa interactivo..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component isOpen={isOpen} {...props} />;
+};
+
 // Lazy ProposalsModal - NO crítico para carga inicial
 export const LazyProposalsModal = ({ isOpen, ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
@@ -160,5 +198,6 @@ export default {
   LazyStatsModal,
   LazyAdminModal,
   LazyReportsModal,
-  LazyProposalsModal
+  LazyProposalsModal,
+  LazyMapModal
 }; 
