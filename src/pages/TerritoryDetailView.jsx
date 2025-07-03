@@ -337,7 +337,14 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const openEditModal = useCallback((address) => {
     setEditingAddress(address);
     setIsFormModalOpen(true);
-  }, []);
+    // Actualizar el historial para indicar que hay un modal de editar dirección abierto
+    window.history.pushState({ 
+      app: 'territorios', 
+      level: 'territory', 
+      territory: territory.id,
+      modalType: 'edit-address-modal'
+    }, '', window.location.href);
+  }, [territory.id]);
 
   const openAddModal = useCallback(() => {
     setEditingAddress(null);
@@ -531,6 +538,23 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }
   }, [addresses, handleToggleAddressStatus, handleUpdateAddress, showToast]);
 
+  // Manejar el cierre del modal de editar dirección desde el botón físico de volver
+  useEffect(() => {
+    const handleCloseAddressFormModal = () => {
+      if (isFormModalOpen) {
+        setIsFormModalOpen(false);
+        setEditingAddress(null);
+        // Limpiar el estado del historial al cerrar el modal
+        if (window.history.state?.modalType === 'edit-address-modal') {
+          window.history.back();
+        }
+      }
+    };
+
+    window.addEventListener('closeAddressFormModal', handleCloseAddressFormModal);
+    return () => window.removeEventListener('closeAddressFormModal', handleCloseAddressFormModal);
+  }, [isFormModalOpen]);
+
   // OPTIMIZACIÓN: Handlers específicos memoizados ⚡
   const createEditHandler = useCallback((address) => () => openEditModal(address), [openEditModal]);
   const createNavigateHandler = useCallback((addressId) => () => handleNavigationStart(addressId), [handleNavigationStart]);
@@ -609,6 +633,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           onClose={() => {
             setIsFormModalOpen(false);
             setEditingAddress(null);
+            // Limpiar el estado del historial al cerrar el modal
+            if (window.history.state?.modalType === 'edit-address-modal') {
+              window.history.back();
+            }
           }}
           address={editingAddress}
           territoryId={territory.id}

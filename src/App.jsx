@@ -210,7 +210,16 @@ function AppContent() {
         return;
       }
 
-      // PRIORIDAD 6: Verificar el estado del historial para determinar acción
+      // PRIORIDAD 6: Si hay modal de editar dirección abierto en territorio, cerrarlo
+      if (selectedTerritory && window.history.state?.modalType === 'edit-address-modal') {
+        // Simular el cierre del modal de editar dirección
+        const closeEvent = new CustomEvent('closeAddressFormModal');
+        window.dispatchEvent(closeEvent);
+        event.preventDefault();
+        return;
+      }
+
+      // PRIORIDAD 7: Verificar el estado del historial para determinar acción
       const currentState = event.state;
       
       // Si tenemos un estado específico de la app, manejarlo
@@ -229,12 +238,12 @@ function AppContent() {
         }
       }
 
-      // PRIORIDAD 7: Si hay historial disponible, permitir navegación normal  
+      // PRIORIDAD 8: Si hay historial disponible, permitir navegación normal  
       if (window.history.length > 1) {
         return; // Permitir navegación normal hacia atrás
       }
 
-      // PRIORIDAD 8: Solo mostrar confirmación si realmente no hay a dónde volver
+      // PRIORIDAD 9: Solo mostrar confirmación si realmente no hay a dónde volver
       event.preventDefault();
       
       const shouldExit = window.confirm('¿Quieres salir de la aplicación?');
