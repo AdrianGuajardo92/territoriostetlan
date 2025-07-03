@@ -446,12 +446,12 @@ const PasswordModal = ({ isOpen, onClose }) => {
         {/* 🎯 FOOTER CON BOTONES ELEGANTES */}
         {!success && (
           <div className="flex-shrink-0 bg-gradient-to-r from-gray-50 to-white border-t border-gray-200 px-6 py-4 shadow-lg">
-            <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <div className="flex flex-row justify-between gap-3 w-full">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isLoading}
-                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50"
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 w-full sm:w-auto"
               >
                 <i className="fas fa-times mr-2"></i>
                 Cancelar
@@ -459,7 +459,7 @@ const PasswordModal = ({ isOpen, onClose }) => {
               <button
                 onClick={handleSubmit}
                 disabled={isLoading || !currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center"
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center w-full sm:w-auto"
               >
                 {isLoading ? (
                   <>
