@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico - Territorios LS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ccc;
+        }
+        .pass { border-color: #4CAF50; background: #f1f8e9; }
+        .fail { border-color: #f44336; background: #ffebee; }
+        .info { border-color: #2196F3; background: #e3f2fd; }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+        }
+        .button:hover { background: #45a049; }
+        .clear-btn { background: #ff9800; }
+        .clear-btn:hover { background: #e68900; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico de Territorios LS</h1>
+        <p>Esta página te ayudará a identificar por qué la aplicación no carga en tu dispositivo.</p>
+        
+        <div id="results"></div>
+        
+        <button class="button" onclick="runTests()">🚀 Ejecutar Diagnóstico</button>
+        <button class="button clear-btn" onclick="clearAll()">🧹 Limpiar Todo y Probar</button>
+        <button class="button" onclick="goToApp()">📱 Ir a la Aplicación</button>
+    </div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function runTests() {
+            clearResults();
+            addResult('🔍 Iniciando diagnóstico...', 'info');
+
+            // Test 1: JavaScript
+            try {
+                addResult('✅ JavaScript: Funcionando correctamente', 'pass');
+            } catch (e) {
+                addResult('❌ JavaScript: Error - ' + e.message, 'fail');
+            }
+
+            // Test 2: Navegador
+            const userAgent = navigator.userAgent;
+            addResult(`🌐 Navegador: ${getBrowserName(userAgent)}`, 'info');
+
+            // Test 3: Conexión
+            if (navigator.onLine) {
+                addResult('✅ Conexión: Online', 'pass');
+            } else {
+                addResult('❌ Conexión: Offline', 'fail');
+            }
+
+            // Test 4: Local Storage
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                addResult('✅ Local Storage: Funcionando', 'pass');
+            } catch (e) {
+                addResult('❌ Local Storage: Bloqueado o no disponible', 'fail');
+            }
+
+            // Test 5: Service Worker
+            if ('serviceWorker' in navigator) {
+                addResult('✅ Service Worker: Soportado', 'pass');
+            } else {
+                addResult('❌ Service Worker: No soportado', 'fail');
+            }
+
+            // Test 6: Fetch API
+            if (typeof fetch !== 'undefined') {
+                addResult('✅ Fetch API: Disponible', 'pass');
+                
+                // Test de conectividad real
+                fetch('/version.json?t=' + Date.now())
+                    .then(response => response.json())
+                    .then(data => {
+                        addResult(`✅ Conectividad: Servidor responde - Versión ${data.version}`, 'pass');
+                    })
+                    .catch(error => {
+                        addResult('❌ Conectividad: Error al conectar con servidor - ' + error.message, 'fail');
+                    });
+            } else {
+                addResult('❌ Fetch API: No disponible', 'fail');
+            }
+
+            // Test 7: Cache
+            if ('caches' in window) {
+                addResult('✅ Cache API: Disponible', 'pass');
+                
+                caches.keys().then(cacheNames => {
+                    if (cacheNames.length > 0) {
+                        addResult(`⚠️ Cache: ${cacheNames.length} caches encontrados - Esto podría causar problemas`, 'fail');
+                        addResult('💡 Recomendación: Usar el botón "Limpiar Todo" abajo', 'info');
+                    } else {
+                        addResult('✅ Cache: Limpio', 'pass');
+                    }
+                });
+            } else {
+                addResult('❌ Cache API: No disponible', 'fail');
+            }
+
+            // Test 8: Viewport
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            addResult(`📱 Pantalla: ${width}x${height}px`, 'info');
+
+            // Test 9: Cookies
+            if (navigator.cookieEnabled) {
+                addResult('✅ Cookies: Habilitadas', 'pass');
+            } else {
+                addResult('❌ Cookies: Deshabilitadas', 'fail');
+            }
+
+            addResult('🎯 Diagnóstico completado. Revisa los resultados arriba.', 'info');
+        }
+
+        function getBrowserName(userAgent) {
+            if (userAgent.includes('Chrome')) return 'Chrome';
+            if (userAgent.includes('Firefox')) return 'Firefox';
+            if (userAgent.includes('Safari')) return 'Safari';
+            if (userAgent.includes('Edge')) return 'Edge';
+            if (userAgent.includes('Opera')) return 'Opera';
+            return 'Desconocido';
+        }
+
+        async function clearAll() {
+            addResult('🧹 Iniciando limpieza completa...', 'info');
+
+            try {
+                // Limpiar Local Storage
+                localStorage.clear();
+                addResult('✅ Local Storage limpiado', 'pass');
+
+                // Limpiar Session Storage
+                sessionStorage.clear();
+                addResult('✅ Session Storage limpiado', 'pass');
+
+                // Limpiar Service Workers
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                    }
+                    addResult(`✅ ${registrations.length} Service Workers eliminados`, 'pass');
+                }
+
+                // Limpiar Cache
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    addResult(`✅ ${cacheNames.length} caches eliminados`, 'pass');
+                }
+
+                addResult('🎉 Limpieza completa. ¡Ahora prueba la aplicación!', 'pass');
+                
+                // Esperar 2 segundos y redirigir
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+
+            } catch (error) {
+                addResult('❌ Error durante la limpieza: ' + error.message, 'fail');
+            }
+        }
+
+        function goToApp() {
+            window.location.href = '/';
+        }
+
+        // Ejecutar diagnóstico automáticamente al cargar
+        window.onload = function() {
+            setTimeout(runTests, 500);
+        };
+    </script>
+</body>
+</html> 

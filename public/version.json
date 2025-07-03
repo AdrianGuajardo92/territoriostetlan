@@ -1,16 +1,5 @@
 {
   "version": "2.29.0",
-  "buildDate": "2024-12-19",
-  "features": [
-    "Sistema completo de gestión de territorios",
-    "Navegación con Google Maps",
-    "Sistema de propuestas para usuarios",
-    "Panel administrativo completo",
-    "Optimización de rutas",
-    "Modo offline",
-    "PWA instalable",
-    "Mis Revisitas y Estudios"
-  ],
   "timestamp": "2025-01-03T04:45:00.000Z",
   "releaseDate": "2025-01-03",
   "forceUpdate": false,

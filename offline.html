@@ -3,61 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sin Conexión - Gestor de Territorios</title>
+    <title>Sin Conexión - Territorios (LS)</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background: #f3f4f6;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
         }
+        
         .container {
             text-align: center;
             padding: 2rem;
+            max-width: 400px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
+        
         .icon {
             width: 80px;
             height: 80px;
-            margin: 0 auto 1rem;
-            background: #e5e7eb;
+            margin: 0 auto 1.5rem;
+            background: #f3f4f6;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
+        
+        .icon::before {
+            content: '📴';
+            font-size: 40px;
+        }
+        
         h1 {
             color: #374151;
             margin: 0 0 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
         }
+        
         p {
             color: #6b7280;
             margin: 0 0 2rem;
+            font-size: 1rem;
         }
+        
+        .app-info {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #4f46e5;
+        }
+        
+        .app-info h3 {
+            color: #4f46e5;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .app-info p {
+            color: #6b7280;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+        
         button {
-            background: #4f46e5;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             color: white;
             border: none;
-            padding: 0.75rem 2rem;
-            border-radius: 0.5rem;
+            padding: 0.875rem 2rem;
+            border-radius: 12px;
             font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .connection-status {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #fef3cd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #92400e;
+        }
+        
+        .connection-status.online {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 1.25rem;
+            }
+            
+            p {
+                font-size: 0.9rem;
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="icon">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
-                <path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
-            </svg>
+        <div class="icon pulse"></div>
+        <h1>Sin Conexión a Internet</h1>
+        <p>No se puede cargar la aplicación sin conexión. Verifica tu conexión e intenta nuevamente.</p>
+        
+        <div class="app-info">
+            <h3>📱 Territorios (LS)</h3>
+            <p>Aplicación para la gestión de territorios de predicación de Lengua de Señas</p>
         </div>
-        <h1>Sin Conexión</h1>
-        <p>No se puede cargar la aplicación sin conexión a internet.</p>
-        <button onclick="location.reload()">Reintentar</button>
+        
+        <button onclick="checkConnectionAndReload()">🔄 Verificar Conexión</button>
+        
+        <div id="connectionStatus" class="connection-status">
+            <span id="statusText">Verificando conexión...</span>
+        </div>
     </div>
+
+    <script>
+        // Verificar estado de conexión
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+            
+            if (navigator.onLine) {
+                statusDiv.className = 'connection-status online';
+                statusText.textContent = '✅ Conexión detectada - Puedes recargar la página';
+            } else {
+                statusDiv.className = 'connection-status';
+                statusText.textContent = '❌ Sin conexión a internet';
+            }
+        }
+        
+        // Función para verificar y recargar
+        function checkConnectionAndReload() {
+            if (navigator.onLine) {
+                // Intentar recargar la página principal
+                window.location.href = '/';
+            } else {
+                // Mostrar mensaje de error
+                const statusText = document.getElementById('statusText');
+                statusText.textContent = '❌ Aún sin conexión - Intenta en unos momentos';
+                
+                // Volver al estado anterior después de 3 segundos
+                setTimeout(updateConnectionStatus, 3000);
+            }
+        }
+        
+        // Listeners para cambios de conectividad
+        window.addEventListener('online', () => {
+            updateConnectionStatus();
+            // Auto-recargar después de 2 segundos cuando se detecte conexión
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        });
+        
+        window.addEventListener('offline', updateConnectionStatus);
+        
+        // Verificar estado inicial
+        updateConnectionStatus();
+        
+        // Verificar periódicamente
+        setInterval(updateConnectionStatus, 5000);
+        
+        // Intentar recargar automáticamente cada 30 segundos si hay conexión
+        setInterval(() => {
+            if (navigator.onLine) {
+                fetch('/', { method: 'HEAD', cache: 'no-cache' })
+                    .then(() => {
+                        window.location.href = '/';
+                    })
+                    .catch(() => {
+                        // Error de red, mantener en página offline
+                    });
+            }
+        }, 30000);
+    </script>
 </body>
 </html>

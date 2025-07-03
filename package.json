@@ -1,26 +1,42 @@
 {
-  "name": "territoriostetlan",
-  "private": true,
-  "version": "1.0.0",
+  "name": "territorios-tetlan",
+  "version": "2.29.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:clean": "taskkill /F /IM node.exe 2>nul || true && vite",
+    "dev:stable": "vite --config vite.dev.config.js",
+    "dev:port": "vite --port 3002",
+    "dev:force": "vite --force",
     "build": "vite build",
-    "preview": "vite preview"
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "clean": "rm -rf .vite node_modules/.vite dist && npm run build",
+    "fresh": "npm run clean && npm run dev",
+    "format": "prettier --write ."
   },
   "dependencies": {
+    "dexie": "^4.0.11",
+    "firebase": "^10.7.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0",
-    "firebase": "^10.8.0"
+    "react-leaflet": "^4.2.1",
+    "workbox-core": "^7.3.0",
+    "workbox-strategies": "^7.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "postcss": "^8.4.32",
-    "tailwindcss": "^3.3.6",
+    "prettier": "^3.1.1",
+    "tailwindcss": "^3.4.0",
+    "terser": "^5.43.1",
     "vite": "^5.0.8"
   }
-} 
+}
