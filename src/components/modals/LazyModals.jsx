@@ -346,6 +346,120 @@ export const LazySearchModal = ({ isOpen, ...props }) => {
   return <Component isOpen={isOpen} {...props} />;
 };
 
+// Lazy AssignTerritoryModal - MEDIANO HACIA 95% (16KB) - PRIORIDAD #7 ⚡
+export const LazyAssignTerritoryModal = ({ isOpen, ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('./AssignTerritoryModal'),
+    [isOpen] // Solo cargar cuando se abra
+  );
+
+  if (!isOpen) return null;
+  
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md">
+          <p className="text-red-600">Error al cargar asignación</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6">
+          <LazyFallback message="Cargando asignación..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component isOpen={isOpen} {...props} />;
+};
+
+// Lazy InstallModal - MEDIANO HACIA 95% (13KB) - PRIORIDAD #8 ⚡
+export const LazyInstallModal = ({ isOpen, ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('./InstallModal'),
+    [isOpen] // Solo cargar cuando se abra
+  );
+
+  if (!isOpen) return null;
+  
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md">
+          <p className="text-red-600">Error al cargar instalación</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6">
+          <LazyFallback message="Cargando instalación..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component isOpen={isOpen} {...props} />;
+};
+
+// Lazy UpdatesModal - PEQUEÑO PERO FINAL AL 95% (3.8KB) - PRIORIDAD #9 ⚡
+export const LazyUpdatesModal = ({ isOpen, ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('./UpdatesModal'),
+    [isOpen] // Solo cargar cuando se abra
+  );
+
+  if (!isOpen) return null;
+  
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md">
+          <p className="text-red-600">Error al cargar actualizaciones</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6">
+          <LazyFallback message="Cargando actualizaciones..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component isOpen={isOpen} {...props} />;
+};
+
 // Lazy ProposalsModal - NO crítico para carga inicial
 export const LazyProposalsModal = ({ isOpen, ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
@@ -394,5 +508,8 @@ export default {
   LazyUserManagementModal,
   LazyPasswordModal,
   LazySystemReportsModal,
-  LazySearchModal
+  LazySearchModal,
+  LazyAssignTerritoryModal,
+  LazyInstallModal,
+  LazyUpdatesModal
 }; 

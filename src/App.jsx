@@ -12,8 +12,6 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 
 // CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
 import { LazyPasswordModal as PasswordModal } from './components/modals/LazyModals';
-import UpdatesModal from './components/modals/UpdatesModal';
-import InstallModal from './components/modals/InstallModal';
 
 // Importar modales lazy optimizados
 import { 
@@ -21,7 +19,9 @@ import {
   LazyAdminModal, 
   LazyReportsModal,
   LazySystemReportsModal,
-  LazySearchModal
+  LazySearchModal,
+  LazyInstallModal,
+  LazyUpdatesModal
 } from './components/modals/LazyModals';
 
 
@@ -501,10 +501,10 @@ function AppContent() {
         <PasswordModal isOpen onClose={handleCloseModal} modalId="password-modal" />
       )}
       {activeModal === 'updates' && (
-        <UpdatesModal isOpen onClose={handleCloseModal} modalId="updates-modal" />
+        <LazyUpdatesModal isOpen onClose={handleCloseModal} modalId="updates-modal" />
       )}
       {activeModal === 'install' && (
-        <InstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
+        <LazyInstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
       )}
       {activeModal === 'systemReports' && (
         <LazySystemReportsModal isOpen onClose={handleCloseModal} modalId="system-reports-modal" />

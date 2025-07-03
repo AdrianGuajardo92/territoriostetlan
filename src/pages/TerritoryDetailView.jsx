@@ -4,7 +4,7 @@ import { useToast } from '../hooks/useToast';
 import TerritoryDetailHeader from '../components/territories/TerritoryDetailHeader';
 import AddressCard from '../components/addresses/AddressCard';
 import { LazyAddressFormModal as AddressFormModal } from '../components/modals/LazyModals';
-import AssignTerritoryModal from '../components/modals/AssignTerritoryModal';
+import { LazyAssignTerritoryModal as AssignTerritoryModal } from '../components/modals/LazyModals';
 import { LazyMapModal as MapModal } from '../components/modals/LazyModals';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
