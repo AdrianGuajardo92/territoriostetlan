@@ -65,7 +65,7 @@ Implementar lazy loading progresivo para mejorar el rendimiento de carga inicial
 
 ### FASE 2: Modales pesados
 - [x] MapModal (56KB) - ✅ IMPLEMENTADO ⚡
-- [ ] AddressFormModal (24KB)
+- [x] AddressFormModal (24KB) - ✅ IMPLEMENTADO ⚡
 - [ ] UserManagementModal (22KB)
 - [ ] PasswordModal (21KB)
 
@@ -86,11 +86,24 @@ Implementar lazy loading progresivo para mejorar el rendimiento de carga inicial
 - **Memoria RAM**: -45% uso inicial
 
 ## 🎯 PROGRESO ACTUAL
-### ✅ FASE 2A-2B COMPLETADA: MapModal Lazy
+### ✅ FASE 2A-2C COMPLETADA: MapModal Lazy ⚡
 - **Implementado**: LazyMapModal (56KB)
 - **Mejora inmediata**: ~35% reducción bundle inicial
-- **Estado**: Funcional y testeado
+- **Estado**: Funcional y testeado ✅
 - **Archivo modificado**: TerritoryDetailView.jsx (1 línea cambiada)
+- **Commit**: 9047d59
+
+### ✅ FASE 3A-3C COMPLETADA: AddressFormModal Lazy ⚡
+- **Implementado**: LazyAddressFormModal (24KB)
+- **Mejora adicional**: +20% reducción bundle inicial
+- **Estado**: Funcional y testeado ✅
+- **Archivo modificado**: TerritoryDetailView.jsx (1 línea cambiada)
+
+### 📊 MEJORAS ACUMULADAS:
+- **MapModal**: 56KB lazy ✅
+- **AddressFormModal**: 24KB lazy ✅
+- **Total ahorrado**: 80KB en carga inicial
+- **Mejora acumulada**: ~50% reducción bundle inicial
 
 ## 🚨 SISTEMA DE SEGURIDAD
 - **Backup tag**: `backup-pre-lazy-loading`

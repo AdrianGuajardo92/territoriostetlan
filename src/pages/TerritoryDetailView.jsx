@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../hooks/useToast';
 import TerritoryDetailHeader from '../components/territories/TerritoryDetailHeader';
 import AddressCard from '../components/addresses/AddressCard';
-import AddressFormModal from '../components/modals/AddressFormModal';
+import { LazyAddressFormModal as AddressFormModal } from '../components/modals/LazyModals';
 import AssignTerritoryModal from '../components/modals/AssignTerritoryModal';
 import { LazyMapModal as MapModal } from '../components/modals/LazyModals';
 import ConfirmDialog from '../components/common/ConfirmDialog';

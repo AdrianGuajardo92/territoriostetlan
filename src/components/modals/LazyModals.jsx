@@ -156,6 +156,44 @@ export const LazyMapModal = ({ isOpen, ...props }) => {
   return <Component isOpen={isOpen} {...props} />;
 };
 
+// Lazy AddressFormModal - PESADO (24KB) - PRIORIDAD #2 ⚡
+export const LazyAddressFormModal = ({ isOpen, ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('./AddressFormModal'),
+    [isOpen] // Solo cargar cuando se abra
+  );
+
+  if (!isOpen) return null;
+  
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md">
+          <p className="text-red-600">Error al cargar formulario</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6">
+          <LazyFallback message="Cargando formulario..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component isOpen={isOpen} {...props} />;
+};
+
 // Lazy ProposalsModal - NO crítico para carga inicial
 export const LazyProposalsModal = ({ isOpen, ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
@@ -199,5 +237,6 @@ export default {
   LazyAdminModal,
   LazyReportsModal,
   LazyProposalsModal,
-  LazyMapModal
+  LazyMapModal,
+  LazyAddressFormModal
 }; 
