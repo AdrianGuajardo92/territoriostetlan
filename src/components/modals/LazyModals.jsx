@@ -506,7 +506,7 @@ export const LazyProposalsModal = ({ isOpen, ...props }) => {
 export const LazyMyProposalsView = ({ ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
     () => import('../../pages/MyProposalsView'),
-    [] // Cargar cuando se monte
+    [true] // Cargar inmediatamente
   );
   
   if (error) {
@@ -542,7 +542,7 @@ export const LazyMyProposalsView = ({ ...props }) => {
 export const LazyTerritoryDetailView = ({ ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
     () => import('../../pages/TerritoryDetailView'),
-    [] // Cargar cuando se monte
+    [true] // Cargar inmediatamente
   );
   
   if (error) {
@@ -578,7 +578,7 @@ export const LazyTerritoryDetailView = ({ ...props }) => {
 export const LazyTerritoriesView = ({ ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
     () => import('../../pages/TerritoriesView'),
-    [] // Cargar cuando se monte
+    [true] // Cargar inmediatamente
   );
   
   if (error) {
@@ -614,7 +614,7 @@ export const LazyTerritoriesView = ({ ...props }) => {
 export const LazyMyStudiesAndRevisitsView = ({ ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
     () => import('../../pages/MyStudiesAndRevisitsView'),
-    [] // Cargar cuando se monte
+    [true] // Cargar inmediatamente
   );
   
   if (error) {
