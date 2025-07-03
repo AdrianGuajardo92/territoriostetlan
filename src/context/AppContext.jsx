@@ -214,10 +214,9 @@ export const AppProvider = ({ children }) => {
         password: newPassword
       }));
       
-      
       return { success: true };
     } catch (error) {
-      console.error('❌ Error updating password:', error);
+      console.error('Error updating password:', error);
       return { success: false, error: error.message || 'Error al actualizar contraseña' };
     }
   };
@@ -1252,7 +1251,10 @@ export const AppProvider = ({ children }) => {
     handleResetUserPassword,
     
     // Sync functions
-    syncTerritoryStatus
+    syncTerritoryStatus,
+    
+    // Toast function
+    showToast
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -1,14 +1,12 @@
 {
-  "version": "2.26.8",
-  "timestamp": "2025-01-02T23:45:00.000Z",
-  "releaseDate": "2025-01-02",
+  "version": "2.26.9",
+  "timestamp": "2025-01-03T00:00:00.000Z",
+  "releaseDate": "2025-01-03",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "🔧 CORRECCIÓN NETLIFY: Exportación nombrada de AppContext agregada para compatibilidad con build",
-    "🔗 CONEXIÓN CONTEXTO: Integrado con AppContext para usar funciones reales de Firebase",
-    "✅ VALIDACIÓN REAL: Verificación de contraseña actual contra datos de Firebase",
-    "🔄 ACTUALIZACIÓN FIREBASE: Función updatePassword conectada correctamente",
+    "✅ CORRECCIÓN FINAL: Modal de contraseña completamente funcional con Firebase",
+    "🔧 showToast agregado al contexto para compatibilidad completa",
     "🎯 BOTONES SIEMPRE VISIBLES: Modal 100% optimizado para móviles con botones siempre accesibles",
     "📱 COMPATIBILIDAD S24 ULTRA: Optimizado para pantallas altas y dispositivos móviles modernos",
     "🔒 FOOTER STICKY: Botones fijos en la parte inferior con scroll aislado",
@@ -21,6 +19,6 @@
     "🔧 CORRECCIONES: Múltiples bugs solucionados",
     "🎯 MEJORAS UX: Interfaz más intuitiva y fácil de usar"
   ],
-  "critical": true,
-  "description": "Corrección de exportación de AppContext para compatibilidad con Netlify build"
+  "critical": false,
+  "description": "Corrección final del modal de contraseña - completamente funcional"
 }

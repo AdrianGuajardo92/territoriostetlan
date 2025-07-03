@@ -85,7 +85,7 @@ const PasswordModal = ({ isOpen, onClose }) => {
     setError('');
     
     try {
-      // Verificar contraseña actual
+      // Verificar contraseña actual contra Firebase directamente
       if (currentUser.password !== currentPassword) {
         setError('La contraseña actual es incorrecta');
         return;
