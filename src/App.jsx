@@ -12,7 +12,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 
 // CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
 import SearchModal from './components/modals/SearchModal';
-import PasswordModal from './components/modals/PasswordModal';
+import { LazyPasswordModal as PasswordModal } from './components/modals/LazyModals';
 import UpdatesModal from './components/modals/UpdatesModal';
 import InstallModal from './components/modals/InstallModal';
 
