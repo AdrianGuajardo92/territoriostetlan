@@ -111,7 +111,9 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "", ...prop
         'downloadCloud': 'DownloadCloud',
         'users-cog': 'Settings', // Mapear users-cog a Settings
         'times': 'X', // Mapear times a X
-        'tools': 'Wrench' // Mapear tools a Wrench
+        'tools': 'Wrench', // Mapear tools a Wrench
+        'refreshCw': 'RefreshCw', // Para el botón de actualización
+        'alertTriangle': 'AlertTriangle' // Para notificaciones críticas
     };
     
     const iconName = iconMap[name] || name;

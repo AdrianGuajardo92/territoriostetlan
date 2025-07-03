@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useAppUpdates } from '../../hooks/useAppUpdates';
 import Icon from './Icon';
 
 const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handleLogout }) => {
   const { currentUser, CURRENT_VERSION } = useApp();
+  const { checkForUpdates, isChecking } = useAppUpdates();
   const [hoveredItem, setHoveredItem] = useState(null);
   
   // Configuración de colores vibrantes para cada item del menú
@@ -259,6 +261,62 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
               
               {/* Separador elegante */}
               <div className="my-8 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+              
+              {/* Botón de actualización manual */}
+              <div className="mb-4">
+                <button
+                  onClick={() => {
+                    checkForUpdates();
+                    onClose();
+                  }}
+                  disabled={isChecking}
+                  className={`w-full group flex items-center p-4 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] relative overflow-hidden ${
+                    isChecking ? 'opacity-75 cursor-wait' : 'hover:shadow-lg'
+                  }`}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    minHeight: '70px'
+                  }}
+                >
+                  {/* Efecto de brillo en hover */}
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 opacity-0 group-hover:opacity-90 rounded-2xl transition-opacity duration-300"
+                    style={{ zIndex: -1 }}
+                  />
+                  
+                  {/* Contenedor del icono */}
+                  <div className="relative w-12 h-12 rounded-xl flex items-center justify-center mr-4 transition-all duration-300 bg-gray-200 group-hover:bg-white/20 backdrop-blur-sm shadow-lg">
+                    {isChecking ? (
+                      <div className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                    ) : (
+                      <Icon 
+                        name="refreshCw" 
+                        size={22} 
+                        className="text-gray-600 group-hover:text-white group-hover:scale-110 transition-all duration-300"
+                      />
+                    )}
+                  </div>
+                  
+                  {/* Contenido del texto */}
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="font-semibold text-sm transition-all duration-300 whitespace-nowrap text-gray-800 group-hover:text-white">
+                      {isChecking ? 'Verificando...' : 'Actualizar aplicación'}
+                    </p>
+                    <p className="text-sm mt-1 transition-all duration-300 whitespace-nowrap overflow-hidden text-ellipsis text-gray-600 group-hover:text-white/80">
+                      Buscar nuevas versiones
+                    </p>
+                  </div>
+                  
+                  {/* Flecha indicadora */}
+                  <Icon 
+                    name="chevronRight" 
+                    size={18} 
+                    className="flex-shrink-0 transition-all duration-300 text-gray-500 group-hover:text-white group-hover:transform group-hover:translate-x-1 group-hover:scale-110"
+                  />
+                </button>
+              </div>
               
               {/* Footer del menú */}
               <div className="px-2 pb-6">

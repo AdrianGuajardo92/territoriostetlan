@@ -14,45 +14,49 @@ Esto causaba que al cerrar el modal, se ejecutara `window.history.back()`, lo qu
 
 ## Solución Implementada
 
-### Cambios Realizados
+### Versión 1.0.0 (Corrección inicial)
+1. ✅ Eliminé el hook `useModalHistory` del modal del mapa
+2. ✅ Reemplacé todas las referencias a `closeModal` por `onClose`
+3. ✅ Ahora el modal se cierra directamente sin afectar la navegación
 
-1. **Eliminación del hook `useModalHistory`** en `MapModal.jsx`:
-   ```javascript
-   // ANTES
-   import { useModalHistory } from '../../hooks/useModalHistory';
-   const { closeModal } = useModalHistory(isOpen, onClose, modalId);
-   
-   // DESPUÉS
-   // Eliminado completamente
-   ```
+### Versión 1.0.1 (Mejoras adicionales)
+1. ✅ **Mejoré la visibilidad de los botones de cerrar**:
+   - Botón de flecha (izquierda): Ahora es más grande (24px), rojo, con fondo blanco y sombra
+   - Botón X (móvil): Más grande (22px), rojo, con fondo blanco y sombra
+   - Botón X flotante (desktop): Nuevo botón prominente en la esquina superior derecha
 
-2. **Reemplazo de `closeModal` por `onClose`**:
-   ```javascript
-   // ANTES
-   onClick={closeModal}
-   
-   // DESPUÉS
-   onClick={onClose}
-   ```
+2. ✅ **Agregué logs de depuración** para verificar el comportamiento del cierre
 
-### Archivos Modificados
-- `src/components/modals/MapModal.jsx`
+3. ✅ **Optimicé el contraste visual**:
+   - Botones con fondo blanco y borde gris
+   - Iconos en color rojo para mayor visibilidad
+   - Efectos hover en rojo claro
 
 ## Resultado
-Ahora cuando el usuario:
-1. **Abre el modal del mapa** desde la vista de territorios
-2. **Cierra el modal** (con X o botón volver)
-3. **Permanece en la vista de territorios** con todas las tarjetas de direcciones visibles
+Ahora cuando cierras el modal del mapa:
+- ✅ **Permanecen en la vista del territorio** (tarjetas de direcciones)
+- ✅ **Los botones de cerrar son más visibles** y fáciles de identificar
+- ✅ **No hay interferencia con la navegación** de la aplicación
+- ✅ **Experiencia de usuario mejorada** con botones más prominentes
 
-## Beneficios
-- ✅ **Navegación consistente**: El modal se comporta como un overlay simple
-- ✅ **Experiencia de usuario mejorada**: No se pierde el contexto del territorio
-- ✅ **Comportamiento predecible**: El usuario sabe exactamente dónde estará después de cerrar el modal
+## Archivos Modificados
+- `src/components/modals/MapModal.jsx` - Eliminación de useModalHistory y mejora de botones
+- `src/pages/TerritoryDetailView.jsx` - Logs de depuración para el cierre del modal
+- `package.json` - Versión actualizada a 1.0.1
+- `public/version.json` - Información de la nueva versión
+
+## Testing
+Para probar la corrección:
+1. Abrir un territorio
+2. Abrir el modal del mapa
+3. Cerrar el modal con la X o el botón de volver
+4. Verificar que permanezca en la vista del territorio
 
 ## Notas Técnicas
-- El hook `useModalHistory` sigue siendo útil para otros modales que requieren manejo especial del historial
-- El modal del mapa ahora usa el cierre directo sin interferir con la navegación de la aplicación
-- Se mantiene la funcionalidad completa del mapa (navegación, edición, etc.)
+- El modal del mapa ya no usa `useModalHistory` para evitar conflictos de navegación
+- Los botones de cerrar ahora tienen mejor contraste y visibilidad
+- Se agregaron logs para facilitar la depuración futura
+- La navegación se maneja correctamente sin interferir con el historial del navegador
 
 ## Fecha de Implementación
 - **Fecha**: Diciembre 2024

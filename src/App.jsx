@@ -5,6 +5,7 @@ import './utils/errorLogger'; // Inicializar el sistema de captura de errores
 import LoginView from './components/auth/LoginView';
 import MobileMenu from './components/common/MobileMenu';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import { UpdateNotification } from './components/common/UpdateNotification';
 
 // 🚀 PÁGINAS LAZY - CODE SPLITTING MÍTICO 100% ⚡
 import { 
@@ -51,6 +52,11 @@ function AppContent() {
   
   // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
   const [fontsLoaded, setFontsLoaded] = useState(false);
+  
+  // Detectar si la aplicación está instalada
+  const [isAppInstalled, setIsAppInstalled] = useState(
+    () => window.matchMedia('(display-mode: standalone)').matches
+  );
 
 
 
@@ -109,6 +115,15 @@ function AppContent() {
       window.location.reload();
     }
   };
+
+  // Detectar cambios en el estado de instalación de la app
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleChange = () => setIsAppInstalled(mediaQuery.matches);
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   // OPTIMIZACIÓN: Detectar cuando Inter font se carga para aplicar clase
   useEffect(() => {
@@ -324,12 +339,14 @@ function AppContent() {
     }
   ];
 
-  // Filtrar items según el rol
+  // Filtrar items según el rol y estado de instalación
   const filteredMenuItems = menuItems.filter(item => {
     if (item.id === 'admin' && currentUser?.role !== 'admin') return false;
     if (item.id === 'myProposals' && currentUser?.role === 'admin') return false;
     // Permitir "Mis Revisitas y Estudios" para todos los usuarios (incluyendo admin)
     if (item.adminOnly && currentUser?.role !== 'admin') return false; // Filtrar items solo para admin
+    // Ocultar botón de instalación si la app ya está instalada
+    if (item.id === 'install' && isAppInstalled) return false;
     return true;
   });
 
@@ -450,6 +467,8 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
 
+      {/* Sistema de Actualizaciones Automáticas */}
+      <UpdateNotification />
 
       {/* Vista principal */}
       {showMyStudiesAndRevisits ? (

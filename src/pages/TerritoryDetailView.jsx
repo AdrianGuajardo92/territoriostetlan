@@ -661,7 +661,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       {isMapModalOpen && (
         <MapModal
           isOpen={isMapModalOpen}
-          onClose={() => setIsMapModalOpen(false)}
+          onClose={() => {
+            console.log('🗺️ Cerrando modal del mapa - permaneciendo en territorio');
+            setIsMapModalOpen(false);
+          }}
           territory={territory}
           addresses={territoryAddresses}
           isAssignedToMe={isAssignedToMe}
