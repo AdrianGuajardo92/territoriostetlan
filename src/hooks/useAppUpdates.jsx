@@ -42,22 +42,30 @@ export const useAppUpdates = () => {
 
             // Comparar versiones
             if (versionData.version !== localVersion) {
-                setUpdateAvailable(true);
+                setUpdateAvailable(!versionData.silent); // Solo mostrar notificación si no es silenciosa
                 setForceUpdate(versionData.forceUpdate || false);
                 
-                // Mostrar notificación de actualización disponible
-                if (versionData.critical) {
-                    showToast(
-                        `🚨 ACTUALIZACIÓN CRÍTICA DISPONIBLE (v${versionData.version})`, 
-                        'error',
-                        0 // No se cierra automáticamente
-                    );
+                // Si es una actualización silenciosa, recargar automáticamente
+                if (versionData.silent) {
+                    console.log('🔄 Actualización silenciosa detectada, recargando aplicación...');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000); // Pequeño delay para evitar interrumpir al usuario
                 } else {
-                    showToast(
-                        `🔄 Nueva versión disponible (v${versionData.version})`, 
-                        'info',
-                        5000
-                    );
+                    // Mostrar notificación de actualización disponible solo si no es silenciosa
+                    if (versionData.critical) {
+                        showToast(
+                            `🚨 ACTUALIZACIÓN CRÍTICA DISPONIBLE (v${versionData.version})`, 
+                            'error',
+                            0 // No se cierra automáticamente
+                        );
+                    } else {
+                        showToast(
+                            `🔄 Nueva versión disponible (v${versionData.version})`, 
+                            'info',
+                            5000
+                        );
+                    }
                 }
             } else {
                 setUpdateAvailable(false);

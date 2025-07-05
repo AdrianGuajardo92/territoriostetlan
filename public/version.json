@@ -3,6 +3,7 @@
   "timestamp": "2025-01-03T05:15:00.000Z",
   "releaseDate": "2025-01-03",
   "forceUpdate": false,
+  "silent": true,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
     "🔄 SINCRONIZACIÓN TIEMPO REAL: Estado de territorios se actualiza inmediatamente al completar/liberar direcciones",
