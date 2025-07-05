@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { useApp } from '../../context/AppContext';
 
 const PasswordModal = ({ isOpen, onClose }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -11,7 +11,7 @@ const PasswordModal = ({ isOpen, onClose }) => {
   const [success, setSuccess] = useState(false);
   
   // Obtener contexto de la aplicación
-  const { currentUser, updatePassword, showToast } = useContext(AppContext);
+  const { currentUser, updatePassword, showToast } = useApp();
 
   // Bloquear scroll del body cuando el modal está abierto
   useEffect(() => {
