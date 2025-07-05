@@ -1,5 +1,5 @@
 {
-  "version": "2.29.0",
+  "version": "1.4.0",
   "buildDate": "2024-12-19",
   "features": [
     "Sistema completo de gestión de territorios",
@@ -11,25 +11,24 @@
     "PWA instalable",
     "Mis Revisitas y Estudios"
   ],
-  "timestamp": "2025-01-03T04:45:00.000Z",
+  "timestamp": "2025-01-03T05:15:00.000Z",
   "releaseDate": "2025-01-03",
   "forceUpdate": false,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "🔔 NOTIFICACIONES INMEDIATAS: Las notificaciones desaparecen al instante al entrar a Mis Propuestas",
-    "📱 CORRECCIÓN CRÍTICA: Error db.batch() resuelto con writeBatch de Firebase",
-    "✅ ACTUALIZACIÓN INMEDIATA: Estado local se actualiza antes que Firebase para experiencia fluida",
-    "🎯 LOGS DE DEPURACIÓN: Sistema de logs detallado para rastrear el proceso",
-    "⚡ MANEJO DE ERRORES: Toast notifications para errores de Firebase",
-    "🔄 SINCRONIZACIÓN MEJORADA: Actualización inmediata del contador userNotificationsCount",
-    "🎨 EXPERIENCIA FLUIDA: Notificaciones desaparecen sin esperar sincronización de red",
-    "🔧 IMPORTACIÓN CORREGIDA: writeBatch importado correctamente de firebase/firestore",
-    "📊 ESTADO LOCAL OPTIMIZADO: setProposals y setUserNotificationsCount actualizados inmediatamente",
-    "🆕 FUNCIONALIDADES MEJORADAS: markProposalsAsRead con actualización inmediata del estado",
-    "🎯 DEPURACIÓN MEJORADA: Logs detallados para identificar problemas",
-    "⚡ RENDIMIENTO OPTIMIZADO: Actualización local antes que Firebase",
-    "🔒 COMPATIBILIDAD TOTAL: Funciona offline con sincronización automática"
+    "🔄 SINCRONIZACIÓN TIEMPO REAL: Estado de territorios se actualiza inmediatamente al completar/liberar direcciones",
+    "🏷️ ETIQUETAS REACTIVAS: La etiqueta de estado ('Predicando'/'Completado') se actualiza en tiempo real",
+    "🎯 CORRECCIÓN CRÍTICA: Parámetros incorrectos en handleToggleAddressStatus corregidos",
+    "⚡ ACTUALIZACIÓN INMEDIATA: Tarjetas de territorio cambian de color instantáneamente",
+    "🔧 CONTEXTO REACTIVO: TerritoryDetailHeader conectado al estado del contexto",
+    "📊 ESTADO SINCRONIZADO: Eliminación de discrepancias entre UI y base de datos",
+    "🎨 EXPERIENCIA FLUIDA: No es necesario salir y volver a entrar para ver cambios",
+    "🔍 DEBUGGING LIMPIO: Logs de desarrollo removidos para producción",
+    "✅ FUNCIONALIDAD COMPLETA: Cambio de amarillo a rojo y viceversa funciona perfectamente",
+    "🚀 OPTIMIZACIÓN: Uso de useMemo para territorio reactivo",
+    "🔄 SINCRONIZACIÓN MEJORADA: syncTerritoryStatus ejecutándose correctamente",
+    "🎯 PARÁMETROS CORREGIDOS: AddressCard.jsx usando estado actual en lugar de opuesto"
   ],
   "critical": false,
-  "description": "Corrección crítica de notificaciones inmediatas - Error db.batch() resuelto y experiencia fluida"
+  "description": "Sincronización tiempo real de estado de territorios - Etiquetas y colores se actualizan instantáneamente"
 }

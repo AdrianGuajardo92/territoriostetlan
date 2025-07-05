@@ -451,6 +451,7 @@ export const AppProvider = ({ children }) => {
         showToast(message, 'info');
       }
       
+      
     } catch (error) {
       console.error("Error en syncTerritoryStatus:", error);
       showToast('Error al sincronizar estado del territorio', 'error');

@@ -15,31 +15,20 @@ export default defineConfig({
     port: 3001,
     strictPort: false, // Cambiar a false para permitir puertos alternativos
     open: true,
-    host: '0.0.0.0',  // Cambiar a 0.0.0.0 para mejor compatibilidad
-    // SOLUCIÓN MEJORADA: Configuración HMR más robusta
+    host: 'localhost',  // Cambiar a localhost para evitar problemas de red
+    // CONFIGURACIÓN HMR SIMPLIFICADA Y ESTABLE
     hmr: {
       overlay: false,
-      port: 3001,
-      host: 'localhost',
-      protocol: 'ws',
-      timeout: 30000,
-      clientPort: 3001
+      port: 3001
     },
-    // Configuraciones adicionales para estabilidad
+    // Configuraciones básicas para estabilidad
     cors: true,
-    force: true,
-    // Configuración para evitar problemas de red
-    network: {
-      host: '0.0.0.0'
-    },
-    // Configuraciones adicionales para WebSocket
+    // Configuración de watch simplificada
     watch: {
       usePolling: false,
-      interval: 1000
-    },
-    // Configuración para manejar reconexiones
-    middlewareMode: false
-    // https: true  // Comentado temporalmente
+      interval: 1000,
+      ignored: ['**/node_modules/**', '**/.git/**']
+    }
   },
   build: {
     outDir: 'dist',
@@ -85,9 +74,9 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // Eliminar console.logs en producción
+        drop_console: false, // MANTENER console.logs en desarrollo con debug
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.warn'], // Eliminar funciones específicas
+        pure_funcs: ['console.warn'], // Solo eliminar warnings
       },
       format: {
         comments: false // Sin comentarios en producción
@@ -107,12 +96,12 @@ export default defineConfig({
       'react-dom'
     ],
     // Pre-bundle dependencias pesadas
-    force: true
+    force: false // Cambiar a false para evitar re-optimizaciones constantes
   },
   
   define: {
     'process.env': {},
     // OPTIMIZACIÓN: Eliminar código de desarrollo
-    __DEV__: false
+    __DEV__: true // Cambiar a true para desarrollo
   }
 }) 
