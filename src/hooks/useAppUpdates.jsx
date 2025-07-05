@@ -11,7 +11,7 @@ export const useAppUpdates = () => {
 
     // Función para obtener la versión actual desde el package.json
     const getCurrentVersion = useCallback(() => {
-        return process.env.npm_package_version || '1.0.3';
+        return process.env.npm_package_version || '1.4.0'; // Actualizar versión por defecto
     }, []);
 
     // Función para verificar actualizaciones con cache busting
@@ -47,10 +47,20 @@ export const useAppUpdates = () => {
                 
                 // Si es una actualización silenciosa, recargar automáticamente
                 if (versionData.silent) {
-                    console.log('🔄 Actualización silenciosa detectada, recargando aplicación...');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000); // Pequeño delay para evitar interrumpir al usuario
+                    // Verificar si ya se intentó recargar para evitar bucle infinito
+                    const lastReloadAttempt = localStorage.getItem('lastSilentReload');
+                    const currentTime = Date.now();
+                    
+                    // Solo recargar si no se ha intentado en los últimos 30 segundos
+                    if (!lastReloadAttempt || (currentTime - parseInt(lastReloadAttempt)) > 30000) {
+                        console.log('🔄 Actualización silenciosa detectada, recargando aplicación...');
+                        localStorage.setItem('lastSilentReload', currentTime.toString());
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000); // Pequeño delay para evitar interrumpir al usuario
+                    } else {
+                        console.log('🔄 Recarga silenciosa ya intentada recientemente, evitando bucle infinito');
+                    }
                 } else {
                     // Mostrar notificación de actualización disponible solo si no es silenciosa
                     if (versionData.critical) {
