@@ -356,6 +356,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // 🔄 SYNC FUNCTIONS (declarar ANTES de handleToggleAddressStatus)
+  // 🔄 PASO 3: Modificada para manejar asignaciones múltiples
   const syncTerritoryStatus = async (territoryId, triggeredByVisited) => {
     try {
       const territoryAddressesQuery = query(
@@ -382,22 +383,34 @@ export const AppProvider = ({ children }) => {
       const territoryData = territoryDoc.data();
       const currentStatus = territoryData.status;
       
+      // 🔄 PASO 3: Usar helpers para manejar asignaciones múltiples
+      const assignedNames = getAssignedNames(territoryData.assignedTo);
+      const currentUserAssigned = isUserAssigned(territoryData.assignedTo, currentUser?.name);
+      
       if (allVisited && currentStatus === 'En uso') {
-        const completedBy = territoryData.assignedTo || currentUser?.name || 'Usuario';
+        // 🔄 PASO 3: Completado por equipo - usar primer nombre o usuario actual
+        const completedByName = currentUserAssigned 
+          ? currentUser?.name 
+          : assignedNames.length > 0 
+            ? assignedNames[0] 
+            : currentUser?.name || 'Usuario';
 
         await updateDoc(territoryRef, {
           status: 'Completado',
-          assignedTo: null,
-          assignedDate: null,
+          assignedTo: territoryData.assignedTo, // ✅ MANTENER ASIGNACIÓN ORIGINAL COMPLETA
           completedDate: serverTimestamp(),
-          completedBy: completedBy,
+          completedBy: completedByName,
           lastWorked: serverTimestamp()
         });
         
+        // 🔄 PASO 3: Historial con información de equipo
         await addDoc(collection(db, 'territoryHistory'), {
           territoryId: territoryId,
           territoryName: territoryData.name,
-          assignedTo: completedBy,
+          assignedTo: territoryData.assignedTo, // Valor original
+          assignedNames: assignedNames, // Array para reportes
+          completedBy: completedByName,
+          assignmentType: assignedNames.length > 1 ? 'multiple' : 'single',
           status: 'Completado Automáticamente',
           completedDate: serverTimestamp(),
           assignedDate: territoryData.assignedDate || serverTimestamp()
@@ -406,12 +419,15 @@ export const AppProvider = ({ children }) => {
         showToast(`🎉 ${territoryData.name} completado automáticamente`, 'success', 3000);
       } 
       else if (hasUnvisited && (currentStatus === 'Completado' || currentStatus === 'Terminado')) {
-        let newAssignee = currentUser?.name || 'Usuario';
+        // 🔄 PASO 3: Reactivación - mantener equipo original si admin, sino asignar a usuario actual
+        let newAssignee;
         
-        if (territoryData.assignedTo && 
-            territoryData.assignedTo !== currentUser?.name && 
-            currentUser?.role === 'admin') {
+        if (currentUser?.role === 'admin' && assignedNames.length > 0) {
+          // Admin: mantener asignación original (equipo completo)
           newAssignee = territoryData.assignedTo;
+        } else {
+          // Usuario normal: asignar solo a él
+          newAssignee = currentUser?.name || 'Usuario';
         }
 
         await updateDoc(territoryRef, {
@@ -423,25 +439,37 @@ export const AppProvider = ({ children }) => {
           lastWorked: serverTimestamp()
         });
         
+        // 🔄 PASO 3: Historial con información de reactivación
+        const newAssignedNames = getAssignedNames(newAssignee);
         await addDoc(collection(db, 'territoryHistory'), {
           territoryId: territoryId,
           territoryName: territoryData.name,
           assignedTo: newAssignee,
-          status: newAssignee === currentUser?.name ? 'Reactivado por desmarcación' : 'Reactivado - asignación mantenida',
+          assignedNames: newAssignedNames,
+          assignmentType: newAssignedNames.length > 1 ? 'multiple' : 'single',
+          status: currentUser?.role === 'admin' && assignedNames.length > 0 
+            ? 'Reactivado - asignación mantenida' 
+            : 'Reactivado por desmarcación',
           assignedDate: serverTimestamp(),
           previousStatus: currentStatus,
           reactivatedBy: currentUser?.name || 'Usuario',
           reason: `Dirección desmarcada por ${currentUser?.name || 'Usuario'}`
         });
 
-        // Evitar duplicación de "Territorio" en el nombre
+        // 🔄 PASO 3: Mensaje con nombres formateados
         const territoryDisplayName = territoryData.name.toLowerCase().startsWith('territorio') 
           ? territoryData.name 
           : territoryData.name;
+        
+        const formattedNewNames = newAssignedNames.length === 1 
+          ? newAssignedNames[0]
+          : newAssignedNames.length === 2 
+            ? `${newAssignedNames[0]} y ${newAssignedNames[1]}`
+            : `${newAssignedNames[0]}, ${newAssignedNames[1]} y ${newAssignedNames[2]}`;
           
-        const message = newAssignee === currentUser?.name 
-          ? `📍 ${territoryDisplayName} reasignado a ${currentUser?.name}`
-          : `📍 ${territoryDisplayName} reactivado - sigue asignado a ${newAssignee}`;
+        const message = currentUser?.role === 'admin' && assignedNames.length > 0
+          ? `📍 ${territoryDisplayName} reactivado - sigue asignado a ${formattedNewNames}`
+          : `📍 ${territoryDisplayName} reasignado a ${formattedNewNames}`;
         
         showToast(message, 'info');
       }
@@ -508,9 +536,26 @@ export const AppProvider = ({ children }) => {
   }, [addresses, currentUser]);
 
   // 🏢 TERRITORY FUNCTIONS  
-  const handleAssignTerritory = useCallback(async (territoryId, publisherName) => {
+  // 🔄 PASO 2: Modificada para soportar asignaciones múltiples
+  const handleAssignTerritory = useCallback(async (territoryId, assignedTo) => {
+    // 🔄 PASO 2: Normalizar entrada - puede ser string o array
+    const normalizedAssignedTo = normalizeAssignedTo(assignedTo);
+    const assignedNames = getAssignedNames(normalizedAssignedTo);
+    
+    // Validación: debe haber al menos 1 nombre válido
+    if (assignedNames.length === 0) {
+      showToast('Error: Debe asignar al menos una persona', 'error');
+      return;
+    }
+    
+    // Validación: máximo 3 personas
+    if (assignedNames.length > 3) {
+      showToast('Error: Máximo 3 personas por territorio', 'error');
+      return;
+    }
+    
     // Prevenir doble llamada con debouncing
-    const callKey = `assign_${territoryId}_${publisherName}`;
+    const callKey = `assign_${territoryId}_${assignedNames.join('_')}`;
     if (window.assignmentInProgress && window.assignmentInProgress.has(callKey)) {
       console.log('🚫 Llamada duplicada prevenida:', callKey);
       return;
@@ -523,32 +568,45 @@ export const AppProvider = ({ children }) => {
     try {
       // Verificar si es reasignación
       const territory = territories.find(t => t.id === territoryId);
-      const isReassignment = territory?.status === 'En uso' && territory?.assignedTo && territory.assignedTo !== publisherName;
+      const currentAssigned = getAssignedNames(territory?.assignedTo);
+      const isReassignment = territory?.status === 'En uso' && currentAssigned.length > 0;
+      
+      // 🔄 PASO 2: Guardar como array si son múltiples, string si es uno solo (compatibilidad)
+      const assignedToSave = assignedNames.length === 1 ? assignedNames[0] : assignedNames;
       
       await updateDoc(doc(db, 'territories', territoryId), {
         status: 'En uso',
-        assignedTo: publisherName,
+        assignedTo: assignedToSave,
         assignedDate: serverTimestamp(),
         lastWorked: serverTimestamp()
       });
 
+      // 🔄 PASO 2: Historial con información de equipo
       await addDoc(collection(db, 'territoryHistory'), {
         territoryId,
         territoryName: territory?.name || 'Desconocido',
-        assignedTo: publisherName,
+        assignedTo: assignedToSave,
+        assignedNames: assignedNames, // Agregar array para reportes
+        assignmentType: assignedNames.length > 1 ? 'multiple' : 'single',
         status: isReassignment ? 'Reasignado' : 'Asignado',
         assignedDate: serverTimestamp()
       });
 
-      // Evitar duplicación de "Territorio" en el nombre
+      // 🔄 PASO 2: Mensaje con nombres formateados
       const territoryName = territory?.name || territoryId;
       const displayName = territoryName.toLowerCase().startsWith('territorio') 
         ? territoryName 
         : `Territorio ${territoryName}`;
+      
+      const formattedNames = assignedNames.length === 1 
+        ? assignedNames[0]
+        : assignedNames.length === 2 
+          ? `${assignedNames[0]} y ${assignedNames[1]}`
+          : `${assignedNames[0]}, ${assignedNames[1]} y ${assignedNames[2]}`;
         
       const message = isReassignment 
-        ? `${displayName} reasignado a ${publisherName}`
-        : `${displayName} asignado a ${publisherName}`;
+        ? `${displayName} reasignado a ${formattedNames}`
+        : `${displayName} asignado a ${formattedNames}`;
       showToast(message, 'success');
     } catch (error) {
       console.error('Error assigning territory:', error);
@@ -562,6 +620,7 @@ export const AppProvider = ({ children }) => {
     }
   }, [territories]);
 
+  // 🔄 PASO 3: Modificada para manejar asignaciones múltiples
   const handleReturnTerritory = useCallback(async (territoryId) => {
     // Prevenir doble llamada con debouncing
     const callKey = `return_${territoryId}`;
@@ -576,6 +635,8 @@ export const AppProvider = ({ children }) => {
     
     try {
       const territory = territories.find(t => t.id === territoryId);
+      // 🔄 PASO 3: Obtener nombres asignados usando helper
+      const assignedNames = getAssignedNames(territory?.assignedTo);
       
       // 🔄 DESMARCAR TODAS LAS DIRECCIONES DEL TERRITORIO
       const addressesQuery = query(
@@ -600,23 +661,39 @@ export const AppProvider = ({ children }) => {
       // Ejecutar todas las actualizaciones en paralelo
       await Promise.all([territoryUpdate, ...addressUpdates]);
 
+      // 🔄 PASO 3: Historial con información de equipo
       if (territory) {
         await addDoc(collection(db, 'territoryHistory'), {
           territoryId,
           territoryName: territory.name,
-          assignedTo: territory.assignedTo,
+          assignedTo: territory.assignedTo, // Guardar valor original
+          assignedNames: assignedNames, // Array para reportes
+          returnedBy: currentUser?.name || 'Usuario', // Quien devolvió
+          assignmentType: assignedNames.length > 1 ? 'multiple' : 'single',
           status: 'Devuelto',
           assignedDate: serverTimestamp()
         });
       }
 
-      // Evitar duplicación de "Territorio" en el nombre
+      // 🔄 PASO 3: Mensaje con nombres formateados
       const territoryName = territory?.name || territoryId;
       const displayName = territoryName.toLowerCase().startsWith('territorio') 
         ? territoryName 
         : `Territorio ${territoryName}`;
+      
+      const formattedNames = assignedNames.length === 0 
+        ? 'territorio'
+        : assignedNames.length === 1 
+          ? assignedNames[0]
+          : assignedNames.length === 2 
+            ? `${assignedNames[0]} y ${assignedNames[1]}`
+            : `${assignedNames[0]}, ${assignedNames[1]} y ${assignedNames[2]}`;
         
-      showToast(`${displayName} devuelto y direcciones desmarcadas`, 'success');
+      const message = assignedNames.length === 0 
+        ? `${displayName} devuelto y direcciones desmarcadas`
+        : `${displayName} devuelto por ${formattedNames} y direcciones desmarcadas`;
+        
+      showToast(message, 'success');
     } catch (error) {
       console.error('Error returning territory:', error);
       showToast('Error al devolver territorio', 'error');
@@ -627,7 +704,7 @@ export const AppProvider = ({ children }) => {
         window.returnInProgress?.delete(callKey);
       }, 2000);
     }
-  }, [territories]);
+  }, [territories, currentUser]);
 
   const handleCompleteTerritory = useCallback(async (territoryId) => {
     // Prevenir doble llamada con debouncing
@@ -644,20 +721,35 @@ export const AppProvider = ({ children }) => {
     try {
       const territory = territories.find(t => t.id === territoryId);
       
+      // 🔄 MANTENER TODO EL EQUIPO: Conservar exactamente los mismos nombres asignados al completar
+      // Sin importar quién haga clic en "Completado", mantener la asignación original
+      
+
+      
       await updateDoc(doc(db, 'territories', territoryId), {
         status: 'Completado',
+        assignedTo: territory?.assignedTo, // ✅ MANTENER ASIGNACIÓN ORIGINAL COMPLETA
         completedDate: serverTimestamp(),
         completedBy: currentUser?.name || 'Usuario',
         lastWorked: serverTimestamp()
       });
+      
+
 
       if (territory) {
+        // 🔄 PASO 4: Usar helpers para manejar equipos en historial
+        const assignedNames = getAssignedNames(territory.assignedTo);
+        const isTeam = assignedNames.length > 1;
+        
         await addDoc(collection(db, 'territoryHistory'), {
           territoryId,
           territoryName: territory.name,
-          assignedTo: territory.assignedTo,
+          assignedTo: territory.assignedTo, // Mantener formato original
+          assignedNames, // ✅ NUEVO: Array de nombres para mejor procesamiento
+          assignmentType: isTeam ? 'team' : 'individual', // ✅ NUEVO: Tipo de asignación
           status: 'Completado',
           completedDate: serverTimestamp(),
+          completedBy: currentUser?.name || 'Usuario',
           assignedDate: territory.assignedDate || serverTimestamp()
         });
       }
@@ -952,10 +1044,14 @@ export const AppProvider = ({ children }) => {
         throw new Error('No puedes eliminar tu propio usuario');
       }
 
-      // Verificar si el usuario tiene territorios asignados
+      // 🔄 PASO 4: Verificar si el usuario tiene territorios asignados (incluyendo equipos)
       const userToDelete = users.find(u => u.id === userId);
       if (userToDelete) {
-        const assignedTerritories = territories.filter(t => t.assignedTo === userToDelete.name);
+        const assignedTerritories = territories.filter(t => {
+          // Usar helper para verificar si el usuario está asignado (individual o en equipo)
+          return isUserAssigned(t.assignedTo, userToDelete.name);
+        });
+        
         if (assignedTerritories.length > 0) {
           throw new Error(`No se puede eliminar: ${userToDelete.name} tiene ${assignedTerritories.length} territorio(s) asignado(s)`);
         }
@@ -992,7 +1088,8 @@ export const AppProvider = ({ children }) => {
         showToast('Error: No se encontró el territorio.', 'error');
         return;
       }
-      const territoryName = territoryDoc.data().name;
+      const territoryData = territoryDoc.data();
+      const territoryName = territoryData.name;
       
       // Evitar duplicación de "Territorio" en el nombre para la notificación de progreso
       const displayName = territoryName.toLowerCase().startsWith('territorio') 
@@ -1024,9 +1121,16 @@ export const AppProvider = ({ children }) => {
       });
       await Promise.all(batch);
       
+      // 🔄 PASO 4: Mejorar logging con información de equipos
+      const previousAssignedNames = getAssignedNames(territoryData.assignedTo);
+      const wasTeam = previousAssignedNames.length > 1;
+      
       await addDoc(collection(db, 'territoryHistory'), {
         territoryId: territoryId,
         territoryName: territoryName,
+        previousAssignedTo: territoryData.assignedTo, // ✅ NUEVO: Guardar asignación anterior
+        previousAssignedNames, // ✅ NUEVO: Array de nombres anteriores
+        previousAssignmentType: wasTeam ? 'team' : 'individual', // ✅ NUEVO: Tipo anterior
         status: 'Reiniciado (Admin)',
         assignedDate: serverTimestamp(),
         assignedTo: currentUser?.name || 'Admin'
@@ -1074,10 +1178,13 @@ export const AppProvider = ({ children }) => {
 
       await Promise.all(batchPromises);
 
+      // 🔄 PASO 4: Mejorar logging del reinicio general
       await addDoc(collection(db, 'territoryHistory'), {
         status: 'Reinicio General',
         assignedDate: serverTimestamp(),
-        assignedTo: currentUser?.name || 'Admin'
+        assignedTo: currentUser?.name || 'Admin',
+        resetBy: currentUser?.name || 'Admin', // ✅ NUEVO: Quién hizo el reinicio
+        resetType: 'general' // ✅ NUEVO: Tipo de reinicio
       });
 
       showToast('¡Reinicio completado! Todos los territorios y direcciones han sido restaurados.', 'success');
@@ -1087,6 +1194,24 @@ export const AppProvider = ({ children }) => {
       throw error;
     }
   };
+
+  // 🔄 PASO 1: Funciones helper para asignaciones múltiples (MEMOIZADAS)
+  const normalizeAssignedTo = useCallback((assignedTo) => {
+    if (!assignedTo) return [];
+    if (Array.isArray(assignedTo)) return assignedTo;
+    return [assignedTo];
+  }, []);
+
+  const getAssignedNames = useCallback((assignedTo) => {
+    const normalized = normalizeAssignedTo(assignedTo);
+    return normalized.filter(name => name && name.trim() !== '');
+  }, [normalizeAssignedTo]);
+
+  const isUserAssigned = useCallback((assignedTo, userName) => {
+    if (!userName) return false;
+    const names = getAssignedNames(assignedTo);
+    return names.includes(userName);
+  }, [getAssignedNames]);
 
   // 📋 Cargar versión al iniciar la aplicación
   useEffect(() => {
@@ -1281,14 +1406,26 @@ export const AppProvider = ({ children }) => {
     }
   }, [proposals, currentUser, getUnreadProposalsCount, getPendingProposalsCount]);
 
-  // 📊 CALCULAR TERRITORIOS CON CONTEO DE DIRECCIONES
+  // 📊 CALCULAR TERRITORIOS CON CONTEO DE DIRECCIONES (OPTIMIZADO)
   const territoriesWithCount = useMemo(() => {
+    // 🚀 PASO 15: Crear mapa de direcciones por territorio para mejor rendimiento
+    const addressesByTerritory = addresses.reduce((acc, addr) => {
+      if (!acc[addr.territoryId]) {
+        acc[addr.territoryId] = { total: 0, visited: 0 };
+      }
+      acc[addr.territoryId].total++;
+      if (addr.isVisited) {
+        acc[addr.territoryId].visited++;
+      }
+      return acc;
+    }, {});
+
     return territories.map(territory => {
-      const territoryAddresses = addresses.filter(addr => addr.territoryId === territory.id);
+      const counts = addressesByTerritory[territory.id] || { total: 0, visited: 0 };
       return {
         ...territory,
-        addressCount: territoryAddresses.length,
-        visitedCount: territoryAddresses.filter(addr => addr.isVisited).length
+        addressCount: counts.total,
+        visitedCount: counts.visited
       };
     });
   }, [territories, addresses]);
@@ -1362,5 +1499,4 @@ export const AppProvider = ({ children }) => {
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-export { AppContext };
 export default AppContext; 

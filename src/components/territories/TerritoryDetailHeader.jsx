@@ -2,6 +2,32 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { usePremiumFeedback } from '../../hooks/usePremiumFeedback';
 import { useApp } from '../../context/AppContext';
 
+// 🔄 PASO 11: Funciones helper para asignaciones múltiples
+const normalizeAssignedTo = (assignedTo) => {
+  if (!assignedTo) return [];
+  if (Array.isArray(assignedTo)) return assignedTo;
+  return [assignedTo];
+};
+
+const getAssignedNames = (assignedTo) => {
+  const normalized = normalizeAssignedTo(assignedTo);
+  return normalized.filter(name => name && name.trim() !== '');
+};
+
+const formatTeamNames = (names, isMobile = false) => {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  
+  if (isMobile && names.length > 1) {
+    const firstNames = names.map(name => name.split(' ')[0]);
+    if (firstNames.length === 2) return `${firstNames[0]} y ${firstNames[1]}`;
+    return `${firstNames.slice(0, -1).join(', ')} y ${firstNames[firstNames.length - 1]}`;
+  }
+  
+  if (names.length === 2) return `${names[0]} y ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
+};
+
 const TerritoryDetailHeader = ({
   territory,
   stats,
@@ -13,6 +39,7 @@ const TerritoryDetailHeader = ({
   onComplete,
   onAddAddress,
   isAssignedToMe,
+  assignedTeamInfo, // 🔄 PASO 11: Información del equipo
   sortControls,
   viewControls,
   onOpenMapModal,
@@ -38,6 +65,23 @@ const TerritoryDetailHeader = ({
   
   // Normalizar el estado para manejar "Terminado" como "Completado"
   const normalizedStatus = currentTerritory.status === 'Terminado' ? 'Completado' : currentTerritory.status;
+  
+  // 🔄 PASO 11: Información del equipo asignado - Ahora recibida como prop
+  // const assignedTeamInfo = useMemo(() => {
+  //   if (!currentTerritory.assignedTo) return null;
+  //   
+  //   const names = getAssignedNames(currentTerritory.assignedTo);
+  //   const isTeam = names.length > 1;
+  //   const isMobile = window.innerWidth < 640;
+  //   
+  //   return {
+  //     names,
+  //     isTeam,
+  //     count: names.length,
+  //     displayName: formatTeamNames(names, isMobile),
+  //     fullDisplayName: formatTeamNames(names, false)
+  //   };
+  // }, [currentTerritory.assignedTo]);
 
   // Cerrar menús al hacer clic fuera
   useEffect(() => {
@@ -431,6 +475,8 @@ const TerritoryDetailHeader = ({
               </span>
             </div>
             
+
+
             {/* Indicador de modo administrador activo */}
             {isAdmin && adminEditMode && (
               <div className="bg-orange-500/90 px-3 py-1 rounded-lg flex items-center space-x-2 animate-pulse">

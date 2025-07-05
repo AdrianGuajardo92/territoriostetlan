@@ -5,7 +5,7 @@ import './utils/errorLogger'; // Inicializar el sistema de captura de errores
 import LoginView from './components/auth/LoginView';
 import MobileMenu from './components/common/MobileMenu';
 import LoadingSpinner from './components/common/LoadingSpinner';
-import { UpdateNotification } from './components/common/UpdateNotification';
+// import { UpdateNotification } from './components/common/UpdateNotification'; // 🔧 TEMPORALMENTE DESACTIVADO
 
 // 🚀 PÁGINAS LAZY - CODE SPLITTING MÍTICO 100% ⚡
 import { 
@@ -60,46 +60,47 @@ function AppContent() {
 
 
 
+  // 🔧 TEMPORALMENTE DESACTIVADO PARA TESTING
   // Sistema de Service Worker ESTABLE - Sin bucles
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      const registerSW = async () => {
-        try {
+  // useEffect(() => {
+  //   if ('serviceWorker' in navigator) {
+  //     const registerSW = async () => {
+  //       try {
     
           
-          const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/',
-            updateViaCache: 'none'
-          });
+  //         const registration = await navigator.serviceWorker.register('/sw.js', {
+  //           scope: '/',
+  //           updateViaCache: 'none'
+  //         });
           
           
           
-          // Solo escuchar updatefound, sin forzar actualizaciones
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
+  //         // Solo escuchar updatefound, sin forzar actualizaciones
+  //         registration.addEventListener('updatefound', () => {
+  //           const newWorker = registration.installing;
             
             
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('✨ SW: Nueva versión lista');
-                showToast('Nueva versión disponible. Recarga para actualizar.', 'info', { duration: 10000 });
-              }
-            });
-          });
+  //           newWorker.addEventListener('statechange', () => {
+  //             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+  //               console.log('✨ SW: Nueva versión lista');
+  //               showToast('Nueva versión disponible. Recarga para actualizar.', 'info', { duration: 10000 });
+  //             }
+  //           });
+  //         });
           
-        } catch (error) {
-          console.error('❌ SW: Error en registro:', error);
-        }
-      };
+  //       } catch (error) {
+  //         console.error('❌ SW: Error en registro:', error);
+  //       }
+  //     };
 
-      // Registrar solo una vez cuando la página esté cargada
-      if (document.readyState === 'complete') {
-      registerSW();
-      } else {
-        window.addEventListener('load', registerSW, { once: true });
-      }
-    }
-  }, [showToast]);
+  //     // Registrar solo una vez cuando la página esté cargada
+  //     if (document.readyState === 'complete') {
+  //     registerSW();
+  //     } else {
+  //       window.addEventListener('load', registerSW, { once: true });
+  //     }
+  //   }
+  // }, [showToast]);
 
   // Función simplificada para limpiar cache
   const handleClearCache = () => {
@@ -468,7 +469,7 @@ function AppContent() {
     <div className="min-h-screen bg-gray-50">
 
       {/* Sistema de Actualizaciones Automáticas */}
-      <UpdateNotification />
+      {/* <UpdateNotification /> */} {/* 🔧 TEMPORALMENTE DESACTIVADO PARA TESTING */}
 
       {/* Vista principal */}
       {showMyStudiesAndRevisits ? (

@@ -12,11 +12,11 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:930008027118:web:236a36e1ded5e1555c08ff"
 };
 
-// Log para diagnóstico (se puede eliminar después)
-console.log('🔧 Configuración Firebase cargada:');
-console.log('Project ID:', firebaseConfig.projectId);
-console.log('Auth Domain:', firebaseConfig.authDomain);
-console.log('Usando variables de entorno:', !!import.meta.env.VITE_FIREBASE_PROJECT_ID);
+// Log para diagnóstico (DESACTIVADO EN PRODUCCIÓN)
+// console.log('🔧 Configuración Firebase cargada:');
+// console.log('Project ID:', firebaseConfig.projectId);
+// console.log('Auth Domain:', firebaseConfig.authDomain);
+// console.log('Usando variables de entorno:', !!import.meta.env.VITE_FIREBASE_PROJECT_ID);
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);

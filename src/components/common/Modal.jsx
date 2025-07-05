@@ -54,32 +54,37 @@ const Modal = ({
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
     '2xl': 'max-w-6xl',
-    full: 'w-full h-full max-w-none'
+    full: 'w-full h-full max-w-none',
+    // Opción B: Pantalla completa en móviles, más grande en desktop
+    'responsive-large': 'w-full h-full max-w-none sm:max-w-5xl sm:max-h-[90vh] sm:h-auto'
   };
 
   // Configuración especial para modal full screen
   const isFullScreen = size === 'full';
+  const isResponsiveLarge = size === 'responsive-large';
 
   return (
     <>
       {/* Backdrop con animación suave */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity modal-backdrop"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] transition-opacity modal-backdrop"
         onClick={closeOnBackdrop ? handleClose : undefined}
       />
       
       {/* Modal con animación Fade + Scale */}
-      <div className={`fixed inset-0 z-50 ${isFullScreen ? '' : 'flex items-center justify-center p-4'} pointer-events-none`}>
+      <div className={`fixed inset-0 z-[9999] ${isFullScreen ? '' : isResponsiveLarge ? 'p-0 sm:flex sm:items-center sm:justify-center sm:p-4' : 'flex items-center justify-center p-4'} pointer-events-none`}>
         <div className={`
           bg-white shadow-2xl w-full transform pointer-events-auto modal-fade-scale
           ${isFullScreen 
             ? 'h-full w-full rounded-none' 
-            : `${sizeClasses[size]} rounded-3xl max-h-[85vh] sm:max-h-[90vh]`
+            : isResponsiveLarge 
+              ? 'h-full w-full rounded-none sm:rounded-3xl sm:max-h-[90vh] sm:h-auto sm:max-w-5xl'
+              : `${sizeClasses[size]} rounded-3xl max-h-[85vh] sm:max-h-[90vh]`
           } 
           flex flex-col
         `}>
           {/* Header - Solo para modales no full screen o con título explícito */}
-          {(title || showCloseButton) && !isFullScreen && (
+          {(title || showCloseButton) && !isFullScreen && !isResponsiveLarge && (
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               {title && (
                 <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
@@ -97,7 +102,7 @@ const Modal = ({
           )}
           
           {/* Content */}
-          <div className={`flex-1 ${isFullScreen ? 'h-full' : 'overflow-hidden'}`}>
+          <div className={`flex-1 ${isFullScreen || isResponsiveLarge ? 'h-full' : 'overflow-hidden'}`}>
             {children}
           </div>
         </div>

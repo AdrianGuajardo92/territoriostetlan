@@ -7,6 +7,24 @@ import Icon from '../components/common/Icon';
 import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
 
+// 🔄 PASO 10: Funciones helper para asignaciones múltiples
+const normalizeAssignedTo = (assignedTo) => {
+  if (!assignedTo) return [];
+  if (Array.isArray(assignedTo)) return assignedTo;
+  return [assignedTo];
+};
+
+const getAssignedNames = (assignedTo) => {
+  const normalized = normalizeAssignedTo(assignedTo);
+  return normalized.filter(name => name && name.trim() !== '');
+};
+
+const isUserAssigned = (assignedTo, userName) => {
+  if (!userName) return false;
+  const names = getAssignedNames(assignedTo);
+  return names.includes(userName);
+};
+
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const { 
     territories, 
@@ -19,7 +37,10 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   } = useApp();
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('name');
+
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  
+  // Estados simplificados - filtros avanzados removidos
   
   // OPTIMIZACIÓN FASE 2: Refs para scroll performance ⚡
   const containerRef = useRef(null);
@@ -30,13 +51,13 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
 
 
 
-  // Filtrar y ordenar territorios
+  // 🔄 PASO 10: Filtrar y ordenar territorios con soporte para equipos
   const filteredAndSortedTerritories = useMemo(() => {
     let filtered = territories;
 
-    // Aplicar filtro de estado
+    // 🔄 PASO 10: Aplicar filtro de estado
     if (filterStatus !== 'all') {
-      filtered = territories.filter(t => {
+      filtered = filtered.filter(t => {
         if (filterStatus === 'disponible') return t.status === 'Disponible';
         if (filterStatus === 'en uso') return t.status === 'En uso';
         if (filterStatus === 'completado') return t.status === 'Completado' || t.status === 'Terminado';
@@ -44,20 +65,23 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       });
     }
 
+
+
     // Ordenar
     const sorted = [...filtered].sort((a, b) => {
-      // Si está filtrando "en uso", priorizar los míos
+      // 🔄 CORRECCIÓN: Si está filtrando "en uso", priorizar los míos (sin cambiar orden por equipos)
       if (filterStatus === 'en uso') {
-        const isAMine = a.assignedTo === currentUser.name;
-        const isBMine = b.assignedTo === currentUser.name;
+        const isAMine = isUserAssigned(a.assignedTo, currentUser?.name);
+        const isBMine = isUserAssigned(b.assignedTo, currentUser?.name);
         if (isAMine && !isBMine) return -1;
         if (!isAMine && isBMine) return 1;
       }
 
-      // Ordenamiento normal
+      // 🔄 CORRECCIÓN: Ordenamiento estático por nombre (sin priorizar equipos)
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name, undefined, { numeric: true });
       }
+      
       if (sortBy === 'status') {
         const statusOrder = { 'En uso': 1, 'Disponible': 2, 'Completado': 3 };
         return (statusOrder[a.status] || 4) - (statusOrder[b.status] || 4);
@@ -76,9 +100,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     completed: territories.filter(t => t.status === 'Completado' || t.status === 'Terminado').length,
   }), [territories]);
 
-  const userHasAssignedTerritories = useMemo(() => {
-    return territories.some(t => t.status === 'En uso' && t.assignedTo === currentUser?.name);
-  }, [territories, currentUser?.name]);
+
   
   // OPTIMIZACIÓN: Memoizar handlers para evitar re-renders ⚡
   const handleFilterChange = useCallback((newFilter) => {
@@ -89,6 +111,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     setSortBy(newSort);
   }, []);
   
+  // Limpiar filtros
   const handleClearFilters = useCallback(() => {
     setFilterStatus('all');
   }, []);
@@ -155,9 +178,14 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       {/* Header */}
       <header className="shadow-md sticky top-0 z-30">
         <div className="px-4 pt-2 pb-2 flex justify-between items-center" style={{ backgroundColor: '#2C3E50' }}>
-          <h1 className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>
-            Territorios
-          </h1>
+          <div className="flex items-center space-x-3">
+            <h1 className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>
+              Territorios
+            </h1>
+            
+
+          </div>
+          
           <button 
             onClick={onOpenMenu} 
             className="relative p-3 rounded-xl shadow-md transition-all duration-200" 
@@ -192,7 +220,6 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             filterStatus={filterStatus}
             setFilterStatus={handleFilterChange}
             stats={stats}
-            userHasAssignedTerritories={userHasAssignedTerritories}
           />
           
           {/* FASE 3: Indicador sutil de swipe navigation */}
@@ -204,6 +231,8 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             </div>
           </div>
         </div>
+        
+
       </header>
 
 
@@ -247,7 +276,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
           <div className="text-center py-16">
             <Icon name="mapPin" size={48} className="mx-auto mb-4 text-gray-300" />
             <p className="text-gray-500 font-medium text-lg">
-              {filterStatus !== 'all' 
+              {filterStatus !== 'all'
                 ? 'No se encontraron territorios con los filtros aplicados' 
                 : 'No hay territorios registrados'}
             </p>

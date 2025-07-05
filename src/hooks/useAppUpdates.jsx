@@ -62,20 +62,21 @@ export const useAppUpdates = () => {
                         console.log('🔄 Recarga silenciosa ya intentada recientemente, evitando bucle infinito');
                     }
                 } else {
+                    // 🔇 NOTIFICACIONES DE ACTUALIZACIÓN DESACTIVADAS
                     // Mostrar notificación de actualización disponible solo si no es silenciosa
-                    if (versionData.critical) {
-                        showToast(
-                            `🚨 ACTUALIZACIÓN CRÍTICA DISPONIBLE (v${versionData.version})`, 
-                            'error',
-                            0 // No se cierra automáticamente
-                        );
-                    } else {
-                        showToast(
-                            `🔄 Nueva versión disponible (v${versionData.version})`, 
-                            'info',
-                            5000
-                        );
-                    }
+                    // if (versionData.critical) {
+                    //     showToast(
+                    //         `🚨 ACTUALIZACIÓN CRÍTICA DISPONIBLE (v${versionData.version})`, 
+                    //         'error',
+                    //         0 // No se cierra automáticamente
+                    //     );
+                    // } else {
+                    //     showToast(
+                    //         `🔄 Nueva versión disponible (v${versionData.version})`, 
+                    //         'info',
+                    //         5000
+                    //     );
+                    // }
                 }
             } else {
                 setUpdateAvailable(false);
@@ -111,41 +112,41 @@ export const useAppUpdates = () => {
 
     // Función para actualizar suavemente
     const softUpdate = useCallback(() => {
-        showToast('🔄 Actualizando aplicación...', 'info', 2000);
+        // 🔇 NOTIFICACIÓN DE ACTUALIZACIÓN DESACTIVADA
+        // showToast('🔄 Actualizando aplicación...', 'info', 2000);
         
-        // Pequeño delay para que el usuario vea el mensaje
-        setTimeout(() => {
-            window.location.reload();
-        }, 1000);
-    }, [showToast]);
+        // Recargar directamente sin notificación
+        window.location.reload();
+    }, []);
 
+    // 🔇 VERIFICACIONES AUTOMÁTICAS DE ACTUALIZACIÓN DESACTIVADAS
     // Verificar actualizaciones al cargar la app
-    useEffect(() => {
-        checkForUpdates();
-    }, [checkForUpdates]);
+    // useEffect(() => {
+    //     checkForUpdates();
+    // }, [checkForUpdates]);
 
     // Verificar actualizaciones periódicamente (cada 5 minutos)
-    useEffect(() => {
-        const interval = setInterval(() => {
-            checkForUpdates();
-        }, 5 * 60 * 1000); // 5 minutos
+    // useEffect(() => {
+    //     const interval = setInterval(() => {
+    //         checkForUpdates();
+    //     }, 5 * 60 * 1000); // 5 minutos
 
-        return () => clearInterval(interval);
-    }, [checkForUpdates]);
+    //     return () => clearInterval(interval);
+    // }, [checkForUpdates]);
 
     // Verificar actualizaciones cuando la app vuelve a estar visible
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (!document.hidden) {
-                checkForUpdates();
-            }
-        };
+    // useEffect(() => {
+    //     const handleVisibilityChange = () => {
+    //         if (!document.hidden) {
+    //             checkForUpdates();
+    //         }
+    //     };
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, [checkForUpdates]);
+    //     document.addEventListener('visibilitychange', handleVisibilityChange);
+    //     return () => {
+    //         document.removeEventListener('visibilitychange', handleVisibilityChange);
+    //     };
+    // }, [checkForUpdates]);
 
     return {
         currentVersion,

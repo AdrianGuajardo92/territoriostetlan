@@ -2,8 +2,54 @@ import React, { memo, useMemo, useCallback } from 'react';
 import Icon from '../common/Icon';
 import { formatRelativeTime } from '../../utils/helpers';
 
+// 🔄 PASO 9: Funciones helper para asignaciones múltiples
+const normalizeAssignedTo = (assignedTo) => {
+  if (!assignedTo) return [];
+  if (Array.isArray(assignedTo)) return assignedTo;
+  return [assignedTo];
+};
+
+const getAssignedNames = (assignedTo) => {
+  const normalized = normalizeAssignedTo(assignedTo);
+  return normalized.filter(name => name && name.trim() !== '');
+};
+
+const formatTeamNames = (names, isMobile = false) => {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  
+  // 🔄 MEJORA: Lógica de abreviación inteligente
+  if (names.length === 2) {
+    // Para 2 personas: Nombre + inicial del apellido (ej: "Adrian G. y Fabiola G.")
+    const abbreviatedNames = names.map(name => {
+      const parts = name.trim().split(' ');
+      if (parts.length >= 2) {
+        const firstName = parts[0];
+        const lastNameInitial = parts[1].charAt(0).toUpperCase();
+        return `${firstName} ${lastNameInitial}.`;
+      }
+      return parts[0]; // Si solo tiene un nombre
+    });
+    return `${abbreviatedNames[0]} y ${abbreviatedNames[1]}`;
+  }
+  
+  // Para 3+ personas: usar abreviación (solo primeros nombres)
+  if (names.length >= 3) {
+    const firstNames = names.map(name => name.split(' ')[0]); // Solo primeros nombres
+    return `${firstNames.slice(0, -1).join(', ')} y ${firstNames[firstNames.length - 1]}`;
+  }
+  
+  // Fallback (no debería llegar aquí)
+  return names.join(', ');
+};
+
 // OPTIMIZACIÓN FASE 2: TerritoryCard memoizada para evitar re-renders ⚡
 const TerritoryCard = memo(({ territory, onSelect }) => {
+  // 🔄 PASO 15: Memoizar detectores de estado para evitar recálculos
+  const isMobile = useMemo(() => {
+    return window.innerWidth < 640; // sm breakpoint
+  }, []); // Solo calcular una vez, no depender de window resize
+
   // OPTIMIZACIÓN: Memoizar normalización de estado ⚡
   const normalizedStatus = useMemo(() => 
     territory.status === 'Terminado' ? 'Completado' : territory.status, 
@@ -81,15 +127,37 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
     [statusConfig, normalizedStatus]
   );
 
-  // OPTIMIZACIÓN: Memoizar persona responsable ⚡
-  const responsiblePerson = useMemo(() => {
+  // 🔄 PASO 15: Memoizar persona responsable con soporte para equipos ⚡
+  const responsibleInfo = useMemo(() => {
+    let assignedTo = null;
+    let isTeam = false;
+    
+    // ✅ CORREGIDO: Para territorios completados, usar assignedTo (todo el equipo)
+    // Si assignedTo es null/undefined (territorios completados antes del cambio), usar completedBy como fallback
     if (normalizedStatus === 'Completado') {
-      return territory.completedBy || territory.terminadoPor || territory.assignedTo || 'No especificado';
+      if (territory.assignedTo && territory.assignedTo !== null) {
+        assignedTo = territory.assignedTo; // Usar equipo completo (territorios nuevos)
+      } else {
+        assignedTo = territory.completedBy || territory.terminadoPor || 'No especificado'; // Fallback para territorios antiguos
+      }
     } else if (normalizedStatus === 'En uso') {
-      return territory.assignedTo;
+      assignedTo = territory.assignedTo;
     }
+    
+    if (assignedTo) {
+      const names = getAssignedNames(assignedTo);
+      isTeam = names.length > 1;
+      return {
+        displayName: formatTeamNames(names, isMobile),
+        fullDisplayName: formatTeamNames(names, false), // Siempre formato completo para tooltip
+        names: names,
+        isTeam: isTeam,
+        count: names.length
+      };
+    }
+    
     return null;
-  }, [normalizedStatus, territory.completedBy, territory.terminadoPor, territory.assignedTo]);
+  }, [normalizedStatus, territory.completedBy, territory.terminadoPor, territory.assignedTo, isMobile]);
 
   // OPTIMIZACIÓN: Memoizar fecha relevante ⚡
   const relevantDate = useMemo(() => {
@@ -153,20 +221,23 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
             </div>
           )}
           
-          {/* Estado badge compacto */}
-          <div className={`${config.statusBg} px-3 py-1 rounded-full flex items-center space-x-1.5 shadow-sm`}>
-            <div className={`w-2 h-2 rounded-full ${config.statusDot} ${normalizedStatus === 'En uso' ? 'animate-pulse' : ''}`}></div>
-            <span className={`text-xs font-medium ${config.statusText}`}>
-              {normalizedStatus === 'En uso' ? 'Predicando' : normalizedStatus}
-            </span>
+          {/* 🔄 PASO 9: Estado badge sin indicador de equipo */}
+          <div className="flex items-center space-x-2">
+            {/* Estado badge compacto */}
+            <div className={`${config.statusBg} px-3 py-1 rounded-full flex items-center space-x-1.5 shadow-sm`}>
+              <div className={`w-2 h-2 rounded-full ${config.statusDot} ${normalizedStatus === 'En uso' ? 'animate-pulse' : ''}`}></div>
+              <span className={`text-xs font-medium ${config.statusText}`}>
+                {normalizedStatus === 'En uso' ? 'Predicando' : normalizedStatus}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Contenido principal */}
       <div className="px-4 py-3 space-y-2">
-        {/* Persona responsable */}
-        {responsiblePerson && (
+        {/* 🔄 PASO 9: Persona responsable con soporte para equipos */}
+        {responsibleInfo && (
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 flex-1 min-w-0">
               <Icon 
@@ -175,12 +246,24 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
                 className="text-gray-400 flex-shrink-0"
               />
               <span className="text-sm text-gray-600 truncate">
-                {normalizedStatus === 'Completado' ? 'Completado por' : 'Asignado a'}:
+                {normalizedStatus === 'Completado' 
+                  ? 'Completado por'
+                  : 'Asignado a'
+                }:
               </span>
             </div>
-            <span className={`${config.badgeBg} ${config.badgeText} px-3 py-1 rounded-full text-sm font-medium ml-2 shadow-sm`}>
-              {responsiblePerson}
-            </span>
+            
+            <div className="flex items-center space-x-2 ml-2">
+              {/* 🔄 PASO 9: Badge principal con nombres y tooltip */}
+              <span 
+                className={`${config.badgeBg} ${config.badgeText} px-3 py-1 rounded-full text-sm font-medium shadow-sm`}
+                title={responsibleInfo.isTeam && isMobile ? responsibleInfo.fullDisplayName : undefined}
+              >
+                {responsibleInfo.displayName}
+              </span>
+              
+
+            </div>
           </div>
         )}
 

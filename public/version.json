@@ -1,24 +1,37 @@
 {
-  "version": "1.5.0",
-  "timestamp": "2024-12-19T12:30:00.000Z",
+  "version": "1.0.1",
+  "buildDate": "2024-12-19",
+  "features": [
+    "Sistema completo de gestión de territorios",
+    "Navegación con Google Maps",
+    "Sistema de propuestas para usuarios",
+    "Panel administrativo completo",
+    "Sistema de backup de datos",
+    "Optimización de rutas",
+    "Modo offline",
+    "PWA instalable",
+    "Mis Revisitas y Estudios",
+    "Sistema de asignaciones múltiples (equipos)"
+  ],
+  "timestamp": "2024-12-19T20:45:00.000Z",
   "releaseDate": "2024-12-19",
   "forceUpdate": false,
-  "silent": false,
+  "silent": true,
   "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "💾 NUEVO: Sistema de backup completo en panel de administración",
-    "📁 BACKUP DIRECCIONES: Exportar solo territorios y direcciones",
-    "🗄️ BACKUP COMPLETO: Exportar todos los datos del sistema (usuarios, propuestas, etc.)",
-    "✅ CORRECCIÓN: Propuestas ahora muestran 'Aprobada por:' y 'Rechazada por:' con nombres reales",
-    "🔧 CORRECCIÓN: Error 'db.batch is not a function' en eliminación de propuestas solucionado",
-    "📝 MEJORA: Historial de propuestas con información clara del procesamiento",
-    "🚀 OPTIMIZACIÓN: Eliminación de recargas infinitas en desarrollo",
-    "⚡ ESTABILIDAD: Configuración de Vite optimizada para mejor rendimiento",
-    "🔄 FIREBASE: Migración completa a sintaxis v9+ de Firebase Firestore",
-    "📊 INTERFAZ: Diseño elegante para opciones de backup con contadores en tiempo real",
-    "🎯 EXPERIENCIA: Descarga automática de archivos JSON con fechas",
-    "🛡️ SEGURIDAD: Backups solo accesibles para administradores"
+    "🎯 SISTEMA COMPLETO: Asignaciones múltiples para equipos de 2-3 personas",
+    "👥 EQUIPOS: Modal rediseñado para seleccionar múltiples publicadores",
+    "✅ CORRECCIÓN CRÍTICA: Territorios completados muestran todos los nombres del equipo",
+    "🔧 CORRECCIÓN: Completado manual y automático mantienen asignación completa",
+    "📱 INTERFAZ: Modal responsive con pantalla completa en móviles",
+    "🎨 DISEÑO: Tarjetas de territorios con iconos dinámicos para equipos",
+    "🔍 FILTROS: Sistema simplificado sin elementos innecesarios",
+    "📊 ESTADÍSTICAS: Conteo correcto de publicadores individuales en equipos",
+    "🔇 SILENCIOSO: Actualizaciones automáticas sin notificaciones molestas",
+    "⚡ OPTIMIZACIÓN: Funciones helper optimizadas para mejor rendimiento",
+    "🧹 LIMPIEZA: Código optimizado y console.logs de producción eliminados",
+    "🎯 COMPATIBILIDAD: Mantiene compatibilidad total con asignaciones individuales"
   ],
   "critical": false,
-  "description": "Sistema de backup completo y correcciones importantes en propuestas"
+  "description": "Sistema completo de asignaciones múltiples con optimizaciones y correcciones críticas"
 }

@@ -113,7 +113,11 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "", ...prop
         'times': 'X', // Mapear times a X
         'tools': 'Wrench', // Mapear tools a Wrench
         'refreshCw': 'RefreshCw', // Para el botón de actualización
-        'alertTriangle': 'AlertTriangle' // Para notificaciones críticas
+        'alertTriangle': 'AlertTriangle', // Para notificaciones críticas
+        'trending-up': 'TrendingUp', // Para métricas de eficiencia
+        'lightbulb': 'Lightbulb', // Para insights y recomendaciones
+        'chart-line': 'TrendingUp', // Alternativo para gráficos
+        'user-slash': 'UserX' // Para publicadores inactivos
     };
     
     const iconName = iconMap[name] || name;

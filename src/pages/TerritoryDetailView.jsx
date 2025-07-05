@@ -10,6 +10,38 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
 import { optimizeRoute, getCurrentLocation, calculateRouteStats } from '../utils/routeOptimizer';
 
+// 🔄 PASO 11: Funciones helper para asignaciones múltiples
+const normalizeAssignedTo = (assignedTo) => {
+  if (!assignedTo) return [];
+  if (Array.isArray(assignedTo)) return assignedTo;
+  return [assignedTo];
+};
+
+const getAssignedNames = (assignedTo) => {
+  const normalized = normalizeAssignedTo(assignedTo);
+  return normalized.filter(name => name && name.trim() !== '');
+};
+
+const isUserAssigned = (assignedTo, userName) => {
+  if (!userName) return false;
+  const names = getAssignedNames(assignedTo);
+  return names.includes(userName);
+};
+
+const formatTeamNames = (names, isMobile = false) => {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  
+  if (isMobile && names.length > 1) {
+    const firstNames = names.map(name => name.split(' ')[0]);
+    if (firstNames.length === 2) return `${firstNames[0]} y ${firstNames[1]}`;
+    return `${firstNames.slice(0, -1).join(', ')} y ${firstNames[firstNames.length - 1]}`;
+  }
+  
+  if (names.length === 2) return `${names[0]} y ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
+};
+
 const TerritoryDetailView = ({ territory, onBack }) => {
   const { 
     addresses, 
@@ -278,8 +310,26 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     territoryAddressesHash
   ]);
 
-  const isAssignedToMe = territory.status === 'En uso' && territory.assignedTo === currentUser.name;
+  // 🔄 PASO 11: Verificar si el territorio está asignado al usuario (incluyendo equipos)
+  const isAssignedToMe = territory.status === 'En uso' && isUserAssigned(territory.assignedTo, currentUser?.name);
   const isAdmin = currentUser.role === 'admin';
+  
+  // 🔄 PASO 11: Información del equipo asignado
+  const assignedTeamInfo = useMemo(() => {
+    if (!territory.assignedTo) return null;
+    
+    const names = getAssignedNames(territory.assignedTo);
+    const isTeam = names.length > 1;
+    const isMobile = window.innerWidth < 640;
+    
+    return {
+      names,
+      isTeam,
+      count: names.length,
+      displayName: formatTeamNames(names, isMobile),
+      fullDisplayName: formatTeamNames(names, false)
+    };
+  }, [territory.assignedTo]);
 
   // Manejo de navegación - MOVIDO ARRIBA CON MEMOIZACIÓN
   const stopNavigatingHighlight = useCallback(() => {
@@ -572,6 +622,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         onComplete={handleShowConfirmComplete}
         onAddAddress={openAddModal}
         isAssignedToMe={isAssignedToMe}
+        assignedTeamInfo={assignedTeamInfo} // 🔄 PASO 11: Pasar información del equipo
         sortControls={{
           sortOrder: sortState.sortOrder,
           isCalculatingRoute: sortState.isCalculatingRoute,

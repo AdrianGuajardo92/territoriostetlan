@@ -3,6 +3,38 @@ import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import Icon from '../common/Icon';
 
+// 🔄 PASO 12: Funciones helper para asignaciones múltiples
+const normalizeAssignedTo = (assignedTo) => {
+  if (!assignedTo) return [];
+  if (Array.isArray(assignedTo)) return assignedTo;
+  return [assignedTo];
+};
+
+const getAssignedNames = (assignedTo) => {
+  const normalized = normalizeAssignedTo(assignedTo);
+  return normalized.filter(name => name && name.trim() !== '');
+};
+
+const isUserAssigned = (assignedTo, userName) => {
+  if (!userName) return false;
+  const names = getAssignedNames(assignedTo);
+  return names.includes(userName);
+};
+
+const formatTeamNames = (names, isMobile = false) => {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  
+  if (isMobile && names.length > 1) {
+    const firstNames = names.map(name => name.split(' ')[0]);
+    if (firstNames.length === 2) return `${firstNames[0]} y ${firstNames[1]}`;
+    return `${firstNames.slice(0, -1).join(', ')} y ${firstNames[firstNames.length - 1]}`;
+  }
+  
+  if (names.length === 2) return `${names[0]} y ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
+};
+
 const AddressCard = memo(({ 
     address, 
     viewMode = 'grid-full', 
@@ -75,13 +107,26 @@ const AddressCard = memo(({
 
     const config = statusConfig[address.isVisited ? 'visited' : 'notVisited'];
     
+    // 🔄 PASO 12: Obtener información del territorio y equipo PRIMERO
+    const territory = contextTerritories.find(t => t.id === address.territoryId);
+    const territoryName = territory ? territory.name : `Territorio ${address.territoryId}`;
+    const territoryAssignedTo = territory?.assignedTo;
+    const isUserInTeam = territoryAssignedTo && isUserAssigned(territoryAssignedTo, currentUser?.name);
+    
+    // 🔄 PASO 12: Información del equipo asignado
+    const teamInfo = territory?.assignedTo ? {
+      names: getAssignedNames(territoryAssignedTo),
+      isTeam: getAssignedNames(territoryAssignedTo).length > 1,
+      displayName: formatTeamNames(getAssignedNames(territoryAssignedTo), window.innerWidth < 640)
+    } : null;
+    
     // ✅ TODOS los usuarios pueden editar direcciones:
     // - Admins: Edición directa 
     // - Publicadores: Envío de propuestas para revisión
     const isEditEnabled = true;
     
-    // Permisos estrictos para marcar/desmarcar direcciones
-    const canToggleStatus = isAssignedToMe || (isAdmin && globalAdminEditMode);
+    // 🔄 PASO 12: Permisos estrictos para marcar/desmarcar direcciones (con soporte para equipos)
+    const canToggleStatus = isUserInTeam || (isAdmin && globalAdminEditMode);
     
     // Highlight elegante sin parpadeo - CONTRASTE AZUL SUTIL
     const navigatingClass = (isNavigating || isNavigatingLocal) ? 'ring-4 ring-blue-500 ring-opacity-50 bg-blue-50/50 scale-[1.02] shadow-2xl' : '';
@@ -253,9 +298,7 @@ const AddressCard = memo(({
         setTimeout(() => setIsNavigatingLocal(false), 3000);
     };
 
-    // Obtener nombre del territorio
-    const territory = contextTerritories.find(t => t.id === address.territoryId);
-    const territoryName = territory ? territory.name : `Territorio ${address.territoryId}`;
+    // 🔄 PASO 12: Variables ya declaradas arriba - eliminadas para evitar duplicación
     
     // VISTA DE LISTA COMPACTA
     if (viewMode === 'list') {
@@ -333,7 +376,7 @@ const AddressCard = memo(({
                                     transition-all transform hover:scale-105 active:scale-95
                                     shadow-lg hover:shadow-xl
                                 `}
-                                title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
+                                title={!canToggleStatus ? (teamInfo && teamInfo.isTeam ? `Solo el equipo (${teamInfo.displayName}) puede marcar/desmarcar` : 'Sin permisos para marcar/desmarcar') : ''}
                             >
                                 {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
                             </button>
@@ -469,7 +512,7 @@ const AddressCard = memo(({
                                             transition-all transform hover:scale-105 active:scale-95
                                             shadow-lg hover:shadow-xl
                                         `}
-                                        title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
+                                        title={!canToggleStatus ? (teamInfo && teamInfo.isTeam ? `Solo el equipo (${teamInfo.displayName}) puede marcar/desmarcar` : 'Sin permisos para marcar/desmarcar') : ''}
                                     >
                                         {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
                                     </button>
@@ -543,7 +586,7 @@ const AddressCard = memo(({
                                             transition-all transform hover:scale-105 active:scale-95
                                             shadow-lg hover:shadow-xl
                                         `}
-                                        title={!canToggleStatus ? 'Sin permisos para marcar/desmarcar' : ''}
+                                        title={!canToggleStatus ? (teamInfo && teamInfo.isTeam ? `Solo el equipo (${teamInfo.displayName}) puede marcar/desmarcar` : 'Sin permisos para marcar/desmarcar') : ''}
                                     >
                                         {isProcessing ? 'Procesando...' : address.isVisited ? 'Desmarcar' : 'Completado'}
                                     </button>

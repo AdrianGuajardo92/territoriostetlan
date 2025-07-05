@@ -4,8 +4,20 @@ import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 
+// 🔄 PASO 19: Funciones helper para estadísticas de equipos
+const normalizeAssignedTo = (assignedTo) => {
+  if (!assignedTo) return [];
+  if (Array.isArray(assignedTo)) return assignedTo;
+  return [assignedTo];
+};
+
+const getAssignedNames = (assignedTo) => {
+  const normalized = normalizeAssignedTo(assignedTo);
+  return normalized.filter(name => name && name.trim() !== '');
+};
+
 const StatsModal = ({ isOpen, onClose }) => {
-  const { territories, addresses, users, territoryHistory = [] } = useApp();
+  const { territories, addresses, users, territoryHistory = [], publishers, currentUser } = useApp();
   const { showToast } = useToast();
   const [selectedStat, setSelectedStat] = useState('overview');
   const [dateFilter, setDateFilter] = useState('all'); // all, week, month, year
@@ -94,17 +106,24 @@ const StatsModal = ({ isOpen, onClose }) => {
       ).length;
     }
     
-    // Publicadores activos
-    const activePublishers = [...new Set(territories
-      .filter(t => t.status === 'En uso')
-      .map(t => t.assignedTo)
-      .filter(Boolean))];
+    // Publicadores activos (expandir equipos para contar cada persona individualmente)
+    const activePublishersSet = new Set();
+    territories
+      .filter(t => t.status === 'En uso' && t.assignedTo)
+      .forEach(t => {
+        const names = getAssignedNames(t.assignedTo);
+        names.forEach(name => activePublishersSet.add(name));
+      });
+    const activePublishers = Array.from(activePublishersSet);
     
-    // Territorios por publicador
+    // Territorios por publicador (contar individualmente para cada miembro del equipo)
     const publisherStats = {};
     territories.forEach(t => {
       if (t.status === 'En uso' && t.assignedTo) {
-        publisherStats[t.assignedTo] = (publisherStats[t.assignedTo] || 0) + 1;
+        const names = getAssignedNames(t.assignedTo);
+        names.forEach(name => {
+          publisherStats[name] = (publisherStats[name] || 0) + 1;
+        });
       }
     });
     
@@ -136,6 +155,71 @@ const StatsModal = ({ isOpen, onClose }) => {
       predictiveStats.estimatedDaysToComplete = Math.ceil(basic.pendingAddresses / predictiveStats.progressPerDay);
     }
     
+    // 🔄 PASO 19: Estadísticas mejoradas con soporte para equipos
+    const territoryStats = {
+      total: territories.length,
+      available: territories.filter(t => t.status === 'Disponible').length,
+      inUse: territories.filter(t => t.status === 'En uso').length,
+      completed: territories.filter(t => t.status === 'Completado' || t.status === 'Terminado').length,
+      // 🔄 PASO 19: Nuevas estadísticas para equipos
+      individualAssignments: 0,
+      teamAssignments: 0,
+      totalPeopleInTeams: 0,
+      averageTeamSize: 0,
+      largestTeam: 0,
+      publishersInTeams: new Set()
+    };
+
+    const addressStats = {
+      total: addresses.length,
+      visited: addresses.filter(a => a.isVisited).length,
+      unvisited: addresses.filter(a => !a.isVisited).length,
+      averagePerTerritory: territories.length > 0 ? (addresses.length / territories.length).toFixed(1) : 0
+    };
+
+    // 🔄 PASO 19: Análisis detallado de asignaciones
+    territories.forEach(territory => {
+      if (territory.status === 'En uso' && territory.assignedTo) {
+        const names = getAssignedNames(territory.assignedTo);
+        
+        if (names.length === 1) {
+          territoryStats.individualAssignments++;
+        } else if (names.length > 1) {
+          territoryStats.teamAssignments++;
+          territoryStats.totalPeopleInTeams += names.length;
+          territoryStats.largestTeam = Math.max(territoryStats.largestTeam, names.length);
+          
+          // Agregar personas a la lista de quienes trabajan en equipos
+          names.forEach(name => territoryStats.publishersInTeams.add(name));
+        }
+      }
+    });
+
+    // Calcular promedio de tamaño de equipo
+    if (territoryStats.teamAssignments > 0) {
+      territoryStats.averageTeamSize = (territoryStats.totalPeopleInTeams / territoryStats.teamAssignments).toFixed(1);
+    }
+
+    // 🔄 PASO 19: Estadísticas de publicadores para equipos
+    const publisherTeamStats = {
+      total: publishers ? publishers.length : 0,
+      active: publishers ? publishers.filter(p => {
+        return territories.some(t => {
+          if (t.status !== 'En uso') return false;
+          const names = getAssignedNames(t.assignedTo);
+          return names.includes(p.name);
+        });
+      }).length : 0,
+      inTeams: territoryStats.publishersInTeams.size,
+      workingAlone: territoryStats.individualAssignments,
+      averageTerritoriesPerPerson: 0
+    };
+
+    // Calcular promedio de territorios por persona activa
+    if (publisherTeamStats.active > 0) {
+      publisherTeamStats.averageTerritoriesPerPerson = (territoryStats.inUse / publisherTeamStats.active).toFixed(1);
+    }
+
     return {
       ...basic,
       ...timeStats,
@@ -144,9 +228,18 @@ const StatsModal = ({ isOpen, onClose }) => {
       addressesAddedThisMonth,
       activePublishers: activePublishers.length,
       inactivePublishers,
-      publisherStats: Object.entries(publisherStats).sort((a, b) => b[1] - a[1])
+      publisherStats: Object.entries(publisherStats).sort((a, b) => b[1] - a[1]),
+      territories: territoryStats,
+      addresses: addressStats,
+      publishers: publisherTeamStats,
+      // 🔄 PASO 19: Métricas de eficiencia
+      efficiency: {
+        territoryUtilization: territories.length > 0 ? ((territoryStats.inUse / territories.length) * 100).toFixed(1) : 0,
+        addressProgress: addresses.length > 0 ? ((addressStats.visited / addresses.length) * 100).toFixed(1) : 0,
+        teamCollaboration: publisherTeamStats.total > 0 ? ((publisherTeamStats.inTeams / publisherTeamStats.total) * 100).toFixed(1) : 0
+      }
     };
-  }, [territories, addresses, users, territoryHistory]);
+  }, [territories, addresses, users, territoryHistory, publishers]);
   
   if (!stats) return null;
   
@@ -165,14 +258,14 @@ const StatsModal = ({ isOpen, onClose }) => {
         ['Fecha de generación:', new Date().toLocaleString('es-MX')],
         [''],
         ['RESUMEN GENERAL'],
-        ['Total de Territorios', stats.totalTerritories],
-        ['Total de Direcciones', stats.totalAddresses],
+        ['Total de Territorios', stats.territories.total],
+        ['Total de Direcciones', stats.addresses.total],
         ['Porcentaje de Cobertura', `${stats.completionRate}%`],
         ['Días Promedio por Territorio', stats.averageCompletionDays || 'N/A'],
         [''],
         ['ESTADO DE TERRITORIOS'],
-        ['Disponibles', stats.availableTerritories],
-        ['En Uso', stats.inUseTerritories],
+        ['Disponibles', stats.territories.available],
+        ['En Uso', stats.territories.inUse],
         ['Completados esta Semana', stats.completedByPeriod.week],
         ['Completados este Mes', stats.completedByPeriod.month],
         ['Completados este Año', stats.completedByPeriod.year],
@@ -222,10 +315,17 @@ const StatsModal = ({ isOpen, onClose }) => {
           ? ((visitedCount / territoryAddresses.length) * 100).toFixed(1)
           : 0;
           
+        // Formatear nombres de equipos para Excel
+        const assignedToFormatted = territory.assignedTo 
+          ? (Array.isArray(territory.assignedTo) 
+              ? territory.assignedTo.join(' y ') 
+              : territory.assignedTo)
+          : '-';
+        
         territoryData.push([
           territory.name,
           territory.status,
-          territory.assignedTo || '-',
+          assignedToFormatted,
           territoryAddresses.length,
           visitedCount,
           `${percentage}%`
@@ -273,11 +373,11 @@ const StatsModal = ({ isOpen, onClose }) => {
             <h2>Resumen General</h2>
             <div class="stat">
               <span class="stat-label">Total de Territorios:</span> 
-              <span class="stat-value">${stats.totalTerritories}</span>
+              <span class="stat-value">${stats.territories.total}</span>
             </div>
             <div class="stat">
               <span class="stat-label">Total de Direcciones:</span> 
-              <span class="stat-value">${stats.totalAddresses}</span>
+              <span class="stat-value">${stats.addresses.total}</span>
             </div>
             <div class="stat">
               <span class="stat-label">Porcentaje de Cobertura:</span> 
@@ -296,11 +396,11 @@ const StatsModal = ({ isOpen, onClose }) => {
               </tr>
               <tr>
                 <td>Disponibles</td>
-                <td>${stats.availableTerritories}</td>
+                <td>${stats.territories.available}</td>
               </tr>
               <tr>
                 <td>En Uso</td>
-                <td>${stats.inUseTerritories}</td>
+                <td>${stats.territories.inUse}</td>
               </tr>
               <tr>
                 <td>Completados esta Semana</td>
@@ -432,6 +532,64 @@ const StatsModal = ({ isOpen, onClose }) => {
   );
   };
   
+  // 🔄 PASO 19: Análisis de tendencias y patrones
+  const insights = useMemo(() => {
+    const insights = [];
+
+    // Insights sobre equipos
+    if (stats.territories.teamAssignments > stats.territories.individualAssignments) {
+      insights.push({
+        type: 'positive',
+        title: 'Trabajo en equipo predominante',
+        description: `${stats.territories.teamAssignments} territorios asignados a equipos vs ${stats.territories.individualAssignments} individuales`
+      });
+    }
+
+    // Insights sobre utilización
+    if (parseFloat(stats.efficiency.territoryUtilization) > 80) {
+      insights.push({
+        type: 'positive',
+        title: 'Alta utilización de territorios',
+        description: `${stats.efficiency.territoryUtilization}% de territorios están siendo trabajados`
+      });
+    } else if (parseFloat(stats.efficiency.territoryUtilization) < 50) {
+      insights.push({
+        type: 'warning',
+        title: 'Baja utilización de territorios',
+        description: `Solo ${stats.efficiency.territoryUtilization}% de territorios están asignados`
+      });
+    }
+
+    // Insights sobre progreso
+    if (parseFloat(stats.efficiency.addressProgress) > 70) {
+      insights.push({
+        type: 'positive',
+        title: 'Buen progreso en direcciones',
+        description: `${stats.efficiency.addressProgress}% de direcciones han sido visitadas`
+      });
+    }
+
+    // Insights sobre colaboración
+    if (parseFloat(stats.efficiency.teamCollaboration) > 60) {
+      insights.push({
+        type: 'info',
+        title: 'Alta colaboración',
+        description: `${stats.efficiency.teamCollaboration}% de publicadores trabajan en equipos`
+      });
+    }
+
+    // Insights sobre tamaño de equipos
+    if (stats.territories.largestTeam >= 3) {
+      insights.push({
+        type: 'info',
+        title: 'Equipos grandes',
+        description: `El equipo más grande tiene ${stats.territories.largestTeam} personas`
+      });
+    }
+
+    return insights;
+  }, [stats]);
+  
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" size="full">
       <div className="h-full flex flex-col bg-gradient-to-br from-indigo-50 via-white to-blue-50">
@@ -504,7 +662,7 @@ const StatsModal = ({ isOpen, onClose }) => {
         </div>
         
         {/* Contenido scrolleable con diseño elegante */}
-        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6">
           {selectedStat === 'overview' && (
             <div className="space-y-8">
               {/* Sección 1: Estadísticas Generales con diseño mejorado */}
@@ -522,20 +680,20 @@ const StatsModal = ({ isOpen, onClose }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <StatCard
                   title="Total de Territorios"
-                  value={stats.totalTerritories}
+                  value={stats.territories.total}
                     icon="map"
                     color="blue"
                 />
                 <StatCard
                   title="Total de Direcciones"
-                  value={stats.totalAddresses}
+                  value={stats.addresses.total}
                   icon="home"
                     color="green"
                   />
                   <StatCard
                     title="Porcentaje de Cobertura"
                     value={`${stats.completionRate}%`}
-                    subtitle={`${stats.visitedAddresses} de ${stats.totalAddresses} visitadas`}
+                    subtitle={`${stats.visitedAddresses} de ${stats.addresses.total} visitadas`}
                     icon="chart-line"
                     color="purple"
                   />
@@ -564,13 +722,13 @@ const StatsModal = ({ isOpen, onClose }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <StatCard
                     title="Disponibles"
-                    value={stats.availableTerritories}
+                    value={stats.territories.available}
                     icon="check-circle"
                     color="green"
                 />
                 <StatCard
                     title="En Uso"
-                    value={stats.inUseTerritories}
+                    value={stats.territories.inUse}
                     subtitle={`Por ${stats.activePublishers} publicadores`}
                   icon="users"
                     color="blue"
@@ -661,9 +819,9 @@ const StatsModal = ({ isOpen, onClose }) => {
                     <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
                       <div 
                         className="absolute left-0 top-0 h-full bg-green-500 flex items-center justify-end pr-2"
-                        style={{ width: `${stats.totalTerritories > 0 ? (stats.availableTerritories / stats.totalTerritories * 100) : 0}%` }}
+                        style={{ width: `${stats.territories.total > 0 ? (stats.territories.available / stats.territories.total * 100) : 0}%` }}
                       >
-                        <span className="text-xs font-medium text-white">{stats.availableTerritories}</span>
+                        <span className="text-xs font-medium text-white">{stats.territories.available}</span>
                       </div>
                     </div>
                   </div>
@@ -672,9 +830,9 @@ const StatsModal = ({ isOpen, onClose }) => {
                     <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
                       <div 
                         className="absolute left-0 top-0 h-full bg-yellow-500 flex items-center justify-end pr-2"
-                        style={{ width: `${stats.totalTerritories > 0 ? (stats.inUseTerritories / stats.totalTerritories * 100) : 0}%` }}
+                        style={{ width: `${stats.territories.total > 0 ? (stats.territories.inUse / stats.territories.total * 100) : 0}%` }}
                       >
-                        <span className="text-xs font-medium text-white">{stats.inUseTerritories}</span>
+                        <span className="text-xs font-medium text-white">{stats.territories.inUse}</span>
                       </div>
                     </div>
                   </div>
@@ -683,14 +841,107 @@ const StatsModal = ({ isOpen, onClose }) => {
                     <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
                       <div 
                         className="absolute left-0 top-0 h-full bg-gray-600 flex items-center justify-end pr-2"
-                        style={{ width: `${stats.totalTerritories > 0 ? (stats.completedTerritories / stats.totalTerritories * 100) : 0}%` }}
+                        style={{ width: `${stats.territories.total > 0 ? (stats.territories.completed / stats.territories.total * 100) : 0}%` }}
                       >
-                        <span className="text-xs font-medium text-white">{stats.completedTerritories}</span>
+                        <span className="text-xs font-medium text-white">{stats.territories.completed}</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* 🔄 PASO 19: Sección de estadísticas de equipos - MOVIDA AQUÍ */}
+              {/* Estadísticas de equipos */}
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-lg border border-indigo-200">
+                <h3 className="font-semibold text-indigo-800 mb-4 flex items-center space-x-2">
+                  <Icon name="users" size={20} />
+                  <span>Análisis de Equipos</span>
+                </h3>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-indigo-600">{stats.territories.teamAssignments}</div>
+                    <div className="text-xs text-indigo-700">Territorios en equipo</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{stats.territories.individualAssignments}</div>
+                    <div className="text-xs text-green-700">Territorios individuales</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{stats.territories.averageTeamSize}</div>
+                    <div className="text-xs text-blue-700">Promedio por equipo</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">{stats.territories.largestTeam}</div>
+                    <div className="text-xs text-purple-700">Equipo más grande</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Métricas de eficiencia */}
+              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+                  <Icon name="trending-up" size={20} />
+                  <span>Métricas de Eficiencia</span>
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-white rounded-lg">
+                    <div className="text-3xl font-bold text-blue-600">{stats.efficiency.territoryUtilization}%</div>
+                    <div className="text-sm text-gray-600">Utilización de territorios</div>
+                  </div>
+                  <div className="text-center p-4 bg-white rounded-lg">
+                    <div className="text-3xl font-bold text-green-600">{stats.efficiency.addressProgress}%</div>
+                    <div className="text-sm text-gray-600">Progreso en direcciones</div>
+                  </div>
+                  <div className="text-center p-4 bg-white rounded-lg">
+                    <div className="text-3xl font-bold text-purple-600">{stats.efficiency.teamCollaboration}%</div>
+                    <div className="text-sm text-gray-600">Colaboración en equipos</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Insights y recomendaciones */}
+              {insights.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-gray-800 flex items-center space-x-2">
+                    <Icon name="lightbulb" size={20} />
+                    <span>Insights y Recomendaciones</span>
+                  </h3>
+                  
+                  {insights.map((insight, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg border-l-4 ${
+                        insight.type === 'positive'
+                          ? 'bg-green-50 border-green-400'
+                          : insight.type === 'warning'
+                          ? 'bg-yellow-50 border-yellow-400'
+                          : 'bg-blue-50 border-blue-400'
+                      }`}
+                    >
+                      <div className={`font-medium ${
+                        insight.type === 'positive'
+                          ? 'text-green-800'
+                          : insight.type === 'warning'
+                          ? 'text-yellow-800'
+                          : 'text-blue-800'
+                      }`}>
+                        {insight.title}
+                      </div>
+                      <div className={`text-sm ${
+                        insight.type === 'positive'
+                          ? 'text-green-700'
+                          : insight.type === 'warning'
+                          ? 'text-yellow-700'
+                          : 'text-blue-700'
+                      }`}>
+                        {insight.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           
@@ -739,7 +990,7 @@ const StatsModal = ({ isOpen, onClose }) => {
                     <p className="text-xs text-gray-600">Pendientes</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-700">{stats.totalAddresses}</p>
+                    <p className="text-2xl font-bold text-gray-700">{stats.addresses.total}</p>
                     <p className="text-xs text-gray-600">Total</p>
                   </div>
                 </div>
@@ -819,6 +1070,7 @@ const StatsModal = ({ isOpen, onClose }) => {
             </div>
           )}
         </div>
+
       </div>
     </Modal>
   );

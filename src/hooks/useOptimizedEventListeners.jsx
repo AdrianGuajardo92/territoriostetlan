@@ -1,78 +1,81 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-// OPTIMIZACIÓN FASE 2: Hook para event listeners consolidados ⚡
-export const useOptimizedEventListeners = (eventListeners = []) => {
-  const listenersRef = useRef([]);
-  const cleanupRef = useRef([]);
+/**
+ * Hook optimizado para manejar event listeners con debounce y cleanup automático
+ * 🚀 PASO 15: Optimización de rendimiento
+ */
+export const useOptimizedEventListeners = () => {
+  const listenersRef = useRef(new Map());
+  const timeoutsRef = useRef(new Map());
 
-  // Función para agregar event listener optimizado
+  // Función para agregar listener con debounce opcional
   const addListener = useCallback((element, event, handler, options = {}) => {
-    if (!element || typeof handler !== 'function') return;
+    const { debounce = 0, passive = true } = options;
+    const key = `${event}-${element}`;
 
-    // Verificar si ya existe para evitar duplicados
-    const existingIndex = listenersRef.current.findIndex(
-      listener => listener.element === element && listener.event === event
-    );
+    // Remover listener anterior si existe
+    removeListener(element, event);
 
-    if (existingIndex !== -1) {
-      // Remover el anterior si existe
-      const existing = listenersRef.current[existingIndex];
-      existing.element.removeEventListener(existing.event, existing.handler, existing.options);
-      listenersRef.current.splice(existingIndex, 1);
+    let optimizedHandler = handler;
+    
+    // Aplicar debounce si se especifica
+    if (debounce > 0) {
+      optimizedHandler = (...args) => {
+        const timeoutKey = `${key}-timeout`;
+        
+        // Limpiar timeout anterior
+        if (timeoutsRef.current.has(timeoutKey)) {
+          clearTimeout(timeoutsRef.current.get(timeoutKey));
+        }
+        
+        // Crear nuevo timeout
+        const timeoutId = setTimeout(() => {
+          handler(...args);
+          timeoutsRef.current.delete(timeoutKey);
+        }, debounce);
+        
+        timeoutsRef.current.set(timeoutKey, timeoutId);
+      };
     }
 
-    // Agregar el nuevo listener
-    const optimizedOptions = {
-      passive: true, // Optimización por defecto para mejor performance
-      capture: false,
-      ...options
-    };
-
-    element.addEventListener(event, handler, optimizedOptions);
-
-    // Guardar referencia para cleanup
-    listenersRef.current.push({
-      element,
-      event,
-      handler,
-      options: optimizedOptions
-    });
-
-    // Retornar función de cleanup individual
-    return () => {
-      element.removeEventListener(event, handler, optimizedOptions);
-      const index = listenersRef.current.findIndex(
-        listener => listener.element === element && 
-                   listener.event === event && 
-                   listener.handler === handler
-      );
-      if (index !== -1) {
-        listenersRef.current.splice(index, 1);
-      }
-    };
+    // Agregar listener
+    element.addEventListener(event, optimizedHandler, { passive });
+    listenersRef.current.set(key, { element, event, handler: optimizedHandler });
   }, []);
 
-  // Función para remover todos los listeners
+  // Función para remover listener específico
+  const removeListener = useCallback((element, event) => {
+    const key = `${event}-${element}`;
+    const listener = listenersRef.current.get(key);
+    
+    if (listener) {
+      element.removeEventListener(event, listener.handler);
+      listenersRef.current.delete(key);
+    }
+  }, []);
+
+  // Función para limpiar todos los listeners
   const removeAllListeners = useCallback(() => {
-    listenersRef.current.forEach(({ element, event, handler, options }) => {
-      if (element && element.removeEventListener) {
-        element.removeEventListener(event, handler, options);
-      }
+    // Limpiar timeouts
+    timeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+    timeoutsRef.current.clear();
+    
+    // Limpiar listeners
+    listenersRef.current.forEach(({ element, event, handler }) => {
+      element.removeEventListener(event, handler);
     });
-    listenersRef.current = [];
+    listenersRef.current.clear();
   }, []);
 
   // Cleanup automático al desmontar
   useEffect(() => {
-    return () => {
-      removeAllListeners();
-    };
+    return removeAllListeners;
   }, [removeAllListeners]);
 
   return {
     addListener,
-    removeAllListeners,
-    activeListeners: listenersRef.current.length
+    removeListener,
+    removeAllListeners
   };
 };
 
