@@ -582,12 +582,28 @@ export const AppProvider = ({ children }) => {
     try {
       const territory = territories.find(t => t.id === territoryId);
       
-      await updateDoc(doc(db, 'territories', territoryId), {
+      // 🔄 DESMARCAR TODAS LAS DIRECCIONES DEL TERRITORIO
+      const addressesQuery = query(
+        collection(db, 'addresses'),
+        where('territoryId', '==', territoryId)
+      );
+      const addressesSnapshot = await getDocs(addressesQuery);
+      
+      // Actualizar territorio y direcciones en paralelo
+      const territoryUpdate = updateDoc(doc(db, 'territories', territoryId), {
         status: 'Disponible',
         assignedTo: null,
         assignedDate: null,
         lastWorked: serverTimestamp()
       });
+
+      // Desmarcar todas las direcciones
+      const addressUpdates = addressesSnapshot.docs.map(addressDoc => 
+        updateDoc(addressDoc.ref, { isVisited: false })
+      );
+
+      // Ejecutar todas las actualizaciones en paralelo
+      await Promise.all([territoryUpdate, ...addressUpdates]);
 
       if (territory) {
         await addDoc(collection(db, 'territoryHistory'), {
@@ -605,7 +621,7 @@ export const AppProvider = ({ children }) => {
         ? territoryName 
         : `Territorio ${territoryName}`;
         
-      showToast(`${displayName} devuelto`, 'success');
+      showToast(`${displayName} devuelto y direcciones desmarcadas`, 'success');
     } catch (error) {
       console.error('Error returning territory:', error);
       showToast('Error al devolver territorio', 'error');
