@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { usePremiumFeedback } from '../../hooks/usePremiumFeedback';
+import { useApp } from '../../context/AppContext';
 
 const TerritoryDetailHeader = ({
   territory,
@@ -26,8 +27,17 @@ const TerritoryDetailHeader = ({
   // FASE 3: Premium feedback ⚡
   const { tapFeedback, successFeedback } = usePremiumFeedback();
   
+  // 🔄 OBTENER TERRITORIO ACTUALIZADO DEL CONTEXTO
+  const { territories } = useApp();
+  
+  // 🔄 TERRITORIO REACTIVO: Obtener el territorio actualizado del contexto
+  const currentTerritory = useMemo(() => {
+    const updatedTerritory = territories.find(t => t.id === territory.id);
+    return updatedTerritory || territory;
+  }, [territories, territory.id, territory]);
+  
   // Normalizar el estado para manejar "Terminado" como "Completado"
-  const normalizedStatus = territory.status === 'Terminado' ? 'Completado' : territory.status;
+  const normalizedStatus = currentTerritory.status === 'Terminado' ? 'Completado' : currentTerritory.status;
 
   // Cerrar menús al hacer clic fuera
   useEffect(() => {

@@ -203,15 +203,16 @@ const AddressCard = memo(({
         try {
             // Usar la función onUpdate que viene como prop en lugar de la del contexto
             if (onUpdate) {
-                const updatedAddress = {
-                    ...address,
+                // CORRECCIÓN: Para toggle de estado, pasar solo los campos necesarios
+                const updatedData = {
                     isVisited: !address.isVisited,
                     lastUpdated: new Date()
                 };
-                await onUpdate(address.id, updatedAddress);
+                await onUpdate(address.id, updatedData);
             } else {
                 // Fallback a la función del contexto si no se proporciona onUpdate
-                await handleToggleAddressStatus(address.id, !address.isVisited);
+                // CORRECCIÓN: Pasar el estado ACTUAL, no el opuesto
+                await handleToggleAddressStatus(address.id, address.isVisited);
             }
             
             // Sin notificación de éxito - solo feedback visual
