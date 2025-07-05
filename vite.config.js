@@ -11,21 +11,19 @@ export default defineConfig({
   },
   server: {
     port: 3001,
-    strictPort: false, // Cambiar a false para permitir puertos alternativos
+    strictPort: false,
     open: true,
-    host: 'localhost',  // Cambiar a localhost para evitar problemas de red
-    // CONFIGURACIÓN HMR SIMPLIFICADA Y ESTABLE
+    host: 'localhost',
+    // HMR más estable
     hmr: {
-      overlay: false,
-      port: 3001
+      overlay: false
     },
     // Configuraciones básicas para estabilidad
     cors: true,
-    // Configuración de watch simplificada
+    // Configuración de watch más estable
     watch: {
       usePolling: false,
-      interval: 1000,
-      ignored: ['**/node_modules/**', '**/.git/**']
+      ignored: ['**/node_modules/**', '**/.git/**', '**/dist/**']
     }
   },
   build: {
@@ -94,7 +92,7 @@ export default defineConfig({
       'react-dom'
     ],
     // Pre-bundle dependencias pesadas
-    force: false // Cambiar a false para evitar re-optimizaciones constantes
+    force: false
   },
   
   define: {

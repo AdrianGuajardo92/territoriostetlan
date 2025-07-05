@@ -72,7 +72,6 @@ export const AppProvider = ({ children }) => {
   // 📋 Cargar versión desde version.json
   const loadAppVersion = async () => {
     try {
-
       const response = await fetch('/version.json?t=' + Date.now(), {
         cache: 'no-cache',
         headers: {
@@ -83,18 +82,14 @@ export const AppProvider = ({ children }) => {
       
       if (response.ok) {
         const versionData = await response.json();
-
         setAppVersion(versionData.version);
         
         // Forzar actualización del título de la página
         if (typeof document !== 'undefined') {
           document.title = `Territorios - ${versionData.version}`;
         }
-      } else {
-        console.error('❌ DEBUG - Error al cargar version.json:', response.status);
       }
     } catch (error) {
-      console.error('❌ DEBUG - Error cargando versión:', error);
       // Silenciosamente usar la versión por defecto si hay error
       // No mostrar error en consola para mantenerla limpia
     }
@@ -748,7 +743,7 @@ export const AppProvider = ({ children }) => {
 
       await updateDoc(doc(db, 'proposals', proposalId), {
         status: 'approved',
-        approvedBy: currentUser?.id || 'unknown',
+        approvedBy: currentUser?.name || 'Administrador',
         approvedAt: serverTimestamp(),
         notificationRead: false // ✅ Marcar como no leída para que aparezca notificación
       });
@@ -766,7 +761,7 @@ export const AppProvider = ({ children }) => {
       await updateDoc(doc(db, 'proposals', proposalId), {
         status: 'rejected',
         rejectionReason: reason,
-        rejectedBy: currentUser?.id || 'unknown',
+        rejectedBy: currentUser?.name || 'Administrador',
         rejectedAt: serverTimestamp(),
         notificationRead: false // ✅ Marcar como no leída para que aparezca notificación
       });
@@ -798,7 +793,7 @@ export const AppProvider = ({ children }) => {
         return true;
       });
 
-      const batch = db.batch();
+      const batch = writeBatch(db);
       proposalsToDelete.forEach(proposal => {
         const proposalRef = doc(db, 'proposals', proposal.id);
         batch.delete(proposalRef);
@@ -1097,13 +1092,13 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     loadAppVersion();
     
-    // Cargar versión cada 30 segundos para asegurar actualización
-    const versionInterval = setInterval(() => {
-      console.log('⏰ DEBUG - Recargando versión...');
-      loadAppVersion();
-    }, 30000);
+    // COMENTADO TEMPORALMENTE: Esto puede causar recargas infinitas
+    // const versionInterval = setInterval(() => {
+    //   console.log('⏰ DEBUG - Recargando versión...');
+    //   loadAppVersion();
+    // }, 30000);
     
-    return () => clearInterval(versionInterval);
+    // return () => clearInterval(versionInterval);
   }, []); // Solo se ejecuta una vez al montar
 
   // 🚀 INICIALIZACIÓN Y GESTIÓN DE AUTENTICACIÓN PERSONALIZADA

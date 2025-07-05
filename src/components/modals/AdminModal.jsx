@@ -41,6 +41,71 @@ const AdminModal = (props = {}) => {
     }
   }, [isOpen, currentUser]);
   
+  // Funciones de backup
+  const handleBackupAddressesAndTerritories = async () => {
+    try {
+      const backupData = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        type: 'addresses_territories',
+        data: {
+          territories: territories,
+          addresses: addresses
+        }
+      };
+      
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `backup_direcciones_territorios_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast('Backup de direcciones y territorios descargado', 'success');
+    } catch (error) {
+      console.error('Error creando backup:', error);
+      showToast('Error al crear backup', 'error');
+    }
+  };
+
+  const handleBackupGeneral = async () => {
+    try {
+      const backupData = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        type: 'complete',
+        data: {
+          territories: territories,
+          addresses: addresses,
+          users: users,
+          proposals: proposals
+        }
+      };
+      
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `backup_completo_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast('Backup completo descargado', 'success');
+    } catch (error) {
+      console.error('Error creando backup completo:', error);
+      showToast('Error al crear backup completo', 'error');
+    }
+  };
+
   // Configuración de opciones del administrador con diseño elegante
   const adminOptions = [
     { 
@@ -60,7 +125,14 @@ const AdminModal = (props = {}) => {
       color: 'blue',
       action: () => setView('users') 
     },
-
+    { 
+      id: 'backup', 
+      title: 'Respaldo de Datos', 
+      description: 'Crear backups del sistema', 
+      icon: 'fas fa-download', 
+      color: 'green',
+      action: () => setView('backup') 
+    },
     { 
       id: 'stats', 
       title: 'Estadísticas Completas', 
@@ -679,7 +751,9 @@ const AdminModal = (props = {}) => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                               <div>
                                 <p className="text-gray-600">
-                                  <span className="font-medium">Procesada por:</span>
+                                  <span className="font-medium">
+                                    {proposal.status === 'approved' ? 'Aprobada por:' : 'Rechazada por:'}
+                                  </span>
                                 </p>
                                 <p className="text-gray-800">
                                   {proposal.approvedBy || proposal.rejectedBy || 'Administrador'}
@@ -939,6 +1013,104 @@ const AdminModal = (props = {}) => {
           </div>
         );
       
+      case 'backup':
+        return (
+          <div className="space-y-8">
+            {/* Header de la sección */}
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+                <i className="fas fa-download text-3xl text-white"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Respaldo de Datos</h3>
+              <p className="text-gray-600 max-w-md mx-auto">Crea copias de seguridad de la información del sistema</p>
+            </div>
+
+            {/* Opciones de backup */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Backup Direcciones y Territorios */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-3xl p-6 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
+                <div className="flex items-start mb-4">
+                  <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+                    <i className="fas fa-map-marked-alt text-2xl text-white"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Direcciones y Territorios</h4>
+                    <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                      Exporta únicamente los datos de territorios y direcciones. Ideal para respaldos específicos.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                        📍 {addresses.length} direcciones
+                      </span>
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                        🗺️ {territories.length} territorios
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleBackupAddressesAndTerritories}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all transform hover:scale-105 font-medium shadow-lg"
+                >
+                  <i className="fas fa-download"></i>
+                  <span>Descargar Backup</span>
+                </button>
+              </div>
+
+              {/* Backup General */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-100 border-2 border-green-200 rounded-3xl p-6 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
+                <div className="flex items-start mb-4">
+                  <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+                    <i className="fas fa-database text-2xl text-white"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Backup Completo</h4>
+                    <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                      Exporta todos los datos del sistema incluyendo usuarios y propuestas. Respaldo total.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                        📍 {addresses.length} direcciones
+                      </span>
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                        🗺️ {territories.length} territorios
+                      </span>
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                        👥 {users.length} usuarios
+                      </span>
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                        📝 {proposals.length} propuestas
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleBackupGeneral}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-lg"
+                >
+                  <i className="fas fa-download"></i>
+                  <span>Descargar Backup Completo</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Información adicional */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border-2 border-amber-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-info-circle text-white text-sm"></i>
+                </div>
+                <h5 className="text-lg font-bold text-amber-900">Información Importante</h5>
+              </div>
+              <div className="space-y-2 text-amber-800 text-sm">
+                <p>• Los backups se descargan en formato JSON con fecha actual</p>
+                <p>• Guarda los archivos en un lugar seguro y accesible</p>
+                <p>• Los backups incluyen toda la información hasta el momento de la descarga</p>
+                <p>• Recomendamos hacer backups regulares para mantener la información segura</p>
+              </div>
+            </div>
+          </div>
+        );
 
 
       
