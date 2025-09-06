@@ -79,6 +79,38 @@ const AdminModal = (props = {}) => {
     }
   };
 
+  // Nueva función para exportar solo direcciones
+  const handleBackupAddressesOnly = async () => {
+    try {
+      const backupData = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        type: 'addresses_only',
+        totalAddresses: addresses.length,
+        data: {
+          addresses: addresses
+        }
+      };
+      
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `backup_solo_direcciones_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast(`Backup de ${addresses.length} direcciones descargado`, 'success');
+    } catch (error) {
+      console.error('Error creando backup de direcciones:', error);
+      showToast('Error al crear backup de direcciones', 'error');
+    }
+  };
+
   const handleBackupGeneral = async () => {
     try {
       const backupData = {
@@ -995,7 +1027,7 @@ const AdminModal = (props = {}) => {
             </div>
 
             {/* Opciones de backup */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Backup Direcciones y Territorios */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200 rounded-3xl p-6 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
                 <div className="flex items-start mb-4">
@@ -1023,6 +1055,36 @@ const AdminModal = (props = {}) => {
                 >
                   <i className="fas fa-download"></i>
                   <span>Descargar Backup</span>
+                </button>
+              </div>
+
+              {/* Nuevo: Backup Solo Direcciones */}
+              <div className="bg-gradient-to-br from-purple-50 to-pink-100 border-2 border-purple-200 rounded-3xl p-6 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
+                <div className="flex items-start mb-4">
+                  <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+                    <i className="fas fa-home text-2xl text-white"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Solo Direcciones</h4>
+                    <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                      Exporta exclusivamente las direcciones. Ideal para campañas especiales y asignaciones.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-medium">
+                        📍 {addresses.length} direcciones
+                      </span>
+                      <span className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-xs font-medium">
+                        🎯 Para campañas
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleBackupAddressesOnly}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all transform hover:scale-105 font-medium shadow-lg"
+                >
+                  <i className="fas fa-download"></i>
+                  <span>Exportar Solo Direcciones</span>
                 </button>
               </div>
 
