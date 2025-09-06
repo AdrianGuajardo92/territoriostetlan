@@ -7,6 +7,7 @@ import { LazyStatsModal } from './LazyModals'; // CORRECCIÓN: Usar lazy loading
 import { LazyUserManagementModal as UserManagementModal } from './LazyModals';
 import UserListModal from './UserListModal';
 import ExportAddressesModal from './ExportAddressesModal';
+import CampaignModal from './CampaignModal';
 
 const AdminModal = (props = {}) => {
   const { isOpen = false, onClose = () => {} } = props;
@@ -44,6 +45,9 @@ const AdminModal = (props = {}) => {
   
   // Estado para el modal de exportación de direcciones
   const [showExportAddressesModal, setShowExportAddressesModal] = useState(false);
+  
+  // Estado para el modal de campañas
+  const [showCampaignModal, setShowCampaignModal] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
@@ -237,6 +241,14 @@ const AdminModal = (props = {}) => {
       icon: 'fas fa-users-cog', 
       color: 'blue',
       action: () => setView('users') 
+    },
+    { 
+      id: 'campaigns', 
+      title: 'Gestión de Campañas', 
+      description: 'Campañas especiales', 
+      icon: 'fas fa-flag', 
+      color: 'purple',
+      action: () => setShowCampaignModal(true) 
     },
     { 
       id: 'backup', 
@@ -1419,6 +1431,12 @@ const AdminModal = (props = {}) => {
         onClose={() => setShowExportAddressesModal(false)}
         onExportComplete={handleExportAddressesComplete}
         onExportSimplified={handleExportAddressesSimplified}
+      />
+
+      {/* Modal de Gestión de Campañas */}
+      <CampaignModal
+        isOpen={showCampaignModal}
+        onClose={() => setShowCampaignModal(false)}
       />
     </>
   );

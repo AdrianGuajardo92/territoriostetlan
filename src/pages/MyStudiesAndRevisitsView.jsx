@@ -4,12 +4,16 @@ import { useToast } from '../hooks/useToast';
 import AddressCard from '../components/addresses/AddressCard';
 import Icon from '../components/common/Icon';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import CampaignAssignmentView from '../components/campaigns/CampaignAssignmentView';
 
 const MyStudiesAndRevisitsView = ({ onBack }) => {
-  const { currentUser, addresses, territories, handleUpdateAddress } = useApp();
+  const { currentUser, addresses, territories, handleUpdateAddress, campaigns } = useApp();
   const { showToast } = useToast();
-  const [filter, setFilter] = useState('studies'); // 'studies', 'revisits'
+  const [filter, setFilter] = useState('studies'); // 'studies', 'revisits', 'campaign'
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, address: null, type: null });
+  
+  // Verificar si hay campañas activas
+  const hasActiveCampaign = campaigns?.some(c => c.status === 'active');
 
   // Filtrar y procesar las direcciones confirmadas del usuario
   const { studies, revisits, totalItems } = useMemo(() => {
@@ -74,7 +78,17 @@ const MyStudiesAndRevisitsView = ({ onBack }) => {
         inactive: 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100',
         active: 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-200'
       }
-    }
+    },
+    ...(hasActiveCampaign ? [{
+      id: 'campaign',
+      label: 'Campaña Especial',
+      count: '!', // Indicador especial
+      colors: {
+        inactive: 'bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600 border-purple-200 hover:from-purple-100 hover:to-pink-100',
+        active: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-600 shadow-lg shadow-purple-300'
+      },
+      isSpecial: true
+    }] : [])
   ];
 
   // Obtener direcciones según el filtro seleccionado
@@ -170,11 +184,19 @@ const MyStudiesAndRevisitsView = ({ onBack }) => {
                   className={`
                     px-6 py-4 rounded-xl text-center transition-all duration-300 transform hover:scale-[1.02] 
                     font-semibold text-sm border-2 ${colorClass}
+                    ${option.isSpecial ? 'relative overflow-hidden' : ''}
                   `}
                 >
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="font-bold text-lg">
-                      {option.count || 0}
+                  {option.isSpecial && isActive && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 opacity-20 animate-pulse" />
+                  )}
+                  <div className="flex flex-col items-center gap-1 relative z-10">
+                    <span className={`font-bold text-lg ${option.isSpecial ? 'text-2xl' : ''}`}>
+                      {option.isSpecial ? (
+                        <Icon name="flag" className="text-2xl" />
+                      ) : (
+                        option.count || 0
+                      )}
                     </span>
                     <span className="font-medium">
                       {option.label}
@@ -186,8 +208,10 @@ const MyStudiesAndRevisitsView = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Lista de direcciones o estado vacío */}
-        {filteredAddresses.length === 0 ? (
+        {/* Vista de campaña o lista de direcciones */}
+        {filter === 'campaign' ? (
+          <CampaignAssignmentView />
+        ) : filteredAddresses.length === 0 ? (
           <div className="flex items-center justify-center py-16">
             <div className="text-center max-w-md">
               <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl ${

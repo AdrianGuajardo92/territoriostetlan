@@ -52,6 +52,7 @@ export const AppProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [territoryHistory, setTerritoryHistory] = useState([]); // Agregar estado para historial
+  const [campaigns, setCampaigns] = useState([]); // Estado para campañas especiales
   const [isLoading, setIsLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [adminEditMode, setAdminEditMode] = useState(false);
@@ -1081,6 +1082,84 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // 🎯 CAMPAIGN MANAGEMENT FUNCTIONS
+  const createCampaign = async (campaignData) => {
+    try {
+      const campaignRef = await addDoc(collection(db, 'campaigns'), {
+        ...campaignData,
+        createdAt: serverTimestamp(),
+        createdBy: currentUser?.id
+      });
+      
+      showToast('Campaña creada exitosamente', 'success');
+      return campaignRef.id;
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      showToast('Error al crear la campaña', 'error');
+      throw error;
+    }
+  };
+
+  const updateCampaign = async (campaignId, updates) => {
+    try {
+      await updateDoc(doc(db, 'campaigns', campaignId), {
+        ...updates,
+        updatedAt: serverTimestamp(),
+        updatedBy: currentUser?.id
+      });
+      
+      showToast('Campaña actualizada exitosamente', 'success');
+    } catch (error) {
+      console.error('Error updating campaign:', error);
+      showToast('Error al actualizar la campaña', 'error');
+      throw error;
+    }
+  };
+
+  const deleteCampaign = async (campaignId) => {
+    try {
+      await deleteDoc(doc(db, 'campaigns', campaignId));
+      showToast('Campaña eliminada exitosamente', 'success');
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      showToast('Error al eliminar la campaña', 'error');
+      throw error;
+    }
+  };
+
+  const finalizeCampaign = async (campaignId) => {
+    try {
+      await updateDoc(doc(db, 'campaigns', campaignId), {
+        status: 'completed',
+        completedAt: serverTimestamp(),
+        completedBy: currentUser?.id
+      });
+      
+      showToast('Campaña finalizada exitosamente', 'success');
+    } catch (error) {
+      console.error('Error finalizing campaign:', error);
+      showToast('Error al finalizar la campaña', 'error');
+      throw error;
+    }
+  };
+
+  const getCampaignAssignments = (campaignId) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (!campaign) return [];
+    
+    const userId = currentUser?.id;
+    if (!userId) return [];
+    
+    // Si es admin, ver todas las asignaciones
+    if (currentUser?.role === 'admin') {
+      return campaign.assignments || [];
+    }
+    
+    // Si es publicador, ver solo sus asignaciones
+    const userAssignment = campaign.assignments?.find(a => a.userId === userId);
+    return userAssignment ? [userAssignment] : [];
+  };
+
   const handleResetSingleTerritory = async (territoryId) => {
     try {
       const territoryDoc = await getDoc(doc(db, 'territories', territoryId));
@@ -1361,8 +1440,18 @@ export const AppProvider = ({ children }) => {
           setTerritoryHistory(historyData);
         });
 
+        // Suscripción a campañas
+        const campaignsQuery = query(collection(db, 'campaigns'), orderBy('createdAt', 'desc'));
+        const unsubCampaigns = onSnapshot(campaignsQuery, (snapshot) => {
+          const campaignsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setCampaigns(campaignsData);
+        });
+
         // Guardar funciones de cleanup
-        unsubscribesRef.current = [unsubTerritories, unsubAddresses, unsubUsers, unsubProposals, unsubHistory];
+        unsubscribesRef.current = [unsubTerritories, unsubAddresses, unsubUsers, unsubProposals, unsubHistory, unsubCampaigns];
         
         setIsLoading(false);
       } catch (error) {
@@ -1439,6 +1528,7 @@ export const AppProvider = ({ children }) => {
     users,
     proposals,
     territoryHistory, // Agregar territoryHistory al contexto
+    campaigns, // Campañas especiales
     isLoading,
     authLoading,
     CURRENT_VERSION: appVersion, // Ahora es dinámico desde version.json
@@ -1493,7 +1583,14 @@ export const AppProvider = ({ children }) => {
     // ✅ NUEVO: Funciones para manejar notificaciones
     markProposalsAsRead,
     getUnreadProposalsCount,
-    getPendingProposalsCount
+    getPendingProposalsCount,
+    
+    // Campaign functions
+    createCampaign,
+    updateCampaign,
+    deleteCampaign,
+    finalizeCampaign,
+    getCampaignAssignments
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
