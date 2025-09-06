@@ -195,27 +195,28 @@ const UserManagementModal = ({
         </div>
 
         {/* Botones de acción - Optimizado para móvil */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-2 border-t pt-3 mt-3">
           <button
             onClick={() => handleEdit(user)}
-            className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 bg-white/70 hover:bg-white border border-gray-200 text-gray-700 rounded-lg transition-colors text-sm font-medium"
+            className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-bold shadow-md"
           >
             <Icon name="edit" className="text-sm" />
-            <span className="hidden sm:inline">Editar</span>
+            <span>✏️ Editar</span>
           </button>
           <button
             onClick={() => handlePasswordResetClick(user)}
-            className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 bg-yellow-100 hover:bg-yellow-200 border border-yellow-200 text-yellow-700 rounded-lg transition-colors text-sm font-medium"
+            className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors text-sm font-bold shadow-md"
           >
             <Icon name="key" className="text-sm" />
-            <span className="hidden sm:inline">Reset</span>
+            <span>🔑 Reset</span>
           </button>
           {!isCurrentUser && (
             <button
               onClick={() => handleDeleteClick(user)}
-              className="flex items-center justify-center py-2.5 px-3 bg-red-100 hover:bg-red-200 border border-red-200 text-red-700 rounded-lg transition-colors text-sm font-medium"
+              className="flex items-center justify-center py-2.5 px-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors text-sm font-bold shadow-md"
             >
               <Icon name="trash" className="text-sm" />
+              <span>🗑️</span>
             </button>
           )}
         </div>
@@ -241,10 +242,10 @@ const UserManagementModal = ({
         
         <button
           onClick={() => setActiveView('create')}
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-medium shadow-lg w-full sm:w-auto"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-bold shadow-lg w-full sm:w-auto animate-pulse"
         >
-          <Icon name="plus" className="text-lg" />
-          <span>Nuevo Usuario</span>
+          <Icon name="plus" className="text-xl" />
+          <span className="text-lg">➕ NUEVO USUARIO</span>
         </button>
       </div>
 
@@ -427,8 +428,8 @@ const UserManagementModal = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+        <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden" style={{ position: 'relative', zIndex: 10000 }}>
           {/* Header del modal - Optimizado para móvil */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 sm:p-6 flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -465,7 +466,7 @@ const UserManagementModal = ({
 
       {/* Modal para resetear contraseña */}
       {showPasswordReset && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10001] flex items-center justify-center p-4" style={{ zIndex: 10001 }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-6">

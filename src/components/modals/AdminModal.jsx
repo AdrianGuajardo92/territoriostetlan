@@ -847,10 +847,10 @@ const AdminModal = (props = {}) => {
               {/* Botón para abrir gestión completa */}
               <button
                 onClick={() => setShowUserManagement(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 font-medium shadow-lg"
+                className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-110 shadow-lg flex items-center justify-center"
+                title="Gestión Completa de Usuarios"
               >
-                <i className="fas fa-cogs"></i>
-                Gestión Completa
+                <i className="fas fa-user-cog text-xl"></i>
               </button>
             </div>
 
