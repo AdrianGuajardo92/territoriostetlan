@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
-import { useModalHistory } from '../../hooks/useModalHistory';
 import Icon from '../common/Icon';
 import ConfirmDialog from '../common/ConfirmDialog';
 
 const UserManagementModal = ({ 
   isOpen, 
-  onClose, 
-  modalId = 'user-management-modal' 
+  onClose
 }) => {
   const { 
     users, 
@@ -19,12 +17,12 @@ const UserManagementModal = ({
     currentUser 
   } = useApp();
   const { showToast } = useToast();
-  const { closeModal } = useModalHistory(isOpen, onClose, modalId);
 
   // Estados del modal
   const [activeView, setActiveView] = useState('list'); // 'list', 'create', 'edit'
   const [selectedUser, setSelectedUser] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(''); // Estado para búsqueda
   
   // Estados de confirmación
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -53,12 +51,33 @@ const UserManagementModal = ({
       setShowPasswordReset(false);
       setUserToDelete(null);
       setUserToResetPassword(null);
+      setSearchTerm(''); // Resetear búsqueda
     }
   }, [isOpen]);
 
-  // Separar usuarios por rol
-  const adminUsers = users.filter(u => u.role === 'admin');
-  const publisherUsers = users.filter(u => u.role !== 'admin');
+  // Función de filtrado de usuarios por búsqueda
+  const filterUsers = (userList) => {
+    if (!searchTerm.trim()) return userList;
+    
+    const term = searchTerm.toLowerCase().trim();
+    return userList.filter(user => {
+      return (
+        user.name?.toLowerCase().includes(term) ||
+        user.accessCode?.toLowerCase().includes(term)
+      );
+    });
+  };
+
+  // Separar usuarios por rol y aplicar filtro de búsqueda
+  const allAdminUsers = users.filter(u => u.role === 'admin');
+  const allPublisherUsers = users.filter(u => u.role !== 'admin');
+  
+  const adminUsers = filterUsers(allAdminUsers);
+  const publisherUsers = filterUsers(allPublisherUsers);
+  
+  // Calcular totales para mostrar resultados de búsqueda
+  const totalFiltered = adminUsers.length + publisherUsers.length;
+  const totalUsers = allAdminUsers.length + allPublisherUsers.length;
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -118,6 +137,7 @@ const UserManagementModal = ({
   };
 
   const handleDeleteClick = (user) => {
+    console.log('🗑️ Abriendo diálogo de confirmación para eliminar:', user.name);
     setUserToDelete(user);
     setShowDeleteConfirm(true);
   };
@@ -249,8 +269,68 @@ const UserManagementModal = ({
         </button>
       </div>
 
+      {/* Barra de búsqueda */}
+      <div className="relative">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="🔍 Buscar por nombre o usuario..."
+            className="w-full px-4 py-3 pl-12 pr-12 bg-white border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-gray-700 placeholder-gray-400"
+          />
+          <Icon 
+            name="search" 
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Icon name="x" className="text-gray-500 text-lg" />
+            </button>
+          )}
+        </div>
+        
+        {/* Indicador de resultados de búsqueda */}
+        {searchTerm && (
+          <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700 font-medium">
+              {totalFiltered === 0 ? (
+                <>No se encontraron usuarios que coincidan con "<span className="font-bold">{searchTerm}</span>"</>
+              ) : (
+                <>
+                  Mostrando <span className="font-bold">{totalFiltered}</span> de {totalUsers} usuarios
+                  {totalFiltered !== totalUsers && <> que coinciden con "<span className="font-bold">{searchTerm}</span>"</>}
+                </>
+              )}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Mensaje cuando no hay resultados de búsqueda */}
+      {searchTerm && totalFiltered === 0 && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4 shadow-lg">
+            <Icon name="search" className="text-3xl text-gray-400" />
+          </div>
+          <h4 className="text-xl font-bold text-gray-800 mb-2">Sin resultados</h4>
+          <p className="text-gray-600 text-center">
+            No se encontraron usuarios que coincidan con "<span className="font-semibold">{searchTerm}</span>"
+          </p>
+          <button
+            onClick={() => setSearchTerm('')}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Limpiar búsqueda
+          </button>
+        </div>
+      )}
+
       {/* Sección de Administradores */}
-      {adminUsers.length > 0 && (
+      {(totalFiltered > 0 || !searchTerm) && adminUsers.length > 0 && (
         <div>
           <div className="flex items-center mb-4">
             <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-violet-600 rounded-lg flex items-center justify-center mr-3">
@@ -269,7 +349,8 @@ const UserManagementModal = ({
       )}
 
       {/* Sección de Publicadores */}
-      <div>
+      {(totalFiltered > 0 || !searchTerm) && (
+        <div>
         <div className="flex items-center mb-4">
           <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
             <Icon name="users" className="text-white text-sm" />
@@ -296,6 +377,7 @@ const UserManagementModal = ({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 
@@ -437,7 +519,7 @@ const UserManagementModal = ({
               <h2 className="text-lg sm:text-2xl font-bold">Gestión de Usuarios</h2>
             </div>
             <button
-              onClick={closeModal}
+              onClick={onClose}
               className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
             >
               <Icon name="times" className="text-lg sm:text-xl" />

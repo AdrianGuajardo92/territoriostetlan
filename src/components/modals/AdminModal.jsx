@@ -1225,7 +1225,6 @@ const AdminModal = (props = {}) => {
         <UserManagementModal
           isOpen={showUserManagement}
           onClose={() => setShowUserManagement(false)}
-          modalId="user-management-modal"
         />
       )}
 

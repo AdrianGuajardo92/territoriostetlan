@@ -1,6 +1,5 @@
 import React from 'react';
 import Icon from './Icon';
-import { useModalHistory } from '../../hooks/useModalHistory';
 
 const ConfirmDialog = ({
   isOpen,
@@ -11,12 +10,12 @@ const ConfirmDialog = ({
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
   type = 'warning', // warning, danger, info, success
-  modalId = 'confirm-dialog' // ID único para el historial
+  isProcessing = false // Para deshabilitar botones durante el procesamiento
 }) => {
-  // Hook para manejar historial del navegador consistentemente
-  const { closeModal } = useModalHistory(isOpen, onClose, modalId);
 
   if (!isOpen) return null;
+  
+  console.log('✅ ConfirmDialog renderizando con título:', title);
 
   const typeConfig = {
     warning: {
@@ -49,19 +48,20 @@ const ConfirmDialog = ({
 
   const handleConfirm = () => {
     onConfirm();
-    closeModal();
+    onClose();
   };
 
   return (
     <>
       {/* Backdrop con animación suave */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 modal-backdrop"
-        onClick={closeModal}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10002] modal-backdrop"
+        onClick={onClose}
+        style={{ zIndex: 10002 }}
       />
       
       {/* Dialog con animación Fade + Scale */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[10003] flex items-center justify-center p-4" style={{ zIndex: 10003 }}>
         <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform pointer-events-auto modal-fade-scale">
           <div className="p-6">
             {/* Icon */}
@@ -80,16 +80,25 @@ const ConfirmDialog = ({
             {/* Actions */}
             <div className="flex space-x-3">
               <button
-                onClick={closeModal}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                onClick={onClose}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {cancelText}
               </button>
               <button
                 onClick={handleConfirm}
-                className={`flex-1 px-4 py-2 ${config.confirmButton} text-white rounded-lg transition-colors font-medium shadow-sm`}
+                disabled={isProcessing}
+                className={`flex-1 px-4 py-2 ${config.confirmButton} text-white rounded-lg transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
               >
-                {confirmText}
+                {isProcessing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Eliminando...
+                  </>
+                ) : (
+                  confirmText
+                )}
               </button>
             </div>
           </div>
