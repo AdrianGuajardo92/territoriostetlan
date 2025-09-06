@@ -1160,6 +1160,36 @@ export const AppProvider = ({ children }) => {
     return userAssignment ? [userAssignment] : [];
   };
 
+  // Nueva función para actualizar el progreso de una campaña
+  const updateCampaignProgress = async (campaignId, userId, completedAddresses) => {
+    try {
+      const campaign = campaigns.find(c => c.id === campaignId);
+      if (!campaign) return;
+
+      // Actualizar las asignaciones con el progreso
+      const updatedAssignments = campaign.assignments.map(assignment => {
+        if (assignment.userId === userId) {
+          return {
+            ...assignment,
+            completedAddresses: completedAddresses,
+            completedCount: completedAddresses.length
+          };
+        }
+        return assignment;
+      });
+
+      // Actualizar en Firebase
+      await updateDoc(doc(db, 'campaigns', campaignId), {
+        assignments: updatedAssignments,
+        lastUpdated: serverTimestamp()
+      });
+
+    } catch (error) {
+      console.error('Error updating campaign progress:', error);
+      throw error;
+    }
+  };
+
   const handleResetSingleTerritory = async (territoryId) => {
     try {
       const territoryDoc = await getDoc(doc(db, 'territories', territoryId));
@@ -1590,7 +1620,8 @@ export const AppProvider = ({ children }) => {
     updateCampaign,
     deleteCampaign,
     finalizeCampaign,
-    getCampaignAssignments
+    getCampaignAssignments,
+    updateCampaignProgress
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

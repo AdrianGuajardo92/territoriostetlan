@@ -3,6 +3,7 @@ import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import CampaignCreationWizard from './CampaignCreationWizard';
+import CampaignProgressModal from './CampaignProgressModal';
 import ConfirmDialog from '../common/ConfirmDialog';
 
 const CampaignModal = ({ isOpen, onClose }) => {
@@ -14,6 +15,7 @@ const CampaignModal = ({ isOpen, onClose }) => {
   const [filterStatus, setFilterStatus] = useState('all'); // all, active, completed, draft
   const [showFinalizeCampaignConfirm, setShowFinalizeCampaignConfirm] = useState(false);
   const [campaignToFinalize, setCampaignToFinalize] = useState(null);
+  const [showProgressModal, setShowProgressModal] = useState(false);
 
   // Resetear al abrir/cerrar
   useEffect(() => {
@@ -189,9 +191,36 @@ const CampaignModal = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Lista de asignaciones */}
+          {/* Botón para Ver Progreso en Tiempo Real */}
+          {selectedCampaign.status === 'active' && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Monitoreo de Progreso
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Visualiza el avance de la campaña en tiempo real
+                  </p>
+                </div>
+                <Icon name="activity" className="text-3xl text-purple-500" />
+              </div>
+              
+              <button
+                onClick={() => setShowProgressModal(true)}
+                className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
+              >
+                <Icon name="barChart" className="text-2xl" />
+                Ver Progreso en Tiempo Real
+              </button>
+            </div>
+          )}
+
+          {/* Lista básica de asignaciones */}
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Asignaciones</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              Asignaciones de la Campaña
+            </h3>
             <div className="space-y-3">
               {selectedCampaign.assignments?.map((assignment, index) => {
                 const user = users.find(u => u.id === assignment.userId);
@@ -230,6 +259,13 @@ const CampaignModal = ({ isOpen, onClose }) => {
           confirmText="Sí, finalizar campaña"
           cancelText="Cancelar"
           type="danger"
+        />
+        
+        {/* Modal de Progreso en Tiempo Real */}
+        <CampaignProgressModal
+          campaign={selectedCampaign}
+          isOpen={showProgressModal}
+          onClose={() => setShowProgressModal(false)}
         />
       </div>
     );

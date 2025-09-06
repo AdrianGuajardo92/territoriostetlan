@@ -4,7 +4,7 @@ import AddressCard from '../addresses/AddressCard';
 import { useApp } from '../../context/AppContext';
 
 const CampaignAssignmentView = () => {
-  const { campaigns, currentUser, addresses, territories } = useApp();
+  const { campaigns, currentUser, addresses, territories, updateCampaignProgress } = useApp();
   const [activeCampaign, setActiveCampaign] = useState(null);
   const [userAssignments, setUserAssignments] = useState([]);
   const [completedAddresses, setCompletedAddresses] = useState(new Set()); // Track de direcciones completadas
@@ -38,21 +38,34 @@ const CampaignAssignmentView = () => {
         });
         
         setUserAssignments(sortedAddresses);
+        
+        // Cargar el progreso guardado
+        if (userAssignment.completedAddresses) {
+          setCompletedAddresses(new Set(userAssignment.completedAddresses));
+        }
       }
     }
   }, [campaigns, currentUser, addresses, territories]);
 
   // Función para marcar/desmarcar una dirección como completada
-  const toggleAddressCompleted = (addressId) => {
-    setCompletedAddresses(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(addressId)) {
-        newSet.delete(addressId);
-      } else {
-        newSet.add(addressId);
-      }
-      return newSet;
-    });
+  const toggleAddressCompleted = async (addressId) => {
+    const newSet = new Set(completedAddresses);
+    if (newSet.has(addressId)) {
+      newSet.delete(addressId);
+    } else {
+      newSet.add(addressId);
+    }
+    
+    setCompletedAddresses(newSet);
+    
+    // Guardar el progreso en Firebase
+    if (activeCampaign && currentUser) {
+      await updateCampaignProgress(
+        activeCampaign.id, 
+        currentUser.id, 
+        Array.from(newSet)
+      );
+    }
   };
 
   // Si no hay campaña activa
