@@ -7,14 +7,14 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
   const { territories, addresses, users, createCampaign } = useApp();
   const { showToast } = useToast();
   
-  const [step, setStep] = useState(1); // 1: Info básica, 2: Territorios, 3: Reglas, 4: Confirmación
+  const [step, setStep] = useState(1); // 1: Info básica, 2: Reglas, 3: Confirmación
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Datos de la campaña
   const [campaignData, setCampaignData] = useState({
     name: '',
     description: '',
-    selectedTerritories: [],
+    selectedTerritories: [], // Se llenará automáticamente con todos los territorios
     defaultAddressCount: 2,
     exceptions: [], // Array de {userId, addressCount}
     startDate: new Date().toISOString().split('T')[0],
@@ -25,11 +25,22 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
   const [userSearch, setUserSearch] = useState('');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
+  // Al montar el componente, seleccionar todos los territorios automáticamente
+  useEffect(() => {
+    if (territories.length > 0 && campaignData.selectedTerritories.length === 0) {
+      setCampaignData(prev => ({
+        ...prev,
+        selectedTerritories: territories.map(t => t.id)
+      }));
+    }
+  }, [territories]);
+
   // Calcular totales
   const calculateTotals = () => {
-    // Direcciones totales en territorios seleccionados
+    // Usar todos los territorios siempre
+    const allTerritoryIds = territories.map(t => t.id);
     const totalAddresses = addresses.filter(addr => 
-      campaignData.selectedTerritories.includes(addr.territoryId)
+      allTerritoryIds.includes(addr.territoryId)
     ).length;
 
     // Publicadores (excluir administradores si es necesario)
@@ -92,24 +103,6 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
     }));
   };
 
-  // Toggle territorio seleccionado
-  const toggleTerritory = (territoryId) => {
-    setCampaignData(prev => ({
-      ...prev,
-      selectedTerritories: prev.selectedTerritories.includes(territoryId)
-        ? prev.selectedTerritories.filter(t => t !== territoryId)
-        : [...prev.selectedTerritories, territoryId]
-    }));
-  };
-
-  // Seleccionar todos los territorios
-  const selectAllTerritories = () => {
-    setCampaignData(prev => ({
-      ...prev,
-      selectedTerritories: territories.map(t => t.id)
-    }));
-  };
-
   // Crear y asignar campaña
   const handleCreateCampaign = async () => {
     setIsProcessing(true);
@@ -121,21 +114,16 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
         return;
       }
 
-      if (campaignData.selectedTerritories.length === 0) {
-        showToast('Por favor selecciona al menos un territorio', 'error');
-        setIsProcessing(false);
-        return;
-      }
-
       if (!totals.isViable) {
         showToast('No hay suficientes direcciones para completar las asignaciones', 'error');
         setIsProcessing(false);
         return;
       }
 
-      // Obtener direcciones de los territorios seleccionados
+      // Obtener TODAS las direcciones de TODOS los territorios
+      const allTerritoryIds = territories.map(t => t.id);
       const availableAddresses = addresses.filter(addr => 
-        campaignData.selectedTerritories.includes(addr.territoryId)
+        allTerritoryIds.includes(addr.territoryId)
       );
 
       // Obtener publicadores
@@ -170,7 +158,7 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
       const newCampaign = {
         name: campaignData.name,
         description: campaignData.description,
-        territories: campaignData.selectedTerritories,
+        territories: allTerritoryIds, // Usar todos los territorios
         totalAddresses: shuffledAddresses.length,
         assignments,
         status: 'active',
@@ -211,7 +199,7 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold">Nueva Campaña</h1>
-                <p className="text-white/80 text-sm">Paso {step} de 4</p>
+                <p className="text-white/80 text-sm">Paso {step} de 3</p>
               </div>
             </div>
             <button
@@ -225,7 +213,7 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
 
           {/* Barra de progreso */}
           <div className="flex gap-2">
-            {[1, 2, 3, 4].map(s => (
+            {[1, 2, 3].map(s => (
               <div
                 key={s}
                 className={`flex-1 h-2 rounded-full transition-all ${
@@ -301,65 +289,19 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
           </div>
         )}
 
-        {/* Paso 2: Selección de territorios */}
+        {/* Paso 2: Reglas de asignación */}
         {step === 2 && (
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Seleccionar Territorios</h2>
-              <button
-                onClick={selectAllTerritories}
-                className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 font-medium"
-              >
-                Seleccionar Todos
-              </button>
-            </div>
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Reglas de Asignación</h2>
 
+            {/* Información sobre territorios */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
               <p className="text-sm text-blue-800">
                 <Icon name="info" className="inline mr-2" />
-                Selecciona los territorios de donde se tomarán las direcciones para esta campaña.
-                Actualmente hay <span className="font-bold">{totals.totalAddresses}</span> direcciones
-                en los territorios seleccionados.
+                Se utilizarán <span className="font-bold">todos los {territories.length} territorios</span> disponibles 
+                con un total de <span className="font-bold">{totals.totalAddresses} direcciones</span> para esta campaña.
               </p>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {territories.map(territory => {
-                const addressCount = addresses.filter(a => a.territoryId === territory.id).length;
-                const isSelected = campaignData.selectedTerritories.includes(territory.id);
-                
-                return (
-                  <button
-                    key={territory.id}
-                    onClick={() => toggleTerritory(territory.id)}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      isSelected 
-                        ? 'bg-purple-100 border-purple-500 shadow-lg' 
-                        : 'bg-white border-gray-200 hover:border-purple-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-gray-900">
-                        T{territory.name.replace(/[^\d]/g, '')}
-                      </span>
-                      {isSelected && (
-                        <Icon name="checkCircle" className="text-purple-600" />
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      {addressCount} direcciones
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Paso 3: Reglas de asignación */}
-        {step === 3 && (
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Reglas de Asignación</h2>
 
             {/* Regla general */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -493,8 +435,8 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
           </div>
         )}
 
-        {/* Paso 4: Confirmación */}
-        {step === 4 && (
+        {/* Paso 3: Confirmación */}
+        {step === 3 && (
           <div className="max-w-2xl mx-auto">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Confirmar Campaña</h2>
 
@@ -510,7 +452,7 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
                 <div>
                   <p className="text-sm text-gray-600">Territorios</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {campaignData.selectedTerritories.length}
+                    {territories.length} (Todos)
                   </p>
                 </div>
                 <div>
@@ -566,13 +508,12 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
             {step === 1 ? 'Cancelar' : 'Anterior'}
           </button>
 
-          {step < 4 ? (
+          {step < 3 ? (
             <button
               onClick={() => setStep(step + 1)}
               disabled={
                 (step === 1 && !campaignData.name.trim()) ||
-                (step === 2 && campaignData.selectedTerritories.length === 0) ||
-                (step === 3 && !totals.isViable)
+                (step === 2 && !totals.isViable)
               }
               className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
