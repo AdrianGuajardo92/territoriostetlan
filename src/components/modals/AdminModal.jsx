@@ -836,18 +836,13 @@ const AdminModal = (props = {}) => {
       case 'users':
         return (
           <div className="space-y-6">
-            {/* Header de la sección */}
+            {/* Header de la sección - Simplificado sin icono decorativo */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <i className="fas fa-users-cog text-white text-xl"></i>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h3>
-                  <p className="text-gray-600 text-sm">
-                    {users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''} en el sistema
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h3>
+                <p className="text-gray-600 text-sm mt-1">
+                  {users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''} en el sistema
+                </p>
               </div>
               
               {/* Botón para abrir gestión completa */}
