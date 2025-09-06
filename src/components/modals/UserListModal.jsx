@@ -181,21 +181,62 @@ const UserListModal = ({
                 const isCurrentUser = user.id === currentUser?.id;
                 const isAdmin = user.role === 'admin';
                 
+                // Estilos específicos para cada rol cuando se muestra la vista "all"
+                const cardStyles = userType === 'all' 
+                  ? (isAdmin 
+                    ? {
+                        cardBg: 'from-purple-50 to-violet-100',
+                        borderColor: 'border-purple-300',
+                        iconBg: 'from-purple-500 to-violet-600',
+                        badge: 'from-purple-600 to-violet-600',
+                        shadowColor: 'shadow-purple-200',
+                        ringColor: 'ring-purple-400'
+                      }
+                    : {
+                        cardBg: 'from-blue-50 to-indigo-100',
+                        borderColor: 'border-blue-200',
+                        iconBg: 'from-blue-500 to-indigo-600',
+                        badge: 'from-blue-500 to-indigo-600',
+                        shadowColor: 'shadow-blue-100',
+                        ringColor: 'ring-blue-400'
+                      })
+                  : {
+                      cardBg: theme.cardBg,
+                      borderColor: theme.borderColor,
+                      iconBg: theme.icon,
+                      badge: theme.badge,
+                      shadowColor: '',
+                      ringColor: ''
+                    };
+                
                 return (
                   <div 
                     key={user.id} 
-                    className={`bg-gradient-to-br ${theme.cardBg} rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 p-5 border-2 ${theme.borderColor} relative overflow-hidden`}
+                    className={`
+                      bg-gradient-to-br ${cardStyles.cardBg} 
+                      rounded-2xl shadow-md hover:shadow-xl 
+                      transition-all duration-300 p-5 
+                      border-2 ${cardStyles.borderColor} 
+                      relative overflow-hidden
+                      ${userType === 'all' && isAdmin ? 'ring-2 ring-purple-300 ring-opacity-50' : ''}
+                      ${userType === 'all' ? (isAdmin ? 'hover:scale-105' : 'hover:scale-[1.02]') : 'hover:scale-[1.02]'}
+                    `}
                   >
-                    {/* Badge de rol */}
+                    {/* Badge de rol con estrella para admin */}
                     <div className="absolute top-2 right-2">
-                      <span className={`inline-block bg-gradient-to-r ${theme.badge} text-white px-3 py-1 rounded-full text-xs font-bold`}>
+                      <span className={`inline-flex items-center gap-1 bg-gradient-to-r ${cardStyles.badge} text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg`}>
+                        {isAdmin && <Icon name="star" className="text-xs" />}
                         {isAdmin ? 'ADMIN' : 'PUBLICADOR'}
                       </span>
                     </div>
                     
-                    {/* Avatar/Icono */}
+                    {/* Avatar/Icono con efectos mejorados */}
                     <div className="flex justify-center mb-4">
-                      <div className={`w-16 h-16 bg-gradient-to-r ${theme.icon} rounded-full flex items-center justify-center shadow-lg`}>
+                      <div className={`
+                        w-16 h-16 bg-gradient-to-r ${cardStyles.iconBg} 
+                        rounded-full flex items-center justify-center shadow-lg
+                        ${userType === 'all' && isAdmin ? 'animate-pulse' : ''}
+                      `}>
                         <Icon 
                           name={isAdmin ? 'shield' : 'user'} 
                           className="text-white text-2xl" 

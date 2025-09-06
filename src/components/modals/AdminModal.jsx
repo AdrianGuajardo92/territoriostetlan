@@ -39,6 +39,7 @@ const AdminModal = (props = {}) => {
   // Estados para los nuevos modales de lista de usuarios
   const [showAdminListModal, setShowAdminListModal] = useState(false);
   const [showPublisherListModal, setShowPublisherListModal] = useState(false);
+  const [showAllUsersModal, setShowAllUsersModal] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
@@ -915,19 +916,25 @@ const AdminModal = (props = {}) => {
                 
               </div>
 
-              {/* Card Total (sin acordeón) */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg p-6 border-2 border-green-200">
+              {/* Card Total - Ahora clickeable */}
+              <button
+                onClick={() => setShowAllUsersModal(true)}
+                className="w-full text-left bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg p-6 border-2 border-green-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
                     <i className="fas fa-users-cog text-white text-xl"></i>
                   </div>
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
-                    {users.length}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
+                      {users.length}
+                    </span>
+                    <i className="fas fa-arrow-right text-green-600"></i>
+                  </div>
                 </div>
                 <h4 className="text-xl font-bold text-green-800 mb-2">Total Usuarios</h4>
-                <p className="text-green-600 text-sm">Registrados en el sistema</p>
-              </div>
+                <p className="text-green-600 text-sm">Registrados en el sistema • Click para ver todos</p>
+              </button>
             </div>
 
             {/* Mensaje informativo */}
@@ -1246,6 +1253,13 @@ const AdminModal = (props = {}) => {
         isOpen={showPublisherListModal}
         onClose={() => setShowPublisherListModal(false)}
         userType="publisher"
+      />
+
+      {/* Modal de Todos los Usuarios */}
+      <UserListModal
+        isOpen={showAllUsersModal}
+        onClose={() => setShowAllUsersModal(false)}
+        userType="all"
       />
     </>
   );
