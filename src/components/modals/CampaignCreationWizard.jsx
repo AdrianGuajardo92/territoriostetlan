@@ -43,42 +43,42 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
       allTerritoryIds.includes(addr.territoryId)
     ).length;
 
-    // Publicadores (excluir administradores)
-    const publishers = users.filter(u => u.role !== 'admin');
+    // Todos los participantes (incluir administradores + publicadores)
+    const allParticipants = users; // TODOS los usuarios participan en las campañas
     
     // Calcular distribución equitativa
     const exceptionsCount = campaignData.exceptions.length;
-    const regularPublishers = publishers.length - exceptionsCount;
+    const regularParticipants = allParticipants.length - exceptionsCount;
     
     // Direcciones después de asignar 1 a cada excepción
     const addressesAfterExceptions = totalAddresses - exceptionsCount;
     
-    // Calcular cuántas direcciones recibirá cada publicador regular
-    const addressesPerRegular = regularPublishers > 0 
-      ? Math.floor(addressesAfterExceptions / regularPublishers)
+    // Calcular cuántas direcciones recibirá cada participante regular
+    const addressesPerRegular = regularParticipants > 0 
+      ? Math.floor(addressesAfterExceptions / regularParticipants)
       : 0;
     
     // Direcciones sobrantes que se distribuirán
-    const remainingAddresses = regularPublishers > 0
-      ? addressesAfterExceptions % regularPublishers
+    const remainingAddresses = regularParticipants > 0
+      ? addressesAfterExceptions % regularParticipants
       : 0;
 
     return {
       totalAddresses,
-      totalPublishers: publishers.length,
+      totalParticipants: allParticipants.length,
       exceptionsCount,
-      regularPublishers,
+      regularParticipants,
       addressesPerRegular,
       remainingAddresses,
-      isViable: totalAddresses >= publishers.length // Al menos 1 dirección por publicador
+      isViable: totalAddresses >= allParticipants.length // Al menos 1 dirección por participante
     };
   };
 
   const totals = calculateTotals();
 
-  // Filtrar usuarios para dropdown de excepciones
+  // Filtrar usuarios para dropdown de excepciones (incluir TODOS los usuarios)
   const filteredUsers = users.filter(user => {
-    if (user.role === 'admin') return false;
+    // Incluir tanto administradores como publicadores
     if (campaignData.exceptions.some(e => e.userId === user.id)) return false;
     if (!userSearch) return false;
     return user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -410,7 +410,7 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Excepciones Especiales</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Publicadores que recibirán <span className="font-semibold">solo 1 dirección</span> debido a circunstancias especiales
+                Participantes que recibirán <span className="font-semibold">solo 1 dirección</span> debido a circunstancias especiales
               </p>
 
               {/* Agregar excepción */}
@@ -423,7 +423,7 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
                     setShowUserDropdown(true);
                   }}
                   onFocus={() => setShowUserDropdown(true)}
-                  placeholder="Buscar publicador para agregar excepción..."
+                  placeholder="Buscar participante para agregar excepción..."
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                 />
                 
@@ -499,8 +499,8 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
                     <p className="font-bold text-gray-900">{totals.totalAddresses}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600">Total de publicadores:</p>
-                    <p className="font-bold text-gray-900">{totals.totalPublishers}</p>
+                    <p className="text-gray-600">Total de participantes:</p>
+                    <p className="font-bold text-gray-900">{totals.totalParticipants}</p>
                   </div>
                   {totals.exceptionsCount > 0 && (
                     <div>
@@ -509,19 +509,19 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
                     </div>
                   )}
                   <div>
-                    <p className="text-gray-600">Publicadores regulares:</p>
-                    <p className="font-bold text-gray-900">{totals.regularPublishers}</p>
+                    <p className="text-gray-600">Participantes regulares:</p>
+                    <p className="font-bold text-gray-900">{totals.regularParticipants}</p>
                   </div>
                 </div>
                 
-                {totals.isViable && totals.regularPublishers > 0 && (
+                {totals.isViable && totals.regularParticipants > 0 && (
                   <div className="pt-3 border-t border-green-200">
                     <p className="text-sm text-green-800">
                       <Icon name="checkCircle" className="inline mr-1" />
-                      Cada publicador regular recibirá aproximadamente <span className="font-bold">{totals.addressesPerRegular}</span> direcciones
+                      Cada participante regular recibirá aproximadamente <span className="font-bold">{totals.addressesPerRegular}</span> direcciones
                       {totals.remainingAddresses > 0 && (
                         <span className="block mt-1 text-xs">
-                          ({totals.remainingAddresses} publicadores recibirán 1 dirección adicional)
+                          ({totals.remainingAddresses} participantes recibirán 1 dirección adicional de forma aleatoria)
                         </span>
                       )}
                     </p>
@@ -530,7 +530,7 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
                 
                 {!totals.isViable && (
                   <p className="text-sm text-red-700">
-                    ⚠️ No hay suficientes direcciones. Se necesita al menos 1 dirección por publicador.
+                    ⚠️ No hay suficientes direcciones. Se necesita al menos 1 dirección por participante.
                   </p>
                 )}
               </div>
@@ -567,7 +567,7 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
                 <div>
                   <p className="text-sm text-gray-600">Participantes</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {totals.totalPublishers}
+                    {totals.totalParticipants}
                   </p>
                 </div>
                 <div>

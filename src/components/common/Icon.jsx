@@ -19,6 +19,8 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "", ...prop
         'arrowRight': 'ArrowRight',
         'chevronRight': 'ChevronRight',
         'chevronLeft': 'ChevronLeft',
+        'chevronDown': 'ChevronDown',
+        'chevronUp': 'ChevronUp',
         'shield': 'Shield',
         'users': 'Users',
         'search': 'Search',
