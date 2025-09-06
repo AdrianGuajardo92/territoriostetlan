@@ -937,30 +937,49 @@ const AdminModal = (props = {}) => {
               </button>
             </div>
 
-            {/* Mensaje informativo */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-info text-white text-sm"></i>
+            {/* Mensaje informativo mejorado */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 rounded-3xl shadow-lg border border-indigo-200/50 backdrop-blur-sm">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-400/10 to-transparent rounded-full -mr-16 -mt-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-400/10 to-transparent rounded-full -ml-12 -mb-12"></div>
+              
+              <div className="relative p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <i className="fas fa-user-cog text-white text-lg"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h5 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                      Gestión Completa de Usuarios
+                    </h5>
+                    <p className="text-gray-700 leading-relaxed">
+                      Para crear, editar, eliminar o resetear la contraseña de un usuario, haz clic en el 
+                      <span className="inline-flex items-center gap-1 mx-2 px-2 py-1 bg-green-100 text-green-700 rounded-lg font-medium">
+                        <i className="fas fa-user-cog text-xs"></i>
+                        ícono
+                      </span>
+                      ubicado en la parte superior.
+                    </p>
+                  </div>
                 </div>
-                <h5 className="text-lg font-bold text-blue-800">Gestión Completa de Usuarios</h5>
-              </div>
-              <p className="text-blue-700 mb-4">
-                Para crear, editar, eliminar usuarios o resetear contraseñas, utiliza el botón "Gestión Completa" arriba.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
-                  ✅ Crear usuarios
-                </span>
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
-                  ✅ Editar información
-                </span>
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
-                  ✅ Resetear contraseñas
-                </span>
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
-                  ✅ Eliminar usuarios
-                </span>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white/70 rounded-xl border border-indigo-200/50 backdrop-blur-sm">
+                    <i className="fas fa-plus-circle text-green-600"></i>
+                    <span className="text-sm font-medium text-gray-700">Crear</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white/70 rounded-xl border border-blue-200/50 backdrop-blur-sm">
+                    <i className="fas fa-edit text-blue-600"></i>
+                    <span className="text-sm font-medium text-gray-700">Editar</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white/70 rounded-xl border border-yellow-200/50 backdrop-blur-sm">
+                    <i className="fas fa-key text-yellow-600"></i>
+                    <span className="text-sm font-medium text-gray-700">Resetear</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white/70 rounded-xl border border-red-200/50 backdrop-blur-sm">
+                    <i className="fas fa-trash text-red-600"></i>
+                    <span className="text-sm font-medium text-gray-700">Eliminar</span>
+                  </div>
+                </div>
               </div>
             </div>
 
