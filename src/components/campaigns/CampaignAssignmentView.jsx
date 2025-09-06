@@ -147,11 +147,7 @@ const CampaignAssignmentView = () => {
                   showActions={false}
                   hideStatusBadge={true}  // Ocultar badge de "Pendiente"
                   showFullAddress={true}   // Mostrar dirección completa sin truncar
-                  customBadge={
-                    <span className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-xs font-medium">
-                      Territorio {address.territoryName}
-                    </span>
-                  }
+                  // No pasamos customBadge para eliminar el badge de territorio
                 />
               </div>
             ))}
