@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 
 const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
-  const { territories, addresses, users, createCampaign } = useApp();
+  const { territories, addresses, users, createCampaign, currentUser } = useApp();
   const { showToast } = useToast();
   
   const [step, setStep] = useState(1); // 1: Info básica, 2: Reglas, 3: Confirmación
@@ -35,7 +35,7 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
     }
   }, [territories]);
 
-  // Calcular totales
+  // Calcular totales con distribución equitativa
   const calculateTotals = () => {
     // Usar todos los territorios siempre
     const allTerritoryIds = territories.map(t => t.id);
@@ -43,21 +43,34 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
       allTerritoryIds.includes(addr.territoryId)
     ).length;
 
-    // Publicadores (excluir administradores si es necesario)
+    // Publicadores (excluir administradores)
     const publishers = users.filter(u => u.role !== 'admin');
     
-    // Calcular direcciones necesarias
-    let requiredAddresses = 0;
-    publishers.forEach(user => {
-      const exception = campaignData.exceptions.find(e => e.userId === user.id);
-      requiredAddresses += exception ? exception.addressCount : campaignData.defaultAddressCount;
-    });
+    // Calcular distribución equitativa
+    const exceptionsCount = campaignData.exceptions.length;
+    const regularPublishers = publishers.length - exceptionsCount;
+    
+    // Direcciones después de asignar 1 a cada excepción
+    const addressesAfterExceptions = totalAddresses - exceptionsCount;
+    
+    // Calcular cuántas direcciones recibirá cada publicador regular
+    const addressesPerRegular = regularPublishers > 0 
+      ? Math.floor(addressesAfterExceptions / regularPublishers)
+      : 0;
+    
+    // Direcciones sobrantes que se distribuirán
+    const remainingAddresses = regularPublishers > 0
+      ? addressesAfterExceptions % regularPublishers
+      : 0;
 
     return {
       totalAddresses,
       totalPublishers: publishers.length,
-      requiredAddresses,
-      isViable: totalAddresses >= requiredAddresses
+      exceptionsCount,
+      regularPublishers,
+      addressesPerRegular,
+      remainingAddresses,
+      isViable: totalAddresses >= publishers.length // Al menos 1 dirección por publicador
     };
   };
 
@@ -93,16 +106,6 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
     }));
   };
 
-  // Actualizar cantidad de direcciones en excepción
-  const updateExceptionCount = (userId, count) => {
-    setCampaignData(prev => ({
-      ...prev,
-      exceptions: prev.exceptions.map(e => 
-        e.userId === userId ? { ...e, addressCount: parseInt(count) || 0 } : e
-      )
-    }));
-  };
-
   // Crear y asignar campaña
   const handleCreateCampaign = async () => {
     setIsProcessing(true);
@@ -126,22 +129,121 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
         allTerritoryIds.includes(addr.territoryId)
       );
 
+      // Agrupar direcciones por territorio para optimización
+      const addressesByTerritory = {};
+      availableAddresses.forEach(addr => {
+        if (!addressesByTerritory[addr.territoryId]) {
+          addressesByTerritory[addr.territoryId] = [];
+        }
+        addressesByTerritory[addr.territoryId].push(addr);
+      });
+
+      // Mezclar direcciones dentro de cada territorio
+      Object.keys(addressesByTerritory).forEach(territoryId => {
+        addressesByTerritory[territoryId].sort(() => Math.random() - 0.5);
+      });
+
       // Obtener publicadores
       const publishers = users.filter(u => u.role !== 'admin');
 
+      // Separar publicadores con excepción y regulares
+      const exceptionPublishers = publishers.filter(p => 
+        campaignData.exceptions.some(e => e.userId === p.id)
+      );
+      const regularPublishers = publishers.filter(p => 
+        !campaignData.exceptions.some(e => e.userId === p.id)
+      );
+
       // Crear asignaciones
       const assignments = [];
-      let addressIndex = 0;
-      const shuffledAddresses = [...availableAddresses].sort(() => Math.random() - 0.5);
+      const usedAddresses = new Set();
 
-      for (const publisher of publishers) {
-        const exception = campaignData.exceptions.find(e => e.userId === publisher.id);
-        const addressCount = exception ? exception.addressCount : campaignData.defaultAddressCount;
+      // PASO 1: Asignar 1 dirección a cada publicador con excepción
+      for (const publisher of exceptionPublishers) {
+        const assignedAddress = [];
+        
+        // Buscar una dirección disponible de cualquier territorio
+        for (const territoryId in addressesByTerritory) {
+          const territoryAddresses = addressesByTerritory[territoryId];
+          for (const addr of territoryAddresses) {
+            if (!usedAddresses.has(addr.id)) {
+              assignedAddress.push(addr.id);
+              usedAddresses.add(addr.id);
+              break;
+            }
+          }
+          if (assignedAddress.length === 1) break;
+        }
+
+        assignments.push({
+          userId: publisher.id,
+          userName: publisher.name,
+          addressCount: assignedAddress.length,
+          addressIds: assignedAddress,
+          completed: false,
+          completedCount: 0
+        });
+      }
+
+      // PASO 2: Distribución equitativa para publicadores regulares
+      const remainingAddresses = availableAddresses.filter(addr => !usedAddresses.has(addr.id));
+      const addressesPerRegular = Math.floor(remainingAddresses.length / regularPublishers.length);
+      const extraAddresses = remainingAddresses.length % regularPublishers.length;
+
+      // Crear pool de direcciones ordenado por territorio
+      const addressPool = [];
+      Object.keys(addressesByTerritory).forEach(territoryId => {
+        const territoryAddresses = addressesByTerritory[territoryId]
+          .filter(addr => !usedAddresses.has(addr.id));
+        addressPool.push(...territoryAddresses);
+      });
+
+      let poolIndex = 0;
+
+      // Asignar direcciones a publicadores regulares
+      regularPublishers.forEach((publisher, index) => {
+        const baseCount = addressesPerRegular;
+        const extraCount = index < extraAddresses ? 1 : 0;
+        const totalCount = baseCount + extraCount;
         
         const assignedAddresses = [];
-        for (let i = 0; i < addressCount && addressIndex < shuffledAddresses.length; i++) {
-          assignedAddresses.push(shuffledAddresses[addressIndex].id);
-          addressIndex++;
+        
+        // Intentar asignar direcciones del mismo territorio cuando sea posible
+        let lastTerritoryId = null;
+        let addressesFromSameTerritory = [];
+        
+        for (let i = 0; i < totalCount && poolIndex < addressPool.length; i++) {
+          // Si no tenemos territorio actual, tomar el siguiente disponible
+          if (!lastTerritoryId || addressesFromSameTerritory.length === 0) {
+            const nextAddress = addressPool[poolIndex++];
+            if (nextAddress) {
+              assignedAddresses.push(nextAddress.id);
+              lastTerritoryId = nextAddress.territoryId;
+              
+              // Buscar más direcciones del mismo territorio
+              addressesFromSameTerritory = addressPool
+                .slice(poolIndex)
+                .filter(addr => addr.territoryId === lastTerritoryId);
+            }
+          } else {
+            // Tomar del mismo territorio si hay disponibles
+            const sameTerrAddress = addressesFromSameTerritory.shift();
+            if (sameTerrAddress) {
+              assignedAddresses.push(sameTerrAddress.id);
+              // Remover del pool principal
+              const indexInPool = addressPool.indexOf(sameTerrAddress);
+              if (indexInPool > poolIndex) {
+                addressPool.splice(indexInPool, 1);
+              }
+            } else {
+              // Si no hay más del mismo territorio, tomar la siguiente
+              const nextAddress = addressPool[poolIndex++];
+              if (nextAddress) {
+                assignedAddresses.push(nextAddress.id);
+                lastTerritoryId = nextAddress.territoryId;
+              }
+            }
+          }
         }
 
         assignments.push({
@@ -152,28 +254,28 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
           completed: false,
           completedCount: 0
         });
-      }
+      });
 
       // Crear objeto de campaña
       const newCampaign = {
         name: campaignData.name,
         description: campaignData.description,
         territories: allTerritoryIds, // Usar todos los territorios
-        totalAddresses: shuffledAddresses.length,
+        totalAddresses: availableAddresses.length,
         assignments,
         status: 'active',
         createdAt: new Date().toISOString(),
-        createdBy: useApp().currentUser?.id,
+        createdBy: currentUser?.id,
         startDate: campaignData.startDate,
         endDate: campaignData.endDate,
         rules: {
-          defaultAddressCount: campaignData.defaultAddressCount,
+          distributionType: 'equitable', // Distribución equitativa automática
           exceptions: campaignData.exceptions
         }
       };
 
-      // Llamar a la función del contexto (cuando esté implementada)
-      // await createCampaign(newCampaign);
+      // Llamar a la función del contexto
+      await createCampaign(newCampaign);
       
       showToast(`Campaña "${campaignData.name}" creada exitosamente con ${assignments.length} asignaciones`, 'success');
       onComplete();
@@ -303,35 +405,50 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
               </p>
             </div>
 
-            {/* Regla general */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Regla General</h3>
-              <div className="flex items-center gap-4">
-                <label className="text-gray-700">
-                  Asignar por defecto
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={campaignData.defaultAddressCount}
-                  onChange={(e) => setCampaignData(prev => ({ 
-                    ...prev, 
-                    defaultAddressCount: parseInt(e.target.value) || 1 
-                  }))}
-                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center font-bold"
-                />
-                <span className="text-gray-700">
-                  direcciones a cada publicador
-                </span>
+            {/* Sistema de Asignación Automática */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-lg p-6 mb-6 border border-green-200">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">Sistema de Asignación Automática</h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white font-bold text-sm">1</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Distribución Equitativa</p>
+                    <p className="text-sm text-gray-600">
+                      El sistema distribuirá automáticamente las direcciones de manera equitativa entre todos los publicadores.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white font-bold text-sm">2</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Optimización por Territorio</p>
+                    <p className="text-sm text-gray-600">
+                      Cuando sea posible, se asignarán direcciones del mismo territorio a cada publicador para facilitar su ruta.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Icon name="info" className="text-white text-sm" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-blue-800 bg-blue-50 rounded-lg p-2">
+                      La mayoría recibirá aproximadamente 2 direcciones, pero el número exacto dependerá del total disponible.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Excepciones */}
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Excepciones</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Excepciones Especiales</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Publicadores que recibirán una cantidad diferente de direcciones
+                Publicadores que recibirán <span className="font-semibold">solo 1 dirección</span> debido a circunstancias especiales
               </p>
 
               {/* Agregar excepción */}
@@ -375,24 +492,19 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
               ) : (
                 <div className="space-y-3">
                   {campaignData.exceptions.map(exception => (
-                    <div key={exception.userId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={exception.userId} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
                       <div className="flex items-center gap-3">
-                        <Icon name="user" className="text-gray-400" />
+                        <Icon name="user" className="text-orange-500" />
                         <span className="font-medium text-gray-900">{exception.userName}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <input
-                          type="number"
-                          min="0"
-                          max="10"
-                          value={exception.addressCount}
-                          onChange={(e) => updateExceptionCount(exception.userId, e.target.value)}
-                          className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
-                        />
-                        <span className="text-gray-600">direcciones</span>
+                        <span className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                          1 dirección
+                        </span>
                         <button
                           onClick={() => removeException(exception.userId)}
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar excepción"
                         >
                           <Icon name="trash" />
                         </button>
@@ -409,28 +521,57 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
                 ? 'bg-green-50 border-green-200' 
                 : 'bg-red-50 border-red-200'
             }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Resumen de Asignación</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    {totals.totalPublishers} publicadores × {campaignData.defaultAddressCount} direcciones 
-                    (con {campaignData.exceptions.length} excepciones)
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-2xl font-bold ${
-                    totals.isViable ? 'text-green-700' : 'text-red-700'
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-gray-700">Resumen de Distribución</p>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    totals.isViable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                   }`}>
-                    {totals.requiredAddresses} / {totals.totalAddresses}
-                  </p>
-                  <p className="text-xs text-gray-600">necesarias / disponibles</p>
+                    {totals.isViable ? '✓ Viable' : '✗ No viable'}
+                  </span>
                 </div>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-600">Total de direcciones:</p>
+                    <p className="font-bold text-gray-900">{totals.totalAddresses}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Total de publicadores:</p>
+                    <p className="font-bold text-gray-900">{totals.totalPublishers}</p>
+                  </div>
+                  {totals.exceptionsCount > 0 && (
+                    <div>
+                      <p className="text-gray-600">Con excepción (1 dir.):</p>
+                      <p className="font-bold text-orange-700">{totals.exceptionsCount}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-gray-600">Publicadores regulares:</p>
+                    <p className="font-bold text-gray-900">{totals.regularPublishers}</p>
+                  </div>
+                </div>
+                
+                {totals.isViable && totals.regularPublishers > 0 && (
+                  <div className="pt-3 border-t border-green-200">
+                    <p className="text-sm text-green-800">
+                      <Icon name="checkCircle" className="inline mr-1" />
+                      Cada publicador regular recibirá aproximadamente <span className="font-bold">{totals.addressesPerRegular}</span> direcciones
+                      {totals.remainingAddresses > 0 && (
+                        <span className="block mt-1 text-xs">
+                          ({totals.remainingAddresses} publicadores recibirán 1 dirección adicional)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+                
+                {!totals.isViable && (
+                  <p className="text-sm text-red-700">
+                    ⚠️ No hay suficientes direcciones. Se necesita al menos 1 dirección por publicador.
+                  </p>
+                )}
               </div>
-              {!totals.isViable && (
-                <p className="text-sm text-red-700 mt-2">
-                  ⚠️ No hay suficientes direcciones. Reduce las asignaciones o selecciona más territorios.
-                </p>
-              )}
             </div>
           </div>
         )}

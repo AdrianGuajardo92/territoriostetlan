@@ -3,14 +3,17 @@ import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import CampaignCreationWizard from './CampaignCreationWizard';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 const CampaignModal = ({ isOpen, onClose }) => {
-  const { campaigns = [], users, territories, addresses, currentUser } = useApp();
+  const { campaigns = [], users, territories, addresses, currentUser, deleteCampaign } = useApp();
   const { showToast } = useToast();
   const [view, setView] = useState('list'); // list, create, details
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all, active, completed, draft
+  const [showFinalizeCampaignConfirm, setShowFinalizeCampaignConfirm] = useState(false);
+  const [campaignToFinalize, setCampaignToFinalize] = useState(null);
 
   // Resetear al abrir/cerrar
   useEffect(() => {
@@ -45,32 +48,29 @@ const CampaignModal = ({ isOpen, onClose }) => {
 
   const stats = getStats();
 
-  // Función para finalizar campaña
-  const handleFinalizeCampaign = async (campaignId) => {
+  // Función unificada para finalizar y eliminar campaña
+  const handleFinalizeCampaign = async () => {
+    if (!campaignToFinalize) return;
+    
     try {
-      // Aquí llamaríamos a la función del contexto
-      // await finalizeCampaign(campaignId);
-      showToast('Campaña finalizada exitosamente', 'success');
+      // Eliminar la campaña de Firebase (esto también limpia las asignaciones)
+      await deleteCampaign(campaignToFinalize.id);
+      
+      showToast('Campaña finalizada y eliminada exitosamente', 'success');
       setSelectedCampaign(null);
+      setCampaignToFinalize(null);
+      setShowFinalizeCampaignConfirm(false);
       setView('list');
     } catch (error) {
+      console.error('Error al finalizar la campaña:', error);
       showToast('Error al finalizar la campaña', 'error');
     }
   };
 
-  // Función para eliminar campaña
-  const handleDeleteCampaign = async (campaignId) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta campaña? Esta acción no se puede deshacer.')) {
-      return;
-    }
-    try {
-      // await deleteCampaign(campaignId);
-      showToast('Campaña eliminada exitosamente', 'success');
-      setSelectedCampaign(null);
-      setView('list');
-    } catch (error) {
-      showToast('Error al eliminar la campaña', 'error');
-    }
+  // Función para iniciar el proceso de finalización
+  const initiateFinalizeCampaign = (campaign) => {
+    setCampaignToFinalize(campaign);
+    setShowFinalizeCampaignConfirm(true);
   };
 
   if (!isOpen) return null;
@@ -114,24 +114,15 @@ const CampaignModal = ({ isOpen, onClose }) => {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {selectedCampaign.status === 'active' && (
-                  <button
-                    onClick={() => handleFinalizeCampaign(selectedCampaign.id)}
-                    className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-colors"
-                  >
-                    <Icon name="checkCircle" className="inline mr-2" />
-                    Finalizar
-                  </button>
-                )}
+              {selectedCampaign.status === 'active' && (
                 <button
-                  onClick={() => handleDeleteCampaign(selectedCampaign.id)}
-                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
+                  onClick={() => initiateFinalizeCampaign(selectedCampaign)}
+                  className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-medium transition-all shadow-lg flex items-center gap-2"
                 >
-                  <Icon name="trash" className="inline mr-2" />
-                  Eliminar
+                  <Icon name="flag" className="text-lg" />
+                  Finalizar Campaña
                 </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -225,6 +216,21 @@ const CampaignModal = ({ isOpen, onClose }) => {
             </div>
           </div>
         </div>
+        
+        {/* Modal de confirmación para finalizar campaña */}
+        <ConfirmDialog
+          isOpen={showFinalizeCampaignConfirm}
+          onClose={() => {
+            setShowFinalizeCampaignConfirm(false);
+            setCampaignToFinalize(null);
+          }}
+          onConfirm={handleFinalizeCampaign}
+          title="¿Finalizar Campaña?"
+          message={`¿Estás seguro de que deseas finalizar la campaña "${campaignToFinalize?.name}"? Todas las asignaciones de direcciones se eliminarán permanentemente y los publicadores ya no verán esta campaña.`}
+          confirmText="Sí, finalizar campaña"
+          cancelText="Cancelar"
+          type="danger"
+        />
       </div>
     );
   }
