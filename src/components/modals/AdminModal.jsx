@@ -82,13 +82,27 @@ const AdminModal = (props = {}) => {
   // Nueva función para exportar solo direcciones
   const handleBackupAddressesOnly = async () => {
     try {
+      // Ordenar direcciones por número de territorio (ascendente)
+      const sortedAddresses = [...addresses].sort((a, b) => {
+        // Extraer el número del territorio
+        const getTerritoryNumber = (territoryId) => {
+          const match = territoryId?.match(/\d+/);
+          return match ? parseInt(match[0]) : 0;
+        };
+        
+        const numA = getTerritoryNumber(a.territoryId);
+        const numB = getTerritoryNumber(b.territoryId);
+        
+        return numA - numB;
+      });
+
       const backupData = {
         version: '1.0',
         timestamp: new Date().toISOString(),
         type: 'addresses_only',
-        totalAddresses: addresses.length,
+        totalAddresses: sortedAddresses.length,
         data: {
-          addresses: addresses
+          addresses: sortedAddresses
         }
       };
       
@@ -104,7 +118,7 @@ const AdminModal = (props = {}) => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      showToast(`Backup de ${addresses.length} direcciones descargado`, 'success');
+      showToast(`Backup de ${sortedAddresses.length} direcciones descargado (ordenado por territorio)`, 'success');
     } catch (error) {
       console.error('Error creando backup de direcciones:', error);
       showToast('Error al crear backup de direcciones', 'error');
