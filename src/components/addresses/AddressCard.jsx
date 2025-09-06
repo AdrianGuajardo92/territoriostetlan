@@ -48,7 +48,10 @@ const AddressCard = memo(({
     showToast = null,
     onUnmark = null,
     territories = [],
-    showActions = true
+    showActions = true,
+    customBadge = null,
+    hideStatusBadge = false,
+    showFullAddress = false
 }) => {
     const { 
         handleToggleAddressStatus, 
@@ -332,7 +335,7 @@ const AddressCard = memo(({
                             {/* Dirección y género */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2">
-                                    <h3 className={`font-bold text-base truncate ${config.titleColor}`}>
+                                    <h3 className={`font-bold text-base ${showFullAddress ? '' : 'truncate'} ${config.titleColor}`}>
                                         {address.address}
                                     </h3>
                                     <GenderTag gender={address.gender} />
@@ -433,7 +436,7 @@ const AddressCard = memo(({
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className={`text-lg font-bold truncate ${config.titleColor}`}>
+                            <h3 className={`text-lg font-bold ${showFullAddress ? '' : 'truncate'} ${config.titleColor}`}>
                                 {address.address}
                             </h3>
                             <div className="flex items-center space-x-2 mt-1">
@@ -443,16 +446,20 @@ const AddressCard = memo(({
                         </div>
                     </div>
 
-                    {/* Estado badge */}
-                    <div className={`${config.badgeBg} px-3 py-1.5 rounded-full flex items-center space-x-2 shadow-sm border`}>
-                        <div 
-                            className={`w-2 h-2 rounded-full ${address.isVisited ? '' : 'animate-pulse'}`}
-                            style={{backgroundColor: config.accentColor}}
-                        ></div>
-                        <span className="text-sm font-medium">
-                            {address.isVisited ? 'Visitada' : 'Pendiente'}
-                        </span>
-                    </div>
+                    {/* Estado badge o badge personalizado */}
+                    {customBadge ? (
+                        customBadge
+                    ) : !hideStatusBadge ? (
+                        <div className={`${config.badgeBg} px-3 py-1.5 rounded-full flex items-center space-x-2 shadow-sm border`}>
+                            <div 
+                                className={`w-2 h-2 rounded-full ${address.isVisited ? '' : 'animate-pulse'}`}
+                                style={{backgroundColor: config.accentColor}}
+                            ></div>
+                            <span className="text-sm font-medium">
+                                {address.isVisited ? 'Visitada' : 'Pendiente'}
+                            </span>
+                        </div>
+                    ) : null}
                 </div>
             </div>
 
