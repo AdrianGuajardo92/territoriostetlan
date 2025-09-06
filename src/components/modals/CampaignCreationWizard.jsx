@@ -125,11 +125,14 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
 
       // Obtener TODAS las direcciones de TODOS los territorios
       const allTerritoryIds = territories.map(t => t.id);
-      const availableAddresses = addresses.filter(addr => 
+      let availableAddresses = addresses.filter(addr => 
         allTerritoryIds.includes(addr.territoryId)
       );
+      
+      // ALEATORIZAR COMPLETAMENTE todas las direcciones disponibles
+      availableAddresses = availableAddresses.sort(() => Math.random() - 0.5);
 
-      // Agrupar direcciones por territorio para optimización
+      // Agrupar direcciones por territorio (solo para referencia, no para ordenar)
       const addressesByTerritory = {};
       availableAddresses.forEach(addr => {
         if (!addressesByTerritory[addr.territoryId]) {
@@ -138,46 +141,39 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
         addressesByTerritory[addr.territoryId].push(addr);
       });
 
-      // Mezclar direcciones dentro de cada territorio
-      Object.keys(addressesByTerritory).forEach(territoryId => {
-        addressesByTerritory[territoryId].sort(() => Math.random() - 0.5);
-      });
+      // Obtener TODOS los usuarios (publicadores + administradores)
+      const allUsers = users; // Usar TODOS los usuarios para las campañas
 
-      // Obtener publicadores
-      const publishers = users.filter(u => u.role !== 'admin');
-
-      // Separar publicadores con excepción y regulares
-      const exceptionPublishers = publishers.filter(p => 
-        campaignData.exceptions.some(e => e.userId === p.id)
+      // Separar usuarios con excepción y regulares
+      const exceptionUsers = allUsers.filter(u => 
+        campaignData.exceptions.some(e => e.userId === u.id)
       );
-      const regularPublishers = publishers.filter(p => 
-        !campaignData.exceptions.some(e => e.userId === p.id)
+      let regularUsers = allUsers.filter(u => 
+        !campaignData.exceptions.some(e => e.userId === u.id)
       );
+      
+      // ALEATORIZAR completamente el orden de los usuarios regulares
+      regularUsers = regularUsers.sort(() => Math.random() - 0.5);
 
       // Crear asignaciones
       const assignments = [];
       const usedAddresses = new Set();
 
-      // PASO 1: Asignar 1 dirección a cada publicador con excepción
-      for (const publisher of exceptionPublishers) {
+      // PASO 1: Asignar 1 dirección a cada usuario con excepción
+      let addressIndex = 0;
+      for (const user of exceptionUsers) {
         const assignedAddress = [];
         
-        // Buscar una dirección disponible de cualquier territorio
-        for (const territoryId in addressesByTerritory) {
-          const territoryAddresses = addressesByTerritory[territoryId];
-          for (const addr of territoryAddresses) {
-            if (!usedAddresses.has(addr.id)) {
-              assignedAddress.push(addr.id);
-              usedAddresses.add(addr.id);
-              break;
-            }
-          }
-          if (assignedAddress.length === 1) break;
+        // Tomar la siguiente dirección disponible del array aleatorizado
+        if (addressIndex < availableAddresses.length) {
+          assignedAddress.push(availableAddresses[addressIndex].id);
+          usedAddresses.add(availableAddresses[addressIndex].id);
+          addressIndex++;
         }
 
         assignments.push({
-          userId: publisher.id,
-          userName: publisher.name,
+          userId: user.id,
+          userName: user.name,
           addressCount: assignedAddress.length,
           addressIds: assignedAddress,
           completed: false,
@@ -185,70 +181,36 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
         });
       }
 
-      // PASO 2: Distribución equitativa para publicadores regulares
-      const remainingAddresses = availableAddresses.filter(addr => !usedAddresses.has(addr.id));
-      const addressesPerRegular = Math.floor(remainingAddresses.length / regularPublishers.length);
-      const extraAddresses = remainingAddresses.length % regularPublishers.length;
+      // PASO 2: Distribución equitativa para usuarios regulares
+      const remainingAddresses = availableAddresses.slice(addressIndex); // Continuar desde donde quedamos
+      const addressesPerRegular = Math.floor(remainingAddresses.length / regularUsers.length);
+      const extraAddresses = remainingAddresses.length % regularUsers.length;
+      
+      // ALEATORIZAR qué usuarios reciben direcciones extras
+      const usersReceivingExtra = new Set();
+      const randomIndexes = [...Array(regularUsers.length).keys()].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < extraAddresses; i++) {
+        usersReceivingExtra.add(randomIndexes[i]);
+      }
 
-      // Crear pool de direcciones ordenado por territorio
-      const addressPool = [];
-      Object.keys(addressesByTerritory).forEach(territoryId => {
-        const territoryAddresses = addressesByTerritory[territoryId]
-          .filter(addr => !usedAddresses.has(addr.id));
-        addressPool.push(...territoryAddresses);
-      });
-
-      let poolIndex = 0;
-
-      // Asignar direcciones a publicadores regulares
-      regularPublishers.forEach((publisher, index) => {
+      // Asignar direcciones a usuarios regulares de forma COMPLETAMENTE ALEATORIA
+      let currentAddressIndex = 0;
+      regularUsers.forEach((user, index) => {
         const baseCount = addressesPerRegular;
-        const extraCount = index < extraAddresses ? 1 : 0;
+        const extraCount = usersReceivingExtra.has(index) ? 1 : 0;
         const totalCount = baseCount + extraCount;
         
         const assignedAddresses = [];
         
-        // Intentar asignar direcciones del mismo territorio cuando sea posible
-        let lastTerritoryId = null;
-        let addressesFromSameTerritory = [];
-        
-        for (let i = 0; i < totalCount && poolIndex < addressPool.length; i++) {
-          // Si no tenemos territorio actual, tomar el siguiente disponible
-          if (!lastTerritoryId || addressesFromSameTerritory.length === 0) {
-            const nextAddress = addressPool[poolIndex++];
-            if (nextAddress) {
-              assignedAddresses.push(nextAddress.id);
-              lastTerritoryId = nextAddress.territoryId;
-              
-              // Buscar más direcciones del mismo territorio
-              addressesFromSameTerritory = addressPool
-                .slice(poolIndex)
-                .filter(addr => addr.territoryId === lastTerritoryId);
-            }
-          } else {
-            // Tomar del mismo territorio si hay disponibles
-            const sameTerrAddress = addressesFromSameTerritory.shift();
-            if (sameTerrAddress) {
-              assignedAddresses.push(sameTerrAddress.id);
-              // Remover del pool principal
-              const indexInPool = addressPool.indexOf(sameTerrAddress);
-              if (indexInPool > poolIndex) {
-                addressPool.splice(indexInPool, 1);
-              }
-            } else {
-              // Si no hay más del mismo territorio, tomar la siguiente
-              const nextAddress = addressPool[poolIndex++];
-              if (nextAddress) {
-                assignedAddresses.push(nextAddress.id);
-                lastTerritoryId = nextAddress.territoryId;
-              }
-            }
-          }
+        // Simplemente tomar las siguientes N direcciones del array aleatorizado
+        for (let i = 0; i < totalCount && currentAddressIndex < remainingAddresses.length; i++) {
+          assignedAddresses.push(remainingAddresses[currentAddressIndex].id);
+          currentAddressIndex++;
         }
 
         assignments.push({
-          userId: publisher.id,
-          userName: publisher.name,
+          userId: user.id,
+          userName: user.name,
           addressCount: assignedAddresses.length,
           addressIds: assignedAddresses,
           completed: false,
@@ -414,9 +376,9 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
                     <span className="text-white font-bold text-sm">1</span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Distribución Equitativa</p>
+                    <p className="font-medium text-gray-900">Distribución Equitativa y Aleatoria</p>
                     <p className="text-sm text-gray-600">
-                      El sistema distribuirá automáticamente las direcciones de manera equitativa entre todos los publicadores.
+                      El sistema distribuirá automáticamente las direcciones de manera equitativa y completamente aleatoria entre TODOS los usuarios (publicadores y administradores).
                     </p>
                   </div>
                 </div>
@@ -425,9 +387,9 @@ const CampaignCreationWizard = ({ isOpen, onClose, onComplete }) => {
                     <span className="text-white font-bold text-sm">2</span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Optimización por Territorio</p>
+                    <p className="font-medium text-gray-900">Asignación Completamente Aleatoria</p>
                     <p className="text-sm text-gray-600">
-                      Cuando sea posible, se asignarán direcciones del mismo territorio a cada publicador para facilitar su ruta.
+                      Las direcciones se asignarán de forma totalmente aleatoria para garantizar la máxima equidad en la distribución.
                     </p>
                   </div>
                 </div>
