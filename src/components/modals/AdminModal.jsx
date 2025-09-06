@@ -6,6 +6,7 @@ import { useToast } from '../../hooks/useToast';
 import { LazyStatsModal } from './LazyModals'; // CORRECCIÓN: Usar lazy loading para stats
 import { LazyUserManagementModal as UserManagementModal } from './LazyModals';
 import UserListModal from './UserListModal';
+import ExportAddressesModal from './ExportAddressesModal';
 
 const AdminModal = (props = {}) => {
   const { isOpen = false, onClose = () => {} } = props;
@@ -40,6 +41,9 @@ const AdminModal = (props = {}) => {
   const [showAdminListModal, setShowAdminListModal] = useState(false);
   const [showPublisherListModal, setShowPublisherListModal] = useState(false);
   const [showAllUsersModal, setShowAllUsersModal] = useState(false);
+  
+  // Estado para el modal de exportación de direcciones
+  const [showExportAddressesModal, setShowExportAddressesModal] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
@@ -79,8 +83,13 @@ const AdminModal = (props = {}) => {
     }
   };
 
-  // Nueva función para exportar solo direcciones
-  const handleBackupAddressesOnly = async () => {
+  // Función para mostrar el modal de selección de formato de exportación
+  const handleBackupAddressesOnly = () => {
+    setShowExportAddressesModal(true);
+  };
+
+  // Función para exportar direcciones completas
+  const handleExportAddressesComplete = async () => {
     try {
       // Ordenar direcciones por número de territorio (ascendente)
       const sortedAddresses = [...addresses].sort((a, b) => {
@@ -118,10 +127,62 @@ const AdminModal = (props = {}) => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      showToast(`Backup de ${sortedAddresses.length} direcciones descargado (ordenado por territorio)`, 'success');
+      showToast(`Backup completo de ${sortedAddresses.length} direcciones descargado (ordenado por territorio)`, 'success');
     } catch (error) {
-      console.error('Error creando backup de direcciones:', error);
-      showToast('Error al crear backup de direcciones', 'error');
+      console.error('Error creando backup completo de direcciones:', error);
+      showToast('Error al crear backup completo de direcciones', 'error');
+    }
+  };
+
+  // Función para exportar direcciones simplificadas (solo territorio y dirección)
+  const handleExportAddressesSimplified = async () => {
+    try {
+      // Ordenar direcciones por número de territorio (ascendente)
+      const sortedAddresses = [...addresses].sort((a, b) => {
+        // Extraer el número del territorio
+        const getTerritoryNumber = (territoryId) => {
+          const match = territoryId?.match(/\d+/);
+          return match ? parseInt(match[0]) : 0;
+        };
+        
+        const numA = getTerritoryNumber(a.territoryId);
+        const numB = getTerritoryNumber(b.territoryId);
+        
+        return numA - numB;
+      });
+
+      // Crear versión simplificada con solo territorio y dirección
+      const simplifiedAddresses = sortedAddresses.map(addr => ({
+        territorio: addr.territoryId?.replace(/territorio/i, 'Territorio ') || 'Sin territorio',
+        direccion: addr.address || 'Sin dirección'
+      }));
+
+      const backupData = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        type: 'addresses_simplified',
+        totalAddresses: simplifiedAddresses.length,
+        data: {
+          addresses: simplifiedAddresses
+        }
+      };
+      
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `direcciones_campanas_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast(`Lista simplificada de ${simplifiedAddresses.length} direcciones descargada (para campañas)`, 'success');
+    } catch (error) {
+      console.error('Error creando lista simplificada de direcciones:', error);
+      showToast('Error al crear lista simplificada de direcciones', 'error');
     }
   };
 
@@ -1350,6 +1411,14 @@ const AdminModal = (props = {}) => {
         isOpen={showAllUsersModal}
         onClose={() => setShowAllUsersModal(false)}
         userType="all"
+      />
+
+      {/* Modal de Exportación de Direcciones */}
+      <ExportAddressesModal
+        isOpen={showExportAddressesModal}
+        onClose={() => setShowExportAddressesModal(false)}
+        onExportComplete={handleExportAddressesComplete}
+        onExportSimplified={handleExportAddressesSimplified}
       />
     </>
   );
