@@ -7,6 +7,7 @@ const CampaignAssignmentView = () => {
   const { campaigns, currentUser, addresses, territories } = useApp();
   const [activeCampaign, setActiveCampaign] = useState(null);
   const [userAssignments, setUserAssignments] = useState([]);
+  const [completedAddresses, setCompletedAddresses] = useState(new Set()); // Track de direcciones completadas
 
   useEffect(() => {
     // Encontrar campañas activas
@@ -40,6 +41,19 @@ const CampaignAssignmentView = () => {
       }
     }
   }, [campaigns, currentUser, addresses, territories]);
+
+  // Función para marcar/desmarcar una dirección como completada
+  const toggleAddressCompleted = (addressId) => {
+    setCompletedAddresses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(addressId)) {
+        newSet.delete(addressId);
+      } else {
+        newSet.add(addressId);
+      }
+      return newSet;
+    });
+  };
 
   // Si no hay campaña activa
   if (!activeCampaign) {
@@ -121,66 +135,60 @@ const CampaignAssignmentView = () => {
       {/* Lista de direcciones asignadas - SIEMPRE EXPANDIDA */}
       <div className="bg-white rounded-xl shadow-md">
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-bold text-gray-900">
-            Mis Direcciones Asignadas (Ordenadas por Territorio)
-          </h3>
-          <p className="text-sm text-gray-600 mt-1">
-            Total: {userAssignments.length} {userAssignments.length === 1 ? 'dirección' : 'direcciones'}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Mis Direcciones Asignadas (Ordenadas por Territorio)
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Total: {userAssignments.length} {userAssignments.length === 1 ? 'dirección' : 'direcciones'}
+              </p>
+            </div>
+            {completedAddresses.size > 0 && (
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Progreso</p>
+                <p className="text-lg font-bold text-green-600">
+                  {completedAddresses.size} / {userAssignments.length}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="p-6">
           {/* Mostrar SIEMPRE todas las tarjetas expandidas */}
           <div className="space-y-3">
-            {userAssignments.map((address, index) => (
-              <div key={address.id} className="relative">
-                {/* Badge con el número de la dirección */}
-                <div className="absolute -top-2 -left-2 z-10">
-                  <span className="inline-flex items-center justify-center w-8 h-8 bg-purple-600 text-white rounded-full text-sm font-bold shadow-lg">
-                    {index + 1}
-                  </span>
+            {userAssignments.map((address, index) => {
+              const isCompleted = completedAddresses.has(address.id);
+              return (
+                <div 
+                  key={address.id} 
+                  className="relative cursor-pointer"
+                  onClick={() => toggleAddressCompleted(address.id)}
+                >
+                  {/* Badge con el número de la dirección */}
+                  <div className="absolute -top-2 -left-2 z-10">
+                    <span className={`inline-flex items-center justify-center w-8 h-8 ${isCompleted ? 'bg-rose-600' : 'bg-purple-600'} text-white rounded-full text-sm font-bold shadow-lg transition-colors`}>
+                      {isCompleted ? '✓' : index + 1}
+                    </span>
+                  </div>
+                  {/* Tarjeta de dirección con todas las funcionalidades */}
+                  <AddressCard 
+                    address={{
+                      ...address,
+                      isVisited: isCompleted  // Pasar el estado de completado como visitado para cambiar el color
+                    }}
+                    viewMode="navigation-only"
+                    showActions={false}
+                    hideStatusBadge={true}  // Ocultar badge de "Pendiente"
+                    showFullAddress={true}   // Mostrar dirección completa sin truncar
+                    // No pasamos customBadge para eliminar el badge de territorio
+                  />
                 </div>
-                {/* Tarjeta de dirección con todas las funcionalidades */}
-                <AddressCard 
-                  address={address}
-                  viewMode="navigation-only"
-                  showActions={false}
-                  hideStatusBadge={true}  // Ocultar badge de "Pendiente"
-                  showFullAddress={true}   // Mostrar dirección completa sin truncar
-                  // No pasamos customBadge para eliminar el badge de territorio
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Botón de exportar/imprimir */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <button
-              onClick={() => {
-                // Crear contenido para exportar
-                const content = userAssignments.map((addr, idx) => 
-                  `${idx + 1}. ${addr.address} (Territorio ${addr.territoryName})`
-                ).join('\n');
-                
-                // Crear blob y descargar
-                const blob = new Blob([`CAMPAÑA: ${activeCampaign.name}\n\nMIS DIRECCIONES ASIGNADAS:\n\n${content}`], 
-                  { type: 'text/plain' }
-                );
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `mis_direcciones_campaña_${new Date().toISOString().split('T')[0]}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              }}
-              className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
-            >
-              <Icon name="download" />
-              Descargar Lista para Imprimir
-            </button>
-          </div>
         </div>
       </div>
 
@@ -193,7 +201,7 @@ const CampaignAssignmentView = () => {
             <ul className="list-disc list-inside space-y-1">
               <li>Estas direcciones han sido asignadas específicamente para ti en esta campaña especial.</li>
               <li>Por favor, visita las direcciones en el orden que consideres más conveniente.</li>
-              <li>Puedes descargar la lista para imprimirla o consultarla sin conexión.</li>
+              <li>Haz clic en una tarjeta para marcarla como completada.</li>
             </ul>
           </div>
         </div>
