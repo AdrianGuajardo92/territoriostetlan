@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../common/Icon';
+import AddressCard from '../addresses/AddressCard';
 import { useApp } from '../../context/AppContext';
 
 const CampaignAssignmentView = () => {
   const { campaigns, currentUser, addresses, territories } = useApp();
   const [activeCampaign, setActiveCampaign] = useState(null);
   const [userAssignments, setUserAssignments] = useState([]);
-  const [expandedAddresses, setExpandedAddresses] = useState(false);
 
   useEffect(() => {
     // Encontrar campañas activas
@@ -26,11 +26,17 @@ const CampaignAssignmentView = () => {
           const territory = territories.find(t => t.id === address?.territoryId);
           return {
             ...address,
-            territoryName: territory?.name || 'Sin territorio'
+            territoryName: territory?.name || 'Sin territorio',
+            territoryNumber: parseInt(territory?.name?.match(/\d+/)?.[0] || 0)
           };
         }).filter(Boolean) || [];
         
-        setUserAssignments(assignedAddresses);
+        // ORDENAR por número de territorio de forma ascendente
+        const sortedAddresses = assignedAddresses.sort((a, b) => {
+          return a.territoryNumber - b.territoryNumber;
+        });
+        
+        setUserAssignments(sortedAddresses);
       }
     }
   }, [campaigns, currentUser, addresses, territories]);
@@ -112,90 +118,42 @@ const CampaignAssignmentView = () => {
         )}
       </div>
 
-      {/* Lista de direcciones asignadas */}
+      {/* Lista de direcciones asignadas - SIEMPRE EXPANDIDA */}
       <div className="bg-white rounded-xl shadow-md">
         <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-gray-900">
-              Mis Direcciones Asignadas
-            </h3>
-            <button
-              onClick={() => setExpandedAddresses(!expandedAddresses)}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
-            >
-              <Icon name={expandedAddresses ? 'chevronUp' : 'chevronDown'} />
-              {expandedAddresses ? 'Contraer' : 'Expandir'}
-            </button>
-          </div>
+          <h3 className="text-lg font-bold text-gray-900">
+            Mis Direcciones Asignadas (Ordenadas por Territorio)
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Total: {userAssignments.length} {userAssignments.length === 1 ? 'dirección' : 'direcciones'}
+          </p>
         </div>
 
         <div className="p-6">
-          {expandedAddresses ? (
-            // Vista expandida - todas las direcciones
-            <div className="space-y-4">
-              {userAssignments.map((address, index) => (
-                <div 
-                  key={address.id} 
-                  className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="inline-flex items-center px-2.5 py-1 bg-purple-600 text-white rounded-full text-xs font-bold">
-                          #{index + 1}
-                        </span>
-                        <span className="inline-flex items-center px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                          Territorio {address.territoryName}
-                        </span>
-                      </div>
-                      <p className="text-gray-900 font-medium">{address.address}</p>
-                      {address.notes && (
-                        <p className="text-sm text-gray-600 mt-2 italic">
-                          Nota: {address.notes}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => {
-                        // Aquí podrías agregar funcionalidad para marcar como visitada
-                        console.log('Marcar como visitada:', address.id);
-                      }}
-                      className="p-2 hover:bg-white/50 rounded-lg transition-colors"
-                      title="Marcar como visitada"
-                    >
-                      <Icon name="checkCircle" className="text-gray-400 hover:text-green-600" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            // Vista compacta - resumen
-            <div className="space-y-3">
-              {userAssignments.slice(0, 3).map((address, index) => (
-                <div 
-                  key={address.id} 
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                >
-                  <span className="inline-flex items-center justify-center w-8 h-8 bg-purple-600 text-white rounded-full text-sm font-bold">
+          {/* Mostrar SIEMPRE todas las tarjetas expandidas */}
+          <div className="space-y-3">
+            {userAssignments.map((address, index) => (
+              <div key={address.id} className="relative">
+                {/* Badge con el número de la dirección */}
+                <div className="absolute -top-2 -left-2 z-10">
+                  <span className="inline-flex items-center justify-center w-8 h-8 bg-purple-600 text-white rounded-full text-sm font-bold shadow-lg">
                     {index + 1}
                   </span>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900 line-clamp-1">{address.address}</p>
-                    <p className="text-xs text-gray-500">Territorio {address.territoryName}</p>
-                  </div>
                 </div>
-              ))}
-              
-              {userAssignments.length > 3 && (
-                <div className="text-center pt-2">
-                  <p className="text-sm text-gray-600">
-                    y {userAssignments.length - 3} direcciones más...
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+                {/* Tarjeta de dirección con todas las funcionalidades */}
+                <AddressCard 
+                  address={address}
+                  viewMode="navigation-only"
+                  showActions={false}
+                  customBadge={
+                    <span className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-xs font-medium">
+                      Territorio {address.territoryName}
+                    </span>
+                  }
+                />
+              </div>
+            ))}
+          </div>
 
           {/* Botón de exportar/imprimir */}
           <div className="mt-6 pt-6 border-t border-gray-200">
