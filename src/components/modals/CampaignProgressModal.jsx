@@ -10,6 +10,7 @@ const CampaignProgressModal = ({ campaign, isOpen, onClose }) => {
     address: null,
     currentAssignment: null
   });
+  const [filter, setFilter] = useState('all'); // 'all', 'pending', 'completed'
   
   if (!isOpen || !campaign) return null;
 
@@ -21,14 +22,42 @@ const CampaignProgressModal = ({ campaign, isOpen, onClose }) => {
   const completedAddresses = campaign.assignments?.reduce((sum, a) => sum + (a.completedCount || 0), 0) || 0;
   const progressPercentage = totalAddresses > 0 ? Math.round((completedAddresses / totalAddresses) * 100) : 0;
 
-  // Ordenar asignaciones alfabéticamente por nombre de usuario
-  const sortedAssignments = [...(campaign.assignments || [])].sort((a, b) => {
-    const userA = users.find(u => u.id === a.userId);
-    const userB = users.find(u => u.id === b.userId);
-    const nameA = userA?.name || '';
-    const nameB = userB?.name || '';
-    return nameA.localeCompare(nameB, 'es', { numeric: true });
-  });
+  // Filtrar y ordenar asignaciones
+  const getFilteredAssignments = () => {
+    let filtered = [...(campaign.assignments || [])];
+    
+    // Aplicar filtro según el estado seleccionado
+    if (filter === 'pending') {
+      // Mostrar solo usuarios con al menos una dirección pendiente
+      filtered = filtered.filter(assignment => {
+        const completedCount = assignment.completedCount || 0;
+        const totalCount = assignment.addressCount || 0;
+        return completedCount < totalCount;
+      });
+    } else if (filter === 'completed') {
+      // Mostrar solo usuarios que completaron todas sus direcciones
+      filtered = filtered.filter(assignment => {
+        const completedCount = assignment.completedCount || 0;
+        const totalCount = assignment.addressCount || 0;
+        return totalCount > 0 && completedCount === totalCount;
+      });
+    }
+    
+    // Ordenar alfabéticamente por nombre de usuario
+    return filtered.sort((a, b) => {
+      const userA = users.find(u => u.id === a.userId);
+      const userB = users.find(u => u.id === b.userId);
+      const nameA = userA?.name || '';
+      const nameB = userB?.name || '';
+      return nameA.localeCompare(nameB, 'es', { numeric: true });
+    });
+  };
+  
+  const filteredAssignments = getFilteredAssignments();
+  
+  // Contar usuarios por estado
+  const pendingCount = campaign.assignments?.filter(a => (a.completedCount || 0) < (a.addressCount || 0)).length || 0;
+  const completedCount = campaign.assignments?.filter(a => a.addressCount > 0 && a.completedCount === a.addressCount).length || 0;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -96,14 +125,80 @@ const CampaignProgressModal = ({ campaign, isOpen, onClose }) => {
               )}
             </div>
             
-            {/* Lista Detallada de Participantes (Ordenada Alfabéticamente) */}
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Detalle por Participante (Orden Alfabético)
-              </h3>
+            {/* Controles de Filtro */}
+            <div className="mb-6">
+              <div className="flex items-center justify-end mb-4">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setFilter('all')}
+                    className={`w-12 h-12 rounded-lg font-medium transition-all flex items-center justify-center ${
+                      filter === 'all'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                    title={`Todos (${campaign.assignments?.length || 0})`}
+                  >
+                    <Icon name="users" size={20} />
+                  </button>
+                  <button
+                    onClick={() => setFilter('pending')}
+                    className={`w-12 h-12 rounded-lg font-medium transition-all flex items-center justify-center ${
+                      filter === 'pending'
+                        ? 'bg-orange-600 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                    title={`Pendientes (${pendingCount})`}
+                  >
+                    <Icon name="clock" size={20} />
+                  </button>
+                  <button
+                    onClick={() => setFilter('completed')}
+                    className={`w-12 h-12 rounded-lg font-medium transition-all flex items-center justify-center ${
+                      filter === 'completed'
+                        ? 'bg-green-600 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                    title={`Completados (${completedCount})`}
+                  >
+                    <Icon name="checkCircle" size={20} />
+                  </button>
+                </div>
+              </div>
               
+              {/* Información del filtro actual */}
+              {filter !== 'all' && (
+                <div className={`p-3 rounded-lg mb-4 ${
+                  filter === 'pending' 
+                    ? 'bg-orange-50 border border-orange-200' 
+                    : 'bg-green-50 border border-green-200'
+                }`}>
+                  <p className={`text-sm ${
+                    filter === 'pending' ? 'text-orange-800' : 'text-green-800'
+                  }`}>
+                    <Icon name="info" className="inline mr-1" />
+                    {filter === 'pending' 
+                      ? `Mostrando ${pendingCount} participante${pendingCount !== 1 ? 's' : ''} con trabajo pendiente`
+                      : `Mostrando ${completedCount} participante${completedCount !== 1 ? 's' : ''} que completaron todo su trabajo`
+                    }
+                  </p>
+                </div>
+              )}
+              
+              {/* Lista de Participantes Filtrada */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {sortedAssignments.map((assignment, index) => {
+                {filteredAssignments.length === 0 ? (
+                  <div className="col-span-2 text-center py-8">
+                    <Icon name={filter === 'pending' ? 'clock' : 'checkCircle'} 
+                          className="text-4xl text-gray-400 mb-3" />
+                    <p className="text-gray-500">
+                      {filter === 'pending' 
+                        ? 'No hay participantes con trabajo pendiente'
+                        : 'No hay participantes que hayan completado todo su trabajo'
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  filteredAssignments.map((assignment, index) => {
                   const user = users.find(u => u.id === assignment.userId);
                   const completedCount = assignment.completedCount || 0;
                   const totalCount = assignment.addressCount || 0;
@@ -211,7 +306,8 @@ const CampaignProgressModal = ({ campaign, isOpen, onClose }) => {
                       )}
                     </div>
                   );
-                })}
+                })
+                )}
               </div>
             </div>
           </div>
