@@ -63,8 +63,10 @@ const TerritoryDetailHeader = ({
     return updatedTerritory || territory;
   }, [territories, territory.id, territory]);
   
-  // Normalizar el estado para manejar "Terminado" como "Completado"
-  const normalizedStatus = currentTerritory.status === 'Terminado' ? 'Completado' : currentTerritory.status;
+  // Normalizar el estado para manejar "Terminado" como "Completado" y "Available" como "Disponible"
+  const normalizedStatus = currentTerritory.status === 'Terminado' ? 'Completado' : 
+                          currentTerritory.status === 'Available' ? 'Disponible' : 
+                          currentTerritory.status;
   
   // 🔄 PASO 11: Información del equipo asignado - Ahora recibida como prop
   // const assignedTeamInfo = useMemo(() => {

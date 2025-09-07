@@ -52,7 +52,9 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
 
   // OPTIMIZACIÓN: Memoizar normalización de estado ⚡
   const normalizedStatus = useMemo(() => 
-    territory.status === 'Terminado' ? 'Completado' : territory.status, 
+    territory.status === 'Terminado' ? 'Completado' : 
+    territory.status === 'Available' ? 'Disponible' : 
+    territory.status, 
     [territory.status]
   );
   

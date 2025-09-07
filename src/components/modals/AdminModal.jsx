@@ -57,6 +57,14 @@ const AdminModal = (props = {}) => {
     if (isOpen) {
       setView(currentUser?.role === 'admin' ? 'actions' : 'no_access');
     }
+    // else {
+    //   // Resetear todos los modales cuando se cierre AdminModal
+    //   setShowTerritoryManagementModal(false);
+    //   setShowCampaignModal(false);
+    //   setShowUserManagement(false);
+    //   setShowStatsModal(false);
+    //   setShowExportAddressesModal(false);
+    // }
   }, [isOpen, currentUser]);
   
   // Funciones de backup
@@ -260,7 +268,7 @@ const AdminModal = (props = {}) => {
       description: 'Liberar y administrar territorios', 
       icon: 'fas fa-map-marked-alt', 
       color: 'indigo',
-      action: () => setShowTerritoryManagementModal(true) 
+      action: () => setShowTerritoryManagementModal(true)
     },
     { 
       id: 'backup', 

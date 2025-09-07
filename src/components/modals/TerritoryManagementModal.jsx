@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import Icon from '../common/Icon';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 
 const TerritoryManagementModal = ({ isOpen, onClose }) => {
+  
   const { territories, users, releaseTerritories } = useApp();
   const { showToast } = useToast();
   const [selectedTerritories, setSelectedTerritories] = useState(new Set());
@@ -110,9 +112,10 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
 
   // Renderizado condicional después de todos los hooks
   if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+  
+  // Usar ReactDOM.createPortal para renderizar en el body
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0" style={{ zIndex: 999999 }}>
       {/* Overlay */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -258,6 +261,7 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                   const isSelected = selectedTerritories.has(territory.id);
                   const assignedUser = territory.assignedTo ? getAssignedUser(territory.assignedTo) : null;
                   
+                  
                   return (
                     <div
                       key={territory.id}
@@ -283,9 +287,11 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                           
                           {/* Número de territorio */}
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
-                            territory.assignedTo
-                              ? 'bg-orange-100 text-orange-600'
-                              : 'bg-green-100 text-green-600'
+                            territory.status === 'Completado'
+                              ? 'bg-blue-100 text-blue-600'
+                              : territory.assignedTo
+                                ? 'bg-orange-100 text-orange-600'
+                                : 'bg-green-100 text-green-600'
                           }`}>
                             {territory.name.match(/\d+/)?.[0] || '?'}
                           </div>
@@ -293,11 +299,13 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                         
                         {/* Badge de estado */}
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          territory.assignedTo
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'bg-green-100 text-green-700'
+                          territory.status === 'Completado'
+                            ? 'bg-blue-100 text-blue-700'
+                            : territory.assignedTo
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-green-100 text-green-700'
                         }`}>
-                          {territory.assignedTo ? 'Asignado' : 'Libre'}
+                          {territory.status || (territory.assignedTo ? 'Asignado' : 'Libre')}
                         </span>
                       </div>
                       
@@ -312,12 +320,46 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                             </span>
                           </div>
                         )}
-                        {territory.lastAssignedDate && (
+                        {/* Mostrar fechas según el estado */}
+                        {territory.status === 'Completado' && (territory.completedDate || territory.lastCompletedDate) ? (
+                          <div className="text-xs text-green-600 mt-1">
+                            <Icon name="checkCircle" className="inline mr-1" size={12} />
+                            Terminado el: {(() => {
+                              const date = territory.completedDate || territory.lastCompletedDate;
+                              // Convertir Timestamp de Firebase a Date
+                              const jsDate = date?.toDate ? date.toDate() : new Date(date);
+                              return jsDate.toLocaleDateString('es-MX', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              });
+                            })()}
+                          </div>
+                        ) : territory.assignedTo && territory.assignedDate ? (
                           <div className="text-xs text-gray-500 mt-1">
                             <Icon name="calendar" className="inline mr-1" size={12} />
-                            Asignado: {new Date(territory.lastAssignedDate).toLocaleDateString('es-MX')}
+                            Asignado el: {(() => {
+                              // Convertir Timestamp de Firebase a Date
+                              const jsDate = territory.assignedDate?.toDate ? 
+                                territory.assignedDate.toDate() : 
+                                new Date(territory.assignedDate);
+                              return jsDate.toLocaleDateString('es-MX', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              });
+                            })()}
+                            {/* Calcular días transcurridos */}
+                            <span className="text-orange-600 ml-2">
+                              ({(() => {
+                                const jsDate = territory.assignedDate?.toDate ? 
+                                  territory.assignedDate.toDate() : 
+                                  new Date(territory.assignedDate);
+                                return Math.floor((new Date() - jsDate) / (1000 * 60 * 60 * 24));
+                              })()} días)
+                            </span>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -353,7 +395,8 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
         confirmButtonClass="bg-red-600 hover:bg-red-700"
         isLoading={isReleasing}
       />
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -722,7 +722,7 @@ export const AppProvider = ({ children }) => {
           const territoryRef = doc(db, 'territories', territoryId);
           batch.update(territoryRef, {
             assignedTo: null,
-            status: 'available',
+            status: 'Disponible',
             lastAssignedDate: null,
             updatedAt: serverTimestamp()
           });
@@ -1179,7 +1179,7 @@ export const AppProvider = ({ children }) => {
   const finalizeCampaign = async (campaignId) => {
     try {
       await updateDoc(doc(db, 'campaigns', campaignId), {
-        status: 'completed',
+        status: 'completada',
         completedAt: serverTimestamp(),
         completedBy: currentUser?.id
       });
