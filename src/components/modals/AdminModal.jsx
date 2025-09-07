@@ -8,6 +8,7 @@ import { LazyUserManagementModal as UserManagementModal } from './LazyModals';
 import UserListModal from './UserListModal';
 import ExportAddressesModal from './ExportAddressesModal';
 import CampaignModal from './CampaignModal';
+import TerritoryManagementModal from './TerritoryManagementModal';
 
 const AdminModal = (props = {}) => {
   const { isOpen = false, onClose = () => {} } = props;
@@ -48,6 +49,9 @@ const AdminModal = (props = {}) => {
   
   // Estado para el modal de campañas
   const [showCampaignModal, setShowCampaignModal] = useState(false);
+  
+  // Estado para el modal de gestión de territorios
+  const [showTerritoryManagementModal, setShowTerritoryManagementModal] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
@@ -251,6 +255,14 @@ const AdminModal = (props = {}) => {
       action: () => setShowCampaignModal(true) 
     },
     { 
+      id: 'territories', 
+      title: 'Gestión de Territorios', 
+      description: 'Liberar y administrar territorios', 
+      icon: 'fas fa-map-marked-alt', 
+      color: 'indigo',
+      action: () => setShowTerritoryManagementModal(true) 
+    },
+    { 
       id: 'backup', 
       title: 'Respaldo de Datos', 
       description: 'Crear backups del sistema', 
@@ -391,6 +403,13 @@ const AdminModal = (props = {}) => {
             text: 'text-purple-600',
             accent: 'border-purple-200',
             hover: 'hover:shadow-purple-100/50'
+          },
+          indigo: { 
+            bg: 'from-indigo-50 to-purple-100', 
+            iconBg: 'bg-indigo-500', 
+            text: 'text-indigo-600',
+            accent: 'border-indigo-200',
+            hover: 'hover:shadow-indigo-100/50'
           }
         };
 
@@ -1437,6 +1456,12 @@ const AdminModal = (props = {}) => {
       <CampaignModal
         isOpen={showCampaignModal}
         onClose={() => setShowCampaignModal(false)}
+      />
+      
+      {/* Modal de Gestión de Territorios */}
+      <TerritoryManagementModal 
+        isOpen={showTerritoryManagementModal}
+        onClose={() => setShowTerritoryManagementModal(false)}
       />
     </>
   );

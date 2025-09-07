@@ -707,6 +707,55 @@ export const AppProvider = ({ children }) => {
     }
   }, [territories, currentUser]);
 
+  // Función para liberar múltiples territorios (para gestión masiva)
+  const releaseTerritories = useCallback(async (territoryIds) => {
+    try {
+      const batch = writeBatch(db);
+      let releasedCount = 0;
+      
+      for (const territoryId of territoryIds) {
+        const territory = territories.find(t => t.id === territoryId);
+        
+        // Solo liberar si está asignado
+        if (territory?.assignedTo) {
+          // Actualizar territorio
+          const territoryRef = doc(db, 'territories', territoryId);
+          batch.update(territoryRef, {
+            assignedTo: null,
+            status: 'available',
+            lastAssignedDate: null,
+            updatedAt: serverTimestamp()
+          });
+          
+          // Desmarcar todas las direcciones del territorio
+          const addresses = await getDocs(
+            query(collection(db, 'addresses'), where('territoryId', '==', territoryId))
+          );
+          
+          addresses.forEach(doc => {
+            batch.update(doc.ref, {
+              isVisited: false,
+              visitDetails: null,
+              updatedAt: serverTimestamp()
+            });
+          });
+          
+          releasedCount++;
+        }
+      }
+      
+      if (releasedCount > 0) {
+        await batch.commit();
+        return releasedCount;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('Error liberando territorios:', error);
+      throw error;
+    }
+  }, [territories]);
+
   const handleCompleteTerritory = useCallback(async (territoryId) => {
     // Prevenir doble llamada con debouncing
     const callKey = `complete_${territoryId}`;
@@ -1666,6 +1715,7 @@ export const AppProvider = ({ children }) => {
     handleAssignTerritory,
     handleReturnTerritory,
     handleCompleteTerritory,
+    releaseTerritories,
     
     // Address functions
     handleToggleAddressStatus,
