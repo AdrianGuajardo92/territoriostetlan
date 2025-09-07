@@ -1,11 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Icon from '../common/Icon';
+import TransferAddressModal from './TransferAddressModal';
 import { useApp } from '../../context/AppContext';
 
 const CampaignProgressModal = ({ campaign, isOpen, onClose }) => {
-  const { users, addresses } = useApp();
+  const { users, addresses, currentUser } = useApp();
+  const [transferModal, setTransferModal] = useState({
+    isOpen: false,
+    address: null,
+    currentAssignment: null
+  });
   
   if (!isOpen || !campaign) return null;
+
+  // Verificar si el usuario es admin
+  const isAdmin = currentUser?.role === 'admin';
 
   // Calcular estadísticas generales
   const totalAddresses = campaign.assignments?.reduce((sum, a) => sum + a.addressCount, 0) || 0;
@@ -165,7 +174,17 @@ const CampaignProgressModal = ({ campaign, isOpen, onClose }) => {
                                     isAddressCompleted 
                                       ? 'bg-green-100 text-green-700' 
                                       : 'bg-gray-100 text-gray-600'
-                                  }`}
+                                  } ${isAdmin ? 'cursor-pointer hover:shadow-md transition-all' : ''}`}
+                                  onClick={() => {
+                                    if (isAdmin && address) {
+                                      setTransferModal({
+                                        isOpen: true,
+                                        address: address,
+                                        currentAssignment: assignment
+                                      });
+                                    }
+                                  }}
+                                  title={isAdmin ? 'Click para transferir esta dirección' : ''}
                                 >
                                   <span className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center ${
                                     isAddressCompleted ? 'bg-green-500' : 'bg-gray-300'
@@ -175,6 +194,9 @@ const CampaignProgressModal = ({ campaign, isOpen, onClose }) => {
                                     )}
                                   </span>
                                   <span className="flex-1">{address?.address || addressId}</span>
+                                  {isAdmin && (
+                                    <Icon name="share" className="text-gray-400 hover:text-blue-500 transition-colors" size={16} />
+                                  )}
                                 </div>
                               );
                             })}
@@ -208,6 +230,15 @@ const CampaignProgressModal = ({ campaign, isOpen, onClose }) => {
           </div>
         </div>
       </div>
+      
+      {/* Modal de Transferencia */}
+      <TransferAddressModal
+        isOpen={transferModal.isOpen}
+        onClose={() => setTransferModal({ isOpen: false, address: null, currentAssignment: null })}
+        address={transferModal.address}
+        currentAssignment={transferModal.currentAssignment}
+        campaignId={campaign?.id}
+      />
     </div>
   );
 };

@@ -1190,6 +1190,95 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Nueva función para transferir una dirección entre usuarios en una campaña
+  const transferCampaignAddress = async (campaignId, addressId, fromUserId, toUserId) => {
+    try {
+      console.log('Iniciando transferencia:', { campaignId, addressId, fromUserId, toUserId });
+      
+      const campaign = campaigns.find(c => c.id === campaignId);
+      if (!campaign) {
+        throw new Error('Campaña no encontrada');
+      }
+      
+      if (!campaign.assignments) {
+        throw new Error('La campaña no tiene asignaciones');
+      }
+
+      // Clonar las asignaciones para evitar mutaciones
+      let updatedAssignments = [...campaign.assignments];
+      
+      // Encontrar y actualizar la asignación del usuario origen
+      const fromUserIndex = updatedAssignments.findIndex(a => a.userId === fromUserId);
+      if (fromUserIndex === -1) {
+        throw new Error('Usuario origen no encontrado en las asignaciones');
+      }
+      
+      // Verificar que la dirección existe en el usuario origen
+      const fromAssignment = updatedAssignments[fromUserIndex];
+      if (!fromAssignment.addressIds.includes(addressId)) {
+        throw new Error('La dirección no está asignada al usuario origen');
+      }
+      
+      // Remover la dirección del usuario origen
+      const updatedFromAddressIds = fromAssignment.addressIds.filter(id => id !== addressId);
+      const updatedFromCompleted = (fromAssignment.completedAddresses || []).filter(id => id !== addressId);
+      
+      updatedAssignments[fromUserIndex] = {
+        ...fromAssignment,
+        addressIds: updatedFromAddressIds,
+        addressCount: updatedFromAddressIds.length,
+        completedAddresses: updatedFromCompleted,
+        completedCount: updatedFromCompleted.length
+      };
+      
+      // Encontrar o crear la asignación del usuario destino
+      const toUserIndex = updatedAssignments.findIndex(a => a.userId === toUserId);
+      
+      if (toUserIndex !== -1) {
+        // Usuario destino ya tiene asignaciones
+        const toAssignment = updatedAssignments[toUserIndex];
+        const updatedToAddressIds = [...toAssignment.addressIds, addressId];
+        
+        updatedAssignments[toUserIndex] = {
+          ...toAssignment,
+          addressIds: updatedToAddressIds,
+          addressCount: updatedToAddressIds.length
+        };
+      } else {
+        // Usuario destino no tiene asignaciones, crear nueva
+        const toUser = users.find(u => u.id === toUserId);
+        if (!toUser) {
+          throw new Error('Usuario destino no encontrado');
+        }
+        
+        updatedAssignments.push({
+          userId: toUserId,
+          userName: toUser.name,
+          addressIds: [addressId],
+          addressCount: 1,
+          completedAddresses: [],
+          completedCount: 0
+        });
+      }
+
+      console.log('Asignaciones actualizadas:', updatedAssignments);
+
+      // Actualizar en Firebase
+      await updateDoc(doc(db, 'campaigns', campaignId), {
+        assignments: updatedAssignments,
+        lastUpdated: serverTimestamp()
+      });
+
+      console.log('Transferencia completada exitosamente');
+      showToast('Dirección transferida exitosamente', 'success');
+      return true;
+    } catch (error) {
+      console.error('Error detallado en transferCampaignAddress:', error);
+      showToast(`Error al transferir: ${error.message}`, 'error');
+      throw error;
+    }
+  };
+
   const handleResetSingleTerritory = async (territoryId) => {
     try {
       const territoryDoc = await getDoc(doc(db, 'territories', territoryId));
@@ -1621,7 +1710,8 @@ export const AppProvider = ({ children }) => {
     deleteCampaign,
     finalizeCampaign,
     getCampaignAssignments,
-    updateCampaignProgress
+    updateCampaignProgress,
+    transferCampaignAddress
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
