@@ -2,7 +2,7 @@ import React from 'react';
 
 const TerritoryFilters = ({ filterStatus, setFilterStatus, stats, userHasAssignedTerritories }) => {
   return (
-    <div className="px-4 py-2" style={{ backgroundColor: '#546E7A' }}>
+    <div className="px-4 py-2" style={{ background: 'linear-gradient(to bottom, #2C3E50, #34495e)' }}>
       <div className="flex items-stretch gap-2">
         <button
           onClick={() => setFilterStatus('all')}

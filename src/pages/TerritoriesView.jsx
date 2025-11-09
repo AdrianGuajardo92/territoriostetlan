@@ -6,6 +6,7 @@ import SkeletonCard from '../components/common/SkeletonCard';
 import Icon from '../components/common/Icon';
 import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
+import GeneralMapModal from '../components/modals/GeneralMapModal';
 
 // 🔄 PASO 10: Funciones helper para asignaciones múltiples
 const normalizeAssignedTo = (assignedTo) => {
@@ -39,13 +40,14 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const [sortBy, setSortBy] = useState('name');
 
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  
+  const [isGeneralMapOpen, setIsGeneralMapOpen] = useState(false);
+
   // Estados simplificados - filtros avanzados removidos
-  
+
   // OPTIMIZACIÓN FASE 2: Refs para scroll performance ⚡
   const containerRef = useRef(null);
   const [visibleCards, setVisibleCards] = useState(new Set());
-  
+
   // FASE 3: Premium feedback y gestures ⚡
   const { swipeFeedback } = usePremiumFeedback();
 
@@ -182,14 +184,30 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             <h1 className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>
               Territorios
             </h1>
-            
+
+            {/* Botón de Mapa General */}
+            <button
+              onClick={() => setIsGeneralMapOpen(true)}
+              className="p-2 rounded-xl shadow-md transition-all duration-200"
+              style={{
+                backgroundColor: '#34495e',
+                minWidth: '36px',
+                minHeight: '36px'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
+              aria-label="Ver mapa general de Guadalajara"
+              title="Mapa General de Guadalajara"
+            >
+              <Icon name="map" size={20} style={{ color: '#FFFFFF' }} />
+            </button>
 
           </div>
-          
-          <button 
-            onClick={onOpenMenu} 
-            className="relative p-3 rounded-xl shadow-md transition-all duration-200" 
-            style={{ 
+
+          <button
+            onClick={onOpenMenu}
+            className="relative p-3 rounded-xl shadow-md transition-all duration-200"
+            style={{
               backgroundColor: '#34495e',
               minWidth: '40px',
               minHeight: '40px'
@@ -201,13 +219,13 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             <svg className="w-5 h-5" fill="none" stroke="#FFFFFF" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
-            {((currentUser?.role === 'admin' && pendingProposalsCount > 0) || 
-              (currentUser?.role !== 'admin' && userNotificationsCount > 0) || 
+            {((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
+              (currentUser?.role !== 'admin' && userNotificationsCount > 0) ||
               updateAvailable) && (
               <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium shadow-sm">
-                {updateAvailable && !((currentUser?.role === 'admin' && pendingProposalsCount > 0) || 
-                  (currentUser?.role !== 'admin' && userNotificationsCount > 0)) 
-                  ? '!' 
+                {updateAvailable && !((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
+                  (currentUser?.role !== 'admin' && userNotificationsCount > 0))
+                  ? '!'
                   : currentUser?.role === 'admin' ? pendingProposalsCount : userNotificationsCount}
               </span>
             )}
@@ -291,6 +309,12 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
           </div>
         )}
       </main>
+
+      {/* Modal de Mapa General */}
+      <GeneralMapModal
+        isOpen={isGeneralMapOpen}
+        onClose={() => setIsGeneralMapOpen(false)}
+      />
     </div>
   );
 };

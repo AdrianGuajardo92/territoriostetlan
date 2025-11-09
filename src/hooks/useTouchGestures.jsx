@@ -19,10 +19,11 @@ export const useTouchGestures = (element, options = {}) => {
 
   // Función segura para prevenir default si está habilitado
   const safePreventDefault = useCallback((e) => {
-    if (defaultOptions.preventDefault && e.preventDefault) {
-      e.preventDefault();
-    }
-  }, [defaultOptions.preventDefault]);
+    // NO hacer preventDefault en eventos pasivos para evitar warnings
+    // Los event listeners se configuran como passive más abajo
+    // por lo que preventDefault no funciona de todas formas
+    return;
+  }, []);
 
   // Touch Start - SEGURO
   const handleTouchStart = useCallback((e) => {
