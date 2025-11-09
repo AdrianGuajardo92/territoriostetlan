@@ -128,8 +128,13 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
         });
     }, [addressesWithData, searchQuery]);
 
-    // Función para obtener el color basado en el ESTADO DEL TERRITORIO
+    // Función para obtener el color basado en el ESTADO DEL TERRITORIO o TIPO DE DIRECCIÓN
     const getAddressColor = useCallback((address) => {
+        // PRIORIDAD: Verificar si es revisita o estudio - usar morado
+        if (address.isRevisita || address.isEstudio) {
+            return '#8b5cf6'; // Morado - Revisitas y Estudios
+        }
+
         // Obtener el estado del territorio
         const territoryStatus = address.territory?.status;
 
@@ -148,6 +153,18 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
 
         // Fallback por si no hay estado
         return '#94a3b8'; // Gris
+    }, []);
+
+    // Función para obtener color de fondo tenue según estado del territorio
+    const getBackgroundColor = useCallback((territoryStatus) => {
+        if (territoryStatus === 'Disponible') {
+            return 'rgba(34, 197, 94, 0.25)'; // Verde más visible
+        } else if (territoryStatus === 'En uso') {
+            return 'rgba(234, 179, 8, 0.25)'; // Amarillo más visible
+        } else if (territoryStatus === 'Completado' || territoryStatus === 'Terminado') {
+            return 'rgba(239, 68, 68, 0.25)'; // Rojo más visible
+        }
+        return 'rgba(255, 255, 255, 1)'; // Blanco por defecto
     }, []);
 
     // Función de navegación
@@ -205,6 +222,52 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
 
         showToast(`Navegando ${modeText[mode] || 'al destino'}`, 'success', 2000);
     }, [getNavigationUrl, showToast]);
+
+    // Función para compartir la ubicación
+    const handleShare = useCallback(async (address) => {
+        let lat, lng;
+
+        // Obtener coordenadas
+        if (address.latitude && address.longitude) {
+            lat = address.latitude;
+            lng = address.longitude;
+        } else if (address.coords && Array.isArray(address.coords) && address.coords.length >= 2) {
+            [lat, lng] = address.coords;
+        } else if (address.mapUrl && address.mapUrl.trim() !== '') {
+            const mapUrlMatch = address.mapUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (mapUrlMatch) {
+                lat = parseFloat(mapUrlMatch[1]);
+                lng = parseFloat(mapUrlMatch[2]);
+            }
+        }
+
+        const googleMapsUrl = lat && lng
+            ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address.address)}`;
+
+        const shareData = {
+            title: `${address.territory?.name || 'Territorio'} - ${address.address}`,
+            text: `📍 ${address.address}\n🏘️ ${address.territory?.name || 'Territorio'}\n${address.name ? `👤 ${address.name}\n` : ''}${address.phone ? `📞 ${address.phone}\n` : ''}`,
+            url: googleMapsUrl
+        };
+
+        try {
+            // Verificar si el navegador soporta Web Share API
+            if (navigator.share) {
+                await navigator.share(shareData);
+                showToast('Ubicación compartida exitosamente', 'success', 2000);
+            } else {
+                // Fallback: copiar al portapapeles
+                const textToShare = `${shareData.text}\n🔗 ${shareData.url}`;
+                await navigator.clipboard.writeText(textToShare);
+                showToast('Enlace copiado al portapapeles', 'success', 2000);
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                showToast('No se pudo compartir la ubicación', 'error', 2000);
+            }
+        }
+    }, [showToast]);
 
     // Función para limpiar el resaltado del marcador
     const clearMarkerHighlight = useCallback(() => {
@@ -714,19 +777,32 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                 <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg animate-slide-up z-20">
                     <div className="px-4 py-3">
                         {/* Header del panel */}
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-start flex-1 mr-2">
                                 <div
-                                    className="w-6 h-6 rounded-full mr-3 flex items-center justify-center"
-                                    style={{ backgroundColor: selectedAddress.territoryColor }}
+                                    className="w-6 h-6 rounded-full mr-3 flex items-center justify-center flex-shrink-0"
+                                    style={{ backgroundColor: getAddressColor(selectedAddress) }}
                                 >
-                                    <i className="fas fa-map-pin text-white text-xs"></i>
+                                    {selectedTerritory.status === 'Disponible' ? (
+                                        <i className="fas fa-check text-white text-xs"></i>
+                                    ) : selectedTerritory.status === 'En uso' ? (
+                                        <i className="fas fa-user text-white text-xs"></i>
+                                    ) : (
+                                        <i className="fas fa-times text-white text-xs"></i>
+                                    )}
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-gray-900 text-sm leading-tight inline">
                                         {selectedAddress.address}
+                                        <button
+                                            onClick={() => handleShare(selectedAddress)}
+                                            className="inline-flex items-center justify-center ml-2 p-1 hover:bg-indigo-50 rounded-full transition-colors align-middle"
+                                            title="Compartir ubicación"
+                                        >
+                                            <Icon name="share" size={14} className="text-indigo-600" />
+                                        </button>
                                     </h3>
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-gray-600 mt-0.5">
                                         <span className="font-semibold">{selectedTerritory.name}</span>
                                         {selectedAddress.name && ` • ${selectedAddress.name}`}
                                     </p>
@@ -737,7 +813,7 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                                     setShowQuickAction(false);
                                     clearMarkerHighlight();
                                 }}
-                                className="p-2 hover:bg-gray-100 rounded-full transition-colors ml-2"
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
                             >
                                 <Icon name="x" size={18} className="text-gray-400" />
                             </button>
@@ -765,63 +841,61 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                                     </p>
                                 </div>
                             )}
-                            <div className="flex items-center space-x-2 text-xs">
-                                {/* Estado del territorio */}
-                                <span className={`px-2 py-1 rounded-full font-semibold ${
+                            <div className="flex items-center flex-wrap gap-2 text-xs">
+                                {/* Estado del territorio con ícono */}
+                                <span className={`px-2 py-1 rounded-full font-semibold flex items-center gap-1 ${
                                     selectedTerritory.status === 'Disponible'
                                         ? 'bg-green-100 text-green-700'
                                         : selectedTerritory.status === 'En uso'
                                         ? 'bg-yellow-100 text-yellow-700'
                                         : 'bg-red-100 text-red-700'
                                 }`}>
-                                    {selectedTerritory.status}
-                                </span>
-                                {/* Estado de la dirección individual */}
-                                <span className={`px-2 py-1 rounded-full ${
-                                    selectedAddress.isVisited
-                                        ? 'bg-gray-100 text-gray-600'
-                                        : 'bg-blue-100 text-blue-600'
-                                }`}>
-                                    {selectedAddress.isVisited ? 'Visitada' : 'Pendiente'}
+                                    {selectedTerritory.status === 'Disponible' ? (
+                                        <i className="fas fa-check-circle"></i>
+                                    ) : selectedTerritory.status === 'En uso' ? (
+                                        <i className="fas fa-user"></i>
+                                    ) : (
+                                        <i className="fas fa-times-circle"></i>
+                                    )}
+                                    <span>{selectedTerritory.status}</span>
                                 </span>
                                 {selectedAddress.isRevisita && (
-                                    <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-700">
-                                        Revisita
+                                    <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium flex items-center gap-1">
+                                        <i className="fas fa-redo"></i>
+                                        <span>Revisita {selectedAddress.revisitaBy && `• ${selectedAddress.revisitaBy}`}</span>
                                     </span>
                                 )}
                                 {selectedAddress.isEstudio && (
-                                    <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-700">
-                                        Estudio
+                                    <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium flex items-center gap-1">
+                                        <i className="fas fa-book"></i>
+                                        <span>Estudio {selectedAddress.estudioBy && `• ${selectedAddress.estudioBy}`}</span>
                                     </span>
                                 )}
                             </div>
                         </div>
 
                         {/* Botones de navegación */}
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 w-full">
                             <button
                                 onClick={() => handleNavigate(selectedAddress, 'driving')}
-                                className="flex-1 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center"
+                                className="flex-1 p-3 bg-slate-500 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center justify-center"
                                 title="Navegar en carro"
                             >
-                                <i className="fas fa-car text-lg mr-2"></i>
-                                Carro
+                                <i className="fas fa-car text-lg"></i>
                             </button>
                             <button
                                 onClick={() => handleNavigate(selectedAddress, 'walking')}
-                                className="flex-1 p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center"
+                                className="flex-1 p-3 bg-slate-500 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center justify-center"
                                 title="Navegar caminando"
                             >
-                                <i className="fas fa-person-walking text-lg mr-2"></i>
-                                A pie
+                                <i className="fas fa-person-walking text-lg"></i>
                             </button>
                             <button
                                 onClick={() => handleNavigate(selectedAddress, 'transit')}
-                                className="flex-1 p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center"
+                                className="flex-1 p-3 bg-slate-500 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center justify-center"
                                 title="Transporte público"
                             >
-                                <i className="fas fa-bus text-lg mr-2"></i>
-                                Bus
+                                <i className="fas fa-bus text-lg"></i>
                             </button>
                         </div>
                     </div>
