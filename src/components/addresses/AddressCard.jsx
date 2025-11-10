@@ -334,8 +334,8 @@ const AddressCard = memo(({
                             
                             {/* Dirección y género */}
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-2">
-                                    <h3 className={`font-bold text-base ${showFullAddress ? '' : 'truncate'} ${config.titleColor}`}>
+                                <div className="flex items-start space-x-2">
+                                    <h3 className={`font-bold text-base break-words ${config.titleColor}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                         {address.address}
                                     </h3>
                                     <GenderTag gender={address.gender} />
@@ -436,7 +436,7 @@ const AddressCard = memo(({
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className={`text-lg font-bold ${showFullAddress ? '' : 'truncate'} ${config.titleColor}`}>
+                            <h3 className={`text-lg font-bold break-words ${config.titleColor}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                 {address.address}
                             </h3>
                             <div className="flex items-center space-x-2 mt-1">
