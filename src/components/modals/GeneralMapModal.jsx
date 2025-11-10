@@ -933,13 +933,6 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
 
                                 {/* Dropdown panel compacto */}
                                 {showTerritoryDropdown && (
-                                    <>
-                                        {/* Overlay para cerrar */}
-                                        <div
-                                            className="fixed inset-0 z-10"
-                                            onClick={() => setShowTerritoryDropdown(false)}
-                                        />
-
                                         <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 w-32 overflow-hidden z-20 backdrop-blur-sm" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                                             {/* Header elegante con color de la app */}
                                             <div className="px-4 py-3 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #2C3E50 0%, #34495e 100%)' }}>
@@ -1022,7 +1015,6 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                                                     })}
                                             </div>
                                         </div>
-                                    </>
                                 )}
                             </div>
                         </div>
