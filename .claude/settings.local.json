@@ -11,7 +11,8 @@
       "Bash(npm install:*)",
       "Bash(taskkill:*)",
       "Bash(nul)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

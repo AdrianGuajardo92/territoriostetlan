@@ -745,6 +745,14 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
         updateUserLocationMarker();
     }, [isOpen, isMapReady, userLocation, updateUserLocationMarker]);
 
+    // Obtener ubicación automáticamente al abrir el mapa
+    useEffect(() => {
+        if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
+
+        // Llamar a getUserLocation solo una vez cuando el mapa esté listo
+        getUserLocation();
+    }, [isMapReady, getUserLocation]); // Solo cuando el mapa esté listo
+
     // Control del scroll del body
     useEffect(() => {
         if (isOpen) {
@@ -932,14 +940,14 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                                             onClick={() => setShowTerritoryDropdown(false)}
                                         />
 
-                                        <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 w-32 max-h-80 overflow-hidden z-20 backdrop-blur-sm">
+                                        <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 w-32 overflow-hidden z-20 backdrop-blur-sm" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                                             {/* Header elegante con color de la app */}
                                             <div className="px-4 py-3 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #2C3E50 0%, #34495e 100%)' }}>
                                                 <div className="flex items-center gap-1.5">
                                                     <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
                                                         <Icon name="map" size={12} className="text-white" />
                                                     </div>
-                                                    <span className="text-xs font-semibold text-white">T.</span>
+                                                    <span className="text-xs font-semibold text-white">Terr.</span>
                                                 </div>
                                                 {selectedTerritoryId && (
                                                     <button
@@ -956,7 +964,7 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                                             </div>
 
                                             {/* Lista elegante con badges */}
-                                            <div className="overflow-y-auto max-h-72 p-2 space-y-1.5">
+                                            <div className="overflow-y-auto p-2 space-y-1.5" style={{ maxHeight: 'calc(100vh - 260px)' }}>
                                                 {territories
                                                     .sort((a, b) => {
                                                         const numA = parseInt(a.name.match(/\d+/)?.[0] || '0');
@@ -971,7 +979,12 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                                                             <button
                                                                 key={territory.id}
                                                                 onClick={() => {
-                                                                    setSelectedTerritoryId(territory.id);
+                                                                    // Toggle: si ya está seleccionado, quitar filtro; si no, seleccionar
+                                                                    if (isSelected) {
+                                                                        setSelectedTerritoryId(null);
+                                                                    } else {
+                                                                        setSelectedTerritoryId(territory.id);
+                                                                    }
                                                                     setShowTerritoryDropdown(false);
                                                                 }}
                                                                 className={`w-full rounded-xl transition-all duration-200 transform hover:scale-105 ${
