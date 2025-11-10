@@ -8,7 +8,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(cat:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(taskkill:*)",
+      "Bash(nul)",
+      "Bash(git config:*)"
     ],
     "deny": [],
     "ask": []

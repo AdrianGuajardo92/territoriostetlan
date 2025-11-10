@@ -18,6 +18,16 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
     const markersRef = useRef({});
     const selectedMarkerRef = useRef(null);
 
+    // Estados para geolocalización
+    const [userLocation, setUserLocation] = useState(null);
+    const [isLocating, setIsLocating] = useState(false);
+    const [locationError, setLocationError] = useState(null);
+    const userMarkerRef = useRef(null);
+
+    // Estado para filtro de territorio por ID
+    const [selectedTerritoryId, setSelectedTerritoryId] = useState(null);
+    const [showTerritoryDropdown, setShowTerritoryDropdown] = useState(false);
+
     // Coordenadas del centro de Guadalajara, Jalisco, México
     const GUADALAJARA_CENTER = { lat: 20.6597, lng: -103.3496 };
     const DEFAULT_ZOOM = 12;
@@ -111,22 +121,32 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
             .filter(Boolean);
     }, [addresses, territories, getCoordinates, territoryColorMap]);
 
-    // Filtrar direcciones según búsqueda
+    // Filtrar direcciones según estado de territorio y búsqueda
     const filteredAddresses = useMemo(() => {
-        if (!searchQuery.trim()) return addressesWithData;
+        let result = addressesWithData;
 
-        const query = searchQuery.toLowerCase();
-        return addressesWithData.filter(address => {
-            return (
-                address.address?.toLowerCase().includes(query) ||
-                address.name?.toLowerCase().includes(query) ||
-                address.notes?.toLowerCase().includes(query) ||
-                address.phone?.toLowerCase().includes(query) ||
-                address.territory.name?.toLowerCase().includes(query) ||
-                address.gender?.toLowerCase().includes(query)
-            );
-        });
-    }, [addressesWithData, searchQuery]);
+        // Filtro 1: Por territorio específico (ID)
+        if (selectedTerritoryId) {
+            result = result.filter(address => address.territoryId === selectedTerritoryId);
+        }
+
+        // Filtro 2: Por búsqueda
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(address => {
+                return (
+                    address.address?.toLowerCase().includes(query) ||
+                    address.name?.toLowerCase().includes(query) ||
+                    address.notes?.toLowerCase().includes(query) ||
+                    address.phone?.toLowerCase().includes(query) ||
+                    address.territory.name?.toLowerCase().includes(query) ||
+                    address.gender?.toLowerCase().includes(query)
+                );
+            });
+        }
+
+        return result;
+    }, [addressesWithData, selectedTerritoryId, searchQuery]);
 
     // Función para obtener el color basado en el ESTADO DEL TERRITORIO o TIPO DE DIRECCIÓN
     const getAddressColor = useCallback((address) => {
@@ -268,6 +288,119 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
             }
         }
     }, [showToast]);
+
+    // Función para obtener la ubicación actual del usuario
+    const getUserLocation = useCallback(() => {
+        if (!navigator.geolocation) {
+            setLocationError('Geolocalización no soportada');
+            showToast('Tu navegador no soporta geolocalización', 'error');
+            return;
+        }
+
+        setIsLocating(true);
+        setLocationError(null);
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude, accuracy } = position.coords;
+                setUserLocation({ lat: latitude, lng: longitude, accuracy });
+                setIsLocating(false);
+                showToast('Ubicación encontrada', 'success', 2000);
+
+                // Centrar mapa en la ubicación del usuario
+                if (mapInstanceRef.current) {
+                    mapInstanceRef.current.setView([latitude, longitude], 15, {
+                        animate: true,
+                        duration: 1
+                    });
+                }
+            },
+            (error) => {
+                setIsLocating(false);
+                let errorMessage = 'No se pudo obtener tu ubicación';
+
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Permiso de ubicación denegado. Por favor, activa los permisos en tu navegador.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Ubicación no disponible';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Tiempo de espera agotado';
+                        break;
+                }
+
+                setLocationError(errorMessage);
+                showToast(errorMessage, 'error', 4000);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 30000
+            }
+        );
+    }, [showToast]);
+
+    // Función para actualizar el marcador de ubicación del usuario
+    const updateUserLocationMarker = useCallback(() => {
+        if (!mapInstanceRef.current || !userLocation) return;
+
+        // Remover marcador anterior si existe
+        if (userMarkerRef.current) {
+            mapInstanceRef.current.removeLayer(userMarkerRef.current);
+            userMarkerRef.current = null;
+        }
+
+        // Crear marcador de ubicación del usuario con diseño distintivo
+        const userMarkerHtml = `
+            <div class="user-location-marker" style="position: relative; width: 40px; height: 40px;">
+                <div class="pulse-ring" style="
+                    position: absolute;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background-color: rgba(59, 130, 246, 0.3);
+                    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+                "></div>
+                <div class="user-dot" style="
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 16px;
+                    height: 16px;
+                    background-color: #3b82f6;
+                    border: 3px solid white;
+                    border-radius: 50%;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                    z-index: 2;
+                "></div>
+            </div>
+        `;
+
+        const userIcon = L.divIcon({
+            html: userMarkerHtml,
+            iconSize: [40, 40],
+            className: 'user-location-icon',
+            iconAnchor: [20, 20]
+        });
+
+        const userMarker = L.marker(
+            [userLocation.lat, userLocation.lng],
+            { icon: userIcon, zIndexOffset: 1000 }
+        );
+
+        // Agregar tooltip
+        userMarker.bindTooltip('Tu ubicación', {
+            permanent: false,
+            direction: 'top',
+            offset: [0, -20]
+        });
+
+        userMarker.addTo(mapInstanceRef.current);
+        userMarkerRef.current = userMarker;
+    }, [userLocation]);
 
     // Función para limpiar el resaltado del marcador
     const clearMarkerHighlight = useCallback(() => {
@@ -605,6 +738,13 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
         }, 100);
     }, [isOpen, isMapReady, updateMapMarkers]);
 
+    // Actualizar marcador de ubicación del usuario
+    useEffect(() => {
+        if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
+
+        updateUserLocationMarker();
+    }, [isOpen, isMapReady, userLocation, updateUserLocationMarker]);
+
     // Control del scroll del body
     useEffect(() => {
         if (isOpen) {
@@ -636,6 +776,21 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                     }
                     50% {
                         opacity: 0.7;
+                    }
+                }
+
+                @keyframes pulse-ring {
+                    0% {
+                        transform: scale(0.8);
+                        opacity: 1;
+                    }
+                    50% {
+                        transform: scale(1.2);
+                        opacity: 0.6;
+                    }
+                    100% {
+                        transform: scale(0.8);
+                        opacity: 1;
                     }
                 }
 
@@ -681,6 +836,7 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                             </p>
                         </div>
                     </div>
+
                     <button
                         onClick={onClose}
                         className="p-2 hover:bg-white/20 rounded-full transition-colors"
@@ -695,7 +851,7 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Buscar por dirección, colonia, nombre, territorio..."
+                        placeholder="Buscar por dirección"
                         className="w-full px-4 py-3 pl-12 pr-10 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/50"
                     />
                     <Icon
@@ -747,27 +903,140 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
                             }}
                         />
 
-                        {/* Botón para volver a centrar en Guadalajara */}
-                        <button
-                            onClick={() => {
-                                if (mapInstanceRef.current) {
-                                    mapInstanceRef.current.setView(
-                                        [GUADALAJARA_CENTER.lat, GUADALAJARA_CENTER.lng],
-                                        DEFAULT_ZOOM,
-                                        { animate: true, duration: 1 }
-                                    );
-                                    showToast('Centrando en Guadalajara', 'info');
-                                }
-                            }}
-                            className="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 hover:shadow-2xl transition-all duration-200 flex items-center justify-center group z-20"
-                            title="Centrar en Guadalajara"
-                        >
-                            <Icon
-                                name="home"
-                                size={24}
-                                className="text-indigo-600 group-hover:text-indigo-700 transition-colors"
-                            />
-                        </button>
+                        {/* Dropdown de filtro discreto (top-left) */}
+                        <div className="absolute top-4 left-4 z-20">
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowTerritoryDropdown(!showTerritoryDropdown)}
+                                    className={`w-10 h-10 bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200 flex items-center justify-center ${
+                                        selectedTerritoryId ? 'border-[#2C3E50]' : ''
+                                    }`}
+                                    style={selectedTerritoryId ? { backgroundColor: '#2C3E50' } : {}}
+                                    title={selectedTerritoryId ? `Territorio ${territories.find(t => t.id === selectedTerritoryId)?.name.match(/\d+/)?.[0]}` : 'Filtrar'}
+                                >
+                                    {selectedTerritoryId ? (
+                                        <span className="text-sm font-bold text-white">
+                                            {territories.find(t => t.id === selectedTerritoryId)?.name.match(/\d+/)?.[0]}
+                                        </span>
+                                    ) : (
+                                        <Icon name="filter" size={18} className="text-gray-600" />
+                                    )}
+                                </button>
+
+                                {/* Dropdown panel compacto */}
+                                {showTerritoryDropdown && (
+                                    <>
+                                        {/* Overlay para cerrar */}
+                                        <div
+                                            className="fixed inset-0 z-10"
+                                            onClick={() => setShowTerritoryDropdown(false)}
+                                        />
+
+                                        <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 w-32 max-h-80 overflow-hidden z-20 backdrop-blur-sm">
+                                            {/* Header elegante con color de la app */}
+                                            <div className="px-4 py-3 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #2C3E50 0%, #34495e 100%)' }}>
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                                                        <Icon name="map" size={12} className="text-white" />
+                                                    </div>
+                                                    <span className="text-xs font-semibold text-white">T.</span>
+                                                </div>
+                                                {selectedTerritoryId && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedTerritoryId(null);
+                                                        }}
+                                                        className="w-5 h-5 bg-white/20 hover:bg-white/30 rounded-md flex items-center justify-center transition-colors backdrop-blur-sm"
+                                                        title="Limpiar filtro"
+                                                    >
+                                                        <Icon name="x" size={12} className="text-white" />
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Lista elegante con badges */}
+                                            <div className="overflow-y-auto max-h-72 p-2 space-y-1.5">
+                                                {territories
+                                                    .sort((a, b) => {
+                                                        const numA = parseInt(a.name.match(/\d+/)?.[0] || '0');
+                                                        const numB = parseInt(b.name.match(/\d+/)?.[0] || '0');
+                                                        return numA - numB;
+                                                    })
+                                                    .map(territory => {
+                                                        const isSelected = selectedTerritoryId === territory.id;
+                                                        const territoryNumber = territory.name.match(/\d+/)?.[0] || '?';
+
+                                                        return (
+                                                            <button
+                                                                key={territory.id}
+                                                                onClick={() => {
+                                                                    setSelectedTerritoryId(territory.id);
+                                                                    setShowTerritoryDropdown(false);
+                                                                }}
+                                                                className={`w-full rounded-xl transition-all duration-200 transform hover:scale-105 ${
+                                                                    isSelected ? 'shadow-lg' : ''
+                                                                }`}
+                                                            >
+                                                                <div
+                                                                    className="flex items-center justify-center p-3 rounded-xl"
+                                                                    style={isSelected
+                                                                        ? { background: 'linear-gradient(135deg, #2C3E50 0%, #34495e 100%)' }
+                                                                        : {}
+                                                                    }
+                                                                >
+                                                                    <div className={`flex items-center justify-center p-3 rounded-xl w-full ${
+                                                                        !isSelected ? 'bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200' : ''
+                                                                    }`}>
+                                                                        <div className="flex items-center gap-2">
+                                                                            {/* Ícono de casa sin fondo */}
+                                                                            <Icon
+                                                                                name="home"
+                                                                                size={16}
+                                                                                style={isSelected ? { color: 'white' } : { color: '#2C3E50' }}
+                                                                            />
+                                                                            {/* Número grande */}
+                                                                            <span className={`text-base font-bold ${
+                                                                                isSelected ? 'text-white' : 'text-gray-800'
+                                                                            }`}>
+                                                                                {territoryNumber}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Botón flotante de ubicación (bottom-right) */}
+                        <div className="absolute bottom-4 right-4 z-20">
+                            <button
+                                onClick={getUserLocation}
+                                disabled={isLocating}
+                                className={`w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-200 flex items-center justify-center group ${
+                                    isLocating ? 'opacity-50 cursor-not-allowed' : ''
+                                } ${userLocation ? 'bg-blue-50 border-blue-300' : ''}`}
+                                title="Mi ubicación"
+                            >
+                                {isLocating ? (
+                                    <div className="animate-spin w-6 h-6 border-3 border-blue-600 border-t-transparent rounded-full"></div>
+                                ) : (
+                                    <Icon
+                                        name="crosshair"
+                                        size={24}
+                                        className={`transition-colors ${
+                                            userLocation ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600'
+                                        }`}
+                                    />
+                                )}
+                            </button>
+                        </div>
                     </>
                 )}
             </div>

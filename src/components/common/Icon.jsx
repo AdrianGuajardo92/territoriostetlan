@@ -6,6 +6,9 @@ const Icon = ({ name, size = 24, color = "currentColor", className = "", ...prop
     // Mapeo de nombres personalizados a nombres de Lucide
     const iconMap = {
         'navigation': 'Navigation',
+        'crosshair': 'Crosshair',
+        'locate': 'Locate',
+        'locateFixed': 'LocateFixed',
         'map': 'Map',
         'plus': 'Plus',
         'edit': 'Edit',

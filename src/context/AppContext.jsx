@@ -28,9 +28,6 @@ export const testFirebaseConnection = async () => {
     return true;
   } catch (error) {
     console.error('❌ Error de conexión Firebase:', error);
-    if (error.code === 'failed-precondition') {
-      console.log('ℹ️ Índices de Firestore aún creándose...');
-    }
     return false;
   }
 };
@@ -108,30 +105,22 @@ export const AppProvider = ({ children }) => {
       );
       
       const querySnapshot = await getDocs(usersQuery);
-      
+
       if (querySnapshot.empty) {
-        console.log('❌ Código de acceso no encontrado');
-        return { 
-          success: false, 
-          error: 'Código de acceso incorrecto' 
+        return {
+          success: false,
+          error: 'Código de acceso incorrecto'
         };
       }
 
       const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
-      
-      console.log('👤 Usuario encontrado:', {
-        name: userData.name,
-        role: userData.role,
-        hasPassword: !!userData.password
-      });
 
       // Validar contraseña
       if (!userData.password || userData.password !== password) {
-        console.log('❌ Contraseña incorrecta');
-        return { 
-          success: false, 
-          error: 'Contraseña incorrecta' 
+        return {
+          success: false,
+          error: 'Contraseña incorrecta'
         };
       }
 
@@ -168,8 +157,6 @@ export const AppProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      console.log('🚪 Cerrando sesión...');
-      
       // Limpiar listeners de Firebase
       unsubscribesRef.current.forEach(unsubscribe => {
         if (typeof unsubscribe === 'function') {
@@ -558,7 +545,6 @@ export const AppProvider = ({ children }) => {
     // Prevenir doble llamada con debouncing
     const callKey = `assign_${territoryId}_${assignedNames.join('_')}`;
     if (window.assignmentInProgress && window.assignmentInProgress.has(callKey)) {
-      console.log('🚫 Llamada duplicada prevenida:', callKey);
       return;
     }
     
@@ -626,7 +612,6 @@ export const AppProvider = ({ children }) => {
     // Prevenir doble llamada con debouncing
     const callKey = `return_${territoryId}`;
     if (window.returnInProgress && window.returnInProgress.has(callKey)) {
-      console.log('🚫 Llamada duplicada prevenida:', callKey);
       return;
     }
     
@@ -760,7 +745,6 @@ export const AppProvider = ({ children }) => {
     // Prevenir doble llamada con debouncing
     const callKey = `complete_${territoryId}`;
     if (window.completeInProgress && window.completeInProgress.has(callKey)) {
-      console.log('🚫 Llamada duplicada prevenida:', callKey);
       return;
     }
     
@@ -954,18 +938,13 @@ export const AppProvider = ({ children }) => {
     if (!currentUser || currentUser.role === 'admin') return;
     
     try {
-      console.log('🔍 Buscando propuestas no leídas para:', currentUser.id);
-      
-      const unreadProposals = proposals.filter(p => 
-        p.proposedBy === currentUser.id && 
-        ['approved', 'rejected'].includes(p.status) && 
+      const unreadProposals = proposals.filter(p =>
+        p.proposedBy === currentUser.id &&
+        ['approved', 'rejected'].includes(p.status) &&
         !p.notificationRead
       );
 
-      console.log('📊 Propuestas no leídas encontradas:', unreadProposals.length);
-
       if (unreadProposals.length === 0) {
-        console.log('✅ No hay propuestas no leídas para marcar');
         return;
       }
 
@@ -980,7 +959,6 @@ export const AppProvider = ({ children }) => {
 
       // ✅ MEJORA: Actualizar contador inmediatamente
       setUserNotificationsCount(0);
-      console.log('✅ Contador de notificaciones actualizado a 0');
 
       const batch = writeBatch(db);
       unreadProposals.forEach(proposal => {
@@ -989,7 +967,6 @@ export const AppProvider = ({ children }) => {
       });
 
       await batch.commit();
-      console.log(`📱 Marcadas ${unreadProposals.length} propuestas como leídas en Firebase`);
     } catch (error) {
       console.error('Error marcando propuestas como leídas:', error);
       // ✅ MEJORA: Revertir cambios locales si hay error
@@ -1242,8 +1219,6 @@ export const AppProvider = ({ children }) => {
   // Nueva función para transferir una dirección entre usuarios en una campaña
   const transferCampaignAddress = async (campaignId, addressId, fromUserId, toUserId) => {
     try {
-      console.log('Iniciando transferencia:', { campaignId, addressId, fromUserId, toUserId });
-      
       const campaign = campaigns.find(c => c.id === campaignId);
       if (!campaign) {
         throw new Error('Campaña no encontrada');
@@ -1310,15 +1285,12 @@ export const AppProvider = ({ children }) => {
         });
       }
 
-      console.log('Asignaciones actualizadas:', updatedAssignments);
-
       // Actualizar en Firebase
       await updateDoc(doc(db, 'campaigns', campaignId), {
         assignments: updatedAssignments,
         lastUpdated: serverTimestamp()
       });
 
-      console.log('Transferencia completada exitosamente');
       showToast('Dirección transferida exitosamente', 'success');
       return true;
     } catch (error) {
@@ -1485,8 +1457,7 @@ export const AppProvider = ({ children }) => {
         
         if (savedUser) {
           const userData = JSON.parse(savedUser);
-          console.log('👤 Restaurando sesión para:', userData.name);
-          
+
           // Verificar que el usuario aún existe en Firestore
           const userDoc = await getDoc(doc(db, 'users', userData.id));
           
@@ -1501,14 +1472,12 @@ export const AppProvider = ({ children }) => {
             };
             
             setCurrentUser(user);
-  
+
           } else {
-            console.log('⚠️ Usuario no existe, limpiando sesión');
             sessionStorage.removeItem('currentUser');
             setCurrentUser(null);
           }
         } else {
-          console.log('ℹ️ No hay sesión guardada');
           setCurrentUser(null);
           }
         } catch (error) {
