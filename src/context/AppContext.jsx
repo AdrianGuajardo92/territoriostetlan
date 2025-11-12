@@ -329,16 +329,68 @@ export const AppProvider = ({ children }) => {
   };
 
   const handleDeleteAddress = async (addressId, options = {}) => {
-    const { showSuccessToast = true } = options;
-    
+    const { showSuccessToast = true, permanentDelete = false } = options;
+
     try {
-      await deleteDoc(doc(db, 'addresses', addressId));
-      if (showSuccessToast) {
-        showToast('Dirección eliminada correctamente', 'success');
+      if (permanentDelete) {
+        // Eliminación permanente (solo para direcciones ya archivadas)
+        await deleteDoc(doc(db, 'addresses', addressId));
+        if (showSuccessToast) {
+          showToast('Dirección eliminada permanentemente', 'success');
+        }
+      } else {
+        // Soft delete - marcar como eliminada en lugar de borrar
+        const address = addresses.find(addr => addr.id === addressId);
+        await updateDoc(doc(db, 'addresses', addressId), {
+          deleted: true,
+          deletedAt: serverTimestamp(),
+          deletedBy: currentUser?.id || 'unknown',
+          deletedByName: currentUser?.name || 'Sistema',
+          deletedReason: 'Eliminado por usuario',
+          // Preservar datos originales
+          originalData: {
+            ...address,
+            address: address?.address,
+            territoryId: address?.territoryId,
+            name: address?.name || '',
+            phone: address?.phone || '',
+            notes: address?.notes || '',
+            gender: address?.gender || '',
+            isVisited: address?.isVisited || false,
+            isRevisita: address?.isRevisita || false,
+            isEstudio: address?.isEstudio || false,
+            coords: address?.coords || null
+          }
+        });
+
+        if (showSuccessToast) {
+          showToast('Dirección archivada correctamente', 'success');
+        }
       }
     } catch (error) {
       console.error('Error deleting address:', error);
       showToast('Error al eliminar dirección', 'error');
+      throw error;
+    }
+  };
+
+  // Función para restaurar direcciones archivadas
+  const handleRestoreAddress = async (addressId) => {
+    try {
+      await updateDoc(doc(db, 'addresses', addressId), {
+        deleted: false,
+        deletedAt: null,
+        deletedBy: null,
+        deletedByName: null,
+        deletedReason: null,
+        restoredAt: serverTimestamp(),
+        restoredBy: currentUser?.id || 'admin',
+        originalData: null
+      });
+      showToast('Dirección restaurada correctamente', 'success');
+    } catch (error) {
+      console.error('Error restoring address:', error);
+      showToast('Error al restaurar dirección', 'error');
       throw error;
     }
   };
@@ -1693,7 +1745,8 @@ export const AppProvider = ({ children }) => {
     handleAddNewAddress,
     handleUpdateAddress,
     handleDeleteAddress,
-    
+    handleRestoreAddress,
+
     // Proposal functions
     handleProposeAddressChange,
     handleProposeNewAddress,

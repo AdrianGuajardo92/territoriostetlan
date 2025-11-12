@@ -115,33 +115,27 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
   
   // Usar ReactDOM.createPortal para renderizar en el body
   return ReactDOM.createPortal(
-    <div className="fixed inset-0" style={{ zIndex: 999999 }}>
-      {/* Overlay */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
+    <div className="fixed inset-0 bg-gray-50" style={{ zIndex: 999999 }}>
       {/* Modal de pantalla completa */}
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="bg-white w-full h-full max-w-6xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-          {/* Header del modal */}
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 flex-shrink-0">
+      <div className="w-full h-full flex flex-col overflow-hidden">
+        {/* Header del modal */}
+        <div className="bg-gradient-to-r from-teal-600 to-teal-800 text-white p-6 flex-shrink-0 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold flex items-center gap-3">
                   <Icon name="map" className="text-3xl" />
                   Gestión de Territorios
                 </h2>
-                <p className="text-indigo-100 mt-1">
+                <p className="text-teal-100 mt-1">
                   Administra y libera territorios de forma masiva
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
               >
-                <Icon name="x" className="text-2xl" />
+                <Icon name="x" className="text-xl" />
+                <span className="font-medium">Cerrar</span>
               </button>
             </div>
           </div>
@@ -155,7 +149,7 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                   onClick={() => setFilter('all')}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
                     filter === 'all'
-                      ? 'bg-blue-600 text-white shadow-lg'
+                      ? 'bg-teal-600 text-white shadow-lg'
                       : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
                   }`}
                 >
@@ -195,7 +189,7 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Buscar territorio..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -222,8 +216,8 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
 
             {/* Información de selección */}
             {selectedTerritories.size > 0 && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-                <p className="text-blue-800">
+              <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg flex items-center justify-between">
+                <p className="text-teal-800">
                   <Icon name="info" className="inline mr-2" />
                   <strong>{selectedTerritories.size}</strong> territorio{selectedTerritories.size > 1 ? 's' : ''} seleccionado{selectedTerritories.size > 1 ? 's' : ''}
                   {selectedAssignedCount > 0 && (
@@ -268,7 +262,7 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                       onClick={() => toggleSelection(territory.id)}
                       className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         isSelected
-                          ? 'border-indigo-500 bg-indigo-50'
+                          ? 'border-teal-500 bg-teal-50'
                           : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
                     >
@@ -277,7 +271,7 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                           {/* Checkbox */}
                           <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
                             isSelected
-                              ? 'bg-indigo-600 border-indigo-600'
+                              ? 'bg-teal-600 border-teal-600'
                               : 'bg-white border-gray-300'
                           }`}>
                             {isSelected && (
@@ -288,7 +282,7 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                           {/* Número de territorio */}
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
                             territory.status === 'Completado'
-                              ? 'bg-blue-100 text-blue-600'
+                              ? 'bg-teal-100 text-teal-600'
                               : territory.assignedTo
                                 ? 'bg-orange-100 text-orange-600'
                                 : 'bg-green-100 text-green-600'
@@ -300,7 +294,7 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                         {/* Badge de estado */}
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           territory.status === 'Completado'
-                            ? 'bg-blue-100 text-blue-700'
+                            ? 'bg-teal-100 text-teal-700'
                             : territory.assignedTo
                               ? 'bg-orange-100 text-orange-700'
                               : 'bg-green-100 text-green-700'

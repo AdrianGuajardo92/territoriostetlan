@@ -9,11 +9,12 @@ import UserListModal from './UserListModal';
 import ExportAddressesModal from './ExportAddressesModal';
 import CampaignModal from './CampaignModal';
 import TerritoryManagementModal from './TerritoryManagementModal';
+import ArchivedAddressesPortal from '../admin/ArchivedAddressesPortal';
 
 const AdminModal = (props = {}) => {
   const { isOpen = false, onClose = () => {} } = props;
-  const { 
-    currentUser, 
+  const {
+    currentUser,
     territories,
     addresses,
     proposals,
@@ -28,6 +29,7 @@ const AdminModal = (props = {}) => {
   
   const { showToast } = useToast();
   const [view, setView] = useState('actions');
+  const [showArchivedAddresses, setShowArchivedAddresses] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showStatsModal, setShowStatsModal] = useState(false); // Estado para las estadísticas completas
@@ -52,10 +54,12 @@ const AdminModal = (props = {}) => {
   
   // Estado para el modal de gestión de territorios
   const [showTerritoryManagementModal, setShowTerritoryManagementModal] = useState(false);
-  
+
   useEffect(() => {
     if (isOpen) {
       setView(currentUser?.role === 'admin' ? 'actions' : 'no_access');
+      // Resetear el estado de ArchivedAddresses cuando se abre AdminModal
+      setShowArchivedAddresses(false);
     }
     // else {
     //   // Resetear todos los modales cuando se cierre AdminModal
@@ -66,7 +70,7 @@ const AdminModal = (props = {}) => {
     //   setShowExportAddressesModal(false);
     // }
   }, [isOpen, currentUser]);
-  
+
   // Funciones de backup
   const handleBackupAddressesAndTerritories = async () => {
     try {
@@ -237,54 +241,64 @@ const AdminModal = (props = {}) => {
 
   // Configuración de opciones del administrador con diseño elegante
   const adminOptions = [
-    { 
-      id: 'proposals', 
-      title: 'Propuestas de Cambios', 
-      description: pendingProposalsCount > 0 ? `${pendingProposalsCount} pendientes` : 'Ver cambios propuestos', 
-      icon: 'fas fa-clipboard-check', 
-      badge: pendingProposalsCount, 
+    {
+      id: 'proposals',
+      title: 'Propuestas de Cambios',
+      description: pendingProposalsCount > 0 ? `${pendingProposalsCount} pendientes` : 'Ver cambios propuestos',
+      icon: 'fas fa-clipboard-check',
+      badge: pendingProposalsCount,
       color: 'orange',
-      action: () => setView('proposals') 
+      action: () => setView('proposals')
     },
-    { 
-      id: 'users', 
-      title: 'Gestión de Usuarios', 
-      description: 'Administrar publicadores', 
-      icon: 'fas fa-users-cog', 
+    {
+      id: 'users',
+      title: 'Gestión de Usuarios',
+      description: 'Administrar publicadores',
+      icon: 'fas fa-users-cog',
       color: 'blue',
-      action: () => setView('users') 
+      action: () => setView('users')
     },
-    { 
-      id: 'campaigns', 
-      title: 'Gestión de Campañas', 
-      description: 'Campañas especiales', 
-      icon: 'fas fa-flag', 
+    {
+      id: 'campaigns',
+      title: 'Gestión de Campañas',
+      description: 'Campañas especiales',
+      icon: 'fas fa-flag',
       color: 'purple',
-      action: () => setShowCampaignModal(true) 
+      action: () => setShowCampaignModal(true)
     },
-    { 
-      id: 'territories', 
-      title: 'Gestión de Territorios', 
-      description: 'Liberar y administrar territorios', 
-      icon: 'fas fa-map-marked-alt', 
+    {
+      id: 'territories',
+      title: 'Gestión de Territorios',
+      description: 'Liberar y administrar territorios',
+      icon: 'fas fa-map-marked-alt',
       color: 'indigo',
       action: () => setShowTerritoryManagementModal(true)
     },
-    { 
-      id: 'backup', 
-      title: 'Respaldo de Datos', 
-      description: 'Crear backups del sistema', 
-      icon: 'fas fa-download', 
+    {
+      id: 'backup',
+      title: 'Respaldo de Datos',
+      description: 'Crear backups del sistema',
+      icon: 'fas fa-download',
       color: 'green',
-      action: () => setView('backup') 
+      action: () => setView('backup')
     },
-    { 
-      id: 'stats', 
-      title: 'Estadísticas Completas', 
-      description: 'Análisis detallado con filtros y exportación', 
-      icon: 'fas fa-chart-line', 
+    {
+      id: 'archived',
+      title: 'Direcciones Archivadas',
+      description: 'Ver historial de direcciones eliminadas',
+      icon: 'fas fa-archive',
+      color: 'gray',
+      action: () => {
+        setShowArchivedAddresses(!showArchivedAddresses);
+      }
+    },
+    {
+      id: 'stats',
+      title: 'Estadísticas Completas',
+      description: 'Análisis detallado con filtros y exportación',
+      icon: 'fas fa-chart-line',
       color: 'purple',
-      action: () => setShowStatsModal(true) 
+      action: () => setShowStatsModal(true)
     }
   ];
   
@@ -377,26 +391,33 @@ const AdminModal = (props = {}) => {
       case 'actions':
         // Configuración de colores para cada opción
         const colorConfig = {
-          orange: { 
-            bg: 'from-orange-50 to-amber-100', 
-            iconBg: 'bg-orange-500', 
+          orange: {
+            bg: 'from-orange-50 to-amber-100',
+            iconBg: 'bg-orange-500',
             text: 'text-orange-600',
             accent: 'border-orange-200',
             hover: 'hover:shadow-orange-100/50'
           },
-          blue: { 
-            bg: 'from-blue-50 to-indigo-100', 
-            iconBg: 'bg-blue-500', 
+          blue: {
+            bg: 'from-blue-50 to-indigo-100',
+            iconBg: 'bg-blue-500',
             text: 'text-blue-600',
             accent: 'border-blue-200',
             hover: 'hover:shadow-blue-100/50'
           },
-          green: { 
-            bg: 'from-green-50 to-emerald-100', 
-            iconBg: 'bg-green-500', 
+          green: {
+            bg: 'from-green-50 to-emerald-100',
+            iconBg: 'bg-green-500',
             text: 'text-green-600',
             accent: 'border-green-200',
             hover: 'hover:shadow-green-100/50'
+          },
+          gray: {
+            bg: 'from-gray-50 to-gray-100',
+            iconBg: 'bg-gray-500',
+            text: 'text-gray-600',
+            accent: 'border-gray-200',
+            hover: 'hover:shadow-gray-100/50'
           },
           indigo: { 
             bg: 'from-indigo-50 to-blue-100', 
@@ -474,6 +495,7 @@ const AdminModal = (props = {}) => {
                       </div>
                     </div>
                   </button>
+
                 );
               })}
             </div>
@@ -1429,6 +1451,11 @@ const AdminModal = (props = {}) => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Modal de Direcciones Archivadas */}
+      {showArchivedAddresses && (
+        <ArchivedAddressesPortal onClose={() => setShowArchivedAddresses(false)} />
       )}
 
       {/* Modal de Lista de Administradores */}
