@@ -1,12 +1,7 @@
 import React from 'react';
 
 const TerritoryFilters = ({ filterStatus, setFilterStatus, stats, userHasAssignedTerritories }) => {
-  // LOG: Para depuración
   const handleFilterClick = (newFilter) => {
-    console.log('🔘 === CLICK EN FILTRO DE TERRITORIOS ===');
-    console.log('   Filtro anterior:', filterStatus);
-    console.log('   Filtro nuevo:', newFilter);
-    console.log('   Origen: Botón en TerritoryFilters');
     setFilterStatus(newFilter);
   };
 

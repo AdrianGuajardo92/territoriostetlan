@@ -42,13 +42,6 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isGeneralMapOpen, setIsGeneralMapOpen] = useState(false);
 
-  // LOG: Rastrear cambios en el filtro
-  useEffect(() => {
-    console.log('🔍 === CAMBIO EN FILTRO DE TERRITORIOS ===');
-    console.log('   Filtro actual:', filterStatus);
-    console.log('   Mapa abierto:', isGeneralMapOpen);
-    console.log('   Stack trace:', new Error().stack?.split('\n').slice(2, 5).join('\n'));
-  }, [filterStatus]);
 
   // Estados simplificados - filtros avanzados removidos
 
@@ -114,13 +107,8 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   
   // OPTIMIZACIÓN: Memoizar handlers para evitar re-renders ⚡
   const handleFilterChange = useCallback((newFilter) => {
-    console.log('🎯 handleFilterChange llamado:', {
-      filtroAnterior: filterStatus,
-      filtroNuevo: newFilter,
-      origen: 'handleFilterChange manual'
-    });
     setFilterStatus(newFilter);
-  }, [filterStatus]);
+  }, []);
   
   const handleSortChange = useCallback((newSort) => {
     setSortBy(newSort);
@@ -154,9 +142,14 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   }, [filterStatus, handleFilterChange, swipeFeedback]);
 
   // Aplicar swipe navigation al container principal
-  const swipeNavRef = useSwipeNavigation(handleSwipeLeft, handleSwipeRight, {
-    swipeThreshold: 80 // Más alto para evitar conflictos con scroll
-  });
+  // IMPORTANTE: Desactivar swipe cuando el mapa está abierto para evitar cambios de filtro no deseados
+  const swipeNavRef = useSwipeNavigation(
+    isGeneralMapOpen ? null : handleSwipeLeft,  // Desactivar cuando el mapa está abierto
+    isGeneralMapOpen ? null : handleSwipeRight, // Desactivar cuando el mapa está abierto
+    {
+      swipeThreshold: 80 // Más alto para evitar conflictos con scroll
+    }
+  );
 
   // OPTIMIZACIÓN: Intersection Observer para lazy loading ⚡
   useEffect(() => {
@@ -201,8 +194,6 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             {/* Botón de Mapa General */}
             <button
               onClick={() => {
-                console.log('🗺️ === ABRIENDO MAPA GENERAL ===');
-                console.log('   Filtro antes de abrir:', filterStatus);
                 setIsGeneralMapOpen(true);
               }}
               className="p-2 rounded-xl shadow-md transition-all duration-200"
@@ -331,8 +322,6 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       <GeneralMapModal
         isOpen={isGeneralMapOpen}
         onClose={() => {
-          console.log('❌ === CERRANDO MAPA GENERAL ===');
-          console.log('   Filtro al cerrar:', filterStatus);
           setIsGeneralMapOpen(false);
         }}
       />
