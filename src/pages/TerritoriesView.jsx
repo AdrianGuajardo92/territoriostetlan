@@ -42,6 +42,14 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isGeneralMapOpen, setIsGeneralMapOpen] = useState(false);
 
+  // LOG: Rastrear cambios en el filtro
+  useEffect(() => {
+    console.log('🔍 === CAMBIO EN FILTRO DE TERRITORIOS ===');
+    console.log('   Filtro actual:', filterStatus);
+    console.log('   Mapa abierto:', isGeneralMapOpen);
+    console.log('   Stack trace:', new Error().stack?.split('\n').slice(2, 5).join('\n'));
+  }, [filterStatus]);
+
   // Estados simplificados - filtros avanzados removidos
 
   // OPTIMIZACIÓN FASE 2: Refs para scroll performance ⚡
@@ -106,8 +114,13 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   
   // OPTIMIZACIÓN: Memoizar handlers para evitar re-renders ⚡
   const handleFilterChange = useCallback((newFilter) => {
+    console.log('🎯 handleFilterChange llamado:', {
+      filtroAnterior: filterStatus,
+      filtroNuevo: newFilter,
+      origen: 'handleFilterChange manual'
+    });
     setFilterStatus(newFilter);
-  }, []);
+  }, [filterStatus]);
   
   const handleSortChange = useCallback((newSort) => {
     setSortBy(newSort);
@@ -187,7 +200,11 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
 
             {/* Botón de Mapa General */}
             <button
-              onClick={() => setIsGeneralMapOpen(true)}
+              onClick={() => {
+                console.log('🗺️ === ABRIENDO MAPA GENERAL ===');
+                console.log('   Filtro antes de abrir:', filterStatus);
+                setIsGeneralMapOpen(true);
+              }}
               className="p-2 rounded-xl shadow-md transition-all duration-200"
               style={{
                 backgroundColor: '#34495e',
@@ -313,7 +330,11 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       {/* Modal de Mapa General */}
       <GeneralMapModal
         isOpen={isGeneralMapOpen}
-        onClose={() => setIsGeneralMapOpen(false)}
+        onClose={() => {
+          console.log('❌ === CERRANDO MAPA GENERAL ===');
+          console.log('   Filtro al cerrar:', filterStatus);
+          setIsGeneralMapOpen(false);
+        }}
       />
     </div>
   );

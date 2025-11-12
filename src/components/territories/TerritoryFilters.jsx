@@ -1,11 +1,20 @@
 import React from 'react';
 
 const TerritoryFilters = ({ filterStatus, setFilterStatus, stats, userHasAssignedTerritories }) => {
+  // LOG: Para depuración
+  const handleFilterClick = (newFilter) => {
+    console.log('🔘 === CLICK EN FILTRO DE TERRITORIOS ===');
+    console.log('   Filtro anterior:', filterStatus);
+    console.log('   Filtro nuevo:', newFilter);
+    console.log('   Origen: Botón en TerritoryFilters');
+    setFilterStatus(newFilter);
+  };
+
   return (
     <div className="px-4 py-2" style={{ background: 'linear-gradient(to bottom, #2C3E50, #34495e)' }}>
       <div className="flex items-stretch gap-2">
         <button
-          onClick={() => setFilterStatus('all')}
+          onClick={() => handleFilterClick('all')}
           title={`Todos (${stats.total})`}
           className={`flex-shrink-0 w-12 h-16 flex flex-col items-center justify-center rounded-xl transition-all duration-300 transform hover:scale-105 ${
             filterStatus === 'all' 
@@ -21,7 +30,7 @@ const TerritoryFilters = ({ filterStatus, setFilterStatus, stats, userHasAssigne
         
         <div className="flex-1 grid grid-cols-3 gap-3">
           <button
-            onClick={() => setFilterStatus('disponible')}
+            onClick={() => handleFilterClick('disponible')}
             className={`relative p-2 text-center rounded-xl transition-all duration-300 transform hover:scale-105 overflow-hidden ${
               filterStatus === 'disponible' 
                 ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg scale-105' 
@@ -43,7 +52,7 @@ const TerritoryFilters = ({ filterStatus, setFilterStatus, stats, userHasAssigne
           </button>
           
           <button
-            onClick={() => setFilterStatus('en uso')}
+            onClick={() => handleFilterClick('en uso')}
             className={`relative p-2 text-center rounded-xl transition-all duration-300 transform hover:scale-105 overflow-hidden ${
               filterStatus === 'en uso' 
                 ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg scale-105' 
@@ -67,7 +76,7 @@ const TerritoryFilters = ({ filterStatus, setFilterStatus, stats, userHasAssigne
           </button>
           
           <button
-            onClick={() => setFilterStatus('completado')}
+            onClick={() => handleFilterClick('completado')}
             className={`relative p-2 text-center rounded-xl transition-all duration-300 transform hover:scale-105 overflow-hidden ${
               filterStatus === 'completado' 
                 ? 'bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-lg scale-105' 
