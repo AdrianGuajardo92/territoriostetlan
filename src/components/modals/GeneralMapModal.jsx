@@ -105,6 +105,8 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
     // Preparar direcciones con coordenadas y territorio
     const addressesWithData = useMemo(() => {
         return addresses
+            // IMPORTANTE: Excluir direcciones archivadas (deleted: true)
+            .filter(address => !address.deleted)
             .map(address => {
                 const coordinates = getCoordinates(address);
                 const territory = territories.find(t => t.id === address.territoryId);

@@ -309,7 +309,8 @@ const StatsModal = ({ isOpen, onClose }) => {
       ];
       
       territories.forEach(territory => {
-        const territoryAddresses = addresses.filter(a => a.territoryId === territory.id);
+        // IMPORTANTE: Excluir direcciones archivadas (deleted: true)
+        const territoryAddresses = addresses.filter(a => a.territoryId === territory.id && !a.deleted);
         const visitedCount = territoryAddresses.filter(a => a.isVisited).length;
         const percentage = territoryAddresses.length > 0 
           ? ((visitedCount / territoryAddresses.length) * 100).toFixed(1)

@@ -245,7 +245,8 @@ const TerritoryDetailView = ({ territory, onBack }) => {
 
   // Hash simple y confiable para direcciones del territorio - PREVIENE BUGS
   const territoryAddressesHash = useMemo(() => {
-    const territoryAddrs = addresses.filter(a => a.territoryId === territory.id);
+    // IMPORTANTE: Excluir direcciones archivadas (deleted: true)
+    const territoryAddrs = addresses.filter(a => a.territoryId === territory.id && !a.deleted);
     // Crear hash simple y estable: count + IDs ordenados + estados visitados
     const idsHash = territoryAddrs.map(a => a.id).sort().join(',');
     const visitedHash = territoryAddrs.map(a => `${a.id}:${a.isVisited ? '1' : '0'}`).sort().join(',');
@@ -255,7 +256,8 @@ const TerritoryDetailView = ({ territory, onBack }) => {
 
   // Obtener direcciones del territorio - OPTIMIZADO Y SEGURO
   const territoryAddresses = useMemo(() => {
-    const allTerritoryAddresses = addresses.filter(a => a.territoryId === territory.id);
+    // IMPORTANTE: Excluir direcciones archivadas (deleted: true)
+    const allTerritoryAddresses = addresses.filter(a => a.territoryId === territory.id && !a.deleted);
 
     if (sortState.sortOrder === 'optimized' && sortState.optimizedRoute) {
       const liveAddressesMap = new Map(
