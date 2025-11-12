@@ -13,14 +13,50 @@ const ArchivedAddresses = ({ onClose }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    console.log('🎯 === COMPONENTE ArchivedAddresses MONTADO ===');
+    console.log('📊 Total direcciones recibidas:', addresses.length);
+    console.log('👤 Usuario actual:', currentUser?.name);
+
+    // Verificar primeras direcciones
+    if (addresses.length > 0) {
+      console.log('🔍 Verificando primeras 3 direcciones:');
+      addresses.slice(0, 3).forEach((addr, i) => {
+        console.log(`  ${i + 1}. ID: ${addr.id}, deleted: ${addr.deleted}`);
+      });
+    }
+
     // Animación de entrada
     setIsVisible(true);
-    return () => setIsVisible(false);
+    return () => {
+      console.log('❌ === COMPONENTE ArchivedAddresses DESMONTADO ===');
+      setIsVisible(false);
+    };
   }, []);
 
   // Obtener solo las direcciones archivadas
   const archivedAddresses = useMemo(() => {
-    return getArchivedAddresses(addresses);
+    console.log('🔍 === BUSCANDO DIRECCIONES ARCHIVADAS ===');
+    console.log('📊 Total direcciones en estado:', addresses.length);
+
+    const archived = getArchivedAddresses(addresses);
+
+    console.log('🗄️ Direcciones archivadas encontradas:', archived.length);
+
+    if (archived.length > 0) {
+      console.log('📋 Detalle de direcciones archivadas:');
+      archived.forEach((addr, index) => {
+        console.log(`  ${index + 1}. ID: ${addr.id}`);
+        console.log(`     - Dirección: ${addr.address}`);
+        console.log(`     - Territorio: ${addr.territoryId}`);
+        console.log(`     - Eliminado por: ${addr.deletedByName}`);
+        console.log(`     - Fecha eliminación: ${addr.deletedAt}`);
+        console.log(`     - deleted flag: ${addr.deleted}`);
+      });
+    } else {
+      console.log('⚠️ No se encontraron direcciones archivadas');
+    }
+
+    return archived;
   }, [addresses]);
 
   // Filtrar direcciones archivadas según búsqueda y territorio

@@ -329,19 +329,47 @@ export const AppProvider = ({ children }) => {
   };
 
   const handleDeleteAddress = async (addressId, options = {}) => {
+    console.log('🗑️ === INICIANDO PROCESO DE ELIMINACIÓN ===');
+    console.log('📍 Address ID:', addressId);
+    console.log('⚙️ Opciones recibidas:', options);
+    console.log('👤 Usuario actual:', {
+      id: currentUser?.id,
+      name: currentUser?.name,
+      role: currentUser?.role
+    });
+
     const { showSuccessToast = true, permanentDelete = false } = options;
 
     try {
       if (permanentDelete) {
+        console.log('⚠️ === ELIMINACIÓN PERMANENTE SOLICITADA ===');
         // Eliminación permanente (solo para direcciones ya archivadas)
         await deleteDoc(doc(db, 'addresses', addressId));
+        console.log('✅ Documento eliminado permanentemente de Firestore');
+
         if (showSuccessToast) {
           showToast('Dirección eliminada permanentemente', 'success');
         }
       } else {
+        console.log('♻️ === INICIANDO SOFT DELETE (ARCHIVADO) ===');
+
         // Soft delete - marcar como eliminada en lugar de borrar
         const address = addresses.find(addr => addr.id === addressId);
-        await updateDoc(doc(db, 'addresses', addressId), {
+
+        console.log('📄 Dirección encontrada en estado local:', {
+          id: address?.id,
+          address: address?.address,
+          territoryId: address?.territoryId,
+          name: address?.name,
+          deleted: address?.deleted,
+          existeEnEstado: !!address
+        });
+
+        if (!address) {
+          console.error('❌ ERROR: Dirección no encontrada en estado local');
+        }
+
+        const updateData = {
           deleted: true,
           deletedAt: serverTimestamp(),
           deletedBy: currentUser?.id || 'unknown',
@@ -361,14 +389,37 @@ export const AppProvider = ({ children }) => {
             isEstudio: address?.isEstudio || false,
             coords: address?.coords || null
           }
+        };
+
+        console.log('📝 Datos de actualización preparados:', {
+          ...updateData,
+          originalData: '... [datos preservados] ...'
         });
 
+        console.log('🔄 Enviando actualización a Firestore...');
+        await updateDoc(doc(db, 'addresses', addressId), updateData);
+        console.log('✅ Documento actualizado en Firestore con marca deleted:true');
+
+        // Verificar el estado después de la actualización
+        console.log('📊 Verificando estado de direcciones:');
+        const activeAddresses = addresses.filter(a => !a.deleted);
+        const archivedAddresses = addresses.filter(a => a.deleted === true);
+
+        console.log('   📋 Total direcciones en estado:', addresses.length);
+        console.log('   ✅ Direcciones activas:', activeAddresses.length);
+        console.log('   🗄️ Direcciones archivadas:', archivedAddresses.length);
+
         if (showSuccessToast) {
+          console.log('🎉 Mostrando toast de éxito');
           showToast('Dirección archivada correctamente', 'success');
         }
       }
+
+      console.log('✅ === PROCESO DE ELIMINACIÓN COMPLETADO EXITOSAMENTE ===');
     } catch (error) {
-      console.error('Error deleting address:', error);
+      console.error('❌ === ERROR EN PROCESO DE ELIMINACIÓN ===');
+      console.error('❌ Error completo:', error);
+      console.error('❌ Stack trace:', error.stack);
       showToast('Error al eliminar dirección', 'error');
       throw error;
     }
@@ -376,8 +427,12 @@ export const AppProvider = ({ children }) => {
 
   // Función para restaurar direcciones archivadas
   const handleRestoreAddress = async (addressId) => {
+    console.log('♻️ === INICIANDO RESTAURACIÓN DE DIRECCIÓN ===');
+    console.log('📍 Address ID a restaurar:', addressId);
+    console.log('👤 Usuario restaurando:', currentUser?.name || 'admin');
+
     try {
-      await updateDoc(doc(db, 'addresses', addressId), {
+      const restoreData = {
         deleted: false,
         deletedAt: null,
         deletedBy: null,
@@ -386,10 +441,22 @@ export const AppProvider = ({ children }) => {
         restoredAt: serverTimestamp(),
         restoredBy: currentUser?.id || 'admin',
         originalData: null
-      });
+      };
+
+      console.log('📝 Datos de restauración:', restoreData);
+      console.log('🔄 Actualizando documento en Firestore...');
+
+      await updateDoc(doc(db, 'addresses', addressId), restoreData);
+
+      console.log('✅ Dirección restaurada exitosamente en Firestore');
+      console.log('🎉 Mostrando toast de éxito');
       showToast('Dirección restaurada correctamente', 'success');
+
+      console.log('✅ === RESTAURACIÓN COMPLETADA EXITOSAMENTE ===');
     } catch (error) {
-      console.error('Error restoring address:', error);
+      console.error('❌ === ERROR EN RESTAURACIÓN ===');
+      console.error('❌ Error completo:', error);
+      console.error('❌ Stack trace:', error.stack);
       showToast('Error al restaurar dirección', 'error');
       throw error;
     }

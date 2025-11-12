@@ -289,6 +289,9 @@ const AdminModal = (props = {}) => {
       icon: 'fas fa-archive',
       color: 'gray',
       action: () => {
+        console.log('🎯 === CLICK EN DIRECCIONES ARCHIVADAS ===');
+        console.log('📊 Estado actual showArchivedAddresses:', showArchivedAddresses);
+        console.log('🔄 Cambiando a:', !showArchivedAddresses);
         setShowArchivedAddresses(!showArchivedAddresses);
       }
     },
@@ -1455,7 +1458,14 @@ const AdminModal = (props = {}) => {
 
       {/* Modal de Direcciones Archivadas */}
       {showArchivedAddresses && (
-        <ArchivedAddressesPortal onClose={() => setShowArchivedAddresses(false)} />
+        <>
+          {console.log('🚀 === RENDERIZANDO MODAL DE DIRECCIONES ARCHIVADAS ===')}
+          {console.log('   showArchivedAddresses:', showArchivedAddresses)}
+          <ArchivedAddressesPortal onClose={() => {
+            console.log('❌ === CERRANDO MODAL DE DIRECCIONES ARCHIVADAS ===');
+            setShowArchivedAddresses(false);
+          }} />
+        </>
       )}
 
       {/* Modal de Lista de Administradores */}
