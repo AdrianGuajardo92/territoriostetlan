@@ -112,7 +112,7 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
 
   // Renderizado condicional después de todos los hooks
   if (!isOpen) return null;
-  
+
   // Usar ReactDOM.createPortal para renderizar en el body
   return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-gray-50" style={{ zIndex: 999999 }}>
@@ -374,21 +374,20 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
               </p>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Modal de confirmación */}
-      <ConfirmDialog
-        isOpen={showConfirmDialog}
-        onClose={() => setShowConfirmDialog(false)}
-        onConfirm={confirmRelease}
-        title="Confirmar Liberación de Territorios"
-        message={`¿Estás seguro de que deseas liberar ${selectedAssignedCount} territorio${selectedAssignedCount > 1 ? 's' : ''}? Esta acción los desasignará de los publicadores actuales y los marcará como disponibles.`}
-        confirmText={isReleasing ? "Liberando..." : "Sí, Liberar"}
-        cancelText="Cancelar"
-        confirmButtonClass="bg-red-600 hover:bg-red-700"
-        isLoading={isReleasing}
-      />
+        {/* Modal de confirmación */}
+        <ConfirmDialog
+          isOpen={showConfirmDialog}
+          onClose={() => setShowConfirmDialog(false)}
+          onConfirm={confirmRelease}
+          title="Confirmar Liberación de Territorios"
+          message={`¿Estás seguro de que deseas liberar ${selectedAssignedCount} territorio${selectedAssignedCount > 1 ? 's' : ''}? Esta acción los desasignará de los publicadores actuales y los marcará como disponibles.`}
+          confirmText={isReleasing ? "Liberando..." : "Sí, Liberar"}
+          cancelText="Cancelar"
+          confirmButtonClass="bg-red-600 hover:bg-red-700"
+          isLoading={isReleasing}
+        />
+      </div>
     </div>,
     document.body
   );
