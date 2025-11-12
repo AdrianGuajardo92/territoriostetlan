@@ -6,7 +6,7 @@
     "dev": "vite",
     "dev:clean": "taskkill /F /IM node.exe 2>nul || true && vite",
     "dev:stable": "vite --config vite.dev.config.js",
-    "dev:port": "vite --port 3002",
+    "dev:3000": "vite --port 3000",
     "dev:force": "vite --force",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
@@ -38,6 +38,6 @@
     "prettier": "^3.1.1",
     "tailwindcss": "^3.4.0",
     "terser": "^5.43.1",
-    "vite": "^5.0.8"
+    "vite": "^4.5.5"
   }
 }
