@@ -92,44 +92,17 @@ export const filterActiveAddresses = (addresses) => {
  * @returns {Array} Direcciones archivadas
  */
 export const getArchivedAddresses = (addresses) => {
-  console.log('🔍 [softDelete.js] getArchivedAddresses llamada');
-  console.log(`📊 [softDelete.js] Total direcciones recibidas: ${addresses?.length || 0}`);
-
   if (!addresses || !Array.isArray(addresses)) {
-    console.log('⚠️ [softDelete.js] No se recibió un array válido');
     return [];
   }
 
-  // Buscar direcciones con deleted === true
-  const archived = addresses.filter(addr => {
-    const isDeleted = addr.deleted === true;
-    if (isDeleted) {
-      console.log(`  ✅ [softDelete.js] Archivada: ID=${addr.id}, dirección="${addr.address}"`);
-    }
-    return isDeleted;
-  });
-
-  console.log(`🗄️ [softDelete.js] Total archivadas encontradas: ${archived.length}`);
-
-  // Si hay direcciones pero ninguna archivada, verificar algunas
-  if (addresses.length > 0 && archived.length === 0) {
-    console.log('🔍 [softDelete.js] No hay archivadas. Verificando primeras 3 direcciones:');
-    addresses.slice(0, 3).forEach(addr => {
-      console.log(`  - ID: ${addr.id}`);
-      console.log(`    deleted: ${addr.deleted} (tipo: ${typeof addr.deleted})`);
-      console.log(`    deletedAt: ${addr.deletedAt}`);
-      console.log(`    deletedBy: ${addr.deletedBy}`);
+  return addresses.filter(addr => addr.deleted === true)
+    .sort((a, b) => {
+      // Ordenar por fecha de eliminación (más recientes primero)
+      const dateA = a.deletedAt?.toDate?.() || new Date(0);
+      const dateB = b.deletedAt?.toDate?.() || new Date(0);
+      return dateB - dateA;
     });
-  }
-
-  // Ordenar por fecha de eliminación (más recientes primero)
-  const sorted = archived.sort((a, b) => {
-    const dateA = a.deletedAt?.toDate?.() || new Date(0);
-    const dateB = b.deletedAt?.toDate?.() || new Date(0);
-    return dateB - dateA;
-  });
-
-  return sorted;
 };
 
 /**
