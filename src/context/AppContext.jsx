@@ -877,10 +877,11 @@ export const AppProvider = ({ children }) => {
   }, [territories, currentUser]);
 
   // 📝 PROPOSAL FUNCTIONS
-  const handleProposeAddressChange = async (addressId, changes, reason) => {
+  const handleProposeAddressChange = async (addressId, changes, reason, actionType = 'modify') => {
     try {
       const proposalData = {
         type: 'edit',
+        actionType, // 'modify' o 'status'
         addressId,
         territoryId: addresses.find(a => a.id === addressId)?.territoryId,
         changes,
@@ -892,8 +893,8 @@ export const AppProvider = ({ children }) => {
       };
 
       await addDoc(collection(db, 'proposals'), proposalData);
-      
-      showToast('¡Gracias por tu propuesta! 😊 Se ha enviado para revisión y te notificaremos cuando sea evaluada. Tu colaboración es muy valiosa.', 'success', 4000);
+
+      showToast('¡Gracias por tu propuesta! Se ha enviado para revisión y te notificaremos cuando sea evaluada.', 'success', 4000);
     } catch (error) {
       console.error('Error creating proposal:', error);
       showToast('Error al crear propuesta', 'error');
@@ -905,6 +906,7 @@ export const AppProvider = ({ children }) => {
     try {
       const proposalData = {
         type: 'new',
+        actionType: 'add',
         territoryId,
         addressData,
         reason,
@@ -915,11 +917,41 @@ export const AppProvider = ({ children }) => {
       };
 
       await addDoc(collection(db, 'proposals'), proposalData);
-      
-      showToast('¡Muchas gracias! 🙏 Tu propuesta de nueva dirección se ha enviado para revisión. La evaluaremos pronto y te informaremos del resultado.', 'success', 4000);
+
+      showToast('¡Muchas gracias! Tu propuesta de nueva dirección se ha enviado para revisión.', 'success', 4000);
     } catch (error) {
       console.error('Error creating proposal:', error);
       showToast('Error al crear propuesta', 'error');
+      throw error;
+    }
+  };
+
+  const handleProposeAddressDeletion = async (addressId, reason) => {
+    try {
+      const address = addresses.find(a => a.id === addressId);
+      const proposalData = {
+        type: 'delete',
+        actionType: 'delete',
+        addressId,
+        territoryId: address?.territoryId,
+        addressInfo: {
+          address: address?.address,
+          name: address?.name,
+          phone: address?.phone
+        },
+        reason,
+        status: 'pending',
+        proposedBy: currentUser?.id || 'unknown',
+        proposedByName: currentUser?.name || 'Usuario',
+        createdAt: serverTimestamp()
+      };
+
+      await addDoc(collection(db, 'proposals'), proposalData);
+
+      showToast('Tu solicitud de eliminación se ha enviado para revisión del administrador.', 'success', 4000);
+    } catch (error) {
+      console.error('Error creating deletion proposal:', error);
+      showToast('Error al crear solicitud de eliminación', 'error');
       throw error;
     }
   };
@@ -934,13 +966,16 @@ export const AppProvider = ({ children }) => {
         await handleUpdateAddress(proposal.addressId, proposal.changes, { showSuccessToast: false });
       } else if (proposal.type === 'new') {
         await handleAddNewAddress(proposal.territoryId, proposal.addressData);
+      } else if (proposal.type === 'delete') {
+        // Eliminar la dirección
+        await handleDeleteAddress(proposal.addressId, { showSuccessToast: false });
       }
 
       await updateDoc(doc(db, 'proposals', proposalId), {
         status: 'approved',
         approvedBy: currentUser?.name || 'Administrador',
         approvedAt: serverTimestamp(),
-        notificationRead: false // ✅ Marcar como no leída para que aparezca notificación
+        notificationRead: false // Marcar como no leída para que aparezca notificación
       });
 
       showToast('Propuesta aprobada', 'success');
@@ -1767,6 +1802,7 @@ export const AppProvider = ({ children }) => {
     // Proposal functions
     handleProposeAddressChange,
     handleProposeNewAddress,
+    handleProposeAddressDeletion,
     handleApproveProposal,
     handleRejectProposal,
     handleDeleteProposal,

@@ -1,11 +1,89 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import ActionTypeBadge, { getActionType } from '../components/common/ActionTypeBadge';
+
+// Función helper para formatear valores en propuestas
+const formatValue = (value) => {
+  if (value === undefined || value === null || value === '') return 'Sin valor';
+  if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+  return String(value);
+};
+
+// Etiquetas para los campos de propuestas (solo campos relevantes)
+const fieldLabels = {
+  address: '📍 Dirección',
+  phone: '📞 Teléfono',
+  name: '👤 Nombre',
+  notes: '📝 Notas',
+  gender: '👥 Género',
+  isRevisita: '📖 Es Revisita',
+  revisitaBy: '📖 Revisita por',
+  isEstudio: '📚 Es Estudio',
+  estudioBy: '📚 Estudio por'
+};
+
+// Función para filtrar cambios reales (respaldo para propuestas legacy)
+const getDisplayChanges = (changes, currentAddress) => {
+  if (!changes || !currentAddress) return changes || {};
+
+  // Campos booleanos que deben tratar undefined/null/false como equivalentes
+  const camposBooleanos = ['isEstudio', 'isRevisita', 'isVisited', 'isPhoneOnly'];
+
+  // Normalizar valores para comparación correcta
+  const normalizeValue = (value, fieldName) => {
+    // Para campos booleanos, normalizar valores "vacíos/falsos" a false
+    if (camposBooleanos.includes(fieldName)) {
+      if (value === undefined || value === null || value === '' ||
+          value === false || value === 'No' || value === 'Sin valor') {
+        return false;
+      }
+      return true;
+    }
+
+    // Para otros campos, normalizar valores vacíos a null
+    if (value === undefined || value === null || value === '' || value === 'Sin valor') {
+      return null;
+    }
+
+    // Strings: limpiar espacios
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+
+    // Objetos: convertir a JSON para comparación
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+
+    return value;
+  };
+
+  const filteredChanges = {};
+  const camposRelevantes = Object.keys(fieldLabels);
+
+  Object.entries(changes).forEach(([campo, valorNuevo]) => {
+    // Solo mostrar campos que están en fieldLabels (ignorar técnicos)
+    if (!camposRelevantes.includes(campo)) return;
+
+    const valorAnterior = currentAddress[campo];
+    const normalizedAnterior = normalizeValue(valorAnterior, campo);
+    const normalizedNuevo = normalizeValue(valorNuevo, campo);
+
+    // Solo incluir si realmente cambió
+    if (normalizedAnterior !== normalizedNuevo) {
+      filteredChanges[campo] = valorNuevo;
+    }
+  });
+
+  return filteredChanges;
+};
 
 const MyProposalsView = ({ onBack }) => {
-  const { 
-    currentUser, 
-    proposals, 
-    territories, 
+  const {
+    currentUser,
+    proposals,
+    territories,
+    addresses, // ✅ NUEVO: Para filtrar propuestas legacy
     handleDeleteProposal,
     handleDeleteProposalsByStatus,
     markProposalsAsRead,
@@ -283,11 +361,7 @@ const MyProposalsView = ({ onBack }) => {
             <div className="mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={() => openDeleteConfirm('bulk', { status: proposalFilter })}
-                className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-all transform hover:scale-105 flex items-center justify-center gap-2 ${
-                  proposalFilter === 'approved' 
-                    ? 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-300' 
-                    : 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-300'
-                }`}
+                className="w-full px-4 py-2 rounded-lg font-medium text-sm transition-all transform hover:scale-105 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300"
               >
                 <i className="fas fa-broom text-sm"></i>
                 <span>Limpiar todas las {proposalFilter === 'approved' ? 'aprobadas' : 'rechazadas'}</span>
@@ -302,11 +376,7 @@ const MyProposalsView = ({ onBack }) => {
           <>
             <div className="flex items-center justify-center py-16">
               <div className="text-center max-w-md">
-                <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl ${
-                  proposalFilter === 'pending' ? 'bg-gradient-to-br from-yellow-100 to-amber-100' :
-                  proposalFilter === 'approved' ? 'bg-gradient-to-br from-green-100 to-emerald-100' :
-                  'bg-gradient-to-br from-red-100 to-pink-100'
-                }`}>
+                <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm bg-slate-100">
                   <span className="text-4xl">
                     {proposalFilter === 'pending' ? '⏳' :
                      proposalFilter === 'approved' ? '✅' :
@@ -352,25 +422,28 @@ const MyProposalsView = ({ onBack }) => {
             <div className="space-y-4">
               {filteredProposals.map(proposal => {
                 const territory = territories.find(t => t.id === proposal.territoryId);
-                
+                const currentAddress = proposal.type === 'edit'
+                  ? addresses.find(a => a.id === proposal.addressId)
+                  : null;
+
                 return (
                   <div 
                     key={proposal.id} 
-                    className="bg-gradient-to-br from-white to-orange-50/30 rounded-2xl shadow-lg p-4 sm:p-6 border-2 border-orange-100 hover:shadow-xl transition-all duration-300"
+                    className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-all duration-300"
                   >
                     {/* Header de la propuesta - Optimizado para móvil */}
                     <div className="flex items-start justify-between mb-4 sm:mb-6">
                       <div className="flex items-start gap-3 sm:gap-4 flex-1">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-orange-400 to-amber-500 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
-                          <i className={`fas ${proposal.type === 'new' ? 'fa-plus' : 'fa-edit'} text-white text-sm sm:text-base`}></i>
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-600 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                          <i className={`fas ${proposal.type === 'new' ? 'fa-plus' : proposal.type === 'delete' ? 'fa-trash' : 'fa-edit'} text-white text-sm sm:text-base`}></i>
                         </div>
-                        
+
                         <div className="w-full">
                           {/* Header con formato aprobado */}
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-lg sm:text-xl font-bold text-gray-900 flex-1 mr-3 truncate">
-                              📝 {proposal.type === 'new' ? 'Nueva Dirección' : 'Editar Dirección'}
-                            </h4>
+                            <div className="flex items-center gap-2 flex-1 mr-3">
+                              <ActionTypeBadge actionType={getActionType(proposal)} size="md" />
+                            </div>
                             <p className="text-xs text-gray-500 flex items-center flex-shrink-0">
                               <i className="fas fa-calendar mr-1"></i>
                               <span className="hidden sm:inline">
@@ -382,14 +455,10 @@ const MyProposalsView = ({ onBack }) => {
                             </p>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
                               🏷️ Territorio {territory?.name?.replace(/territorio\s*/i, '') || proposal.territoryId}
                             </span>
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ml-2 ${
-                              proposal.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              proposal.status === 'approved' ? 'bg-green-100 text-green-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ml-2 bg-slate-100 text-slate-700">
                               {proposal.status === 'pending' ? '⏳ Pendiente' :
                                proposal.status === 'approved' ? '✅ Aprobada' :
                                '❌ Rechazada'}
@@ -401,26 +470,28 @@ const MyProposalsView = ({ onBack }) => {
 
                     {/* Contenido con barras verdes individuales */}
                     <div className="space-y-3">
-                      {/* Dirección - Siempre primero */}
-                      <div className="bg-white rounded-lg p-3 border-l-4 border-green-400">
-                        <p className="text-sm font-semibold text-gray-700 mb-2">
-                          📍 Dirección:
-                        </p>
-                        <p className="text-sm text-gray-800 break-words">
-                          {proposal.type === 'new' ? 
-                            (proposal.addressData?.address || proposal.address) : 
-                            (proposal.currentData?.address || 'Dirección no disponible')
-                          }
-                        </p>
-                      </div>
+                      {/* Dirección - Siempre primero (excepto para delete que tiene su propia sección) */}
+                      {proposal.type !== 'delete' && (
+                        <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-slate-300">
+                          <p className="text-sm font-semibold text-gray-700 mb-2">
+                            📍 Dirección:
+                          </p>
+                          <p className="text-sm text-gray-800 break-words">
+                            {proposal.type === 'new'
+                              ? (proposal.addressData?.address || proposal.address)
+                              : (proposal.currentData?.address || proposal.changes?.address || 'Dirección no disponible')
+                            }
+                          </p>
+                        </div>
+                      )}
 
                       {/* Para propuestas nuevas */}
                       {proposal.type === 'new' && proposal.addressData && (
                         <>
                           {/* Revisita - Formato como notas */}
                           {proposal.addressData.isRevisita && proposal.addressData.revisitaBy && (
-                            <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                              <p className="text-sm font-semibold text-green-700 mb-1">📖 Revisita:</p>
+                            <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
+                              <p className="text-sm font-semibold text-slate-700 mb-1">📖 Revisita:</p>
                               <p className="text-sm text-gray-800 break-words">
                                 {proposal.addressData.revisitaBy}
                               </p>
@@ -429,8 +500,8 @@ const MyProposalsView = ({ onBack }) => {
                           
                           {/* Estudio - Formato como notas */}
                           {proposal.addressData.isEstudio && proposal.addressData.estudioBy && (
-                            <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                              <p className="text-sm font-semibold text-green-700 mb-1">📚 Estudio:</p>
+                            <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
+                              <p className="text-sm font-semibold text-slate-700 mb-1">📚 Estudio:</p>
                               <p className="text-sm text-gray-800 break-words">
                                 {proposal.addressData.estudioBy}
                               </p>
@@ -439,8 +510,8 @@ const MyProposalsView = ({ onBack }) => {
                           
                           {/* Género - Formato como notas */}
                           {proposal.addressData.gender && (
-                            <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                              <p className="text-sm font-semibold text-green-700 mb-1">👥 Género:</p>
+                            <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
+                              <p className="text-sm font-semibold text-slate-700 mb-1">👥 Género:</p>
                               <p className="text-sm text-gray-800 break-words">
                                 {proposal.addressData.gender}
                               </p>
@@ -449,8 +520,8 @@ const MyProposalsView = ({ onBack }) => {
                           
                           {/* Notas */}
                           {proposal.addressData.notes && (
-                            <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                              <p className="text-sm font-semibold text-green-700 mb-1">📝 Notas:</p>
+                            <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
+                              <p className="text-sm font-semibold text-slate-700 mb-1">📝 Notas:</p>
                               <p className="text-sm text-gray-800 italic break-words">
                                 "{proposal.addressData.notes}"
                               </p>
@@ -459,55 +530,84 @@ const MyProposalsView = ({ onBack }) => {
                         </>
                       )}
 
-                      {/* Para ediciones */}
-                      {proposal.type === 'edit' && proposal.changes && (
-                        <>
-                          {/* Revisita */}
-                          {proposal.changes.isRevisita && (
-                            <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                              <p className="text-sm font-semibold text-green-700 mb-1">📖 Revisita:</p>
-                              <p className="text-sm text-gray-800 break-words">
-                                {proposal.changes.revisitaBy || ''}
+                      {/* Para ediciones - Filtrar y mostrar solo campos que realmente cambiaron */}
+                      {proposal.type === 'edit' && proposal.changes && (() => {
+                        // Usar getDisplayChanges para filtrar propuestas legacy
+                        const displayChanges = getDisplayChanges(proposal.changes, currentAddress);
+                        const changesEntries = Object.entries(displayChanges);
+
+                        // Si no hay cambios reales después del filtrado
+                        if (changesEntries.length === 0) {
+                          return (
+                            <>
+                              <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-gray-300">
+                                <p className="text-sm text-gray-600 italic">
+                                  No se detectaron cambios significativos en esta propuesta.
+                                </p>
+                              </div>
+                              {/* Razón del cambio - Siempre mostrar si existe */}
+                              {proposal.reason && (
+                                <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
+                                  <p className="text-sm font-semibold text-slate-700 mb-1">💬 Razón del cambio:</p>
+                                  <p className="text-sm text-gray-800 italic break-words">
+                                    "{proposal.reason}"
+                                  </p>
+                                </div>
+                              )}
+                            </>
+                          );
+                        }
+
+                        return (
+                          <>
+                            {changesEntries.map(([campo, valorNuevo]) => {
+                              const etiqueta = fieldLabels[campo] || campo;
+                              return (
+                                <div key={campo} className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
+                                  <p className="text-sm font-semibold text-slate-700 mb-1">{etiqueta}:</p>
+                                  <p className="text-sm text-gray-800 break-words">
+                                    {formatValue(valorNuevo)}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </>
+                        );
+                      })()}
+
+                      {/* Para propuestas de eliminación */}
+                      {proposal.type === 'delete' && proposal.addressInfo && (
+                        <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-slate-400">
+                          <p className="text-sm font-bold text-slate-800 mb-3 flex items-center">
+                            <i className="fas fa-exclamation-triangle mr-2"></i>
+                            SOLICITUD DE ELIMINACIÓN
+                          </p>
+                          <div className="space-y-2 text-sm">
+                            {proposal.addressInfo.address && (
+                              <p className="text-gray-800">
+                                <span className="font-medium text-gray-600">Dirección:</span> {proposal.addressInfo.address}
                               </p>
-                            </div>
-                          )}
-                          
-                          {/* Estudio */}
-                          {proposal.changes.isEstudio && (
-                            <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                              <p className="text-sm font-semibold text-green-700 mb-1">📚 Estudio:</p>
-                              <p className="text-sm text-gray-800 break-words">
-                                {proposal.changes.estudioBy || ''}
+                            )}
+                            {proposal.addressInfo.name && (
+                              <p className="text-gray-800">
+                                <span className="font-medium text-gray-600">Nombre:</span> {proposal.addressInfo.name}
                               </p>
-                            </div>
-                          )}
-                          
-                          {/* Género */}
-                          {proposal.changes.gender && (
-                            <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                              <p className="text-sm font-semibold text-green-700 mb-1">👥 Género:</p>
-                              <p className="text-sm text-gray-800 break-words">
-                                {proposal.changes.gender}
+                            )}
+                            {proposal.addressInfo.phone && (
+                              <p className="text-gray-800">
+                                <span className="font-medium text-gray-600">Teléfono:</span> {proposal.addressInfo.phone}
                               </p>
-                            </div>
-                          )}
-                          
-                          {/* Notas */}
-                          {proposal.changes.notes && (
-                            <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                              <p className="text-sm font-semibold text-green-700 mb-1">📝 Notas:</p>
-                              <p className="text-sm text-gray-800 italic break-words">
-                                "{proposal.changes.notes}"
-                              </p>
-                            </div>
-                          )}
-                        </>
+                            )}
+                          </div>
+                        </div>
                       )}
 
                       {/* Razón del cambio */}
                       {proposal.reason && (
-                        <div className="bg-green-50 p-3 rounded-lg border-l-4 border-green-400">
-                          <p className="text-sm font-semibold text-green-700 mb-1">💬 Razón del cambio:</p>
+                        <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
+                          <p className="text-sm font-semibold text-slate-700 mb-1">
+                            💬 {proposal.type === 'delete' ? 'Razón de eliminación:' : 'Razón del cambio:'}
+                          </p>
                           <p className="text-sm text-gray-800 italic break-words">
                             "{proposal.reason}"
                           </p>
@@ -517,15 +617,9 @@ const MyProposalsView = ({ onBack }) => {
 
                     {/* Información de procesamiento para propuestas aprobadas/rechazadas */}
                     {proposal.status !== 'pending' && (
-                      <div className={`rounded-xl p-4 border mt-4 ${
-                        proposal.status === 'approved' 
-                          ? 'bg-green-50/70 border-green-200/50' 
-                          : 'bg-red-50/70 border-red-200/50'
-                      }`}>
+                      <div className="rounded-xl p-4 border mt-4 bg-gray-50 border-gray-200">
                         <div className="flex items-start justify-between">
-                          <h6 className={`font-semibold mb-2 flex items-center ${
-                            proposal.status === 'approved' ? 'text-green-800' : 'text-red-800'
-                          }`}>
+                          <h6 className="font-semibold mb-2 flex items-center text-slate-800">
                             <i className={`${
                               proposal.status === 'approved' ? 'fas fa-check-circle' : 'fas fa-times-circle'
                             } mr-2`}></i>
@@ -590,7 +684,7 @@ const MyProposalsView = ({ onBack }) => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-200 overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-red-500 to-pink-600 px-6 py-4">
+            <div className="bg-slate-700 px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                   <i className="fas fa-trash text-white text-lg"></i>
@@ -614,8 +708,8 @@ const MyProposalsView = ({ onBack }) => {
               </p>
 
               {showDeleteConfirm.type === 'bulk' && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
-                  <p className="text-red-800 text-sm font-medium">
+                <div className="bg-slate-100 border border-slate-300 rounded-lg p-3 mb-6">
+                  <p className="text-slate-800 text-sm font-medium">
                     Se eliminarán {filteredProposals.length} propuesta{filteredProposals.length > 1 ? 's' : ''} permanentemente
                   </p>
                 </div>

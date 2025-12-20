@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import Icon from '../common/Icon';
 
@@ -8,8 +8,22 @@ const LoginView = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const accessCodeRef = useRef(null);
   const passwordRef = useRef(null);
+
+  // Cargar usuario guardado al iniciar
+  useEffect(() => {
+    const savedUser = localStorage.getItem('rememberedUser');
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+
+    if (savedRememberMe && savedUser) {
+      setFormData(prev => ({ ...prev, accessCode: savedUser }));
+      setRememberMe(true);
+      // Enfocar el campo de contraseña si ya hay usuario
+      setTimeout(() => passwordRef.current?.focus(), 100);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,8 +36,17 @@ const LoginView = () => {
     setError('');
 
     const result = await login(formData.accessCode, formData.password);
-    
-    if (!result.success) {
+
+    if (result.success) {
+      // Guardar o eliminar usuario solo si el login fue exitoso
+      if (rememberMe) {
+        localStorage.setItem('rememberedUser', formData.accessCode);
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        localStorage.removeItem('rememberedUser');
+        localStorage.removeItem('rememberMe');
+      }
+    } else {
       setError(result.error || 'Error al iniciar sesión');
       setIsLoading(false);
       if (result.error === 'Código de acceso incorrecto') {
@@ -51,9 +74,12 @@ const LoginView = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-900 rounded-2xl shadow-xl mb-4">
             <Icon name="mapPin" size={40} className="text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900">
-            Territorios
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 whitespace-nowrap">
+            Estación Tetlán Señas
           </h1>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-700 mt-2">
+            Territorios
+          </h2>
           <p className="text-gray-600 mt-2">Ingresa con tu usuario y contraseña</p>
         </div>
 
@@ -119,14 +145,32 @@ const LoginView = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center hover:bg-gray-50 rounded-r-xl transition-colors z-10"
                 >
                   <div className="bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 flex items-center justify-center transition-colors">
-                    <Icon 
-                      name={showPassword ? 'eyeOff' : 'eye'} 
-                      size={16} 
+                    <Icon
+                      name={showPassword ? 'eyeOff' : 'eye'}
+                      size={16}
                       className="text-gray-700 hover:text-gray-900 transition-colors"
                     />
                   </div>
                 </button>
               </div>
+            </div>
+
+            {/* Checkbox Recordar usuario */}
+            <div className="flex items-center">
+              <input
+                id="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-gray-900 bg-gray-100 border-gray-300 rounded focus:ring-gray-900 focus:ring-2 cursor-pointer"
+                disabled={isLoading}
+              />
+              <label
+                htmlFor="rememberMe"
+                className="ml-2 text-sm text-gray-600 cursor-pointer select-none hover:text-gray-900 transition-colors"
+              >
+                Recordar usuario
+              </label>
             </div>
 
             <button
@@ -159,7 +203,8 @@ const LoginView = () => {
       </div>
 
       {/* Estilos de animación */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes shake {
           0%, 100% {
             transform: translateX(0);

@@ -27,11 +27,11 @@ const isUserAssigned = (assignedTo, userName) => {
 };
 
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
-  const { 
-    territories, 
-    currentUser, 
-    proposals, 
-    isLoading, 
+  const {
+    territories,
+    currentUser,
+    proposals,
+    isLoading,
     publishers,
     userNotificationsCount, // ✅ NUEVO: Contador de notificaciones del usuario
     pendingProposalsCount // ✅ NUEVO: Contador de propuestas pendientes para admin
@@ -84,7 +84,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name, undefined, { numeric: true });
       }
-      
+
       if (sortBy === 'status') {
         const statusOrder = { 'En uso': 1, 'Disponible': 2, 'Completado': 3 };
         return (statusOrder[a.status] || 4) - (statusOrder[b.status] || 4);
@@ -104,21 +104,21 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   }), [territories]);
 
 
-  
+
   // OPTIMIZACIÓN: Memoizar handlers para evitar re-renders ⚡
   const handleFilterChange = useCallback((newFilter) => {
     setFilterStatus(newFilter);
   }, []);
-  
+
   const handleSortChange = useCallback((newSort) => {
     setSortBy(newSort);
   }, []);
-  
+
   // Limpiar filtros
   const handleClearFilters = useCallback(() => {
     setFilterStatus('all');
   }, []);
-  
+
   // OPTIMIZACIÓN: Crear handlers memoizados para territorios ⚡
   const createTerritorySelectHandler = useCallback((territory) => {
     return () => onSelectTerritory(territory);
@@ -154,7 +154,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   // OPTIMIZACIÓN: Intersection Observer para lazy loading ⚡
   useEffect(() => {
     if (!containerRef.current) return;
-    
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
@@ -170,17 +170,17 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
         threshold: 0.1
       }
     );
-    
+
     const cards = containerRef.current.querySelectorAll('[data-territory-id]');
     cards.forEach(card => observer.observe(card));
-    
+
     return () => observer.disconnect();
   }, [filteredAndSortedTerritories]);
 
   return (
-    <div 
+    <div
       ref={swipeNavRef}
-      className="min-h-screen pb-24 sm:pb-8" 
+      className="min-h-screen pb-24 sm:pb-8"
       style={{ backgroundColor: '#F5F5F5' }}
     >
       {/* Header */}
@@ -230,16 +230,16 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             {((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
               (currentUser?.role !== 'admin' && userNotificationsCount > 0) ||
               updateAvailable) && (
-              <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium shadow-sm">
-                {updateAvailable && !((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
-                  (currentUser?.role !== 'admin' && userNotificationsCount > 0))
-                  ? '!'
-                  : currentUser?.role === 'admin' ? pendingProposalsCount : userNotificationsCount}
-              </span>
-            )}
+                <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium shadow-sm">
+                  {updateAvailable && !((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
+                    (currentUser?.role !== 'admin' && userNotificationsCount > 0))
+                    ? '!'
+                    : currentUser?.role === 'admin' ? pendingProposalsCount : userNotificationsCount}
+                </span>
+              )}
           </button>
         </div>
-        
+
         {/* Filtros */}
         <div className="relative">
           <TerritoryFilters
@@ -247,7 +247,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             setFilterStatus={handleFilterChange}
             stats={stats}
           />
-          
+
           {/* FASE 3: Indicador sutil de swipe navigation */}
           <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 opacity-30">
             <div className="flex items-center space-x-1 text-xs text-gray-500">
@@ -257,7 +257,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             </div>
           </div>
         </div>
-        
+
 
       </header>
 
@@ -270,7 +270,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             {[...Array(10)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : filteredAndSortedTerritories.length > 0 ? (
-          <div 
+          <div
             ref={containerRef}
             className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 territory-list"
             style={{
@@ -291,9 +291,9 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
                   willChange: 'transform'
                 }}
               >
-                <TerritoryCard 
-                  territory={t} 
-                  onSelect={createTerritorySelectHandler(t)} 
+                <TerritoryCard
+                  territory={t}
+                  onSelect={createTerritorySelectHandler(t)}
                 />
               </div>
             ))}
@@ -303,12 +303,12 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             <Icon name="mapPin" size={48} className="mx-auto mb-4 text-gray-300" />
             <p className="text-gray-500 font-medium text-lg">
               {filterStatus !== 'all'
-                ? 'No se encontraron territorios con los filtros aplicados' 
+                ? 'No se encontraron territorios con los filtros aplicados'
                 : 'No hay territorios registrados'}
             </p>
             {filterStatus !== 'all' && (
-              <button 
-                onClick={handleClearFilters} 
+              <button
+                onClick={handleClearFilters}
                 className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium"
               >
                 Limpiar filtros

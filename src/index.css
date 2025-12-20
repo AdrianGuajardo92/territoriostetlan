@@ -512,7 +512,7 @@ select:focus-visible {
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-slate-700 to-slate-900 bg-clip-text text-transparent;
   }
 }
 

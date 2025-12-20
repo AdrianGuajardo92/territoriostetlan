@@ -1,375 +1,451 @@
 <!doctype html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#6366f1">
-    <meta name="description" content="Gestión de territorios para predicación en lengua de señas">
-    
-    <!-- 🚀 CACHE BUSTING SUPER AGRESIVO - Forzar recarga total -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <meta http-equiv="Last-Modified" content="Mon, 29 Jan 2025 12:34:41 GMT" />
-    <meta name="version" content="2.15.5" />
-    <meta name="cache-buster" content="1751415000000" />
-    
-    <!-- CRITICAL: Resource Hints para optimización móvil ⚡ -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    <link rel="dns-prefetch" href="https://unpkg.com">
-    
-    <!-- OPTIMIZACIÓN: Prefetch de FontAwesome CSS solamente ⚡ -->
-    <link rel="prefetch" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Los recursos críticos se cargarán automáticamente por Vite -->
-    
-    <!-- PWA -->
-    <link rel="manifest" href="/manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1e293b">
+  <meta name="description" content="Gestión de territorios para predicación en lengua de señas">
 
-    <!-- SOLUCIÓN OPTIMIZADA: Font loading SIN preloads redundantes ⚡ -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+  <!-- 🚀 CACHE BUSTING SUPER AGRESIVO - Forzar recarga total -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Last-Modified" content="Mon, 29 Jan 2025 12:34:41 GMT" />
+  <meta name="version" content="2.15.5" />
+  <meta name="cache-buster" content="1751415000000" />
 
-    <!-- SOLUCIÓN #3: JSX preload habilitado para estabilidad ⚡ -->
-    
-    <!-- CRÍTICO: FontAwesome PRELOAD - Carga instantánea sin bloqueo ⚡ -->
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossOrigin="anonymous" referrerPolicy="no-referrer">
-    <!-- Fallback para navegadores sin soporte JS -->
-    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossOrigin="anonymous" referrerPolicy="no-referrer"></noscript>
-    
-          <script>
-        // OPTIMIZADO: Verificador de FontAwesome silencioso ⚡
-        window.addEventListener('DOMContentLoaded', function() {
-          let attempts = 0;
-          const maxAttempts = 3;
-          
-          function checkFontAwesome() {
-            attempts++;
-            
-            const testIcon = document.createElement('i');
-            testIcon.className = 'fas fa-home';
-            testIcon.style.position = 'absolute';
-            testIcon.style.left = '-9999px';
-            document.body.appendChild(testIcon);
-            
-            const styles = window.getComputedStyle(testIcon, ':before');
-            const fontFamily = styles.getPropertyValue('font-family');
-            const isLoaded = fontFamily.toLowerCase().includes('awesome');
-            
-            document.body.removeChild(testIcon);
-            
-            if (isLoaded || attempts >= maxAttempts) {
-              return;
-            }
-            
-            setTimeout(checkFontAwesome, 800);
-          }
-          
-          setTimeout(checkFontAwesome, 300);
-        });
-        
-        // SOLUCIÓN #3: Detector de fuentes cargadas silencioso ⚡
-        window.addEventListener('DOMContentLoaded', function() {
-          function checkInterFont() {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            
-            context.font = '16px monospace';
-            const fallbackWidth = context.measureText('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz').width;
-            
-            context.font = '16px Inter, monospace';
-            const interWidth = context.measureText('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz').width;
-            
-            return Math.abs(interWidth - fallbackWidth) > 1;
-          }
-          
-          let fontCheckAttempts = 0;
-          const maxFontChecks = 5;
-          
-          function stabilizeFonts() {
-            fontCheckAttempts++;
-            
-            if (checkInterFont() || fontCheckAttempts >= maxFontChecks) {
-              document.documentElement.classList.add('fonts-loaded');
-              return;
-            }
-            
-            setTimeout(stabilizeFonts, 100);
-          }
-          
-          setTimeout(stabilizeFonts, 200);
-        });
-      
-      // CORRECCIÓN: Carga LAZY de Leaflet - Más robusta ⚡
-      window.loadLeafletCSS = function() {
-        if (window.leafletCSSLoaded) return Promise.resolve();
-        
-        return new Promise((resolve, reject) => {
-          const leafletCSS = document.createElement('link');
-          leafletCSS.rel = 'stylesheet';
-          leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          leafletCSS.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
-          leafletCSS.crossOrigin = '';
-          
-          leafletCSS.onload = () => {
-            window.leafletCSSLoaded = true;
+  <!-- CRITICAL: Resource Hints para optimización móvil ⚡ -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="dns-prefetch" href="https://unpkg.com">
+
+  <!-- OPTIMIZACIÓN: Prefetch de FontAwesome CSS solamente ⚡ -->
+  <link rel="prefetch" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Los recursos críticos se cargarán automáticamente por Vite -->
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+
+  <!-- SOLUCIÓN OPTIMIZADA: Font loading SIN preloads redundantes ⚡ -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style"
+    onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </noscript>
+
+  <!-- SOLUCIÓN #3: JSX preload habilitado para estabilidad ⚡ -->
+
+  <!-- CRÍTICO: FontAwesome PRELOAD - Carga instantánea sin bloqueo ⚡ -->
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style"
+    onload="this.onload=null;this.rel='stylesheet'"
+    integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+    crossOrigin="anonymous" referrerPolicy="no-referrer">
+  <!-- Fallback para navegadores sin soporte JS -->
+  <noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+      crossOrigin="anonymous" referrerPolicy="no-referrer">
+  </noscript>
+
+  <script>
+    // OPTIMIZADO: Verificador de FontAwesome silencioso ⚡
+    window.addEventListener('DOMContentLoaded', function () {
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      function checkFontAwesome() {
+        attempts++;
+
+        const testIcon = document.createElement('i');
+        testIcon.className = 'fas fa-home';
+        testIcon.style.position = 'absolute';
+        testIcon.style.left = '-9999px';
+        document.body.appendChild(testIcon);
+
+        const styles = window.getComputedStyle(testIcon, ':before');
+        const fontFamily = styles.getPropertyValue('font-family');
+        const isLoaded = fontFamily.toLowerCase().includes('awesome');
+
+        document.body.removeChild(testIcon);
+
+        if (isLoaded || attempts >= maxAttempts) {
+          return;
+        }
+
+        setTimeout(checkFontAwesome, 800);
+      }
+
+      setTimeout(checkFontAwesome, 300);
+    });
+
+    // SOLUCIÓN #3: Detector de fuentes cargadas silencioso ⚡
+    window.addEventListener('DOMContentLoaded', function () {
+      function checkInterFont() {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        context.font = '16px monospace';
+        const fallbackWidth = context.measureText('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz').width;
+
+        context.font = '16px Inter, monospace';
+        const interWidth = context.measureText('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz').width;
+
+        return Math.abs(interWidth - fallbackWidth) > 1;
+      }
+
+      let fontCheckAttempts = 0;
+      const maxFontChecks = 5;
+
+      function stabilizeFonts() {
+        fontCheckAttempts++;
+
+        if (checkInterFont() || fontCheckAttempts >= maxFontChecks) {
+          document.documentElement.classList.add('fonts-loaded');
+          return;
+        }
+
+        setTimeout(stabilizeFonts, 100);
+      }
+
+      setTimeout(stabilizeFonts, 200);
+    });
+
+    // CORRECCIÓN: Carga LAZY de Leaflet - Más robusta ⚡
+    window.loadLeafletCSS = function () {
+      if (window.leafletCSSLoaded) return Promise.resolve();
+
+      return new Promise((resolve, reject) => {
+        const leafletCSS = document.createElement('link');
+        leafletCSS.rel = 'stylesheet';
+        leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        leafletCSS.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+        leafletCSS.crossOrigin = '';
+
+        leafletCSS.onload = () => {
+          window.leafletCSSLoaded = true;
+          resolve();
+        };
+
+        leafletCSS.onerror = () => {
+          reject(new Error('Failed to load Leaflet CSS'));
+        };
+
+        document.head.appendChild(leafletCSS);
+      });
+    };
+
+    window.loadLeafletJS = function () {
+      if (window.L && window.leafletJSLoaded) return Promise.resolve();
+
+      return new Promise((resolve, reject) => {
+        const leafletJS = document.createElement('script');
+        leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        leafletJS.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+        leafletJS.crossOrigin = '';
+
+        leafletJS.onload = () => {
+          window.leafletJSLoaded = true;
+          // Verificar que L está disponible
+          if (typeof window.L !== 'undefined') {
             resolve();
-          };
-          
-          leafletCSS.onerror = () => {
-            reject(new Error('Failed to load Leaflet CSS'));
-          };
-          
-          document.head.appendChild(leafletCSS);
-        });
-      };
-      
-      window.loadLeafletJS = function() {
-        if (window.L && window.leafletJSLoaded) return Promise.resolve();
-        
-        return new Promise((resolve, reject) => {
-          const leafletJS = document.createElement('script');
-          leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-          leafletJS.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
-          leafletJS.crossOrigin = '';
-          
-          leafletJS.onload = () => {
-            window.leafletJSLoaded = true;
-            // Verificar que L está disponible
-            if (typeof window.L !== 'undefined') {
-              resolve();
-            } else {
-              reject(new Error('Leaflet failed to initialize'));
-            }
-          };
-          
-          leafletJS.onerror = () => {
-            reject(new Error('Failed to load Leaflet JS'));
-          };
-          
-          document.head.appendChild(leafletJS);
-        });
-      };
-    </script>
-    
-    <title>Territorios LS v2.15.5 - Gestión de Territorios</title>
-    
-    <!-- SOLUCIÓN #3: CRITICAL CSS INLINE - Sin cambios visuales ⚡ -->
-    <style>
-      /* CRITICAL: Reset mínimo y font fallback ESTABLE */
-      * { box-sizing: border-box; }
-      
-      body { 
-        /* CRÍTICO: Font stack que COINCIDE con Inter */
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        margin: 0;
-        padding: 0;
-        background-color: #f1f5f9;
-        color: #1e293b;
-        line-height: 1.6;
-        overflow-x: hidden;
-        /* NUEVO: Forzar estabilidad visual */
-        font-synthesis: none;
-        text-rendering: optimizeLegibility;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-      
-      /* CRÍTICO: Clases Tailwind más usadas - INLINE para evitar FOUC */
-      .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-      .text-base { font-size: 1rem; line-height: 1.5rem; }
-      .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-      .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
-      .font-medium { font-weight: 500; }
-      .font-semibold { font-weight: 600; }
-      .font-bold { font-weight: 700; }
-      
-      /* CRÍTICO: Evitar FOUC en tarjetas */
-      .bg-white { background-color: #ffffff; }
-      .bg-gray-50 { background-color: #f9fafb; }
-      .rounded-lg { border-radius: 0.5rem; }
-      .shadow-md { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
-      .p-4 { padding: 1rem; }
-      .px-4 { padding-left: 1rem; padding-right: 1rem; }
-      .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-      
-      /* NUEVO: Font display INMEDIATO - NO esperar carga */
-      @font-face {
-        font-family: 'Inter-Fallback';
-        src: local('Inter'), local('-apple-system'), local('BlinkMacSystemFont');
-        font-display: block;
-        font-weight: 400 700;
-      }
-      
-      /* SOLUCIÓN #3: Transiciones suaves SOLO cuando fuentes están listas */
-      .fonts-loaded * {
-        transition: font-size 0ms, font-weight 0ms, line-height 0ms !important;
-      }
-      
-      /* CRÍTICO: Skeleton loading para contenido inicial */
-      .loading-content {
-        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-        background-size: 200% 100%;
-        animation: loading 1.5s infinite;
-        border-radius: 0.5rem;
-      }
-      
-      /* NUEVO: Invisible hasta que las fuentes estén listas */
-      .stabilize-fonts {
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-      
-      .fonts-loaded .stabilize-fonts {
-        opacity: 1;
-      }
-      
-      /* CRITICAL: Splash screen optimizado */
-      #splash-screen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        transition: opacity 0.3s ease;
-        will-change: opacity;
-      }
-      
-      #splash-screen.hide {
-        opacity: 0;
-        pointer-events: none;
-      }
-      
-      .splash-content {
-        text-align: center;
-        color: white;
-        max-width: 300px;
-        padding: 20px;
-      }
-      
-      .splash-icon {
-        width: 80px;
-        height: 80px;
-        margin: 0 auto 20px;
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-      }
-      
-      .splash-title {
-        font-size: 28px;
-        font-weight: 700;
-        margin: 0 0 8px 0;
-        letter-spacing: -0.5px;
-      }
-        
-      .splash-subtitle {
-        font-size: 16px;
-        opacity: 0.9;
-        margin: 0 0 30px 0;
-        font-weight: 400;
-      }
-      
-      .splash-loader {
-        width: 40px;
-        height: 40px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-top-color: white;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin: 0 auto;
-        will-change: transform;
-      }
+          } else {
+            reject(new Error('Leaflet failed to initialize'));
+          }
+        };
 
-      @keyframes spin {
-        to { transform: rotate(360deg); }
+        leafletJS.onerror = () => {
+          reject(new Error('Failed to load Leaflet JS'));
+        };
+
+        document.head.appendChild(leafletJS);
+      });
+    };
+  </script>
+
+  <title>Estación Tetlán Señas Territorios</title>
+
+  <!-- SOLUCIÓN #3: CRITICAL CSS INLINE - Sin cambios visuales ⚡ -->
+  <style>
+    /* CRITICAL: Reset mínimo y font fallback ESTABLE */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      /* CRÍTICO: Font stack que COINCIDE con Inter */
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f1f5f9;
+      color: #1e293b;
+      line-height: 1.6;
+      overflow-x: hidden;
+      /* NUEVO: Forzar estabilidad visual */
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* CRÍTICO: Clases Tailwind más usadas - INLINE para evitar FOUC */
+    .text-sm {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+
+    .text-base {
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+
+    .text-lg {
+      font-size: 1.125rem;
+      line-height: 1.75rem;
+    }
+
+    .text-xl {
+      font-size: 1.25rem;
+      line-height: 1.75rem;
+    }
+
+    .font-medium {
+      font-weight: 500;
+    }
+
+    .font-semibold {
+      font-weight: 600;
+    }
+
+    .font-bold {
+      font-weight: 700;
+    }
+
+    /* CRÍTICO: Evitar FOUC en tarjetas */
+    .bg-white {
+      background-color: #ffffff;
+    }
+
+    .bg-gray-50 {
+      background-color: #f9fafb;
+    }
+
+    .rounded-lg {
+      border-radius: 0.5rem;
+    }
+
+    .shadow-md {
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+
+    .p-4 {
+      padding: 1rem;
+    }
+
+    .px-4 {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .py-3 {
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+
+    /* NUEVO: Font display INMEDIATO - NO esperar carga */
+    @font-face {
+      font-family: 'Inter-Fallback';
+      src: local('Inter'), local('-apple-system'), local('BlinkMacSystemFont');
+      font-display: block;
+      font-weight: 400 700;
+    }
+
+    /* SOLUCIÓN #3: Transiciones suaves SOLO cuando fuentes están listas */
+    .fonts-loaded * {
+      transition: font-size 0ms, font-weight 0ms, line-height 0ms !important;
+    }
+
+    /* CRÍTICO: Skeleton loading para contenido inicial */
+    .loading-content {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+      border-radius: 0.5rem;
+    }
+
+    /* NUEVO: Invisible hasta que las fuentes estén listas */
+    .stabilize-fonts {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .fonts-loaded .stabilize-fonts {
+      opacity: 1;
+    }
+
+    /* CRITICAL: Splash screen optimizado */
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+      will-change: opacity;
+    }
+
+    #splash-screen.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .splash-content {
+      text-align: center;
+      color: white;
+      max-width: 300px;
+      padding: 20px;
+    }
+
+    .splash-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .splash-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .splash-subtitle {
+      font-size: 16px;
+      opacity: 0.9;
+      margin: 0 0 30px 0;
+      font-weight: 400;
+    }
+
+    .splash-loader {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+      will-change: transform;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
-      
-      /* CRITICAL: Estilos base para evitar FOUC */
-      #root {
-        min-height: 100vh;
-        position: relative;
-      }
-      
-      /* CRITICAL: Estilos para carga de contenido */
-      .loading-skeleton {
-        background: linear-gradient(
-          90deg,
+    }
+
+    /* CRITICAL: Estilos base para evitar FOUC */
+    #root {
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* CRITICAL: Estilos para carga de contenido */
+    .loading-skeleton {
+      background: linear-gradient(90deg,
           #f0f0f0 25%,
           #e0e0e0 50%,
-          #f0f0f0 75%
-        );
-        background-size: 200% 100%;
-        animation: loading 1.5s infinite;
+          #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+      0% {
+        background-position: 200% 0;
       }
-      
-      @keyframes loading {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
+
+      100% {
+        background-position: -200% 0;
       }
-      
-      /* CRITICAL: Responsive base */
-      @media (max-width: 768px) {
-        .splash-title { font-size: 24px; }
-        .splash-subtitle { font-size: 14px; }
-        .splash-icon { width: 60px; height: 60px; }
+    }
+
+    /* CRITICAL: Responsive base */
+    @media (max-width: 768px) {
+      .splash-title {
+        font-size: 24px;
       }
-    </style>
-  </head>
-  <body>
-    <!-- Splash Screen -->
-    <div id="splash-screen">
-      <div class="splash-content">
-        <div class="splash-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-            <circle cx="12" cy="10" r="3"></circle>
-            </svg>
-                    </div>
-        <h1 class="splash-title">Territorios LS</h1>
-        <p class="splash-subtitle">Gestión de territorios</p>
-        <div class="splash-loader"></div>
-                </div>
-            </div>
-            
-    <!-- App Root -->
-    <div id="root"></div>
-    
-    <script>
-      // Hide splash screen when app loads
-      window.addEventListener('load', () => {
-            setTimeout(() => {
-    const splash = document.getElementById('splash-screen');
-    if (splash) {
-            splash.classList.add('hide');
-            setTimeout(() => splash.remove(), 500);
-            }
-        }, 1000);
+
+      .splash-subtitle {
+        font-size: 14px;
+      }
+
+      .splash-icon {
+        width: 60px;
+        height: 60px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Splash Screen -->
+  <div id="splash-screen">
+    <div class="splash-content">
+      <div class="splash-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+      </div>
+      <h1 class="splash-title">Estación Tetlán Señas</h1>
+      <p class="splash-subtitle">Gestión de Territorios</p>
+      <div class="splash-loader"></div>
+    </div>
+  </div>
+
+  <!-- App Root -->
+  <div id="root"></div>
+
+  <script>
+    // Hide splash screen when app loads
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+          splash.classList.add('hide');
+          setTimeout(() => splash.remove(), 500);
+        }
+      }, 1000);
     });
-    </script>
-    
-    <!-- Cache busting simplificado -->
-    <script>
-      // Cache busting timestamp simple
-      window.CACHE_BUSTER = Date.now();
-    </script>
-    
-    <script type="module" src="/src/main.jsx?v=2.15.5&t=1751415000000"></script>
+  </script>
+
+  <!-- Cache busting simplificado -->
+  <script>
+    // Cache busting timestamp simple
+    window.CACHE_BUSTER = Date.now();
+  </script>
+
+  <script type="module" src="/src/main.jsx?v=2.15.5&t=1751415000000"></script>
 </body>
+
 </html>

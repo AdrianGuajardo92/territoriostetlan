@@ -31,21 +31,77 @@ const isUserAssigned = (assignedTo, userName) => {
 const formatTeamNames = (names, isMobile = false) => {
   if (names.length === 0) return '';
   if (names.length === 1) return names[0];
-  
+
   if (isMobile && names.length > 1) {
     const firstNames = names.map(name => name.split(' ')[0]);
     if (firstNames.length === 2) return `${firstNames[0]} y ${firstNames[1]}`;
     return `${firstNames.slice(0, -1).join(', ')} y ${firstNames[firstNames.length - 1]}`;
   }
-  
+
   if (names.length === 2) return `${names[0]} y ${names[1]}`;
   return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
 };
 
+// Función helper para detectar cambios reales entre dirección original y editada
+const getChangedFields = (original, updated) => {
+  const changes = {};
+
+  // Campos que SÍ deben compararse (relevantes para el admin)
+  const camposRelevantes = [
+    'address', 'phone', 'name', 'notes', 'gender',
+    'isRevisita', 'revisitaBy', 'isEstudio', 'estudioBy'
+  ];
+
+  // Campos booleanos que deben tratar undefined/null/false como equivalentes
+  const camposBooleanos = ['isEstudio', 'isRevisita', 'isVisited', 'isPhoneOnly'];
+
+  // Función para normalizar valores antes de comparar
+  const normalizeValue = (value, fieldName) => {
+    // Para campos booleanos, normalizar valores "vacíos/falsos" a false
+    if (camposBooleanos.includes(fieldName)) {
+      if (value === undefined || value === null || value === '' ||
+          value === false || value === 'No' || value === 'Sin valor') {
+        return false;
+      }
+      return true;
+    }
+
+    // Para otros campos, normalizar valores vacíos a null
+    if (value === undefined || value === null || value === '' || value === 'Sin valor') {
+      return null;
+    }
+
+    // Strings: limpiar espacios
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+
+    // Objetos: convertir a JSON para comparación
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+
+    return value;
+  };
+
+  // Comparar solo campos relevantes
+  camposRelevantes.forEach(campo => {
+    const valorOriginal = normalizeValue(original[campo], campo);
+    const valorNuevo = normalizeValue(updated[campo], campo);
+
+    // Solo incluir si realmente cambió
+    if (valorOriginal !== valorNuevo) {
+      changes[campo] = updated[campo];
+    }
+  });
+
+  return changes;
+};
+
 const TerritoryDetailView = ({ territory, onBack }) => {
-  const { 
-    addresses, 
-    currentUser, 
+  const {
+    addresses,
+    currentUser,
     handleToggleAddressStatus,
     handleUpdateAddress,
     handleAddNewAddress,
@@ -55,6 +111,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     handleCompleteTerritory,
     handleProposeAddressChange,
     handleProposeNewAddress,
+    handleProposeAddressDeletion,
     adminEditMode,
     handleToggleAdminMode,
     resetAdminModeQuietly
@@ -429,21 +486,37 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     try {
       if (!formData.isRevisita) formData.revisitaBy = '';
       if (!formData.isEstudio) formData.estudioBy = '';
-      
+
       if (editingAddress) {
         if (currentUser.role === 'admin') {
           // Usar showSuccessToast: false para evitar notificación duplicada
           await handleUpdateAddress(editingAddress.id, formData, { showSuccessToast: false });
           showToast('Dirección actualizada.', 'success');
         } else {
-          await handleProposeAddressChange(editingAddress.id, formData, changeReason);
+          // Solo enviar campos que realmente cambiaron
+          const changedFields = getChangedFields(editingAddress, formData);
+
+          // Verificar si hay cambios reales
+          if (Object.keys(changedFields).length === 0) {
+            showToast('No se detectaron cambios en la dirección.', 'info');
+            setIsFormModalOpen(false);
+            setEditingAddress(null);
+            setIsProcessing(false);
+            return;
+          }
+
+          // Detectar tipo de acción basado en los campos que cambiaron
+          const statusFields = ['isVisited', 'isRevisita', 'revisitaBy', 'isEstudio', 'estudioBy'];
+          const dataFields = ['address', 'phone', 'name', 'notes', 'gender', 'latitude', 'longitude', 'mapUrl'];
+
+          const statusChanged = statusFields.some(f => changedFields[f] !== undefined);
+          const dataChanged = dataFields.some(f => changedFields[f] !== undefined);
+          const actionType = dataChanged ? 'modify' : (statusChanged ? 'status' : 'modify');
+
+          // Enviar solo changedFields, no formData completo
+          await handleProposeAddressChange(editingAddress.id, changedFields, changeReason, actionType);
         }
       } else {
-        // ❌ ELIMINADO: Notificación innecesaria de coordenadas (los admins ya saben que se obtienen automáticamente)
-        // if (!formData.latitude && !formData.longitude && formData.address) {
-        //   showToast('Obteniendo coordenadas automáticamente...', 'info', 3000);
-        // }
-        
         if (currentUser.role === 'admin' || isAssignedToMe) {
           await handleAddNewAddress(territory.id, formData);
         } else {
@@ -459,16 +532,21 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }
   };
 
-  const handleDeleteAddressAndClose = async (addressId) => {
+  const handleDeleteAddressAndClose = async (addressId, deleteReason = '') => {
     setIsProcessing(true);
     try {
-      // Usar showSuccessToast: false para evitar notificación duplicada
-      await handleDeleteAddress(addressId, { showSuccessToast: false });
-      showToast('Dirección eliminada correctamente.', 'success');
+      if (currentUser.role === 'admin') {
+        // Admin puede eliminar directamente
+        await handleDeleteAddress(addressId, { showSuccessToast: false });
+        showToast('Dirección eliminada correctamente.', 'success');
+      } else {
+        // Usuarios normales proponen eliminación
+        await handleProposeAddressDeletion(addressId, deleteReason);
+      }
       setIsFormModalOpen(false);
       setEditingAddress(null);
     } catch (error) {
-      showToast('Error al eliminar la dirección.', 'error');
+      showToast('Error al procesar la solicitud.', 'error');
     } finally {
       setIsProcessing(false);
     }
