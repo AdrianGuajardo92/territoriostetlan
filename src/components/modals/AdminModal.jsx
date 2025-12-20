@@ -504,19 +504,12 @@ const AdminModal = (props = {}) => {
             accent: 'border-indigo-200',
             hover: 'hover:shadow-indigo-100/50'
           },
-          purple: { 
-            bg: 'from-purple-50 to-violet-100', 
-            iconBg: 'bg-purple-500', 
+          purple: {
+            bg: 'from-purple-50 to-violet-100',
+            iconBg: 'bg-purple-500',
             text: 'text-purple-600',
             accent: 'border-purple-200',
             hover: 'hover:shadow-purple-100/50'
-          },
-          indigo: { 
-            bg: 'from-indigo-50 to-purple-100', 
-            iconBg: 'bg-indigo-500', 
-            text: 'text-indigo-600',
-            accent: 'border-indigo-200',
-            hover: 'hover:shadow-indigo-100/50'
           }
         };
 
@@ -644,48 +637,78 @@ const AdminModal = (props = {}) => {
         const activeFilter = filterOptions.find(f => f.id === proposalFilter);
         
         return (
-          <div className="space-y-4">
-            {/* Header compacto */}
+          <div
+            className="space-y-5 rounded-[20px] p-6"
+            style={{
+              background: 'linear-gradient(165deg, #0D1B2A 0%, #1B263B 50%, #0D1B2A 100%)',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)'
+            }}
+          >
+            {/* Header Silver Navy */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-600 rounded-lg flex items-center justify-center">
-                <i className="fas fa-clipboard-list text-white text-base"></i>
-              </div>
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{
+                  background: '#A8B2C1',
+                  boxShadow: '0 0 12px rgba(168,178,193,0.4)'
+                }}
+              />
               <div>
-                <h3 className="text-xl font-bold text-gray-800">Historial de Propuestas</h3>
-                <p className="text-gray-500 text-xs">
+                <h3 className="text-xl font-semibold" style={{ color: '#FFFFFF' }}>
+                  Historial de Propuestas
+                </h3>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
                   {filteredProposals.length} {proposalFilter === 'pending' ? 'pendientes' : proposalFilter === 'approved' ? 'aprobadas' : 'rechazadas'}
                 </p>
               </div>
             </div>
 
-            {/* Filtros compactos */}
-            <div className="bg-gray-100 rounded-lg p-1.5">
-              <div className="grid grid-cols-3 gap-1.5">
-                {filterOptions.map(filter => (
-                  <button
-                    key={filter.id}
-                    onClick={() => setProposalFilter(filter.id)}
-                    className={`
-                      flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] border
-                      ${proposalFilter === filter.id
-                        ? filter.activeClass
-                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
-                      }
-                    `}
-                    title={filter.label}
-                  >
-                    <i className={`${filter.icon} text-xs`}></i>
-                    <span className="font-semibold">{filter.count || 0}</span>
-                  </button>
-                ))}
+            {/* Filtros Silver Navy */}
+            <div
+              className="rounded-xl p-1.5"
+              style={{ background: 'rgba(255,255,255,0.03)' }}
+            >
+              <div className="grid grid-cols-3 gap-2">
+                {filterOptions.map(filter => {
+                  const isActive = proposalFilter === filter.id;
+                  const colorStyles = {
+                    pending: { bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.3)', text: '#FBBF24' },
+                    approved: { bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.3)', text: '#34D399' },
+                    rejected: { bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.3)', text: '#F87171' }
+                  };
+                  const colors = colorStyles[filter.id];
+
+                  return (
+                    <button
+                      key={filter.id}
+                      onClick={() => setProposalFilter(filter.id)}
+                      className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px]"
+                      style={{
+                        background: isActive ? colors.bg : 'transparent',
+                        border: isActive ? `1px solid ${colors.border}` : '1px solid transparent',
+                        color: isActive ? colors.text : 'rgba(255,255,255,0.5)'
+                      }}
+                      title={filter.label}
+                    >
+                      <i className={`${filter.icon} text-xs`}></i>
+                      <span className="font-semibold">{filter.count || 0}</span>
+                    </button>
+                  );
+                })}
               </div>
-              
+
               {/* Botón limpiar todo para propuestas aprobadas/rechazadas */}
               {(proposalFilter === 'approved' || proposalFilter === 'rejected') && filteredProposals.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                   <button
                     onClick={() => openDeleteConfirm('bulk', { status: proposalFilter })}
-                    className="w-full px-3 py-2 rounded-md font-medium text-xs transition-all flex items-center justify-center gap-2 bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
+                    className="w-full px-3 py-2 rounded-lg font-medium text-xs transition-all flex items-center justify-center gap-2"
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      color: 'rgba(255,255,255,0.6)',
+                      border: '1px solid rgba(255,255,255,0.1)'
+                    }}
                   >
                     <i className="fas fa-broom text-xs"></i>
                     <span>Limpiar {proposalFilter === 'approved' ? 'aprobadas' : 'rechazadas'}</span>
@@ -695,20 +718,26 @@ const AdminModal = (props = {}) => {
             </div>
             
             {filteredProposals.length === 0 ? (
-              /* Estado vacío */
+              /* Estado vacío Silver Navy */
               <div className="flex items-center justify-center py-12">
                 <div className="text-center max-w-sm">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-slate-100">
-                    <i className="fas fa-inbox text-2xl text-slate-400"></i>
+                  <div
+                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(52,211,153,0.15), rgba(52,211,153,0.05))',
+                      border: '1px solid rgba(52,211,153,0.3)'
+                    }}
+                  >
+                    <i className="fas fa-check text-2xl" style={{ color: '#34D399' }}></i>
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-700 mb-2">
-                    {proposalFilter === 'pending' ? 'Sin pendientes' :
+                  <h4 className="text-lg font-semibold mb-2" style={{ color: '#FFFFFF' }}>
+                    {proposalFilter === 'pending' ? '¡Todo al día!' :
                      proposalFilter === 'approved' ? 'Sin aprobadas' :
                      'Sin rechazadas'
                     }
                   </h4>
-                  <p className="text-gray-500 text-sm">
-                    {proposalFilter === 'pending' ? 'Todas las propuestas han sido procesadas.' :
+                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    {proposalFilter === 'pending' ? 'No hay propuestas pendientes de revisión.' :
                      proposalFilter === 'approved' ? 'No hay propuestas aprobadas.' :
                      'No hay propuestas rechazadas.'
                     }
@@ -724,22 +753,39 @@ const AdminModal = (props = {}) => {
                     ? addresses.find(a => a.id === proposal.addressId)
                     : null;
 
+                  // Colores del estado para la tarjeta
+                  const statusStyles = {
+                    pending: { bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.3)', text: '#FBBF24' },
+                    approved: { bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.3)', text: '#34D399' },
+                    rejected: { bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.3)', text: '#F87171' }
+                  };
+                  const statusColor = statusStyles[proposal.status] || statusStyles.pending;
+
                   return (
-                    <div key={proposal.id} className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-all duration-300">
-                      {/* Header de la propuesta - Optimizado para móvil */}
-                      <div className="flex items-start justify-between mb-4 sm:mb-6">
+                    <div
+                      key={proposal.id}
+                      className="rounded-2xl p-5 sm:p-6 transition-all duration-300"
+                      style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.05)'
+                      }}
+                    >
+                      {/* Header de la propuesta Silver Navy */}
+                      <div className="flex items-start justify-between mb-5">
                         <div className="flex items-start gap-3 sm:gap-4 flex-1">
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-600 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
-                            <i className={`fas ${proposal.type === 'new' ? 'fa-plus' : 'fa-edit'} text-white text-sm sm:text-base`}></i>
+                          <div
+                            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{ background: 'linear-gradient(135deg, #A8B2C1, #8892A0)' }}
+                          >
+                            <i className={`fas ${proposal.type === 'new' ? 'fa-plus' : proposal.type === 'delete' ? 'fa-trash' : 'fa-edit'} text-sm`} style={{ color: '#0D1B2A' }}></i>
                           </div>
-                        <div className="w-full">
-                            {/* OPCIÓN A - Header limpio sin etiqueta duplicada */}
+                          <div className="w-full">
+                            {/* Header con nombre y fecha */}
                             <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-lg sm:text-xl font-bold text-gray-900 flex-1 mr-3 truncate">
-                                👤 {proposal.proposedByName}
+                              <h4 className="text-base sm:text-lg font-semibold flex-1 mr-3 truncate" style={{ color: '#FFFFFF' }}>
+                                {proposal.proposedByName}
                               </h4>
-                              <p className="text-xs text-gray-500 flex items-center flex-shrink-0">
-                                <i className="fas fa-calendar mr-1"></i>
+                              <p className="text-xs flex items-center flex-shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }}>
                                 <span className="hidden sm:inline">
                                   {proposal.createdAt?.toDate ? proposal.createdAt.toDate().toLocaleDateString('es-MX') : 'Fecha no disponible'}
                                 </span>
@@ -748,84 +794,152 @@ const AdminModal = (props = {}) => {
                                 </span>
                               </p>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
-                                🏷️ Territorio {territory?.name?.replace(/territorio\s*/i, '') || proposal.territoryId}
+                            <div className="flex items-center justify-between gap-2">
+                              <span
+                                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
+                                style={{
+                                  background: 'rgba(168,178,193,0.1)',
+                                  border: '1px solid rgba(168,178,193,0.2)',
+                                  color: '#A8B2C1'
+                                }}
+                              >
+                                Territorio {territory?.name?.replace(/territorio\s*/i, '') || proposal.territoryId}
                               </span>
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ml-2 bg-slate-100 text-slate-700">
-                                {proposal.status === 'pending' ? '⏳ Pendiente' :
-                                 proposal.status === 'approved' ? '✅ Aprobada' :
-                                 '❌ Rechazada'}
+                              <span
+                                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wide"
+                                style={{
+                                  background: statusColor.bg,
+                                  border: `1px solid ${statusColor.border}`,
+                                  color: statusColor.text,
+                                  letterSpacing: '0.5px'
+                                }}
+                              >
+                                {proposal.status === 'pending' ? 'Pendiente' :
+                                 proposal.status === 'approved' ? 'Aprobada' :
+                                 'Rechazada'}
                               </span>
                             </div>
                           </div>
                         </div>
-                        
-
                       </div>
 
+                      {/* Línea divisoria */}
+                      <div
+                        className="mb-5"
+                        style={{
+                          height: '1px',
+                          background: 'linear-gradient(90deg, transparent, rgba(168,178,193,0.25), transparent)'
+                        }}
+                      />
 
-                      {/* NUEVO DISEÑO LIMPIO Y ENFOCADO */}
+
+                      {/* Contenido Silver Navy */}
                       <div className="space-y-4">
                         <div className="space-y-3">
                           {/* Para propuestas nuevas - mostrar datos principales */}
                           {proposal.type === 'new' && proposal.addressData && (
                             <>
-                              {/* 1. DIRECCIÓN NUEVA SIEMPRE PRIMERO */}
-                              <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-slate-300">
-                                <p className="text-sm font-semibold text-slate-700 mb-2">
-                                  📍 Nueva dirección:
+                              {/* 1. DIRECCIÓN NUEVA */}
+                              <div
+                                className="rounded-xl p-4"
+                                style={{
+                                  background: 'rgba(255,255,255,0.02)',
+                                  borderLeft: '2px solid #A8B2C1'
+                                }}
+                              >
+                                <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                  📍 Nueva dirección
                                 </p>
-                                <p className="text-sm text-gray-800 break-words">
+                                <p className="text-sm break-words" style={{ color: '#FFFFFF' }}>
                                   {proposal.addressData.address || 'No especificada'}
                                 </p>
                               </div>
-                              
-                              {/* 2. REVISITA - Formato como notas */}
+
+                              {/* 2. REVISITA */}
                               {proposal.addressData.isRevisita && proposal.addressData.revisitaBy && (
-                                <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                  <p className="text-sm font-semibold text-slate-700 mb-1">📖 Revisita:</p>
-                                  <p className="text-sm text-gray-800 break-words">
+                                <div
+                                  className="rounded-xl p-4"
+                                  style={{
+                                    background: 'rgba(255,255,255,0.02)',
+                                    borderLeft: '2px solid #A8B2C1'
+                                  }}
+                                >
+                                  <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                    📖 Revisita
+                                  </p>
+                                  <p className="text-sm break-words" style={{ color: 'rgba(255,255,255,0.8)' }}>
                                     {proposal.addressData.revisitaBy}
                                   </p>
                                 </div>
                               )}
-                              
-                              {/* 3. ESTUDIO - Formato como notas */}
+
+                              {/* 3. ESTUDIO */}
                               {proposal.addressData.isEstudio && proposal.addressData.estudioBy && (
-                                <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                  <p className="text-sm font-semibold text-slate-700 mb-1">📚 Estudio:</p>
-                                  <p className="text-sm text-gray-800 break-words">
+                                <div
+                                  className="rounded-xl p-4"
+                                  style={{
+                                    background: 'rgba(255,255,255,0.02)',
+                                    borderLeft: '2px solid #A8B2C1'
+                                  }}
+                                >
+                                  <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                    📚 Estudio
+                                  </p>
+                                  <p className="text-sm break-words" style={{ color: 'rgba(255,255,255,0.8)' }}>
                                     {proposal.addressData.estudioBy}
                                   </p>
                                 </div>
                               )}
-                              
-                              {/* 4. GÉNERO - Formato como notas */}
+
+                              {/* 4. GÉNERO */}
                               {proposal.addressData.gender && (
-                                <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                  <p className="text-sm font-semibold text-slate-700 mb-1">👥 Género:</p>
-                                  <p className="text-sm text-gray-800 break-words">
+                                <div
+                                  className="rounded-xl p-4"
+                                  style={{
+                                    background: 'rgba(255,255,255,0.02)',
+                                    borderLeft: '2px solid #A8B2C1'
+                                  }}
+                                >
+                                  <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                    👥 Género
+                                  </p>
+                                  <p className="text-sm break-words" style={{ color: 'rgba(255,255,255,0.8)' }}>
                                     {proposal.addressData.gender}
                                   </p>
                                 </div>
                               )}
 
-                              {/* 5. NOTAS - Barra neutral */}
+                              {/* 5. NOTAS */}
                               {proposal.addressData.notes && (
-                                <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                  <p className="text-sm font-semibold text-slate-700 mb-1">📝 Notas:</p>
-                                  <p className="text-sm text-gray-800 italic break-words">
+                                <div
+                                  className="rounded-xl p-4"
+                                  style={{
+                                    background: 'rgba(255,255,255,0.02)',
+                                    borderLeft: '2px solid #A8B2C1'
+                                  }}
+                                >
+                                  <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                    📝 Notas
+                                  </p>
+                                  <p className="text-sm italic break-words" style={{ color: 'rgba(255,255,255,0.7)' }}>
                                     "{proposal.addressData.notes}"
                                   </p>
                                 </div>
                               )}
 
-                              {/* Razón del cambio - Barra neutral */}
+                              {/* Razón del cambio */}
                               {proposal.reason && (
-                                <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                  <p className="text-sm font-semibold text-slate-700 mb-1">💬 Razón del cambio:</p>
-                                  <p className="text-sm text-gray-800 italic break-words">
+                                <div
+                                  className="rounded-xl p-4"
+                                  style={{
+                                    background: 'rgba(168,178,193,0.03)',
+                                    borderLeft: '2px solid #A8B2C1'
+                                  }}
+                                >
+                                  <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                    Motivo
+                                  </p>
+                                  <p className="text-sm italic break-words" style={{ color: 'rgba(255,255,255,0.7)' }}>
                                     "{proposal.reason}"
                                   </p>
                                 </div>
@@ -843,16 +957,29 @@ const AdminModal = (props = {}) => {
                             if (changesEntries.length === 0) {
                               return (
                                 <>
-                                  <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-gray-300">
-                                    <p className="text-sm text-gray-600 italic">
+                                  <div
+                                    className="rounded-xl p-4"
+                                    style={{
+                                      background: 'rgba(255,255,255,0.02)',
+                                      borderLeft: '2px solid rgba(255,255,255,0.2)'
+                                    }}
+                                  >
+                                    <p className="text-sm italic" style={{ color: 'rgba(255,255,255,0.5)' }}>
                                       No se detectaron cambios significativos en esta propuesta.
                                     </p>
                                   </div>
-                                  {/* Razón del cambio - Siempre mostrar si existe */}
                                   {proposal.reason && (
-                                    <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                      <p className="text-sm font-semibold text-slate-700 mb-1">💬 Razón del cambio:</p>
-                                      <p className="text-sm text-gray-800 italic break-words">
+                                    <div
+                                      className="rounded-xl p-4"
+                                      style={{
+                                        background: 'rgba(168,178,193,0.03)',
+                                        borderLeft: '2px solid #A8B2C1'
+                                      }}
+                                    >
+                                      <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                        Motivo
+                                      </p>
+                                      <p className="text-sm italic break-words" style={{ color: 'rgba(255,255,255,0.7)' }}>
                                         "{proposal.reason}"
                                       </p>
                                     </div>
@@ -868,17 +995,43 @@ const AdminModal = (props = {}) => {
                                   const etiqueta = fieldLabels[campo] || campo;
 
                                   return (
-                                    <div key={campo} className="bg-white rounded-lg p-3 border-l-4 border-blue-400">
-                                      <p className="text-sm font-semibold text-gray-700 mb-2">{etiqueta}:</p>
-                                      <div className="space-y-2">
-                                        <p className="text-xs text-gray-500">Antes:</p>
-                                        <p className="text-sm text-gray-700 bg-gray-100 p-2 rounded border-l-4 border-gray-400 break-words">
-                                          {formatValue(valorAnterior)}
-                                        </p>
-                                        <p className="text-xs text-gray-500">Después:</p>
-                                        <p className="text-sm text-gray-800 bg-gray-50 p-2 rounded border-l-4 border-slate-400 break-words">
-                                          {formatValue(valorNuevo)}
-                                        </p>
+                                    <div
+                                      key={campo}
+                                      className="rounded-xl p-4"
+                                      style={{
+                                        background: 'rgba(255,255,255,0.02)',
+                                        borderLeft: '2px solid #A8B2C1'
+                                      }}
+                                    >
+                                      <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                        {etiqueta}
+                                      </p>
+                                      <div className="flex items-center gap-3">
+                                        <div className="flex-1">
+                                          <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>Antes</p>
+                                          <p
+                                            className="text-sm break-words"
+                                            style={{
+                                              color: 'rgba(255,255,255,0.5)',
+                                              textDecoration: 'line-through',
+                                              textDecorationColor: 'rgba(248,113,113,0.5)'
+                                            }}
+                                          >
+                                            {formatValue(valorAnterior)}
+                                          </p>
+                                        </div>
+                                        <div
+                                          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                                          style={{ background: 'linear-gradient(135deg, #A8B2C1, #8892A0)' }}
+                                        >
+                                          <span style={{ color: '#0D1B2A', fontSize: '12px' }}>→</span>
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>Después</p>
+                                          <p className="text-sm font-medium break-words" style={{ color: '#FFFFFF' }}>
+                                            {formatValue(valorNuevo)}
+                                          </p>
+                                        </div>
                                       </div>
                                     </div>
                                   );
@@ -886,9 +1039,17 @@ const AdminModal = (props = {}) => {
 
                                 {/* Razón del cambio */}
                                 {proposal.reason && (
-                                  <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                    <p className="text-sm font-semibold text-slate-700 mb-1">💬 Razón del cambio:</p>
-                                    <p className="text-sm text-gray-800 italic break-words">
+                                  <div
+                                    className="rounded-xl p-4"
+                                    style={{
+                                      background: 'rgba(168,178,193,0.03)',
+                                      borderLeft: '2px solid #A8B2C1'
+                                    }}
+                                  >
+                                    <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                      Motivo
+                                    </p>
+                                    <p className="text-sm italic break-words" style={{ color: 'rgba(255,255,255,0.7)' }}>
                                       "{proposal.reason}"
                                     </p>
                                   </div>
@@ -900,26 +1061,32 @@ const AdminModal = (props = {}) => {
                           {/* Para propuestas de eliminación */}
                           {proposal.type === 'delete' && (
                             <>
-                              <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-slate-400">
-                                <p className="text-sm font-bold text-slate-800 mb-3 flex items-center">
+                              <div
+                                className="rounded-xl p-4"
+                                style={{
+                                  background: 'rgba(248,113,113,0.05)',
+                                  borderLeft: '2px solid rgba(248,113,113,0.5)'
+                                }}
+                              >
+                                <p className="text-xs font-semibold uppercase tracking-wider mb-3 flex items-center" style={{ color: '#F87171', letterSpacing: '1px' }}>
                                   <i className="fas fa-exclamation-triangle mr-2"></i>
-                                  SOLICITUD DE ELIMINACIÓN
+                                  Solicitud de eliminación
                                 </p>
                                 {proposal.addressInfo && (
                                   <div className="space-y-2 text-sm">
                                     {proposal.addressInfo.address && (
-                                      <p className="text-gray-800">
-                                        <span className="font-medium text-gray-600">Dirección:</span> {proposal.addressInfo.address}
+                                      <p style={{ color: 'rgba(255,255,255,0.8)' }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>Dirección:</span> {proposal.addressInfo.address}
                                       </p>
                                     )}
                                     {proposal.addressInfo.name && (
-                                      <p className="text-gray-800">
-                                        <span className="font-medium text-gray-600">Nombre:</span> {proposal.addressInfo.name}
+                                      <p style={{ color: 'rgba(255,255,255,0.8)' }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>Nombre:</span> {proposal.addressInfo.name}
                                       </p>
                                     )}
                                     {proposal.addressInfo.phone && (
-                                      <p className="text-gray-800">
-                                        <span className="font-medium text-gray-600">Teléfono:</span> {proposal.addressInfo.phone}
+                                      <p style={{ color: 'rgba(255,255,255,0.8)' }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>Teléfono:</span> {proposal.addressInfo.phone}
                                       </p>
                                     )}
                                   </div>
@@ -927,9 +1094,17 @@ const AdminModal = (props = {}) => {
                               </div>
 
                               {proposal.reason && (
-                                <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                  <p className="text-sm font-semibold text-slate-700 mb-1">💬 Razón de eliminación:</p>
-                                  <p className="text-sm text-gray-800 italic break-words">
+                                <div
+                                  className="rounded-xl p-4"
+                                  style={{
+                                    background: 'rgba(168,178,193,0.03)',
+                                    borderLeft: '2px solid #A8B2C1'
+                                  }}
+                                >
+                                  <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
+                                    Razón de eliminación
+                                  </p>
+                                  <p className="text-sm italic break-words" style={{ color: 'rgba(255,255,255,0.7)' }}>
                                     "{proposal.reason}"
                                   </p>
                                 </div>
@@ -939,68 +1114,78 @@ const AdminModal = (props = {}) => {
                           </div>
                         </div>
 
-                      {/* Información de procesamiento para propuestas aprobadas/rechazadas */}
+                      {/* Información de procesamiento Silver Navy */}
                       {proposal.status !== 'pending' && (
-                        <div className="rounded-xl p-4 border mt-4 bg-gray-50 border-gray-200">
-                          <h6 className="font-semibold mb-2 flex items-center text-slate-800">
+                        <div
+                          className="rounded-xl p-4 mt-4"
+                          style={{
+                            background: 'rgba(255,255,255,0.02)',
+                            border: '1px solid rgba(255,255,255,0.05)'
+                          }}
+                        >
+                          <h6 className="font-semibold mb-3 flex items-center text-sm" style={{ color: proposal.status === 'approved' ? '#34D399' : '#F87171' }}>
                             <i className={`${
                               proposal.status === 'approved' ? 'fas fa-check-circle' : 'fas fa-times-circle'
                             } mr-2`}></i>
                             {proposal.status === 'approved' ? 'Propuesta Aprobada' : 'Propuesta Rechazada'}
                           </h6>
-                          <div className="bg-white p-3 rounded-lg border border-opacity-50">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                              <div>
-                                <p className="text-gray-600">
-                                  <span className="font-medium">
-                                    {proposal.status === 'approved' ? 'Aprobada por:' : 'Rechazada por:'}
-                                  </span>
-                                </p>
-                                <p className="text-gray-800">
-                                  {proposal.approvedBy || proposal.rejectedBy || 'Administrador'}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-gray-600">
-                                  <span className="font-medium">Fecha:</span>
-                                </p>
-                                <p className="text-gray-800">
-                                  {(proposal.approvedAt || proposal.rejectedAt)?.toDate 
-                                    ? (proposal.approvedAt || proposal.rejectedAt).toDate().toLocaleDateString('es-MX')
-                                    : 'Fecha no disponible'
-                                  }
-                                </p>
-                              </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                {proposal.status === 'approved' ? 'Aprobada por:' : 'Rechazada por:'}
+                              </p>
+                              <p style={{ color: '#FFFFFF' }}>
+                                {proposal.approvedBy || proposal.rejectedBy || 'Administrador'}
+                              </p>
                             </div>
-                            {proposal.status === 'rejected' && proposal.rejectionReason && (
-                              <div className="mt-3 pt-3 border-t border-red-200">
-                                <p className="text-gray-600 text-sm">
-                                  <span className="font-medium">Razón del rechazo:</span>
-                                </p>
-                                <p className="text-red-800 text-sm mt-1 italic">
-                                  "{proposal.rejectionReason}"
-                                </p>
-                              </div>
-                        )}
-                      </div>
+                            <div>
+                              <p style={{ color: 'rgba(255,255,255,0.4)' }}>Fecha:</p>
+                              <p style={{ color: '#FFFFFF' }}>
+                                {(proposal.approvedAt || proposal.rejectedAt)?.toDate
+                                  ? (proposal.approvedAt || proposal.rejectedAt).toDate().toLocaleDateString('es-MX')
+                                  : 'Fecha no disponible'
+                                }
+                              </p>
+                            </div>
+                          </div>
+                          {proposal.status === 'rejected' && proposal.rejectionReason && (
+                            <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(248,113,113,0.2)' }}>
+                              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                Razón del rechazo:
+                              </p>
+                              <p className="text-sm mt-1 italic" style={{ color: '#F87171' }}>
+                                "{proposal.rejectionReason}"
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
-                      
-                      {/* Botones de acción - Diferentes según el estado */}
-                      <div className="mt-6 pt-4 border-t border-gray-200">
+
+                      {/* Botones de acción Silver Navy */}
+                      <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                         {proposal.status === 'pending' ? (
                           /* Botones para propuestas pendientes */
                           <div className="flex flex-col sm:flex-row justify-end gap-3">
                             <button
                               onClick={() => setSelectedProposal(proposal)}
-                              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-white text-slate-700 rounded-xl hover:bg-slate-50 transition-all transform hover:scale-105 font-medium shadow-sm border border-slate-300 w-full sm:w-auto"
+                              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl transition-all font-medium w-full sm:w-auto"
+                              style={{
+                                background: 'transparent',
+                                border: '1px solid rgba(239,68,68,0.4)',
+                                color: '#EF4444'
+                              }}
                             >
                               <i className="fas fa-times"></i>
                               <span>Rechazar</span>
                             </button>
                             <button
                               onClick={() => handleApprove(proposal)}
-                              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-slate-700 text-white rounded-xl hover:bg-slate-800 transition-all transform hover:scale-105 font-medium shadow-sm w-full sm:w-auto"
+                              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl transition-all font-semibold w-full sm:w-auto"
+                              style={{
+                                background: 'linear-gradient(135deg, #A8B2C1 0%, #8892A0 100%)',
+                                color: '#0D1B2A',
+                                boxShadow: '0 8px 24px rgba(168,178,193,0.25)'
+                              }}
                             >
                               <i className="fas fa-check"></i>
                               <span>Aprobar</span>
@@ -1011,7 +1196,12 @@ const AdminModal = (props = {}) => {
                           <div className="flex justify-end">
                             <button
                               onClick={() => openDeleteConfirm('single', { id: proposal.id })}
-                              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border border-gray-300 hover:border-red-300"
+                              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
+                              style={{
+                                background: 'transparent',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                color: 'rgba(255,255,255,0.5)'
+                              }}
                               title="Eliminar propuesta"
                             >
                               <i className="fas fa-trash text-sm"></i>

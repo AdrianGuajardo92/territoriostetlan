@@ -33,7 +33,13 @@
       "Bash(node applySoftDelete.cjs:*)",
       "Bash(node fixAdminModal.cjs:*)",
       "Bash(node addArchivedOption.cjs:*)",
-      "Bash(node debugAdminModal.cjs:*)"
+      "Bash(node debugAdminModal.cjs:*)",
+      "Bash(netlify status:*)",
+      "WebFetch(domain:territoriostetlan.netlify.app)",
+      "Bash(npm run build:*)",
+      "Bash(netlify deploy:*)",
+      "Bash(netlify api:*)",
+      "Bash(cmd /c \"del \\\\?\\\\c:\\\\Users\\\\adria\\\\territoriostetlan\\\\nul\")"
     ],
     "deny": [],
     "ask": []
