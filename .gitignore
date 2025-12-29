@@ -27,3 +27,14 @@ npm-debug.log*
 *.temp 
 # Local Netlify folder
 .netlify
+.claude/settings.local.json
+
+# Nombres reservados de Windows
+nul
+NUL
+con
+CON
+prn
+PRN
+aux
+AUX

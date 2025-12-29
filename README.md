@@ -70,7 +70,7 @@ copy index.html index.html.backup
 # Desarrollo local
 npm run dev
 
-# Ver tu app en http://localhost:3000
+# Ver tu app en http://localhost:3500
 
 # Cuando esté listo para producción
 npm run build

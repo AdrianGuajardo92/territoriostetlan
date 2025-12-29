@@ -39,7 +39,8 @@
       "Bash(npm run build:*)",
       "Bash(netlify deploy:*)",
       "Bash(netlify api:*)",
-      "Bash(cmd /c \"del \\\\?\\\\c:\\\\Users\\\\adria\\\\territoriostetlan\\\\nul\")"
+      "Bash(cmd /c \"del \\\\?\\\\c:\\\\Users\\\\adria\\\\territoriostetlan\\\\nul\")",
+      "Bash(dir \"C:\\\\Users\\\\adria\\\\territoriostetlan\" /b)"
     ],
     "deny": [],
     "ask": []

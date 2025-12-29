@@ -460,6 +460,44 @@ export const LazyUpdatesModal = ({ isOpen, ...props }) => {
   return <Component isOpen={isOpen} {...props} />;
 };
 
+// Lazy S13ReportModal - Reporte de Asignación de Territorio
+export const LazyS13ReportModal = ({ isOpen, ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('./S13ReportModal'),
+    [isOpen]
+  );
+
+  if (!isOpen) return null;
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md">
+          <p className="text-red-600">Error al cargar reporte S-13</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6">
+          <LazyFallback message="Cargando reporte S-13..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component isOpen={isOpen} {...props} />;
+};
+
 // Lazy ProposalsModal - NO crítico para carga inicial
 export const LazyProposalsModal = ({ isOpen, ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
@@ -651,6 +689,7 @@ export default {
   LazyAdminModal,
   LazyReportsModal,
   LazyProposalsModal,
+  LazyS13ReportModal,
   LazyMapModal,
   LazyAddressFormModal,
   LazyUserManagementModal,

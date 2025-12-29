@@ -3,6 +3,7 @@ import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import { LazyS13ReportModal } from './LazyModals';
 
 // 🔄 PASO 19: Funciones helper para estadísticas de equipos
 const normalizeAssignedTo = (assignedTo) => {
@@ -21,6 +22,7 @@ const StatsModal = ({ isOpen, onClose }) => {
   const { showToast } = useToast();
   const [selectedStat, setSelectedStat] = useState('overview');
   const [dateFilter, setDateFilter] = useState('all'); // all, week, month, year
+  const [showS13Modal, setShowS13Modal] = useState(false); // Estado para modal S-13
 
   const stats = useMemo(() => {
     if (!territories || !addresses) return null;
@@ -642,7 +644,8 @@ const StatsModal = ({ isOpen, onClose }) => {
             {[
               { id: 'overview', label: 'General', icon: 'fas fa-chart-pie', shortLabel: 'General' },
               { id: 'progress', label: 'Progreso', icon: 'fas fa-chart-bar', shortLabel: 'Progreso' },
-              { id: 'performance', label: 'Rendimiento', icon: 'fas fa-tachometer-alt', shortLabel: 'Rendimiento' }
+              { id: 'performance', label: 'Rendimiento', icon: 'fas fa-tachometer-alt', shortLabel: 'Rendim.' },
+              { id: 's13', label: 'Reporte S-13', icon: 'fas fa-file-alt', shortLabel: 'S-13' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1064,8 +1067,84 @@ const StatsModal = ({ isOpen, onClose }) => {
               )}
             </div>
           )}
+
+          {selectedStat === 's13' && (
+            <div className="space-y-6">
+              {/* Descripción del reporte S-13 */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-6 border border-blue-200">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <i className="fas fa-file-alt text-2xl text-white"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Registro de Asignación de Territorio</h3>
+                    <p className="text-gray-600 text-sm mb-4">
+                      Formulario S-13 oficial. Genera un registro completo de todas las asignaciones de territorios
+                      por año, incluyendo fechas de asignación y completación.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <i className="fas fa-calendar text-blue-500"></i>
+                        <span>Filtrable por año</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <i className="fas fa-file-pdf text-red-500"></i>
+                        <span>Exportar PDF</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <i className="fas fa-file-excel text-green-500"></i>
+                        <span>Exportar Excel</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón para abrir el reporte */}
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setShowS13Modal(true)}
+                  className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-xl font-semibold text-lg"
+                >
+                  <i className="fas fa-external-link-alt"></i>
+                  <span>Abrir Reporte S-13</span>
+                </button>
+              </div>
+
+              {/* Información adicional */}
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <i className="fas fa-info-circle text-blue-500"></i>
+                  Información del reporte
+                </h4>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-start gap-2">
+                    <i className="fas fa-check text-green-500 mt-0.5"></i>
+                    <span>Muestra hasta 4 asignaciones por territorio por año</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <i className="fas fa-check text-green-500 mt-0.5"></i>
+                    <span>Incluye la última fecha de completación antes del año seleccionado</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <i className="fas fa-check text-green-500 mt-0.5"></i>
+                    <span>Formato horizontal optimizado para impresión</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <i className="fas fa-check text-green-500 mt-0.5"></i>
+                    <span>Compatible con el formato oficial S-13</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Modal S-13 */}
+        <LazyS13ReportModal
+          isOpen={showS13Modal}
+          onClose={() => setShowS13Modal(false)}
+        />
       </div>
     </Modal>
   );
