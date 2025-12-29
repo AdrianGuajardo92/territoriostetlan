@@ -19,11 +19,9 @@ import {
 import { LazyPasswordModal as PasswordModal } from './components/modals/LazyModals';
 
 // Importar modales lazy optimizados
-import { 
-  LazyStatsModal, 
-  LazyAdminModal, 
-  LazyReportsModal,
-  LazySystemReportsModal,
+import {
+  LazyStatsModal,
+  LazyAdminModal,
   LazySearchModal,
   LazyInstallModal,
   LazyUpdatesModal
@@ -319,13 +317,6 @@ function AppContent() {
     },
 
     {
-      id: 'systemReports',
-      text: 'Reportes del Sistema',
-      icon: 'chart-line',
-      modal: 'systemReports',
-      description: 'Ver métricas técnicas y diagnósticos'
-    },
-    {
       id: 'install',
       text: 'Instalar App',
       icon: 'smartphone',
@@ -438,18 +429,15 @@ function AppContent() {
   // Manejar apertura del menú
   const handleOpenMenu = () => {
     setIsMenuOpen(true);
-    
-    // Agregar entrada al historial para el menú
-    window.history.pushState({ 
-      app: 'territorios', 
-      level: 'menu' 
+    window.history.pushState({
+      app: 'territorios',
+      level: 'menu'
     }, '', window.location.href);
   };
 
   // Manejar cierre del menú
   const handleCloseMenu = () => {
     setIsMenuOpen(false);
-    // Si el estado actual es menú, navegar hacia atrás
     if (window.history.state?.level === 'menu') {
       window.history.back();
     }
@@ -523,9 +511,6 @@ function AppContent() {
       )}
       {activeModal === 'install' && (
         <LazyInstallModal isOpen onClose={handleCloseModal} modalId="install-modal" />
-      )}
-      {activeModal === 'systemReports' && (
-        <LazySystemReportsModal isOpen onClose={handleCloseModal} modalId="system-reports-modal" />
       )}
     </div>
   );

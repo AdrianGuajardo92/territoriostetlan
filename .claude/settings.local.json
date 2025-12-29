@@ -40,7 +40,9 @@
       "Bash(netlify deploy:*)",
       "Bash(netlify api:*)",
       "Bash(cmd /c \"del \\\\?\\\\c:\\\\Users\\\\adria\\\\territoriostetlan\\\\nul\")",
-      "Bash(dir \"C:\\\\Users\\\\adria\\\\territoriostetlan\" /b)"
+      "Bash(dir \"C:\\\\Users\\\\adria\\\\territoriostetlan\" /b)",
+      "Skill(frontend-design)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

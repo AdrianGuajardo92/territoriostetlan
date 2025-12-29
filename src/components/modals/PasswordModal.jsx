@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 
 const PasswordModal = ({ isOpen, onClose }) => {
@@ -9,9 +9,14 @@ const PasswordModal = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  
+
+  // Estados para foto de perfil
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const fileInputRef = useRef(null);
+
   // Obtener contexto de la aplicación
-  const { currentUser, updatePassword, showToast } = useApp();
+  const { currentUser, updatePassword, updateProfilePicture, showToast } = useApp();
 
   // Bloquear scroll del body cuando el modal está abierto
   useEffect(() => {

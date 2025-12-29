@@ -15,7 +15,8 @@ import {
   getDocs,
   writeBatch
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db, storage } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '../hooks/useToast';
 
 const AppContext = createContext();
