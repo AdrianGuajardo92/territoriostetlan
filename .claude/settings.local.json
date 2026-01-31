@@ -42,7 +42,19 @@
       "Bash(cmd /c \"del \\\\?\\\\c:\\\\Users\\\\adria\\\\territoriostetlan\\\\nul\")",
       "Bash(dir \"C:\\\\Users\\\\adria\\\\territoriostetlan\" /b)",
       "Skill(frontend-design)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(npm run lint)",
+      "Bash(claude mcp:*)",
+      "mcp__stitch__list_projects",
+      "mcp__stitch__create_project",
+      "WebFetch(domain:stitch.withgoogle.com)",
+      "WebFetch(domain:github.com)",
+      "mcp__stitch__generate_screen_from_text",
+      "mcp__stitch__list_screens",
+      "mcp__stitch__get_project",
+      "mcp__stitch__get_screen",
+      "WebFetch(domain:contribution.usercontent.google.com)",
+      "WebFetch(domain:lh3.googleusercontent.com)"
     ],
     "deny": [],
     "ask": []

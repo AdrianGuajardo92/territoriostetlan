@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../hooks/useToast';
+import { useLocationTracking } from '../hooks/useLocationTracking';
 import TerritoryDetailHeader from '../components/territories/TerritoryDetailHeader';
 import AddressCard from '../components/addresses/AddressCard';
 import { LazyAddressFormModal as AddressFormModal } from '../components/modals/LazyModals';
@@ -137,6 +138,18 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     isCalculatingRoute: false
   });
 
+  // Hook de seguimiento de ubicación en tiempo real
+  const {
+    location: trackingLocation,
+    accuracy: trackingAccuracy,
+    lastUpdate: trackingLastUpdate,
+    isTracking,
+    gpsStatus,
+    startTracking,
+    stopTracking,
+    forceUpdate: forceLocationUpdate
+  } = useLocationTracking();
+
   const highlightTimerRef = useRef(null);
   const adminModeRef = useRef(adminEditMode);
 
@@ -147,6 +160,26 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       isCalculatingRoute: false
     }));
   }, []);
+
+  // ✅ TRACKING: Iniciar/detener seguimiento según ruta optimizada y modal abierto
+  useEffect(() => {
+    if (sortState.sortOrder === 'optimized' && isMapModalOpen) {
+      startTracking();
+    } else {
+      stopTracking();
+    }
+    return () => stopTracking();
+  }, [sortState.sortOrder, isMapModalOpen, startTracking, stopTracking]);
+
+  // ✅ TRACKING: Actualizar userLocation en sortState cuando cambia trackingLocation
+  useEffect(() => {
+    if (trackingLocation && sortState.sortOrder === 'optimized') {
+      setSortState(prev => ({
+        ...prev,
+        userLocation: trackingLocation
+      }));
+    }
+  }, [trackingLocation, sortState.sortOrder]);
 
   // Manejar highlight cuando se navega desde el buscador - SIN PARPADEO
   useEffect(() => {
@@ -228,13 +261,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       const modalStates = modalStatesRef.current;
       if (!modalStates) return;
       
-      console.log('🏠 TerritoryDetailView - PopState detectado:', {
-        hasFormModal: modalStates.isFormModalOpen,
-        hasAssignModal: modalStates.isAssignModalOpen,
-        hasMapModal: modalStates.isMapModalOpen,
-        hasConfirmReturn: modalStates.showConfirmReturn,
-        hasConfirmComplete: modalStates.showConfirmComplete
-      });
       
       // Solo manejar si hay modales abiertos en el territorio
       // Si no hay modales, dejar que el listener de App.jsx maneje la navegación
@@ -608,7 +634,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
 
       showToast('Ruta optimizada creada exitosamente', 'success');
     } catch (error) {
-      console.error('Error optimizando ruta:', error);
       
       // SIEMPRE resetear el estado, sin importar el tipo de error
       setSortState(prev => ({ 
@@ -662,7 +687,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         await handleUpdateAddress(addressId, updatedData);
       }
     } catch (error) {
-      console.error('Error updating address:', error);
       showToast('Error al actualizar dirección', 'error');
       throw error;
     }
@@ -793,7 +817,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         <MapModal
           isOpen={isMapModalOpen}
           onClose={() => {
-            console.log('🗺️ Cerrando modal del mapa - permaneciendo en territorio');
+            stopTracking(); // ✅ Detener tracking al cerrar
             setIsMapModalOpen(false);
           }}
           territory={territory}
@@ -802,10 +826,17 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           isAdmin={isAdmin}
           adminEditMode={adminEditMode} // ✅ PASAR MODO ADMINISTRADOR AL MAPA
           onEditAddress={openEditModal}
-          sortState={sortState}
+          sortState={{
+            ...sortState,
+            isTracking,
+            gpsStatus,
+            trackingAccuracy,
+            trackingLastUpdate
+          }}
           onOptimizedRoute={handleOptimizedRoute}
           onResetSort={handleResetSort}
           onToggleAddressStatus={handleUpdateAddressSilent}
+          onForceLocationUpdate={forceLocationUpdate}
           modalId="territory-map-modal"
         />
       )}

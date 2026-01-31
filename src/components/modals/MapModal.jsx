@@ -2,19 +2,20 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useToast } from '../../hooks/useToast';
 import Icon from '../common/Icon';
 
-const TerritoryMapModal = ({ 
-  isOpen, 
-  onClose, 
-  territory, 
-  addresses, 
-  isAssignedToMe, 
-  isAdmin, 
+const TerritoryMapModal = ({
+  isOpen,
+  onClose,
+  territory,
+  addresses,
+  isAssignedToMe,
+  isAdmin,
   adminEditMode = false, // ✅ NUEVA PROP PARA MODO ADMINISTRADOR
-  onEditAddress, 
-  sortState, 
-  onOptimizedRoute, 
-  onResetSort, 
+  onEditAddress,
+  sortState,
+  onOptimizedRoute,
+  onResetSort,
   onToggleAddressStatus,
+  onForceLocationUpdate, // ✅ NUEVA PROP PARA FORZAR ACTUALIZACIÓN DE UBICACIÓN
   modalId = 'territory-map-modal' // ID único para el historial
 }) => {
     
@@ -228,7 +229,7 @@ const TerritoryMapModal = ({
                         });
                     }
                 } catch (error) {
-                    console.warn('Error ajustando vista del mapa:', error);
+                    // Error ajustando vista del mapa - ignorar silenciosamente
                 }
             }
         }
@@ -403,7 +404,7 @@ const TerritoryMapModal = ({
             );
             
         } catch (error) {
-            console.error('Error al actualizar dirección:', error);
+            // Error al actualizar dirección
             showToast('Error al actualizar la dirección', 'error');
             
             // En caso de error, revertir el estado optimista
@@ -548,24 +549,19 @@ const TerritoryMapModal = ({
 
         const initializeMap = () => {
             if (!mapRef.current) {
-                console.error('MapRef no está disponible');
                 setMapError(true);
                 return;
             }
-            
+
             if (mapInstanceRef.current) {
-                console.log('Mapa ya inicializado');
                 return;
             }
-            
+
             try {
                 if (addressesWithCoords.length === 0) {
-                    console.warn('No hay direcciones con coordenadas para mostrar en el mapa');
                     setMapError(true);
                     return;
                 }
-                
-                console.log(`Inicializando mapa con ${addressesWithCoords.length} direcciones`);
                 
                 // Verificar que L.map está disponible antes de usar
                 if (typeof L.map !== 'function') {
@@ -618,56 +614,37 @@ const TerritoryMapModal = ({
                 // Verificar que todo se configuró correctamente
                 mapInstanceRef.current = map;
                 setIsMapReady(true);
-                console.log('Mapa inicializado exitosamente');
-                
+
             } catch (error) {
-                console.error('Error al inicializar el mapa:', error);
-                console.error('Detalles del error:', {
-                    message: error.message,
-                    stack: error.stack,
-                    mapRef: !!mapRef.current,
-                    leaflet: typeof L !== 'undefined',
-                    leafletMap: typeof L?.map === 'function'
-                });
                 setMapError(true);
             }
         };
 
         const checkLeaflet = async () => {
             try {
-                // CORRECCIÓN: Lazy loading robusto de Leaflet ⚡
+                // Lazy loading robusto de Leaflet
                 if (typeof L === 'undefined' || !window.leafletJSLoaded) {
-                    console.log('Cargando Leaflet para el mapa...');
-                    
                     // Verificar que las funciones de carga existen
                     if (typeof window.loadLeafletCSS !== 'function' || typeof window.loadLeafletJS !== 'function') {
                         throw new Error('Funciones de carga de Leaflet no están disponibles');
                     }
-                    
+
                     await Promise.all([
                         window.loadLeafletCSS(),
                         window.loadLeafletJS()
                     ]);
-                    
+
                     // Esperar un poco más para que Leaflet se inicialice completamente
                     await new Promise(resolve => setTimeout(resolve, 200));
                 }
-                
+
                 // Verificación más robusta de Leaflet
                 if (typeof L !== 'undefined' && L.map && typeof L.map === 'function' && L.marker && L.divIcon) {
-                    console.log('Leaflet cargado correctamente, inicializando mapa...');
                     initializeMap();
                 } else {
-                    console.error('Leaflet no se cargó correctamente - funciones faltantes:', {
-                        L_exists: typeof L !== 'undefined',
-                        map_exists: typeof L?.map === 'function',
-                        marker_exists: typeof L?.marker === 'function',
-                        divIcon_exists: typeof L?.divIcon === 'function'
-                    });
                     setMapError(true);
                 }
             } catch (error) {
-                console.error('Error cargando Leaflet:', error);
                 setMapError(true);
             }
         };
@@ -727,6 +704,40 @@ const TerritoryMapModal = ({
         
         return () => clearTimeout(updateTimer);
     }, [isOpen, isMapReady, sortState.sortOrder, drawRouteLine, routeCoordinates]);
+
+    // ✅ TRACKING: UseEffect para actualizar marcador de ubicación del usuario dinámicamente
+    useEffect(() => {
+        if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
+        if (!sortState.userLocation) return;
+
+        const userMarker = mapInstanceRef.current._userLocationMarker;
+
+        if (userMarker) {
+            // Actualizar posición sin recrear el marcador
+            userMarker.setLatLng([
+                sortState.userLocation.lat,
+                sortState.userLocation.lng
+            ]);
+        }
+    }, [isOpen, isMapReady, sortState.userLocation]);
+
+    // ✅ TRACKING: UseEffect para actualizar línea de ruta con nueva ubicación
+    useEffect(() => {
+        if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
+        if (sortState.sortOrder !== 'optimized' || !sortState.userLocation) return;
+
+        if (routeLineRef.current) {
+            const currentLatLngs = routeLineRef.current.getLatLngs();
+            if (currentLatLngs.length > 0) {
+                // Actualizar el primer punto (ubicación del usuario)
+                currentLatLngs[0] = L.latLng(
+                    sortState.userLocation.lat,
+                    sortState.userLocation.lng
+                );
+                routeLineRef.current.setLatLngs(currentLatLngs);
+            }
+        }
+    }, [isOpen, isMapReady, sortState.userLocation, sortState.sortOrder]);
 
     // NUEVO: UseEffect específico para actualizar marcadores cuando cambia la ruta - SOLUCIÓN DEFINITIVA
     useEffect(() => {
@@ -1067,31 +1078,78 @@ const TerritoryMapModal = ({
                         )}
                         <div ref={mapRef} className="w-full h-full" style={{ touchAction: 'manipulation' }} />
                         
-                        {/* Botón de ubicación del usuario - Estilo Google Maps */}
-                        <button
-                            onClick={() => {
-                                if (sortState.userLocation && mapInstanceRef.current) {
-                                    mapInstanceRef.current.setView(
-                                        [sortState.userLocation.lat, sortState.userLocation.lng], 
-                                        16,
-                                        { animate: true, duration: 1 }
-                                    );
-                                    showToast('Centrando en tu ubicación', 'info');
-                                } else {
-                                    showToast('Ubicación no disponible', 'warning');
-                                }
-                            }}
-                            className="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 hover:shadow-2xl transition-all duration-200 flex items-center justify-center group z-20"
-                            title="Ir a mi ubicación"
-                        >
-                            <div className="relative">
-                                <Icon 
-                                    name="mapPin" 
-                                    size={26} 
-                                    className="text-blue-600 group-hover:text-blue-700 transition-colors drop-shadow-md" 
-                                />
+                        {/* ✅ TRACKING: Panel de controles de ubicación con indicador GPS */}
+                        <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
+                            {/* Indicador de estado GPS - Solo visible cuando está obteniendo o hay error */}
+                            {sortState.sortOrder === 'optimized' && (sortState.gpsStatus === 'acquiring' || sortState.gpsStatus === 'error') && (
+                                <div
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium shadow-lg border flex items-center gap-1.5 transition-all ${
+                                        sortState.gpsStatus === 'acquiring'
+                                            ? 'bg-yellow-100 text-yellow-700 border-yellow-300 animate-pulse'
+                                            : 'bg-red-100 text-red-700 border-red-300'
+                                    }`}
+                                >
+                                    <div
+                                        className={`w-2 h-2 rounded-full ${
+                                            sortState.gpsStatus === 'acquiring'
+                                                ? 'bg-yellow-500 animate-ping'
+                                                : 'bg-red-500'
+                                        }`}
+                                    />
+                                    <span>
+                                        {sortState.gpsStatus === 'acquiring'
+                                            ? 'Obteniendo GPS...'
+                                            : 'Error GPS'}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Contenedor de botones */}
+                            <div className="flex flex-col gap-2">
+                                {/* Botón de actualización forzada - Solo visible con ruta optimizada */}
+                                {sortState.sortOrder === 'optimized' && onForceLocationUpdate && (
+                                    <button
+                                        onClick={() => {
+                                            onForceLocationUpdate()
+                                                .then(() => showToast('Ubicación actualizada', 'success'))
+                                                .catch(() => showToast('Error al actualizar ubicación', 'error'));
+                                        }}
+                                        className="w-12 h-12 bg-blue-600 hover:bg-blue-700 rounded-full shadow-lg border-2 border-white transition-all duration-200 flex items-center justify-center group"
+                                        title="Actualizar mi ubicación"
+                                    >
+                                        <Icon
+                                            name="crosshair"
+                                            size={22}
+                                            className="text-white group-hover:scale-110 transition-transform"
+                                        />
+                                    </button>
+                                )}
+
+                                {/* Botón de centrar en ubicación */}
+                                <button
+                                    onClick={() => {
+                                        if (sortState.userLocation && mapInstanceRef.current) {
+                                            mapInstanceRef.current.setView(
+                                                [sortState.userLocation.lat, sortState.userLocation.lng],
+                                                16,
+                                                { animate: true, duration: 1 }
+                                            );
+                                            showToast('Centrando en tu ubicación', 'info');
+                                        } else {
+                                            showToast('Ubicación no disponible', 'warning');
+                                        }
+                                    }}
+                                    className="w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 hover:shadow-2xl transition-all duration-200 flex items-center justify-center group"
+                                    title="Centrar en mi ubicación"
+                                >
+                                    <Icon
+                                        name="mapPin"
+                                        size={26}
+                                        className="text-blue-600 group-hover:text-blue-700 transition-colors drop-shadow-md"
+                                    />
+                                </button>
                             </div>
-                        </button>
+                        </div>
                     </>
                 )}
             </div>

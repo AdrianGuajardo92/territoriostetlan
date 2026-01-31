@@ -43,6 +43,14 @@ const formatTeamNames = (names, isMobile = false) => {
   return names.join(', ');
 };
 
+// Helper para extraer el número del territorio
+const extractTerritoryNumber = (name) => {
+  if (!name) return '?';
+  // Buscar números en el nombre (ej: "Territorio 6" → "6", "T-14" → "14")
+  const match = name.match(/\d+/);
+  return match ? match[0] : name.charAt(0).toUpperCase();
+};
+
 // OPTIMIZACIÓN FASE 2: TerritoryCard memoizada para evitar re-renders ⚡
 const TerritoryCard = memo(({ territory, onSelect }) => {
   // 🔄 PASO 15: Memoizar detectores de estado para evitar recálculos
@@ -185,125 +193,108 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
         border-2 ${config.borderColor} ${config.hoverBorder}
         rounded-2xl overflow-hidden
         shadow-lg ${config.hoverShadow}
-        hover:shadow-2xl hover:scale-[1.01] 
+        hover:shadow-2xl hover:scale-[1.01]
         active:scale-[0.99]
         transition-all duration-300 ease-out
         touch-feedback btn-premium animate-premium-fade-scale micro-interact glow-effect
-        p-0
       `}
     >
-      {/* Encabezado con gradiente */}
-      <div className="relative px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-gray-100">
-        <div className="flex items-center justify-between gap-2">
-          {/* Nombre del territorio con icono */}
-          <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <div className={`${config.iconBg} p-2 rounded-xl shadow-sm group-hover:shadow-md transition-shadow`}>
-              <Icon 
-                name={config.mainIcon} 
-                size={20} 
-                className={config.iconColor}
-              />
+      {/* Layout de dos columnas */}
+      <div className="flex">
+        {/* Columna izquierda - Número del territorio */}
+        <div className={`${config.iconBg} flex items-center justify-center px-4 py-4 min-w-[70px]`}>
+          <span className={`text-3xl font-bold ${config.iconColor}`}>
+            {extractTerritoryNumber(territory.name)}
+          </span>
+        </div>
+
+        {/* Columna derecha - Contenido */}
+        <div className="flex-1 flex flex-col">
+          {/* Header con badges */}
+          <div className="px-3 py-2 bg-white/40 border-b border-gray-100/50">
+            <div className="flex items-center justify-between gap-2">
+              {/* Badge de direcciones */}
+              {territory.addressCount !== undefined && territory.addressCount > 0 && (
+                <div className={`${config.addressBadgeBg} px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-sm`}>
+                  <Icon
+                    name="home"
+                    size={14}
+                    className={config.addressBadgeIcon}
+                  />
+                  <span className={`text-xs font-medium ${config.addressBadgeText}`}>
+                    {territory.addressCount}
+                  </span>
+                </div>
+              )}
+
+              {/* Estado badge */}
+              <div className={`${config.statusBg} px-3 py-1 rounded-full flex items-center space-x-1.5 shadow-sm ml-auto`}>
+                <div className={`w-2 h-2 rounded-full ${config.statusDot} ${normalizedStatus === 'En uso' ? 'animate-pulse' : ''}`}></div>
+                <span className={`text-xs font-medium ${config.statusText}`}>
+                  {normalizedStatus === 'En uso' ? 'Predicando' : normalizedStatus}
+                </span>
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-gray-800 truncate flex-1">
-              {territory.name}
-            </h3>
           </div>
-          
-          {/* Badge de direcciones */}
-          {territory.addressCount !== undefined && territory.addressCount > 0 && (
-            <div className={`${config.addressBadgeBg} px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-sm`}>
-              <Icon 
-                name="home" 
-                size={14} 
-                className={config.addressBadgeIcon}
-              />
-              <span className={`text-xs font-medium ${config.addressBadgeText}`}>
-                {territory.addressCount}
-              </span>
-            </div>
-          )}
-          
-          {/* 🔄 PASO 9: Estado badge sin indicador de equipo */}
-          <div className="flex items-center space-x-2">
-            {/* Estado badge compacto */}
-            <div className={`${config.statusBg} px-3 py-1 rounded-full flex items-center space-x-1.5 shadow-sm`}>
-              <div className={`w-2 h-2 rounded-full ${config.statusDot} ${normalizedStatus === 'En uso' ? 'animate-pulse' : ''}`}></div>
-              <span className={`text-xs font-medium ${config.statusText}`}>
-                {normalizedStatus === 'En uso' ? 'Predicando' : normalizedStatus}
-              </span>
-            </div>
+
+          {/* Contenido principal */}
+          <div className="px-3 py-2 space-y-1.5 flex-1">
+            {/* Persona responsable */}
+            {responsibleInfo && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5 min-w-0">
+                  <Icon
+                    name="user"
+                    size={14}
+                    className="text-gray-400 flex-shrink-0"
+                  />
+                  <span className="text-xs text-gray-500">
+                    {normalizedStatus === 'Completado' ? 'Por' : 'Asignado'}:
+                  </span>
+                </div>
+
+                <span
+                  className={`${config.badgeBg} ${config.badgeText} px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm truncate max-w-[140px]`}
+                  title={responsibleInfo.isTeam && isMobile ? responsibleInfo.fullDisplayName : undefined}
+                >
+                  {responsibleInfo.displayName}
+                </span>
+              </div>
+            )}
+
+            {/* Fecha relevante */}
+            {relevantDate && normalizedStatus !== 'Disponible' && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <Icon
+                    name="calendar"
+                    size={14}
+                    className="text-gray-400"
+                  />
+                  <span className="text-xs text-gray-500">
+                    {normalizedStatus === 'Completado' ? 'Fecha' : 'Desde'}:
+                  </span>
+                </div>
+                <span className="text-xs font-medium text-gray-600">
+                  {formatRelativeTime(relevantDate)}
+                </span>
+              </div>
+            )}
+
+            {/* Call to action para territorio disponible */}
+            {normalizedStatus === 'Disponible' && (
+              <div className="pt-1">
+                <p className="text-xs text-center text-emerald-600 font-medium">
+                  ¡Listo para asignar!
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Contenido principal */}
-      <div className="px-4 py-3 space-y-2">
-        {/* 🔄 PASO 9: Persona responsable con soporte para equipos */}
-        {responsibleInfo && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 flex-1 min-w-0">
-              <Icon 
-                name="user" 
-                size={16} 
-                className="text-gray-400 flex-shrink-0"
-              />
-              <span className="text-sm text-gray-600 truncate">
-                {normalizedStatus === 'Completado' 
-                  ? 'Completado por'
-                  : 'Asignado a'
-                }:
-              </span>
-            </div>
-            
-            <div className="flex items-center space-x-2 ml-2">
-              {/* 🔄 PASO 9: Badge principal con nombres y tooltip */}
-              <span 
-                className={`${config.badgeBg} ${config.badgeText} px-3 py-1 rounded-full text-sm font-medium shadow-sm`}
-                title={responsibleInfo.isTeam && isMobile ? responsibleInfo.fullDisplayName : undefined}
-              >
-                {responsibleInfo.displayName}
-              </span>
-              
-
-            </div>
-          </div>
-        )}
-
-        {/* Fecha relevante - SOLO para territorios NO disponibles */}
-        {relevantDate && normalizedStatus !== 'Disponible' && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Icon 
-                name="calendar" 
-                size={16} 
-                className="text-gray-400"
-              />
-              <span className="text-sm text-gray-600">
-                {normalizedStatus === 'Completado' ? 'Completado' : 
-                 normalizedStatus === 'En uso' ? 'Asignado' : 
-                 'Última vez'}:
-              </span>
-            </div>
-            <span className="text-sm font-medium text-gray-700">
-              {formatRelativeTime(relevantDate)}
-            </span>
-          </div>
-        )}
-
-
-
-        {/* Call to action para territorio disponible - TODOS los disponibles */}
-        {normalizedStatus === 'Disponible' && (
-          <div className="pt-2 mt-2 border-t border-gray-100">
-            <p className="text-xs text-center text-emerald-600 font-medium">
-              ¡Listo para asignar!
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Barra de acento inferior con animación */}
-      <div 
+      {/* Barra de acento inferior */}
+      <div
         className="h-1 w-full bg-gradient-to-r opacity-75 group-hover:opacity-100 transition-opacity"
         style={{
           backgroundImage: `linear-gradient(to right, ${config.accentColor}, ${config.accentColor}dd)`
@@ -313,12 +304,12 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
       {/* Overlay sutil en hover */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-      {/* Icono de flecha en hover (más sutil) */}
+      {/* Icono de flecha en hover */}
       <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-70 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
         <div className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md">
-          <Icon 
-            name="chevronRight" 
-            size={16} 
+          <Icon
+            name="chevronRight"
+            size={16}
             className="text-gray-600"
           />
         </div>

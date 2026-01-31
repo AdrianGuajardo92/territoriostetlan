@@ -8,7 +8,6 @@ import { LazyStatsModal } from './LazyModals'; // CORRECCIÓN: Usar lazy loading
 import { LazyUserManagementModal as UserManagementModal } from './LazyModals';
 import UserListModal from './UserListModal';
 import ExportAddressesModal from './ExportAddressesModal';
-import CampaignModal from './CampaignModal';
 import TerritoryManagementModal from './TerritoryManagementModal';
 import ArchivedAddressesPortal from '../admin/ArchivedAddressesPortal';
 
@@ -49,10 +48,7 @@ const AdminModal = (props = {}) => {
   
   // Estado para el modal de exportación de direcciones
   const [showExportAddressesModal, setShowExportAddressesModal] = useState(false);
-  
-  // Estado para el modal de campañas
-  const [showCampaignModal, setShowCampaignModal] = useState(false);
-  
+
   // Estado para el modal de gestión de territorios
   const [showTerritoryManagementModal, setShowTerritoryManagementModal] = useState(false);
 
@@ -139,14 +135,6 @@ const AdminModal = (props = {}) => {
       // Resetear el estado de ArchivedAddresses cuando se abre AdminModal
       setShowArchivedAddresses(false);
     }
-    // else {
-    //   // Resetear todos los modales cuando se cierre AdminModal
-    //   setShowTerritoryManagementModal(false);
-    //   setShowCampaignModal(false);
-    //   setShowUserManagement(false);
-    //   setShowStatsModal(false);
-    //   setShowExportAddressesModal(false);
-    // }
   }, [isOpen, currentUser]);
 
   // Funciones de backup
@@ -335,14 +323,6 @@ const AdminModal = (props = {}) => {
       icon: 'fas fa-users-cog',
       color: 'blue',
       action: () => setView('users')
-    },
-    {
-      id: 'campaigns',
-      title: 'Gestión de Campañas',
-      description: 'Campañas especiales',
-      icon: 'fas fa-flag',
-      color: 'purple',
-      action: () => setShowCampaignModal(true)
     },
     {
       id: 'territories',
@@ -1704,12 +1684,6 @@ const AdminModal = (props = {}) => {
         onExportSimplified={handleExportAddressesSimplified}
       />
 
-      {/* Modal de Gestión de Campañas */}
-      <CampaignModal
-        isOpen={showCampaignModal}
-        onClose={() => setShowCampaignModal(false)}
-      />
-      
       {/* Modal de Gestión de Territorios */}
       <TerritoryManagementModal 
         isOpen={showTerritoryManagementModal}

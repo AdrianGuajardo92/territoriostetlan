@@ -50,7 +50,6 @@ export const AppProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [territoryHistory, setTerritoryHistory] = useState([]); // Agregar estado para historial
-  const [campaigns, setCampaigns] = useState([]); // Estado para campañas especiales
   const [isLoading, setIsLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [adminEditMode, setAdminEditMode] = useState(false);
@@ -1213,198 +1212,6 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // 🎯 CAMPAIGN MANAGEMENT FUNCTIONS
-  const createCampaign = async (campaignData) => {
-    try {
-      const campaignRef = await addDoc(collection(db, 'campaigns'), {
-        ...campaignData,
-        createdAt: serverTimestamp(),
-        createdBy: currentUser?.id
-      });
-      
-      showToast('Campaña creada exitosamente', 'success');
-      return campaignRef.id;
-    } catch (error) {
-      console.error('Error creating campaign:', error);
-      showToast('Error al crear la campaña', 'error');
-      throw error;
-    }
-  };
-
-  const updateCampaign = async (campaignId, updates) => {
-    try {
-      await updateDoc(doc(db, 'campaigns', campaignId), {
-        ...updates,
-        updatedAt: serverTimestamp(),
-        updatedBy: currentUser?.id
-      });
-      
-      showToast('Campaña actualizada exitosamente', 'success');
-    } catch (error) {
-      console.error('Error updating campaign:', error);
-      showToast('Error al actualizar la campaña', 'error');
-      throw error;
-    }
-  };
-
-  const deleteCampaign = async (campaignId) => {
-    try {
-      await deleteDoc(doc(db, 'campaigns', campaignId));
-      showToast('Campaña eliminada exitosamente', 'success');
-    } catch (error) {
-      console.error('Error deleting campaign:', error);
-      showToast('Error al eliminar la campaña', 'error');
-      throw error;
-    }
-  };
-
-  const finalizeCampaign = async (campaignId) => {
-    try {
-      await updateDoc(doc(db, 'campaigns', campaignId), {
-        status: 'completada',
-        completedAt: serverTimestamp(),
-        completedBy: currentUser?.id
-      });
-      
-      showToast('Campaña finalizada exitosamente', 'success');
-    } catch (error) {
-      console.error('Error finalizing campaign:', error);
-      showToast('Error al finalizar la campaña', 'error');
-      throw error;
-    }
-  };
-
-  const getCampaignAssignments = (campaignId) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    if (!campaign) return [];
-    
-    const userId = currentUser?.id;
-    if (!userId) return [];
-    
-    // Si es admin, ver todas las asignaciones
-    if (currentUser?.role === 'admin') {
-      return campaign.assignments || [];
-    }
-    
-    // Si es publicador, ver solo sus asignaciones
-    const userAssignment = campaign.assignments?.find(a => a.userId === userId);
-    return userAssignment ? [userAssignment] : [];
-  };
-
-  // Nueva función para actualizar el progreso de una campaña
-  const updateCampaignProgress = async (campaignId, userId, completedAddresses) => {
-    try {
-      const campaign = campaigns.find(c => c.id === campaignId);
-      if (!campaign) return;
-
-      // Actualizar las asignaciones con el progreso
-      const updatedAssignments = campaign.assignments.map(assignment => {
-        if (assignment.userId === userId) {
-          return {
-            ...assignment,
-            completedAddresses: completedAddresses,
-            completedCount: completedAddresses.length
-          };
-        }
-        return assignment;
-      });
-
-      // Actualizar en Firebase
-      await updateDoc(doc(db, 'campaigns', campaignId), {
-        assignments: updatedAssignments,
-        lastUpdated: serverTimestamp()
-      });
-
-    } catch (error) {
-      console.error('Error updating campaign progress:', error);
-      throw error;
-    }
-  };
-
-  // Nueva función para transferir una dirección entre usuarios en una campaña
-  const transferCampaignAddress = async (campaignId, addressId, fromUserId, toUserId) => {
-    try {
-      const campaign = campaigns.find(c => c.id === campaignId);
-      if (!campaign) {
-        throw new Error('Campaña no encontrada');
-      }
-      
-      if (!campaign.assignments) {
-        throw new Error('La campaña no tiene asignaciones');
-      }
-
-      // Clonar las asignaciones para evitar mutaciones
-      let updatedAssignments = [...campaign.assignments];
-      
-      // Encontrar y actualizar la asignación del usuario origen
-      const fromUserIndex = updatedAssignments.findIndex(a => a.userId === fromUserId);
-      if (fromUserIndex === -1) {
-        throw new Error('Usuario origen no encontrado en las asignaciones');
-      }
-      
-      // Verificar que la dirección existe en el usuario origen
-      const fromAssignment = updatedAssignments[fromUserIndex];
-      if (!fromAssignment.addressIds.includes(addressId)) {
-        throw new Error('La dirección no está asignada al usuario origen');
-      }
-      
-      // Remover la dirección del usuario origen
-      const updatedFromAddressIds = fromAssignment.addressIds.filter(id => id !== addressId);
-      const updatedFromCompleted = (fromAssignment.completedAddresses || []).filter(id => id !== addressId);
-      
-      updatedAssignments[fromUserIndex] = {
-        ...fromAssignment,
-        addressIds: updatedFromAddressIds,
-        addressCount: updatedFromAddressIds.length,
-        completedAddresses: updatedFromCompleted,
-        completedCount: updatedFromCompleted.length
-      };
-      
-      // Encontrar o crear la asignación del usuario destino
-      const toUserIndex = updatedAssignments.findIndex(a => a.userId === toUserId);
-      
-      if (toUserIndex !== -1) {
-        // Usuario destino ya tiene asignaciones
-        const toAssignment = updatedAssignments[toUserIndex];
-        const updatedToAddressIds = [...toAssignment.addressIds, addressId];
-        
-        updatedAssignments[toUserIndex] = {
-          ...toAssignment,
-          addressIds: updatedToAddressIds,
-          addressCount: updatedToAddressIds.length
-        };
-      } else {
-        // Usuario destino no tiene asignaciones, crear nueva
-        const toUser = users.find(u => u.id === toUserId);
-        if (!toUser) {
-          throw new Error('Usuario destino no encontrado');
-        }
-        
-        updatedAssignments.push({
-          userId: toUserId,
-          userName: toUser.name,
-          addressIds: [addressId],
-          addressCount: 1,
-          completedAddresses: [],
-          completedCount: 0
-        });
-      }
-
-      // Actualizar en Firebase
-      await updateDoc(doc(db, 'campaigns', campaignId), {
-        assignments: updatedAssignments,
-        lastUpdated: serverTimestamp()
-      });
-
-      showToast('Dirección transferida exitosamente', 'success');
-      return true;
-    } catch (error) {
-      console.error('Error detallado en transferCampaignAddress:', error);
-      showToast(`Error al transferir: ${error.message}`, 'error');
-      throw error;
-    }
-  };
-
   const handleResetSingleTerritory = async (territoryId) => {
     try {
       const territoryDoc = await getDoc(doc(db, 'territories', territoryId));
@@ -1682,18 +1489,8 @@ export const AppProvider = ({ children }) => {
           setTerritoryHistory(historyData);
         });
 
-        // Suscripción a campañas
-        const campaignsQuery = query(collection(db, 'campaigns'), orderBy('createdAt', 'desc'));
-        const unsubCampaigns = onSnapshot(campaignsQuery, (snapshot) => {
-          const campaignsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          setCampaigns(campaignsData);
-        });
-
         // Guardar funciones de cleanup
-        unsubscribesRef.current = [unsubTerritories, unsubAddresses, unsubUsers, unsubProposals, unsubHistory, unsubCampaigns];
+        unsubscribesRef.current = [unsubTerritories, unsubAddresses, unsubUsers, unsubProposals, unsubHistory];
         
         setIsLoading(false);
       } catch (error) {
@@ -1770,7 +1567,6 @@ export const AppProvider = ({ children }) => {
     users,
     proposals,
     territoryHistory, // Agregar territoryHistory al contexto
-    campaigns, // Campañas especiales
     isLoading,
     authLoading,
     CURRENT_VERSION: appVersion, // Ahora es dinámico desde version.json
@@ -1828,16 +1624,7 @@ export const AppProvider = ({ children }) => {
     // ✅ NUEVO: Funciones para manejar notificaciones
     markProposalsAsRead,
     getUnreadProposalsCount,
-    getPendingProposalsCount,
-    
-    // Campaign functions
-    createCampaign,
-    updateCampaign,
-    deleteCampaign,
-    finalizeCampaign,
-    getCampaignAssignments,
-    updateCampaignProgress,
-    transferCampaignAddress
+    getPendingProposalsCount
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

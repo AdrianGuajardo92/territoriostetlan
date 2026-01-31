@@ -4,16 +4,12 @@ import { useToast } from '../hooks/useToast';
 import AddressCard from '../components/addresses/AddressCard';
 import Icon from '../components/common/Icon';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import CampaignAssignmentView from '../components/campaigns/CampaignAssignmentView';
 
 const MyStudiesAndRevisitsView = ({ onBack }) => {
-  const { currentUser, addresses, territories, handleUpdateAddress, campaigns } = useApp();
+  const { currentUser, addresses, territories, handleUpdateAddress } = useApp();
   const { showToast } = useToast();
-  const [filter, setFilter] = useState('studies'); // 'studies', 'revisits', 'campaign'
+  const [filter, setFilter] = useState('studies'); // 'studies', 'revisits'
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, address: null, type: null });
-  
-  // Verificar si hay campañas activas
-  const hasActiveCampaign = campaigns?.some(c => c.status === 'active');
 
   // Filtrar y procesar las direcciones confirmadas del usuario
   const { studies, revisits, totalItems } = useMemo(() => {
@@ -61,34 +57,24 @@ const MyStudiesAndRevisitsView = ({ onBack }) => {
 
   // Configuración de filtros elegantes
   const filterOptions = [
-    { 
-      id: 'studies', 
-      label: 'Estudios', 
+    {
+      id: 'studies',
+      label: 'Estudios',
       count: studies.length,
       colors: {
         inactive: 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100',
         active: 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200'
       }
     },
-    { 
-      id: 'revisits', 
-      label: 'Revisitas', 
+    {
+      id: 'revisits',
+      label: 'Revisitas',
       count: revisits.length,
       colors: {
         inactive: 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100',
         active: 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-200'
       }
-    },
-    ...(hasActiveCampaign ? [{
-      id: 'campaign',
-      label: 'Campaña Especial',
-      count: '!', // Indicador especial
-      colors: {
-        inactive: 'bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600 border-purple-200 hover:from-purple-100 hover:to-pink-100',
-        active: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-600 shadow-lg shadow-purple-300'
-      },
-      isSpecial: true
-    }] : [])
+    }
   ];
 
   // Obtener direcciones según el filtro seleccionado
@@ -208,10 +194,8 @@ const MyStudiesAndRevisitsView = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Vista de campaña o lista de direcciones */}
-        {filter === 'campaign' ? (
-          <CampaignAssignmentView />
-        ) : filteredAddresses.length === 0 ? (
+        {/* Lista de direcciones */}
+        {filteredAddresses.length === 0 ? (
           <div className="flex items-center justify-center py-16">
             <div className="text-center max-w-md">
               <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl ${

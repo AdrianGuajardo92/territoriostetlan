@@ -57,13 +57,22 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
     return [assignedTo];
   };
 
-  // Calcular días desde una fecha
-  const formatDaysSince = (date) => {
+  // Calcular días desde una fecha - formato: hoy, ayer, hace X días
+  const formatDaysSince = (date, isCompleted = false) => {
     if (!date) return null;
     const jsDate = date?.toDate ? date.toDate() : new Date(date);
     const days = Math.floor((new Date() - jsDate) / (1000 * 60 * 60 * 24));
-    const isAlert = days >= 15; // Alerta a partir de 15 días
-    const text = `${days} día${days !== 1 ? 's' : ''}`;
+    const isAlert = !isCompleted && days >= 15; // Alerta solo para en uso, a partir de 15 días
+
+    let text;
+    if (days === 0) {
+      text = 'Hoy';
+    } else if (days === 1) {
+      text = 'Ayer';
+    } else {
+      text = `${days} días`;
+    }
+
     return { days, text, isAlert };
   };
 
@@ -325,15 +334,19 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                 const config = statusConfig[status];
                 const territoryNumber = territory.name.match(/\d+/)?.[0] || '?';
 
-                // Obtener nombres asignados (puede ser string o array)
-                const assignedNames = getAssignedNames(territory.assignedTo);
-                const assignedDisplayName = assignedNames.length > 0
-                  ? (assignedNames.length === 1
-                    ? abbreviateName(assignedNames[0])
-                    : `${abbreviateName(assignedNames[0])} +${assignedNames.length - 1}`)
-                  : null;
-                const daysSince = formatDaysSince(territory.assignedDate);
-                const hasAssignmentInfo = status === 'En uso' && assignedNames.length > 0;
+                // Determinar qué info mostrar según el estado
+                const isEnUso = status === 'En uso';
+                const isCompletado = status === 'Completado';
+
+                // Para "En uso": mostrar días desde asignación
+                const daysSinceAssigned = isEnUso ? formatDaysSince(territory.assignedDate) : null;
+
+                // Para "Completado": mostrar días desde completado
+                const completedDate = territory.completedDate || territory.terminadoDate;
+                const daysSinceCompleted = isCompletado ? formatDaysSince(completedDate, true) : null;
+
+                // Mostrar info adicional si es En uso o Completado
+                const hasExtraInfo = isEnUso || isCompletado;
 
                 return (
                   <div
@@ -345,32 +358,31 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                       border-2 ${isSelected ? `${config.borderSelected} border-4 shadow-lg scale-105` : config.border}
                       ${config.bg}
                       hover:shadow-md hover:scale-102
-                      ${hasAssignmentInfo ? 'py-2' : 'aspect-square'}
                     `}
-                    style={{ minWidth: '70px', minHeight: hasAssignmentInfo ? '90px' : '70px' }}
+                    style={{ width: '80px', height: '80px' }}
                   >
                     {/* Número de territorio */}
                     <span className={`text-2xl font-bold ${config.text}`}>
                       {territoryNumber}
                     </span>
 
-                    {/* Info de asignación para territorios en uso */}
-                    {hasAssignmentInfo && (
-                      <div className="flex flex-col items-center mt-1">
-                        <span className="text-xs font-medium text-gray-700 truncate max-w-[70px]">
-                          {assignedDisplayName}
-                        </span>
-                        {daysSince && (
-                          <span className={`text-xs flex items-center gap-0.5 ${
-                            daysSince.isAlert ? 'text-red-600 font-bold' : 'text-gray-500'
-                          }`}>
-                            {daysSince.text}
-                            {daysSince.isAlert && (
-                              <Icon name="alertTriangle" size={10} className="text-red-600" />
-                            )}
-                          </span>
+                    {/* Info para territorios EN USO - Solo días */}
+                    {isEnUso && daysSinceAssigned && (
+                      <span className={`text-xs flex items-center gap-0.5 mt-0.5 ${
+                        daysSinceAssigned.isAlert ? 'text-red-600 font-bold' : 'text-gray-600'
+                      }`}>
+                        {daysSinceAssigned.text}
+                        {daysSinceAssigned.isAlert && (
+                          <Icon name="alertTriangle" size={10} className="text-red-600" />
                         )}
-                      </div>
+                      </span>
+                    )}
+
+                    {/* Info para territorios COMPLETADOS - Cuándo se terminó */}
+                    {isCompletado && daysSinceCompleted && (
+                      <span className="text-xs text-gray-600 mt-0.5">
+                        {daysSinceCompleted.text}
+                      </span>
                     )}
 
                     {/* Indicador de check cuando está seleccionado */}
@@ -384,9 +396,9 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
                     )}
 
                     {/* Indicador pequeño de estado (solo para disponibles) */}
-                    {!hasAssignmentInfo && (
+                    {status === 'Disponible' && (
                       <div
-                        className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full"
+                        className="absolute bottom-1.5 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full"
                         style={{ backgroundColor: config.accent }}
                       />
                     )}
