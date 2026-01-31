@@ -54,7 +54,8 @@
       "mcp__stitch__get_project",
       "mcp__stitch__get_screen",
       "WebFetch(domain:contribution.usercontent.google.com)",
-      "WebFetch(domain:lh3.googleusercontent.com)"
+      "WebFetch(domain:lh3.googleusercontent.com)",
+      "Bash(netlify:*)"
     ],
     "deny": [],
     "ask": []

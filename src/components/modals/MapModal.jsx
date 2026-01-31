@@ -1078,32 +1078,8 @@ const TerritoryMapModal = ({
                         )}
                         <div ref={mapRef} className="w-full h-full" style={{ touchAction: 'manipulation' }} />
                         
-                        {/* ✅ TRACKING: Panel de controles de ubicación con indicador GPS */}
+                        {/* ✅ TRACKING: Panel de controles de ubicación */}
                         <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
-                            {/* Indicador de estado GPS - Solo visible cuando está obteniendo o hay error */}
-                            {sortState.sortOrder === 'optimized' && (sortState.gpsStatus === 'acquiring' || sortState.gpsStatus === 'error') && (
-                                <div
-                                    className={`px-3 py-1.5 rounded-full text-xs font-medium shadow-lg border flex items-center gap-1.5 transition-all ${
-                                        sortState.gpsStatus === 'acquiring'
-                                            ? 'bg-yellow-100 text-yellow-700 border-yellow-300 animate-pulse'
-                                            : 'bg-red-100 text-red-700 border-red-300'
-                                    }`}
-                                >
-                                    <div
-                                        className={`w-2 h-2 rounded-full ${
-                                            sortState.gpsStatus === 'acquiring'
-                                                ? 'bg-yellow-500 animate-ping'
-                                                : 'bg-red-500'
-                                        }`}
-                                    />
-                                    <span>
-                                        {sortState.gpsStatus === 'acquiring'
-                                            ? 'Obteniendo GPS...'
-                                            : 'Error GPS'}
-                                    </span>
-                                </div>
-                            )}
-
                             {/* Contenedor de botones */}
                             <div className="flex flex-col gap-2">
                                 {/* Botón de actualización forzada - Solo visible con ruta optimizada */}
