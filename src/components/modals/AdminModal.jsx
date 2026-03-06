@@ -12,7 +12,11 @@ import TerritoryManagementModal from './TerritoryManagementModal';
 import ArchivedAddressesPortal from '../admin/ArchivedAddressesPortal';
 
 const AdminModal = (props = {}) => {
-  const { isOpen = false, onClose = () => {} } = props;
+  const {
+    isOpen = false,
+    onClose = () => {},
+    initialView = 'actions'
+  } = props;
   const {
     currentUser,
     territories,
@@ -131,11 +135,11 @@ const AdminModal = (props = {}) => {
 
   useEffect(() => {
     if (isOpen) {
-      setView(currentUser?.role === 'admin' ? 'actions' : 'no_access');
+      setView(currentUser?.role === 'admin' ? initialView : 'no_access');
       // Resetear el estado de ArchivedAddresses cuando se abre AdminModal
       setShowArchivedAddresses(false);
     }
-  }, [isOpen, currentUser]);
+  }, [currentUser, initialView, isOpen]);
 
   // Funciones de backup
   const handleBackupAddressesAndTerritories = async () => {

@@ -163,7 +163,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             onMouseLeave={(event) => {
               event.currentTarget.style.backgroundColor = '#34495e';
             }}
-            aria-label="Abrir menÃº"
+                    aria-label={'Abrir men\u00fa'}
           >
             <svg className="w-5 h-5" fill="none" stroke="#FFFFFF" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />

@@ -689,6 +689,43 @@ export const LazyMyStudiesAndRevisitsView = ({ ...props }) => {
   return <Component {...props} />;
 };
 
+export const LazyCampaignsView = ({ ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('../../pages/CampaignsView'),
+    [true]
+  );
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-8 max-w-md shadow-lg">
+          <p className="text-red-600 text-center mb-4">Error al cargar Campañas e Invitaciones</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Recargar página
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="fixed inset-0 z-50">
+        <BootScreen
+          phase="campaigns"
+          subtitle="Preparando campañas e invitaciones."
+          announceMount={false}
+        />
+      </div>
+    );
+  }
+
+  return <Component {...props} />;
+};
+
 export default {
   LazyStatsModal,
   LazyAdminModal,
@@ -706,5 +743,6 @@ export default {
   LazyMyProposalsView,
   LazyTerritoryDetailView,
   LazyTerritoriesView,
+  LazyCampaignsView,
   LazyMyStudiesAndRevisitsView
 }; 

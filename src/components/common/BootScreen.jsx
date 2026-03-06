@@ -5,6 +5,7 @@ const PHASE_LABELS = {
   auth: 'Verificando sesion',
   territories: 'Cargando territorios',
   addresses: 'Cargando territorios',
+  campaigns: 'Cargando campañas',
   secondary: 'Sincronizando datos',
   ready: 'Abriendo aplicacion',
   error: 'Error al iniciar'
@@ -14,6 +15,7 @@ const PHASE_HINTS = {
   auth: 'Validando tu sesion guardada.',
   territories: 'Preparando la lista principal de territorios.',
   addresses: 'Preparando direcciones y detalle base.',
+  campaigns: 'Preparando campañas e invitaciones.',
   secondary: 'Cargando usuarios, propuestas e historial.',
   ready: 'Todo esta listo.',
   error: 'No se pudo completar el arranque.'
