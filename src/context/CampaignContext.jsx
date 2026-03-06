@@ -11,9 +11,13 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
+  getDocs,
   onSnapshot,
+  query,
   serverTimestamp,
   updateDoc,
+  where,
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -36,6 +40,11 @@ const buildLookup = (items = []) => items.reduce((accumulator, item) => {
   accumulator[item.id] = item;
   return accumulator;
 }, {});
+
+const mapSnapshotDocs = (snapshot) => snapshot.docs.map((itemDoc) => ({
+  id: itemDoc.id,
+  ...itemDoc.data()
+}));
 
 export const useCampaigns = () => {
   const context = useContext(CampaignContext);
@@ -67,6 +76,47 @@ export const CampaignProvider = ({ children }) => {
   );
   const territoryMap = useMemo(() => buildTerritoryMap(territories), [territories]);
   const usersById = useMemo(() => buildLookup(users), [users]);
+
+  const resolveCampaign = useCallback(async (campaignId, options = {}) => {
+    const preferLatest = options.preferLatest === true;
+
+    if (!campaignId) {
+      return null;
+    }
+
+    if (!preferLatest) {
+      const localCampaign = campaigns.find((item) => item.id === campaignId);
+      if (localCampaign) {
+        return localCampaign;
+      }
+    }
+
+    const campaignSnapshot = await getDoc(doc(db, 'campaigns', campaignId));
+    if (!campaignSnapshot.exists()) {
+      return null;
+    }
+
+    return {
+      id: campaignSnapshot.id,
+      ...campaignSnapshot.data()
+    };
+  }, [campaigns]);
+
+  const resolveCampaignItems = useCallback(async (collectionName, campaignId, localItems = [], options = {}) => {
+    const preferLatest = options.preferLatest === true;
+    const localMatches = localItems.filter((item) => item.campaignId === campaignId);
+
+    if (!preferLatest && localMatches.length > 0) {
+      return localMatches;
+    }
+
+    const snapshot = await getDocs(query(
+      collection(db, collectionName),
+      where('campaignId', '==', campaignId)
+    ));
+
+    return mapSnapshotDocs(snapshot);
+  }, []);
 
   const resetCampaignState = useCallback(() => {
     setCampaigns([]);
@@ -263,7 +313,7 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Solo los administradores pueden actualizar campañas.');
     }
 
-    const campaign = campaigns.find((item) => item.id === campaignId);
+    const campaign = await resolveCampaign(campaignId);
     if (!campaign) {
       throw new Error('No se encontro la campaña seleccionada.');
     }
@@ -291,14 +341,14 @@ export const CampaignProvider = ({ children }) => {
       name: normalizedUpdates.name,
       territories: normalizedUpdates.sourceTerritoryIds.length
     });
-  }, [campaigns, isAdmin, logCampaignActivity, normalizeCampaignPayload]);
+  }, [isAdmin, logCampaignActivity, normalizeCampaignPayload, resolveCampaign]);
 
   const handleSaveCampaignStructure = useCallback(async (campaignId, structure) => {
     if (!isAdmin) {
       throw new Error('Solo los administradores pueden editar participantes.');
     }
 
-    const campaign = campaigns.find((item) => item.id === campaignId);
+    const campaign = await resolveCampaign(campaignId);
     if (!campaign) {
       throw new Error('No se encontro la campaña seleccionada.');
     }
@@ -423,14 +473,14 @@ export const CampaignProvider = ({ children }) => {
       groupCount: normalizedGroups.length
     });
     showToast('Participantes y grupos guardados', 'success');
-  }, [campaignGroups, campaignParticipants, campaigns, isAdmin, logCampaignActivity, showToast, usersById]);
+  }, [campaignGroups, campaignParticipants, isAdmin, logCampaignActivity, resolveCampaign, showToast, usersById]);
 
-  const handleGenerateCampaignAssignments = useCallback(async (campaignId) => {
+  const handleGenerateCampaignAssignments = useCallback(async (campaignId, options = {}) => {
     if (!isAdmin) {
       throw new Error('Solo los administradores pueden generar asignaciones.');
     }
 
-    const campaign = campaigns.find((item) => item.id === campaignId);
+    const campaign = await resolveCampaign(campaignId, options);
     if (!campaign) {
       throw new Error('No se encontro la campaña seleccionada.');
     }
@@ -445,8 +495,12 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('La campaña no tiene direcciones disponibles para asignar.');
     }
 
-    const campaignSpecificParticipants = campaignParticipants
-      .filter((participant) => participant.campaignId === campaignId)
+    const campaignSpecificParticipants = (await resolveCampaignItems(
+      'campaignParticipants',
+      campaignId,
+      campaignParticipants,
+      options
+    ))
       .map(normalizeParticipantConfig)
       .filter((participant) => participant.isEnabled);
 
@@ -454,9 +508,19 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Debes agregar al menos una persona antes de generar la campaña.');
     }
 
-    const campaignSpecificGroups = campaignGroups.filter((group) => group.campaignId === campaignId);
+    const campaignSpecificGroups = await resolveCampaignItems(
+      'campaignGroups',
+      campaignId,
+      campaignGroups,
+      options
+    );
     const groupsById = buildLookup(campaignSpecificGroups);
-    const existingAssignments = campaignAssignments.filter((assignment) => assignment.campaignId === campaignId);
+    const existingAssignments = await resolveCampaignItems(
+      'campaignAssignments',
+      campaignId,
+      campaignAssignments,
+      options
+    );
     const preservedAssignments = existingAssignments.filter(
       (assignment) => assignment.manualLocked || assignment.status !== CAMPAIGN_PROGRESS_STATUSES.PENDING
     );
@@ -528,14 +592,25 @@ export const CampaignProvider = ({ children }) => {
     });
 
     showToast('Asignacion automatica generada correctamente', 'success');
-  }, [addresses, campaignAssignments, campaignGroups, campaignParticipants, campaigns, isAdmin, logCampaignActivity, showToast, territoryMap]);
+  }, [
+    addresses,
+    campaignAssignments,
+    campaignGroups,
+    campaignParticipants,
+    isAdmin,
+    logCampaignActivity,
+    resolveCampaign,
+    resolveCampaignItems,
+    showToast,
+    territoryMap
+  ]);
 
-  const handleActivateCampaign = useCallback(async (campaignId) => {
+  const handleActivateCampaign = useCallback(async (campaignId, options = {}) => {
     if (!isAdmin) {
       throw new Error('Solo los administradores pueden activar campañas.');
     }
 
-    const campaign = campaigns.find((item) => item.id === campaignId);
+    const campaign = await resolveCampaign(campaignId, options);
     if (!campaign) {
       throw new Error('No se encontro la campaña seleccionada.');
     }
@@ -553,7 +628,13 @@ export const CampaignProvider = ({ children }) => {
       addresses,
       territoryMap
     });
-    const assignmentCount = campaignAssignments.filter((assignment) => assignment.campaignId === campaignId).length;
+    const campaignSpecificAssignments = await resolveCampaignItems(
+      'campaignAssignments',
+      campaignId,
+      campaignAssignments,
+      options
+    );
+    const assignmentCount = campaignSpecificAssignments.length;
 
     if (candidateAddresses.length === 0) {
       throw new Error('La campaña no tiene direcciones disponibles para activar.');
@@ -574,7 +655,17 @@ export const CampaignProvider = ({ children }) => {
     });
 
     showToast('Campaña activada correctamente', 'success');
-  }, [addresses, campaignAssignments, campaigns, isAdmin, logCampaignActivity, showToast, territoryMap]);
+  }, [
+    addresses,
+    campaignAssignments,
+    campaigns,
+    isAdmin,
+    logCampaignActivity,
+    resolveCampaign,
+    resolveCampaignItems,
+    showToast,
+    territoryMap
+  ]);
 
   const handleCompleteCampaign = useCallback(async (campaignId) => {
     if (!isAdmin) {

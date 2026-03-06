@@ -30,6 +30,7 @@ import {
   LazyInstallModal,
   LazyUpdatesModal
 } from './components/modals/LazyModals';
+import { CAMPAIGN_PROGRESS_STATUSES } from './utils/campaignUtils';
 
 
 
@@ -50,6 +51,7 @@ function AppContent() {
   } = useApp();
   const {
     activeCampaign,
+    activeCampaignAssignments,
     myPendingCampaignAssignmentsCount
   } = useCampaigns();
   const { showToast } = useToast();
@@ -69,6 +71,13 @@ function AppContent() {
   const [isAppInstalled, setIsAppInstalled] = useState(
     () => window.matchMedia('(display-mode: standalone)').matches
   );
+
+  const activeCampaignCompletedCount = activeCampaignAssignments.filter(
+    (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+  ).length;
+  const activeCampaignProgressLabel = activeCampaign
+    ? `${activeCampaign.name} · ${activeCampaignCompletedCount}/${activeCampaignAssignments.length || 0} completadas`
+    : 'Sin campaña activa';
 
 
 
@@ -317,9 +326,11 @@ function AppContent() {
       view: 'campaigns',
       hasBadge: !!activeCampaign && myPendingCampaignAssignmentsCount > 0,
       badgeCount: myPendingCampaignAssignmentsCount,
-      description: currentUser?.role === 'admin'
-        ? 'Administrar la campa\u00f1a y ver tus invitaciones'
-        : 'Ver tus invitaciones asignadas'
+      description: activeCampaign
+        ? `Activa: ${activeCampaignProgressLabel}`
+        : (currentUser?.role === 'admin'
+          ? 'Administrar campañas y revisar el avance'
+          : 'Ver tus direcciones asignadas')
     },
     {
       id: 'myProposals',

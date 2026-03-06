@@ -347,7 +347,7 @@ export const getCampaignStatusMeta = (status) => {
   }
 
   return {
-    label: 'Borrador',
+    label: 'Pendiente de activar',
     badgeClass: 'bg-amber-100 text-amber-700 border-amber-200'
   };
 };
