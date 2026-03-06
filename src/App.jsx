@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { ToastProvider, useToast } from './hooks/useToast';
 import './utils/errorLogger'; // Inicializar el sistema de captura de errores
 import LoginView from './components/auth/LoginView';
+import BootScreen from './components/common/BootScreen';
 import MobileMenu from './components/common/MobileMenu';
-import LoadingSpinner from './components/common/LoadingSpinner';
+import { markBoot } from './utils/bootMetrics';
 // import { UpdateNotification } from './components/common/UpdateNotification'; // 🔧 TEMPORALMENTE DESACTIVADO
 
 // 🚀 PÁGINAS LAZY - CODE SPLITTING MÍTICO 100% ⚡
@@ -12,7 +13,8 @@ import {
   LazyTerritoriesView,
   LazyTerritoryDetailView,
   LazyMyProposalsView,
-  LazyMyStudiesAndRevisitsView
+  LazyMyStudiesAndRevisitsView,
+  preloadPrimaryViews
 } from './components/modals/LazyModals';
 
 // CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
@@ -33,20 +35,25 @@ function AppContent() {
   const { 
     currentUser, 
     authLoading, 
-    proposals, 
+    bootstrap,
+    territoriesLoading,
+    addressesLoading,
+    interactiveReady,
+    secondaryDataLoading,
     logout, 
     territories, 
-    adminEditMode, 
-    handleToggleAdminMode,
+    retryBootstrap,
     userNotificationsCount, // ✅ NUEVO: Contador de notificaciones del usuario
     pendingProposalsCount // ✅ NUEVO: Contador de propuestas pendientes para admin
   } = useApp();
   const { showToast } = useToast();
+  const hasMarkedTerritoriesPaintRef = useRef(false);
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [showMyProposals, setShowMyProposals] = useState(false);
   const [showMyStudiesAndRevisits, setShowMyStudiesAndRevisits] = useState(false);
+  const [primaryViewsReady, setPrimaryViewsReady] = useState(false);
   
   // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -443,10 +450,86 @@ function AppContent() {
     }
   };
 
+  useEffect(() => {
+    if (!currentUser) {
+      hasMarkedTerritoriesPaintRef.current = false;
+      return;
+    }
 
+    if (interactiveReady && primaryViewsReady && !hasMarkedTerritoriesPaintRef.current) {
+      hasMarkedTerritoriesPaintRef.current = true;
+      window.requestAnimationFrame(() => {
+        markBoot('boot:territories-painted');
+      });
+    }
+  }, [currentUser, interactiveReady, primaryViewsReady]);
 
-  if (authLoading) {
-    return <LoadingSpinner fullScreen />;
+  useEffect(() => {
+    let isActive = true;
+
+    if (!currentUser?.id) {
+      setPrimaryViewsReady(false);
+      return () => {
+        isActive = false;
+      };
+    }
+
+    setPrimaryViewsReady(false);
+
+    preloadPrimaryViews()
+      .then(() => {
+        if (isActive) {
+          setPrimaryViewsReady(true);
+        }
+      })
+      .catch((error) => {
+        console.error('[preload:primary-views]', error);
+        if (isActive) {
+          setPrimaryViewsReady(true);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser?.id]);
+
+  const hasCriticalBootstrapError =
+    bootstrap.phase === 'error' &&
+    ['auth', 'territories', 'addresses'].includes(bootstrap.error?.scope);
+
+  const shouldShowBootScreen =
+    authLoading ||
+    (currentUser && (!interactiveReady || !primaryViewsReady)) ||
+    (hasCriticalBootstrapError && (!currentUser || territories.length === 0));
+
+  const bootPhase =
+    hasCriticalBootstrapError
+      ? 'error'
+      : currentUser
+        ? 'territories'
+        : bootstrap.phase;
+
+  const bootSubtitle =
+    hasCriticalBootstrapError
+      ? bootstrap.error?.message
+      : currentUser
+        ? (
+          addressesLoading
+            ? 'Preparando territorios, direcciones y detalle base.'
+            : 'Preparando la vista principal para entrar sin esperas.'
+        )
+        : null;
+
+  if (shouldShowBootScreen) {
+    return (
+      <BootScreen
+        phase={bootPhase}
+        error={bootstrap.error}
+        subtitle={bootSubtitle}
+        onRetry={retryBootstrap}
+      />
+    );
   }
 
   if (!currentUser) {
@@ -455,6 +538,23 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {bootstrap.error && currentUser && (
+        <div className="sticky top-0 z-40 px-4 pt-3">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 shadow-sm">
+            <div>
+              <p className="text-sm font-semibold">Carga parcial</p>
+              <p className="text-xs sm:text-sm">{bootstrap.error.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={retryBootstrap}
+              className="shrink-0 rounded-xl bg-amber-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-950"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sistema de Actualizaciones Automáticas */}
       {/* <UpdateNotification /> */} {/* 🔧 TEMPORALMENTE DESACTIVADO PARA TESTING */}

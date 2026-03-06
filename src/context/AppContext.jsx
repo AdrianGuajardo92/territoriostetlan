@@ -15,11 +15,47 @@ import {
   getDocs,
   writeBatch
 } from 'firebase/firestore';
-import { db, storage } from '../config/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db } from '../config/firebase';
 import { useToast } from '../hooks/useToast';
+import { flushBootSummary, markBoot, resetBootMetrics } from '../utils/bootMetrics';
 
 const AppContext = createContext();
+const AUTH_VALIDATION_TIMEOUT_MS = 4000;
+const BOOT_SCOPE_LABELS = {
+  auth: 'la sesion',
+  territories: 'los territorios',
+  addresses: 'las direcciones',
+  users: 'los usuarios',
+  proposals: 'las propuestas',
+  history: 'el historial'
+};
+
+const buildSessionUser = (id, userData) => ({
+  id,
+  accessCode: userData.accessCode,
+  name: userData.name,
+  role: userData.role || 'user',
+  ...userData
+});
+
+const withTimeout = (promise, timeoutMs, onTimeout) => new Promise((resolve, reject) => {
+  const timeoutId = setTimeout(() => reject(onTimeout()), timeoutMs);
+
+  promise
+    .then((value) => {
+      clearTimeout(timeoutId);
+      resolve(value);
+    })
+    .catch((error) => {
+      clearTimeout(timeoutId);
+      reject(error);
+    });
+});
+
+const createBootstrapError = (scope, error) => ({
+  scope,
+  message: error?.message || `No se pudo cargar ${BOOT_SCOPE_LABELS[scope] || 'los datos'}.`
+});
 
 export const testFirebaseConnection = async () => {
   try {
@@ -50,8 +86,16 @@ export const AppProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [territoryHistory, setTerritoryHistory] = useState([]); // Agregar estado para historial
-  const [isLoading, setIsLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
+  const [territoriesLoading, setTerritoriesLoading] = useState(true);
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  const [secondaryDataLoading, setSecondaryDataLoading] = useState(false);
+  const [bootstrapPhase, setBootstrapPhase] = useState('auth');
+  const [bootstrapError, setBootstrapError] = useState(null);
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
+  const [shouldLoadAddresses, setShouldLoadAddresses] = useState(false);
+  const [shouldLoadSecondary, setShouldLoadSecondary] = useState(false);
+  const [hasAddressesSnapshot, setHasAddressesSnapshot] = useState(false);
   const [adminEditMode, setAdminEditMode] = useState(false);
 
   // ✅ NUEVO: Estados para notificaciones
@@ -59,10 +103,125 @@ export const AppProvider = ({ children }) => {
   const [pendingProposalsCount, setPendingProposalsCount] = useState(0);
 
   // Referencias para cleanup
-  const unsubscribesRef = useRef([]);
+  const territoriesUnsubscribeRef = useRef(null);
+  const addressesUnsubscribeRef = useRef(null);
+  const secondaryUnsubscribesRef = useRef([]);
+  const hasMarkedTerritoriesSnapshotRef = useRef(false);
+  const hasMarkedSecondaryReadyRef = useRef(false);
   
   // CORRECCIÓN: Mover useToast DENTRO del componente
   const { showToast } = useToast();
+
+  const interactiveReady = useMemo(() => {
+    if (bootstrapError && ['auth', 'territories', 'addresses'].includes(bootstrapError.scope)) {
+      return false;
+    }
+
+    if (!currentUser?.id) {
+      return !authLoading;
+    }
+
+    return !authLoading && !territoriesLoading && !addressesLoading;
+  }, [addressesLoading, authLoading, bootstrapError, currentUser?.id, territoriesLoading]);
+
+  const bootstrap = useMemo(() => ({
+    phase: bootstrapPhase,
+    error: bootstrapError,
+    territoriesLoading,
+    addressesLoading,
+    secondaryDataLoading,
+    interactiveReady
+  }), [addressesLoading, bootstrapError, bootstrapPhase, interactiveReady, territoriesLoading, secondaryDataLoading]);
+
+  const clearTerritoriesSubscription = useCallback(() => {
+    if (typeof territoriesUnsubscribeRef.current === 'function') {
+      territoriesUnsubscribeRef.current();
+      territoriesUnsubscribeRef.current = null;
+    }
+  }, []);
+
+  const clearAddressesSubscription = useCallback(() => {
+    if (typeof addressesUnsubscribeRef.current === 'function') {
+      addressesUnsubscribeRef.current();
+      addressesUnsubscribeRef.current = null;
+    }
+  }, []);
+
+  const clearSecondarySubscriptions = useCallback(() => {
+    secondaryUnsubscribesRef.current.forEach((unsubscribe) => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    });
+    secondaryUnsubscribesRef.current = [];
+  }, []);
+
+  const clearAllSubscriptions = useCallback(() => {
+    clearTerritoriesSubscription();
+    clearAddressesSubscription();
+    clearSecondarySubscriptions();
+  }, [clearAddressesSubscription, clearSecondarySubscriptions, clearTerritoriesSubscription]);
+
+  const resetLoadedData = useCallback(() => {
+    setTerritories([]);
+    setAddresses([]);
+    setPublishers([]);
+    setUsers([]);
+    setProposals([]);
+    setTerritoryHistory([]);
+    setUserNotificationsCount(0);
+    setPendingProposalsCount(0);
+    setShouldLoadAddresses(false);
+    setShouldLoadSecondary(false);
+    setHasAddressesSnapshot(false);
+  }, []);
+
+  const resetBootProgress = useCallback(() => {
+    hasMarkedTerritoriesSnapshotRef.current = false;
+    hasMarkedSecondaryReadyRef.current = false;
+  }, []);
+
+  const failBootstrap = useCallback((scope, error, options = {}) => {
+    const failure = createBootstrapError(scope, error);
+
+    console.error(`[bootstrap:${scope}]`, error);
+    setBootstrapError(failure);
+    setBootstrapPhase('error');
+
+    if (options.stopTerritories !== false) {
+      setTerritoriesLoading(false);
+    }
+
+    if (options.stopAddresses !== false) {
+      setAddressesLoading(false);
+    }
+
+    if (options.stopSecondary !== false) {
+      setSecondaryDataLoading(false);
+    }
+
+    if (options.showToast !== false) {
+      showToast(failure.message, 'error');
+    }
+
+    return failure;
+  }, [showToast]);
+
+  const retryBootstrap = useCallback(() => {
+    clearAllSubscriptions();
+    resetLoadedData();
+    resetBootProgress();
+    resetBootMetrics();
+    setBootstrapError(null);
+    setBootstrapPhase('auth');
+    setAuthLoading(true);
+    setTerritoriesLoading(true);
+    setAddressesLoading(true);
+    setSecondaryDataLoading(false);
+    setBootstrapAttempt((prev) => prev + 1);
+    markBoot('boot:start');
+    markBoot('boot:react-mounted');
+  }, [clearAllSubscriptions, resetBootProgress, resetLoadedData]);
 
   // Estado para la versión dinámica
   const [appVersion, setAppVersion] = useState('2.15.3'); // Valor por defecto limpio sin logs
@@ -125,21 +284,27 @@ export const AppProvider = ({ children }) => {
       }
 
       // Login exitoso - crear sesión personalizada
-      const user = {
-        id: userDoc.id,
-        accessCode: userData.accessCode,
-        name: userData.name,
-        role: userData.role || 'user',
-        ...userData
-      };
+      const user = buildSessionUser(userDoc.id, userData);
 
       
       
       // Guardar usuario en sessionStorage para persistencia
       sessionStorage.setItem('currentUser', JSON.stringify(user));
       
+      clearAllSubscriptions();
+      resetLoadedData();
+      resetBootProgress();
+      resetBootMetrics();
+      markBoot('boot:start');
+      markBoot('boot:react-mounted');
+      setBootstrapError(null);
+      setBootstrapPhase('territories');
+      setTerritoriesLoading(true);
+      setAddressesLoading(true);
+      setSecondaryDataLoading(false);
       setCurrentUser(user);
       setAuthLoading(false);
+      markBoot('boot:auth-resolved');
       
       return { 
         success: true, 
@@ -158,24 +323,22 @@ export const AppProvider = ({ children }) => {
   const logout = async () => {
     try {
       // Limpiar listeners de Firebase
-      unsubscribesRef.current.forEach(unsubscribe => {
-        if (typeof unsubscribe === 'function') {
-          unsubscribe();
-        }
-      });
-      unsubscribesRef.current = [];
+      clearAllSubscriptions();
       
       // Limpiar sessionStorage
       sessionStorage.removeItem('currentUser');
       
       // Resetear estados
+      resetLoadedData();
+      resetBootProgress();
       setCurrentUser(null);
-      setTerritories([]);
-      setAddresses([]);
-      setPublishers([]);
-      setUsers([]);
-      setProposals([]);
       setAdminEditMode(false);
+      setBootstrapError(null);
+      setBootstrapPhase('ready');
+      setAuthLoading(false);
+      setTerritoriesLoading(false);
+      setAddressesLoading(false);
+      setSecondaryDataLoading(false);
       
 
     } catch (error) {
@@ -1357,9 +1520,456 @@ export const AppProvider = ({ children }) => {
     // return () => clearInterval(versionInterval);
   }, []); // Solo se ejecuta una vez al montar
 
+  useEffect(() => {
+    let isActive = true;
+
+    const initializeAuthBootstrap = async () => {
+      setBootstrapError(null);
+      setBootstrapPhase('auth');
+      setSecondaryDataLoading(false);
+
+      try {
+        const savedUser = sessionStorage.getItem('currentUser');
+
+        if (!savedUser) {
+          if (!isActive) return;
+
+          clearAllSubscriptions();
+          resetLoadedData();
+          setCurrentUser(null);
+          setTerritoriesLoading(false);
+          setAddressesLoading(false);
+          setAuthLoading(false);
+          setBootstrapPhase('ready');
+          markBoot('boot:auth-resolved');
+          flushBootSummary();
+          return;
+        }
+
+        const parsedUser = JSON.parse(savedUser);
+
+        if (!parsedUser?.id) {
+          throw new Error('La sesion guardada no es valida.');
+        }
+
+        if (!isActive) return;
+
+        setCurrentUser(parsedUser);
+        setTerritoriesLoading(true);
+        setAddressesLoading(true);
+        setAuthLoading(false);
+        setBootstrapPhase('territories');
+        markBoot('boot:auth-resolved');
+
+        try {
+          const timeoutFactory = () => {
+            const timeoutError = new Error('La validacion de la sesion tardo demasiado.');
+            timeoutError.code = 'bootstrap/auth-timeout';
+            return timeoutError;
+          };
+
+          const userDoc = await withTimeout(
+            getDoc(doc(db, 'users', parsedUser.id)),
+            AUTH_VALIDATION_TIMEOUT_MS,
+            timeoutFactory
+          );
+
+          if (!isActive) return;
+
+          if (!userDoc.exists()) {
+            sessionStorage.removeItem('currentUser');
+            clearAllSubscriptions();
+            resetLoadedData();
+            setCurrentUser(null);
+            setTerritoriesLoading(false);
+            setAddressesLoading(false);
+            setBootstrapPhase('ready');
+            flushBootSummary();
+            return;
+          }
+
+          const freshUser = buildSessionUser(userDoc.id, userDoc.data());
+          setCurrentUser((prevUser) => (
+            prevUser?.id === freshUser.id
+              ? { ...prevUser, ...freshUser }
+              : freshUser
+          ));
+          sessionStorage.setItem('currentUser', JSON.stringify(freshUser));
+        } catch (error) {
+          if (!isActive) return;
+
+          if (error?.code === 'bootstrap/auth-timeout') {
+            console.warn('[bootstrap:auth] Timeout validando sesion guardada. Se continua con la sesion local.');
+            return;
+          }
+
+          sessionStorage.removeItem('currentUser');
+          clearAllSubscriptions();
+          resetLoadedData();
+          setCurrentUser(null);
+          setTerritoriesLoading(false);
+          setAddressesLoading(false);
+          setAuthLoading(false);
+          failBootstrap('auth', error, {
+            stopTerritories: true,
+            stopAddresses: true,
+            stopSecondary: true,
+            showToast: false
+          });
+          flushBootSummary();
+        }
+      } catch (error) {
+        if (!isActive) return;
+
+        sessionStorage.removeItem('currentUser');
+        clearAllSubscriptions();
+        resetLoadedData();
+        setCurrentUser(null);
+        setTerritoriesLoading(false);
+        setAddressesLoading(false);
+        setAuthLoading(false);
+        failBootstrap('auth', error, {
+          stopTerritories: true,
+          stopAddresses: true,
+          stopSecondary: true,
+          showToast: false
+        });
+        flushBootSummary();
+      }
+    };
+
+    initializeAuthBootstrap();
+
+    return () => {
+      isActive = false;
+    };
+  }, [bootstrapAttempt, clearAllSubscriptions, failBootstrap, resetLoadedData]);
+
+  useEffect(() => {
+    clearTerritoriesSubscription();
+    clearAddressesSubscription();
+    clearSecondarySubscriptions();
+
+    if (!currentUser?.id) {
+      setShouldLoadAddresses(false);
+      setShouldLoadSecondary(false);
+      setTerritoriesLoading(false);
+      setAddressesLoading(false);
+      setSecondaryDataLoading(false);
+      return undefined;
+    }
+
+    let isActive = true;
+    let hasFirstSnapshot = false;
+
+    setTerritoriesLoading(true);
+    setAddressesLoading(true);
+    setSecondaryDataLoading(false);
+    setShouldLoadAddresses(false);
+    setShouldLoadSecondary(false);
+    setHasAddressesSnapshot(false);
+    setBootstrapPhase('territories');
+    setBootstrapError(null);
+
+    const territoriesQuery = query(collection(db, 'territories'), orderBy('name'));
+    const unsubscribe = onSnapshot(
+      territoriesQuery,
+      (snapshot) => {
+        if (!isActive) return;
+
+        const territoriesData = snapshot.docs.map((territoryDoc) => ({
+          id: territoryDoc.id,
+          ...territoryDoc.data()
+        }));
+
+        setTerritories(territoriesData);
+        setTerritoriesLoading(false);
+
+        if (!hasFirstSnapshot) {
+          hasFirstSnapshot = true;
+
+          if (!hasMarkedTerritoriesSnapshotRef.current) {
+            markBoot('boot:territories-first-snapshot');
+            hasMarkedTerritoriesSnapshotRef.current = true;
+          }
+
+          setBootstrapPhase('addresses');
+          setShouldLoadAddresses(true);
+        }
+      },
+      (error) => {
+        if (!isActive) return;
+
+        setShouldLoadAddresses(false);
+        setShouldLoadSecondary(false);
+        failBootstrap('territories', error, {
+          stopTerritories: true,
+          stopAddresses: true,
+          stopSecondary: true
+        });
+        flushBootSummary();
+      }
+    );
+
+    territoriesUnsubscribeRef.current = unsubscribe;
+
+    return () => {
+      isActive = false;
+      if (territoriesUnsubscribeRef.current === unsubscribe) {
+        unsubscribe();
+        territoriesUnsubscribeRef.current = null;
+      }
+    };
+  }, [
+    bootstrapAttempt,
+    clearAddressesSubscription,
+    clearSecondarySubscriptions,
+    clearTerritoriesSubscription,
+    currentUser?.id,
+    failBootstrap
+  ]);
+
+  useEffect(() => {
+    clearAddressesSubscription();
+
+    if (!currentUser?.id) {
+      setAddressesLoading(false);
+      setShouldLoadSecondary(false);
+      return undefined;
+    }
+
+    if (!shouldLoadAddresses) {
+      return undefined;
+    }
+
+    let isActive = true;
+    let hasFirstSnapshot = false;
+
+    setAddressesLoading(true);
+    setBootstrapPhase((prevPhase) => (prevPhase === 'error' ? prevPhase : 'addresses'));
+
+    const addressesQuery = query(collection(db, 'addresses'), orderBy('address'));
+    const unsubscribe = onSnapshot(
+      addressesQuery,
+      (snapshot) => {
+        if (!isActive) return;
+
+        const addressesData = snapshot.docs.map((addressDoc) => ({
+          id: addressDoc.id,
+          ...addressDoc.data()
+        }));
+
+        setAddresses(addressesData);
+        setHasAddressesSnapshot(true);
+
+        if (!hasFirstSnapshot) {
+          hasFirstSnapshot = true;
+          setAddressesLoading(false);
+          setBootstrapPhase((prevPhase) => (prevPhase === 'error' ? prevPhase : 'ready'));
+          setShouldLoadSecondary(true);
+        }
+      },
+      (error) => {
+        if (!isActive) return;
+
+        setHasAddressesSnapshot(false);
+        setShouldLoadSecondary(false);
+        failBootstrap('addresses', error, {
+          stopTerritories: false,
+          stopAddresses: true,
+          stopSecondary: true
+        });
+        flushBootSummary();
+      }
+    );
+
+    addressesUnsubscribeRef.current = unsubscribe;
+
+    return () => {
+      isActive = false;
+      if (addressesUnsubscribeRef.current === unsubscribe) {
+        unsubscribe();
+        addressesUnsubscribeRef.current = null;
+      }
+    };
+  }, [
+    bootstrapAttempt,
+    clearAddressesSubscription,
+    currentUser?.id,
+    failBootstrap,
+    shouldLoadAddresses
+  ]);
+
+  useEffect(() => {
+    clearSecondarySubscriptions();
+
+    if (!currentUser?.id || !shouldLoadSecondary) {
+      setSecondaryDataLoading(false);
+      return undefined;
+    }
+
+    let isActive = true;
+    let hasSecondaryError = false;
+    const settledScopes = new Set();
+    const firstSnapshots = new Set();
+    const totalScopes = 3;
+
+    const settleScope = (scope, error = null) => {
+      if (!isActive || settledScopes.has(scope)) {
+        return;
+      }
+
+      settledScopes.add(scope);
+
+      if (error) {
+        hasSecondaryError = true;
+      }
+
+      if (settledScopes.size === totalScopes) {
+        setSecondaryDataLoading(false);
+
+        if (!hasMarkedSecondaryReadyRef.current) {
+          markBoot('boot:secondary-ready');
+          flushBootSummary();
+          hasMarkedSecondaryReadyRef.current = true;
+        }
+
+        setBootstrapPhase(hasSecondaryError ? 'error' : 'ready');
+      }
+    };
+
+    const markFirstSnapshot = (scope, onFirstSnapshot = () => {}) => {
+      if (firstSnapshots.has(scope)) {
+        return;
+      }
+
+      firstSnapshots.add(scope);
+      onFirstSnapshot();
+      settleScope(scope);
+    };
+
+    const handleSecondaryError = (scope, error) => {
+      if (!isActive) return;
+
+      failBootstrap(scope, error, {
+        stopTerritories: false,
+        stopAddresses: false,
+        stopSecondary: false
+      });
+      settleScope(scope, error);
+    };
+
+    setSecondaryDataLoading(true);
+
+    const usersQuery = query(collection(db, 'users'), orderBy('name'));
+    const unsubUsers = onSnapshot(
+      usersQuery,
+      (snapshot) => {
+        if (!isActive) return;
+
+        const usersData = snapshot.docs.map((userDoc) => ({
+          id: userDoc.id,
+          ...userDoc.data()
+        }));
+
+        setUsers(usersData);
+        setPublishers(usersData);
+        markFirstSnapshot('users');
+      },
+      (error) => {
+        handleSecondaryError('users', error);
+      }
+    );
+
+    let unsubProposals = () => {};
+    if (currentUser.role === 'admin') {
+      const proposalsQuery = query(collection(db, 'proposals'), orderBy('createdAt', 'desc'));
+      unsubProposals = onSnapshot(
+        proposalsQuery,
+        (snapshot) => {
+          if (!isActive) return;
+
+          const proposalsData = snapshot.docs.map((proposalDoc) => ({
+            id: proposalDoc.id,
+            ...proposalDoc.data()
+          }));
+
+          setProposals(proposalsData);
+          markFirstSnapshot('proposals');
+        },
+        (error) => {
+          handleSecondaryError('proposals', error);
+        }
+      );
+    } else {
+      const userProposalsQuery = query(
+        collection(db, 'proposals'),
+        where('proposedBy', '==', currentUser.id)
+      );
+
+      unsubProposals = onSnapshot(
+        userProposalsQuery,
+        (snapshot) => {
+          if (!isActive) return;
+
+          const proposalsData = snapshot.docs.map((proposalDoc) => ({
+            id: proposalDoc.id,
+            ...proposalDoc.data()
+          }));
+
+          proposalsData.sort((a, b) => {
+            const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+            const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+            return dateB - dateA;
+          });
+
+          setProposals(proposalsData);
+          markFirstSnapshot('proposals');
+        },
+        (error) => {
+          handleSecondaryError('proposals', error);
+        }
+      );
+    }
+
+    const historyQuery = query(collection(db, 'territoryHistory'), orderBy('assignedDate', 'desc'));
+    const unsubHistory = onSnapshot(
+      historyQuery,
+      (snapshot) => {
+        if (!isActive) return;
+
+        const historyData = snapshot.docs.map((historyDoc) => ({
+          id: historyDoc.id,
+          ...historyDoc.data()
+        }));
+
+        setTerritoryHistory(historyData);
+        markFirstSnapshot('history');
+      },
+      (error) => {
+        handleSecondaryError('history', error);
+      }
+    );
+
+    secondaryUnsubscribesRef.current = [unsubUsers, unsubProposals, unsubHistory];
+
+    return () => {
+      isActive = false;
+      clearSecondarySubscriptions();
+    };
+  }, [
+    bootstrapAttempt,
+    clearSecondarySubscriptions,
+    currentUser?.id,
+    currentUser?.role,
+    failBootstrap,
+    shouldLoadSecondary
+  ]);
+
   // 🚀 INICIALIZACIÓN Y GESTIÓN DE AUTENTICACIÓN PERSONALIZADA
   useEffect(() => {
-    const initializeAuth = async () => {
+    return undefined;
+/*
   
       setAuthLoading(true);
       
@@ -1402,10 +2012,13 @@ export const AppProvider = ({ children }) => {
     };
 
     initializeAuth();
+*/
   }, []);
 
   // 📊 SUSCRIPCIONES A DATOS DE FIREBASE
   useEffect(() => {
+    return undefined;
+/*
     if (!currentUser) {
       setIsLoading(false);
       return;
@@ -1511,6 +2124,7 @@ export const AppProvider = ({ children }) => {
       });
       unsubscribesRef.current = [];
     };
+*/
   }, [currentUser]);
 
   // ✅ NUEVO: Actualizar contadores de notificaciones
@@ -1536,6 +2150,13 @@ export const AppProvider = ({ children }) => {
 
   // 📊 CALCULAR TERRITORIOS CON CONTEO DE DIRECCIONES (OPTIMIZADO)
   const territoriesWithCount = useMemo(() => {
+    if (!hasAddressesSnapshot) {
+      return territories.map(territory => ({
+        ...territory,
+        addressCount: undefined,
+        visitedCount: undefined
+      }));
+    }
     // 🚀 PASO 15: Crear mapa de direcciones por territorio para mejor rendimiento
     const addressesByTerritory = addresses.reduce((acc, addr) => {
       if (!acc[addr.territoryId]) {
@@ -1556,7 +2177,9 @@ export const AppProvider = ({ children }) => {
         visitedCount: counts.visited
       };
     });
-  }, [territories, addresses]);
+  }, [territories, addresses, hasAddressesSnapshot]);
+
+  const isLoading = territoriesLoading;
 
   const value = {
     // State
@@ -1569,6 +2192,11 @@ export const AppProvider = ({ children }) => {
     territoryHistory, // Agregar territoryHistory al contexto
     isLoading,
     authLoading,
+    territoriesLoading,
+    addressesLoading,
+    secondaryDataLoading,
+    interactiveReady,
+    bootstrap,
     CURRENT_VERSION: appVersion, // Ahora es dinámico desde version.json
     adminEditMode,
     
@@ -1579,6 +2207,7 @@ export const AppProvider = ({ children }) => {
     // Auth functions
     login,
     logout,
+    retryBootstrap,
     updatePassword,
     
     // Territory functions

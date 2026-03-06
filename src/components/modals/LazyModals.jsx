@@ -1,5 +1,40 @@
 import React from 'react';
 import { useLazyComponent, LazyFallback } from '../../hooks/useLazyComponent';
+import BootScreen from '../common/BootScreen';
+
+const createPreloadableLoader = (importer) => {
+  let loadPromise = null;
+  let loadedComponent = null;
+
+  const load = () => {
+    if (loadedComponent) {
+      return Promise.resolve(loadedComponent);
+    }
+
+    if (!loadPromise) {
+      loadPromise = importer().then((module) => {
+        loadedComponent = module.default || module;
+        return loadedComponent;
+      });
+    }
+
+    return loadPromise;
+  };
+
+  load.getLoadedComponent = () => loadedComponent;
+
+  return load;
+};
+
+const loadTerritoriesView = createPreloadableLoader(() => import('../../pages/TerritoriesView'));
+const loadTerritoryDetailView = createPreloadableLoader(() => import('../../pages/TerritoryDetailView'));
+
+export const preloadTerritoriesView = () => loadTerritoriesView();
+export const preloadTerritoryDetailView = () => loadTerritoryDetailView();
+export const preloadPrimaryViews = () => Promise.all([
+  preloadTerritoriesView(),
+  preloadTerritoryDetailView()
+]);
 
 // OPTIMIZACIÓN: Lazy Loading para modales no críticos ⚡
 // Estos modales no se cargan hasta que realmente se necesiten
@@ -110,6 +145,44 @@ export const LazyMapModal = ({ isOpen, ...props }) => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6">
           <LazyFallback message="Cargando mapa interactivo..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component isOpen={isOpen} {...props} />;
+};
+
+// Lazy GeneralMapModal - PESADO y no crítico para la carga inicial
+export const LazyGeneralMapModal = ({ isOpen, ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('./GeneralMapModal'),
+    [isOpen]
+  );
+
+  if (!isOpen) return null;
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md">
+          <p className="text-red-600">Error al cargar mapa general</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6">
+          <LazyFallback message="Cargando mapa general..." />
         </div>
       </div>
     );
@@ -502,10 +575,12 @@ export const LazyMyProposalsView = ({ ...props }) => {
 
 // Lazy TerritoryDetailView - PESADO (25KB) - PRIORIDAD MÍTICA #2 ⚡
 export const LazyTerritoryDetailView = ({ ...props }) => {
+  const preloadedComponent = loadTerritoryDetailView.getLoadedComponent();
   const { Component, isLoading, error } = useLazyComponent(
-    () => import('../../pages/TerritoryDetailView'),
+    loadTerritoryDetailView,
     [true] // Cargar inmediatamente
   );
+  const ResolvedComponent = Component || preloadedComponent;
   
   if (error) {
     return (
@@ -523,25 +598,29 @@ export const LazyTerritoryDetailView = ({ ...props }) => {
     );
   }
 
-  if (isLoading || !Component) {
+  if (isLoading || !ResolvedComponent) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg p-8 shadow-lg">
-          <LazyFallback message="Cargando Detalle del Territorio..." />
-        </div>
+      <div className="fixed inset-0 z-50">
+        <BootScreen
+          phase="territories"
+          subtitle="Preparando el detalle del territorio."
+          announceMount={false}
+        />
       </div>
     );
   }
 
-  return <Component {...props} />;
+  return <ResolvedComponent {...props} />;
 };
 
 // Lazy TerritoriesView - MEDIANO (10KB) - PRIORIDAD MÍTICA #3 ⚡
 export const LazyTerritoriesView = ({ ...props }) => {
+  const preloadedComponent = loadTerritoriesView.getLoadedComponent();
   const { Component, isLoading, error } = useLazyComponent(
-    () => import('../../pages/TerritoriesView'),
+    loadTerritoriesView,
     [true] // Cargar inmediatamente
   );
+  const ResolvedComponent = Component || preloadedComponent;
   
   if (error) {
     return (
@@ -559,17 +638,19 @@ export const LazyTerritoriesView = ({ ...props }) => {
     );
   }
 
-  if (isLoading || !Component) {
+  if (isLoading || !ResolvedComponent) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg p-8 shadow-lg">
-          <LazyFallback message="Cargando Territorios..." />
-        </div>
+      <div className="fixed inset-0 z-50">
+        <BootScreen
+          phase="territories"
+          subtitle="Preparando la vista principal de territorios."
+          announceMount={false}
+        />
       </div>
     );
   }
 
-  return <Component {...props} />;
+  return <ResolvedComponent {...props} />;
 };
 
 // Lazy MyStudiesAndRevisitsView - MEDIANO (9.2KB) - PRIORIDAD MÍTICA #4 ⚡
@@ -614,6 +695,7 @@ export default {
   LazyProposalsModal,
   LazyS13ReportModal,
   LazyMapModal,
+  LazyGeneralMapModal,
   LazyAddressFormModal,
   LazyUserManagementModal,
   LazyPasswordModal,

@@ -151,19 +151,12 @@ select {
 
 /* CRITICAL: Optimización de performance en listas grandes */
 .territory-list {
-  contain: content;  /* Aislamiento de layout */
-  will-change: scroll-position;
-  /* OPTIMIZACIÓN FASE 2: Scroll súper suave ⚡ */
   overflow-anchor: auto;
   overscroll-behavior: contain;
 }
 
 .territory-card {
-  contain: layout;   /* Optimización de re-layouts */
-  /* OPTIMIZACIÓN FASE 2: GPU acceleration ⚡ */
-  transform: translateZ(0);
   backface-visibility: hidden;
-  will-change: transform;
 }
 
 /* OPTIMIZACIÓN FASE 2: Smooth scrolling global ⚡ */
@@ -187,10 +180,6 @@ button, [role="button"], .clickable {
 }
 
 /* OPTIMIZACIÓN FASE 2: Transitions con GPU ⚡ */
-.transition-all {
-  will-change: transform, opacity;
-}
-
 /* FASE 3: ANIMACIONES PREMIUM CON GPU ⚡ */
 
 /* Micro-animaciones suaves */
@@ -439,10 +428,6 @@ select:focus-visible {
 }
 
 /* OPTIMIZACIÓN FASE 2: Grid performance ⚡ */
-.grid {
-  contain: layout style;
-}
-
 /* Leaflet Map Styles - Ya se carga desde CDN en index.html */
 /* @import 'leaflet/dist/leaflet.css'; */
 
@@ -677,12 +662,6 @@ select:focus-visible {
 }
 
 /* Transiciones suaves para todos los elementos interactivos */
-* {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
 /* ===== ESTILOS LEAFLET PERSONALIZADOS ===== */
 
 /* Custom marker styles - Mobile First optimizados */
