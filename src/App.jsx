@@ -1,21 +1,25 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { CampaignProvider, useCampaigns } from './context/CampaignContext';
 import { ToastProvider, useToast } from './hooks/useToast';
 import './utils/errorLogger'; // Inicializar el sistema de captura de errores
 import LoginView from './components/auth/LoginView';
+import BootScreen from './components/common/BootScreen';
 import MobileMenu from './components/common/MobileMenu';
-import LoadingSpinner from './components/common/LoadingSpinner';
-// import { UpdateNotification } from './components/common/UpdateNotification'; // 🔧 TEMPORALMENTE DESACTIVADO
+import { markBoot } from './utils/bootMetrics';
+// import { UpdateNotification } from './components/common/UpdateNotification'; // ðŸ”§ TEMPORALMENTE DESACTIVADO
 
-// 🚀 PÁGINAS LAZY - CODE SPLITTING MÍTICO 100% ⚡
+// ðŸš€ PÃGINAS LAZY - CODE SPLITTING MÃTICO 100% âš¡
 import { 
   LazyTerritoriesView,
   LazyTerritoryDetailView,
   LazyMyProposalsView,
-  LazyMyStudiesAndRevisitsView
+  LazyMyStudiesAndRevisitsView,
+  LazyCampaignsView,
+  preloadPrimaryViews
 } from './components/modals/LazyModals';
 
-// CORRECCIÓN: Usar wrappers lazy optimizados en lugar de lazy imports ⚡
+// CORRECCIÃ“N: Usar wrappers lazy optimizados en lugar de lazy imports âš¡
 import { LazyPasswordModal as PasswordModal } from './components/modals/LazyModals';
 
 // Importar modales lazy optimizados
@@ -33,32 +37,42 @@ function AppContent() {
   const { 
     currentUser, 
     authLoading, 
-    proposals, 
+    bootstrap,
+    territoriesLoading,
+    addressesLoading,
+    interactiveReady,
+    secondaryDataLoading,
     logout, 
     territories, 
-    adminEditMode, 
-    handleToggleAdminMode,
-    userNotificationsCount, // ✅ NUEVO: Contador de notificaciones del usuario
-    pendingProposalsCount // ✅ NUEVO: Contador de propuestas pendientes para admin
+    retryBootstrap,
+    userNotificationsCount, // âœ… NUEVO: Contador de notificaciones del usuario
+    pendingProposalsCount // âœ… NUEVO: Contador de propuestas pendientes para admin
   } = useApp();
+  const {
+    activeCampaign,
+    myPendingCampaignAssignmentsCount
+  } = useCampaigns();
   const { showToast } = useToast();
+  const hasMarkedTerritoriesPaintRef = useRef(false);
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
+  const [showCampaigns, setShowCampaigns] = useState(false);
   const [showMyProposals, setShowMyProposals] = useState(false);
   const [showMyStudiesAndRevisits, setShowMyStudiesAndRevisits] = useState(false);
+  const [primaryViewsReady, setPrimaryViewsReady] = useState(false);
   
-  // OPTIMIZACIÓN: Font loading state para optimizar FOUT ⚡
+  // OPTIMIZACIÃ“N: Font loading state para optimizar FOUT âš¡
   const [fontsLoaded, setFontsLoaded] = useState(false);
   
-  // Detectar si la aplicación está instalada
+  // Detectar si la aplicaciÃ³n estÃ¡ instalada
   const [isAppInstalled, setIsAppInstalled] = useState(
     () => window.matchMedia('(display-mode: standalone)').matches
   );
 
 
 
-  // 🔧 TEMPORALMENTE DESACTIVADO PARA TESTING
+  // ðŸ”§ TEMPORALMENTE DESACTIVADO PARA TESTING
   // Sistema de Service Worker ESTABLE - Sin bucles
   // useEffect(() => {
   //   if ('serviceWorker' in navigator) {
@@ -80,18 +94,18 @@ function AppContent() {
             
   //           newWorker.addEventListener('statechange', () => {
   //             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-  //               console.log('✨ SW: Nueva versión lista');
-  //               showToast('Nueva versión disponible. Recarga para actualizar.', 'info', { duration: 10000 });
+  //               console.log('âœ¨ SW: Nueva versiÃ³n lista');
+  //               showToast('Nueva versiÃ³n disponible. Recarga para actualizar.', 'info', { duration: 10000 });
   //             }
   //           });
   //         });
           
   //       } catch (error) {
-  //         console.error('❌ SW: Error en registro:', error);
+  //         console.error('âŒ SW: Error en registro:', error);
   //       }
   //     };
 
-  //     // Registrar solo una vez cuando la página esté cargada
+  //     // Registrar solo una vez cuando la pÃ¡gina estÃ© cargada
   //     if (document.readyState === 'complete') {
   //     registerSW();
   //     } else {
@@ -100,7 +114,7 @@ function AppContent() {
   //   }
   // }, [showToast]);
 
-  // Función simplificada para limpiar cache
+  // FunciÃ³n simplificada para limpiar cache
   const handleClearCache = () => {
     if ('caches' in window) {
       caches.keys().then(cacheNames => {
@@ -115,7 +129,7 @@ function AppContent() {
     }
   };
 
-  // Detectar cambios en el estado de instalación de la app
+  // Detectar cambios en el estado de instalaciÃ³n de la app
   useEffect(() => {
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
     const handleChange = () => setIsAppInstalled(mediaQuery.matches);
@@ -124,13 +138,13 @@ function AppContent() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // OPTIMIZACIÓN: Detectar cuando Inter font se carga para aplicar clase
+  // OPTIMIZACIÃ“N: Detectar cuando Inter font se carga para aplicar clase
   useEffect(() => {
     if (typeof document !== 'undefined') {
       const checkInterFont = () => {
         if (document.fonts && document.fonts.check('1em Inter')) {
           setFontsLoaded(true);
-          // Aplicar clase font-inter al body cuando esté cargada
+          // Aplicar clase font-inter al body cuando estÃ© cargada
           document.body.classList.add('font-inter');
         } else {
           // Reintentar en 100ms
@@ -138,14 +152,14 @@ function AppContent() {
         }
       };
       
-      // Iniciar verificación cuando el documento esté listo
+      // Iniciar verificaciÃ³n cuando el documento estÃ© listo
       if (document.readyState === 'complete') {
         checkInterFont();
       } else {
         window.addEventListener('load', checkInterFont);
       }
       
-      // Timeout de seguridad - aplicar clase después de 3 segundos
+      // Timeout de seguridad - aplicar clase despuÃ©s de 3 segundos
       const fallbackTimeout = setTimeout(() => {
         if (!fontsLoaded) {
           setFontsLoaded(true);
@@ -160,7 +174,7 @@ function AppContent() {
     }
   }, [fontsLoaded]);
 
-  // Restaurar territorio desde sessionStorage si la app se recargó
+  // Restaurar territorio desde sessionStorage si la app se recargÃ³
   useEffect(() => {
     if (currentUser && territories.length > 0 && !selectedTerritory) {
       const lastTerritoryId = sessionStorage.getItem('lastTerritoryId');
@@ -173,7 +187,7 @@ function AppContent() {
           const territory = territories.find(t => t.id === lastTerritoryId);
           if (territory) {
             setSelectedTerritory(territory);
-            // Limpiar sessionStorage después de restaurar
+            // Limpiar sessionStorage despuÃ©s de restaurar
             sessionStorage.removeItem('lastTerritoryId');
             sessionStorage.removeItem('navigationTimestamp');
           }
@@ -186,9 +200,15 @@ function AppContent() {
     }
   }, [currentUser, territories, selectedTerritory]);
 
-  // Manejar el botón físico de volver
+  // Manejar el botÃ³n fÃ­sico de volver
   useEffect(() => {
     const handlePopState = (event) => {
+      if (showCampaigns) {
+        setShowCampaigns(false);
+        event.preventDefault();
+        return;
+      }
+
       // PRIORIDAD 1: Si hay vista de revisitas y estudios abierta, volver a lista
       if (showMyStudiesAndRevisits) {
         setShowMyStudiesAndRevisits(false);
@@ -217,62 +237,62 @@ function AppContent() {
         return;
       }
 
-      // PRIORIDAD 5: Si hay menú abierto, cerrarlo
+      // PRIORIDAD 5: Si hay menÃº abierto, cerrarlo
       if (isMenuOpen) {
         setIsMenuOpen(false);
         event.preventDefault();
         return;
       }
 
-      // PRIORIDAD 6: Si hay modal de editar dirección abierto en territorio, cerrarlo
+      // PRIORIDAD 6: Si hay modal de editar direcciÃ³n abierto en territorio, cerrarlo
       if (selectedTerritory && window.history.state?.modalType === 'edit-address-modal') {
-        // Simular el cierre del modal de editar dirección
+        // Simular el cierre del modal de editar direcciÃ³n
         const closeEvent = new CustomEvent('closeAddressFormModal');
         window.dispatchEvent(closeEvent);
         event.preventDefault();
         return;
       }
 
-      // PRIORIDAD 7: Verificar el estado del historial para determinar acción
+      // PRIORIDAD 7: Verificar el estado del historial para determinar acciÃ³n
       const currentState = event.state;
       
-      // Si tenemos un estado específico de la app, manejarlo
+      // Si tenemos un estado especÃ­fico de la app, manejarlo
       if (currentState && currentState.app === 'territorios') {
         if (currentState.level === 'territory') {
-          return; // Permitir navegación normal
+          return; // Permitir navegaciÃ³n normal
         }
         if (currentState.level === 'proposals') {
-          return; // Permitir navegación normal
+          return; // Permitir navegaciÃ³n normal
         }
         if (currentState.level === 'menu') {
-          return; // Permitir navegación normal
+          return; // Permitir navegaciÃ³n normal
         }
         if (currentState.level === 'main') {
-          return; // Permitir navegación normal
+          return; // Permitir navegaciÃ³n normal
         }
       }
 
-      // PRIORIDAD 8: Si hay historial disponible, permitir navegación normal  
+      // PRIORIDAD 8: Si hay historial disponible, permitir navegaciÃ³n normal  
       if (window.history.length > 1) {
-        return; // Permitir navegación normal hacia atrás
+        return; // Permitir navegaciÃ³n normal hacia atrÃ¡s
       }
 
-      // PRIORIDAD 9: Solo mostrar confirmación si realmente no hay a dónde volver
+      // PRIORIDAD 9: Solo mostrar confirmaciÃ³n si realmente no hay a dÃ³nde volver
       event.preventDefault();
       
-      const shouldExit = window.confirm('¿Quieres salir de la aplicación?');
+      const shouldExit = window.confirm('\u00bfQuieres salir de la aplicaci\u00f3n?');
       if (shouldExit) {
         // Cerrar ventana
         window.close();
       } else {
-        // Si no quiere salir, mantener en la misma página
+        // Si no quiere salir, mantener en la misma pÃ¡gina
         window.history.pushState({ app: 'territorios', level: 'main' }, '', window.location.href);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeModal, isMenuOpen, selectedTerritory, showMyProposals, showMyStudiesAndRevisits]);
+  }, [activeModal, isMenuOpen, selectedTerritory, showCampaigns, showMyProposals, showMyStudiesAndRevisits]);
 
   // Menu items configuration
   const menuItems = [
@@ -291,6 +311,17 @@ function AppContent() {
       description: 'Ver tus asignaciones confirmadas'
     },
     {
+      id: 'campaigns',
+      text: 'Campa\u00f1as e Invitaciones',
+      icon: 'mail',
+      view: 'campaigns',
+      hasBadge: !!activeCampaign && myPendingCampaignAssignmentsCount > 0,
+      badgeCount: myPendingCampaignAssignmentsCount,
+      description: currentUser?.role === 'admin'
+        ? 'Administrar la campa\u00f1a y ver tus invitaciones'
+        : 'Ver tus invitaciones asignadas'
+    },
+    {
       id: 'myProposals',
       text: 'Mis Propuestas',
       icon: 'edit',
@@ -301,7 +332,7 @@ function AppContent() {
     },
     {
       id: 'admin',
-      text: 'Administración',
+      text: 'Administraci\u00f3n',
       icon: 'settings',
       modal: 'admin',
       hasBadge: currentUser?.role === 'admin' && pendingProposalsCount > 0,
@@ -310,7 +341,7 @@ function AppContent() {
     },
     {
       id: 'password',
-      text: 'Cambiar Contraseña',
+      text: 'Cambiar Contrase\u00f1a',
       icon: 'key',
       modal: 'password',
       description: 'Actualizar credenciales'
@@ -325,30 +356,35 @@ function AppContent() {
     },
     {
       id: 'logout',
-      text: 'Cerrar Sesión',
+      text: 'Cerrar Sesi\u00f3n',
       icon: 'logOut',
       isLogout: true
     }
   ];
 
-  // Filtrar items según el rol y estado de instalación
+  // Filtrar items segÃºn el rol y estado de instalaciÃ³n
   const filteredMenuItems = menuItems.filter(item => {
     if (item.id === 'admin' && currentUser?.role !== 'admin') return false;
     if (item.id === 'myProposals' && currentUser?.role === 'admin') return false;
     // Permitir "Mis Revisitas y Estudios" para todos los usuarios (incluyendo admin)
     if (item.adminOnly && currentUser?.role !== 'admin') return false; // Filtrar items solo para admin
-    // Ocultar botón de instalación si la app ya está instalada
+    // Ocultar botÃ³n de instalaciÃ³n si la app ya estÃ¡ instalada
     if (item.id === 'install' && isAppInstalled) return false;
     return true;
   });
 
   const handleOpenModal = (modalId) => {
-    // CERRAR EL MENÚ cuando se abre cualquier modal
+    // CERRAR EL MENÃš cuando se abre cualquier modal
     if (isMenuOpen) {
       setIsMenuOpen(false);
     }
     
-    // Manejar navegación a vistas especiales
+    // Manejar navegaciÃ³n a vistas especiales
+    if (modalId === 'campaigns') {
+      handleOpenCampaigns();
+      return;
+    }
+
     if (modalId === 'proposals') {
       handleOpenMyProposals();
       return;
@@ -360,17 +396,17 @@ function AppContent() {
     }
     
     setActiveModal(modalId);
-    // El historial ahora lo maneja automáticamente useModalHistory
+    // El historial ahora lo maneja automÃ¡ticamente useModalHistory
   };
 
   const handleCloseModal = () => {
     setActiveModal(null);
-    // El historial ahora lo maneja automáticamente useModalHistory
+    // El historial ahora lo maneja automÃ¡ticamente useModalHistory
   };
 
   const handleSelectTerritory = (territory, addressIdToHighlight = null) => {
     setSelectedTerritory({...territory, highlightedAddressId: addressIdToHighlight});
-    // Agregar entrada específica al historial para el territorio
+    // Agregar entrada especÃ­fica al historial para el territorio
     window.history.pushState({ 
       app: 'territorios', 
       level: 'territory', 
@@ -381,7 +417,7 @@ function AppContent() {
 
   const handleBackFromTerritory = () => {
     setSelectedTerritory(null);
-    // Si el estado actual es un territorio, navegar hacia atrás
+    // Si el estado actual es un territorio, navegar hacia atrÃ¡s
     if (window.history.state?.level === 'territory') {
       window.history.back();
     }
@@ -390,10 +426,10 @@ function AppContent() {
   const handleOpenMyProposals = () => {
     setShowMyProposals(true);
     
-    // ✅ NUEVO: Marcar propuestas como leídas usando la función del contexto
-    // (Esto se maneja automáticamente en MyProposalsView.jsx)
+    // âœ… NUEVO: Marcar propuestas como leÃ­das usando la funciÃ³n del contexto
+    // (Esto se maneja automÃ¡ticamente en MyProposalsView.jsx)
     
-    // Agregar entrada específica al historial
+    // Agregar entrada especÃ­fica al historial
     window.history.pushState({ 
       app: 'territorios', 
       level: 'proposals'
@@ -402,8 +438,24 @@ function AppContent() {
 
   const handleBackFromMyProposals = () => {
     setShowMyProposals(false);
-    // Si el estado actual es propuestas, navegar hacia atrás
+    // Si el estado actual es propuestas, navegar hacia atrÃ¡s
     if (window.history.state?.level === 'proposals') {
+      window.history.back();
+    }
+  };
+
+  const handleOpenCampaigns = () => {
+    setShowCampaigns(true);
+
+    window.history.pushState({
+      app: 'territorios',
+      level: 'campaigns'
+    }, '', window.location.href);
+  };
+
+  const handleBackFromCampaigns = () => {
+    setShowCampaigns(false);
+    if (window.history.state?.level === 'campaigns') {
       window.history.back();
     }
   };
@@ -411,7 +463,7 @@ function AppContent() {
   const handleOpenMyStudiesAndRevisits = () => {
     setShowMyStudiesAndRevisits(true);
     
-    // Agregar entrada específica al historial
+    // Agregar entrada especÃ­fica al historial
     window.history.pushState({ 
       app: 'territorios', 
       level: 'studiesAndRevisits'
@@ -420,13 +472,13 @@ function AppContent() {
 
   const handleBackFromMyStudiesAndRevisits = () => {
     setShowMyStudiesAndRevisits(false);
-    // Si el estado actual es estudios y revisitas, navegar hacia atrás
+    // Si el estado actual es estudios y revisitas, navegar hacia atrÃ¡s
     if (window.history.state?.level === 'studiesAndRevisits') {
       window.history.back();
     }
   };
 
-  // Manejar apertura del menú
+  // Manejar apertura del menÃº
   const handleOpenMenu = () => {
     setIsMenuOpen(true);
     window.history.pushState({
@@ -435,7 +487,7 @@ function AppContent() {
     }, '', window.location.href);
   };
 
-  // Manejar cierre del menú
+  // Manejar cierre del menÃº
   const handleCloseMenu = () => {
     setIsMenuOpen(false);
     if (window.history.state?.level === 'menu') {
@@ -443,10 +495,86 @@ function AppContent() {
     }
   };
 
+  useEffect(() => {
+    if (!currentUser) {
+      hasMarkedTerritoriesPaintRef.current = false;
+      return;
+    }
 
+    if (interactiveReady && primaryViewsReady && !hasMarkedTerritoriesPaintRef.current) {
+      hasMarkedTerritoriesPaintRef.current = true;
+      window.requestAnimationFrame(() => {
+        markBoot('boot:territories-painted');
+      });
+    }
+  }, [currentUser, interactiveReady, primaryViewsReady]);
 
-  if (authLoading) {
-    return <LoadingSpinner fullScreen />;
+  useEffect(() => {
+    let isActive = true;
+
+    if (!currentUser?.id) {
+      setPrimaryViewsReady(false);
+      return () => {
+        isActive = false;
+      };
+    }
+
+    setPrimaryViewsReady(false);
+
+    preloadPrimaryViews()
+      .then(() => {
+        if (isActive) {
+          setPrimaryViewsReady(true);
+        }
+      })
+      .catch((error) => {
+        console.error('[preload:primary-views]', error);
+        if (isActive) {
+          setPrimaryViewsReady(true);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser?.id]);
+
+  const hasCriticalBootstrapError =
+    bootstrap.phase === 'error' &&
+    ['auth', 'territories', 'addresses'].includes(bootstrap.error?.scope);
+
+  const shouldShowBootScreen =
+    authLoading ||
+    (currentUser && (!interactiveReady || !primaryViewsReady)) ||
+    (hasCriticalBootstrapError && (!currentUser || territories.length === 0));
+
+  const bootPhase =
+    hasCriticalBootstrapError
+      ? 'error'
+      : currentUser
+        ? 'territories'
+        : bootstrap.phase;
+
+  const bootSubtitle =
+    hasCriticalBootstrapError
+      ? bootstrap.error?.message
+      : currentUser
+        ? (
+          addressesLoading
+            ? 'Preparando territorios, direcciones y detalle base.'
+            : 'Preparando la vista principal para entrar sin esperas.'
+        )
+        : null;
+
+  if (shouldShowBootScreen) {
+    return (
+      <BootScreen
+        phase={bootPhase}
+        error={bootstrap.error}
+        subtitle={bootSubtitle}
+        onRetry={retryBootstrap}
+      />
+    );
   }
 
   if (!currentUser) {
@@ -455,12 +583,33 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {bootstrap.error && currentUser && (
+        <div className="sticky top-0 z-40 px-4 pt-3">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 shadow-sm">
+            <div>
+              <p className="text-sm font-semibold">Carga parcial</p>
+              <p className="text-xs sm:text-sm">{bootstrap.error.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={retryBootstrap}
+              className="shrink-0 rounded-xl bg-amber-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-950"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Sistema de Actualizaciones Automáticas */}
-      {/* <UpdateNotification /> */} {/* 🔧 TEMPORALMENTE DESACTIVADO PARA TESTING */}
+      {/* Sistema de Actualizaciones AutomÃ¡ticas */}
+      {/* <UpdateNotification /> */} {/* ðŸ”§ TEMPORALMENTE DESACTIVADO PARA TESTING */}
 
       {/* Vista principal */}
-      {showMyStudiesAndRevisits ? (
+      {showCampaigns ? (
+        <LazyCampaignsView
+          onBack={handleBackFromCampaigns}
+        />
+      ) : showMyStudiesAndRevisits ? (
         <LazyMyStudiesAndRevisitsView
           onBack={handleBackFromMyStudiesAndRevisits}
         />
@@ -480,7 +629,7 @@ function AppContent() {
         />
       )}
 
-      {/* Menú móvil */}
+      {/* MenÃº mÃ³vil */}
       <MobileMenu
         isOpen={isMenuOpen}
         onClose={handleCloseMenu}
@@ -490,7 +639,7 @@ function AppContent() {
         handleLogout={logout}
       />
 
-      {/* CORRECCIÓN: Modales sin Suspense - Ya optimizados ⚡ */}
+      {/* CORRECCIÃ“N: Modales sin Suspense - Ya optimizados âš¡ */}
       {activeModal === 'search' && (
         <LazySearchModal 
           isOpen 
@@ -501,7 +650,11 @@ function AppContent() {
       )}
 
       {activeModal === 'admin' && currentUser?.role === 'admin' && (
-        <LazyAdminModal isOpen onClose={handleCloseModal} modalId="admin-modal" />
+        <LazyAdminModal
+          isOpen
+          onClose={handleCloseModal}
+          modalId="admin-modal"
+        />
       )}
       {activeModal === 'password' && (
         <PasswordModal isOpen onClose={handleCloseModal} modalId="password-modal" />
@@ -520,10 +673,13 @@ function App() {
   return (
     <ToastProvider>
       <AppProvider>
-        <AppContent />
+        <CampaignProvider>
+          <AppContent />
+        </CampaignProvider>
       </AppProvider>
     </ToastProvider>
   );
 }
 
 export default App; 
+

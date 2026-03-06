@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import TerritoryCard from '../components/territories/TerritoryCard';
 import TerritoryFilters from '../components/territories/TerritoryFilters';
@@ -6,9 +6,8 @@ import SkeletonCard from '../components/common/SkeletonCard';
 import Icon from '../components/common/Icon';
 import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
-import GeneralMapModal from '../components/modals/GeneralMapModal';
+import { LazyGeneralMapModal as GeneralMapModal } from '../components/modals/LazyModals';
 
-// 🔄 PASO 10: Funciones helper para asignaciones múltiples
 const normalizeAssignedTo = (assignedTo) => {
   if (!assignedTo) return [];
   if (Array.isArray(assignedTo)) return assignedTo;
@@ -30,101 +29,66 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const {
     territories,
     currentUser,
-    proposals,
     isLoading,
-    publishers,
-    userNotificationsCount, // ✅ NUEVO: Contador de notificaciones del usuario
-    pendingProposalsCount // ✅ NUEVO: Contador de propuestas pendientes para admin
+    userNotificationsCount,
+    pendingProposalsCount
   } = useApp();
   const [filterStatus, setFilterStatus] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-
-  const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isGeneralMapOpen, setIsGeneralMapOpen] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
-
-  // Estados simplificados - filtros avanzados removidos
-
-  // OPTIMIZACIÓN FASE 2: Refs para scroll performance ⚡
-  const containerRef = useRef(null);
-  const [visibleCards, setVisibleCards] = useState(new Set());
-
-  // FASE 3: Premium feedback y gestures ⚡
   const { swipeFeedback } = usePremiumFeedback();
 
-
-
-  // 🔄 PASO 10: Filtrar y ordenar territorios con soporte para equipos
   const filteredAndSortedTerritories = useMemo(() => {
     let filtered = territories;
 
-    // 🔄 PASO 10: Aplicar filtro de estado
     if (filterStatus !== 'all') {
-      filtered = filtered.filter(t => {
-        if (filterStatus === 'disponible') return t.status === 'Disponible';
-        if (filterStatus === 'en uso') return t.status === 'En uso';
-        if (filterStatus === 'completado') return t.status === 'Completado' || t.status === 'Terminado';
+      filtered = filtered.filter((territory) => {
+        if (filterStatus === 'disponible') return territory.status === 'Disponible';
+        if (filterStatus === 'en uso') return territory.status === 'En uso';
+        if (filterStatus === 'completado') {
+          return territory.status === 'Completado' || territory.status === 'Terminado';
+        }
         return true;
       });
     }
 
-
-
-    // Ordenar
-    const sorted = [...filtered].sort((a, b) => {
-      // 🔄 CORRECCIÓN: Si está filtrando "en uso", priorizar los míos (sin cambiar orden por equipos)
+    return [...filtered].sort((territoryA, territoryB) => {
       if (filterStatus === 'en uso') {
-        const isAMine = isUserAssigned(a.assignedTo, currentUser?.name);
-        const isBMine = isUserAssigned(b.assignedTo, currentUser?.name);
+        const isAMine = isUserAssigned(territoryA.assignedTo, currentUser?.name);
+        const isBMine = isUserAssigned(territoryB.assignedTo, currentUser?.name);
+
         if (isAMine && !isBMine) return -1;
         if (!isAMine && isBMine) return 1;
       }
 
-      // 🔄 CORRECCIÓN: Ordenamiento estático por nombre (sin priorizar equipos)
-      if (sortBy === 'name') {
-        return a.name.localeCompare(b.name, undefined, { numeric: true });
-      }
-
-      if (sortBy === 'status') {
-        const statusOrder = { 'En uso': 1, 'Disponible': 2, 'Completado': 3 };
-        return (statusOrder[a.status] || 4) - (statusOrder[b.status] || 4);
-      }
-      return 0;
+      return territoryA.name.localeCompare(territoryB.name, undefined, {
+        numeric: true
+      });
     });
+  }, [territories, filterStatus, currentUser?.name]);
 
-    return sorted;
-  }, [territories, filterStatus, sortBy, currentUser?.name]);
-
-  // Estadísticas
   const stats = useMemo(() => ({
     total: territories.length,
-    available: territories.filter(t => t.status === 'Disponible').length,
-    inUse: territories.filter(t => t.status === 'En uso').length,
-    completed: territories.filter(t => t.status === 'Completado' || t.status === 'Terminado').length,
+    available: territories.filter((territory) => territory.status === 'Disponible').length,
+    inUse: territories.filter((territory) => territory.status === 'En uso').length,
+    completed: territories.filter((territory) => (
+      territory.status === 'Completado' || territory.status === 'Terminado'
+    )).length
   }), [territories]);
 
-
-
-  // OPTIMIZACIÓN: Memoizar handlers para evitar re-renders ⚡
   const handleFilterChange = useCallback((newFilter) => {
     setFilterStatus(newFilter);
   }, []);
 
-  const handleSortChange = useCallback((newSort) => {
-    setSortBy(newSort);
-  }, []);
-
-  // Limpiar filtros
   const handleClearFilters = useCallback(() => {
     setFilterStatus('all');
   }, []);
 
-  // OPTIMIZACIÓN: Crear handlers memoizados para territorios ⚡
   const createTerritorySelectHandler = useCallback((territory) => {
     return () => onSelectTerritory(territory);
   }, [onSelectTerritory]);
 
-  // FASE 3: Swipe navigation para filtros ⚡
   const handleSwipeLeft = useCallback(() => {
     swipeFeedback();
     const filters = ['all', 'disponible', 'en uso', 'completado'];
@@ -141,41 +105,13 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     handleFilterChange(filters[nextIndex]);
   }, [filterStatus, handleFilterChange, swipeFeedback]);
 
-  // Aplicar swipe navigation al container principal
-  // IMPORTANTE: Desactivar swipe cuando el mapa está abierto para evitar cambios de filtro no deseados
   const swipeNavRef = useSwipeNavigation(
-    isGeneralMapOpen ? null : handleSwipeLeft,  // Desactivar cuando el mapa está abierto
-    isGeneralMapOpen ? null : handleSwipeRight, // Desactivar cuando el mapa está abierto
+    isGeneralMapOpen ? null : handleSwipeLeft,
+    isGeneralMapOpen ? null : handleSwipeRight,
     {
-      swipeThreshold: 80 // Más alto para evitar conflictos con scroll
+      swipeThreshold: 80
     }
   );
-
-  // OPTIMIZACIÓN: Intersection Observer para lazy loading ⚡
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          const cardId = entry.target.dataset.territoryId;
-          if (entry.isIntersecting) {
-            setVisibleCards(prev => new Set([...prev, cardId]));
-          }
-        });
-      },
-      {
-        root: null,
-        rootMargin: '50px', // Precargar 50px antes de que sea visible
-        threshold: 0.1
-      }
-    );
-
-    const cards = containerRef.current.querySelectorAll('[data-territory-id]');
-    cards.forEach(card => observer.observe(card));
-
-    return () => observer.disconnect();
-  }, [filteredAndSortedTerritories]);
 
   return (
     <div
@@ -183,7 +119,6 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       className="min-h-screen pb-24 sm:pb-8"
       style={{ backgroundColor: '#F5F5F5' }}
     >
-      {/* Header */}
       <header className="shadow-md sticky top-0 z-30">
         <div className="px-4 pt-2 pb-2 flex justify-between items-center" style={{ backgroundColor: '#2C3E50' }}>
           <div className="flex items-center space-x-3">
@@ -191,7 +126,6 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
               Territorios
             </h1>
 
-            {/* Botón de Mapa General */}
             <button
               onClick={() => {
                 setIsGeneralMapOpen(true);
@@ -202,14 +136,17 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
                 minWidth: '36px',
                 minHeight: '36px'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.backgroundColor = '#3a526b';
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.backgroundColor = '#34495e';
+              }}
               aria-label="Ver mapa general de Guadalajara"
               title="Mapa General de Guadalajara"
             >
               <Icon name="map" size={20} style={{ color: '#FFFFFF' }} />
             </button>
-
           </div>
 
           <button
@@ -220,9 +157,13 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
               minWidth: '40px',
               minHeight: '40px'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
-            aria-label="Abrir menú"
+            onMouseEnter={(event) => {
+              event.currentTarget.style.backgroundColor = '#3a526b';
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = '#34495e';
+            }}
+                    aria-label={'Abrir men\u00fa'}
           >
             <svg className="w-5 h-5" fill="none" stroke="#FFFFFF" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
@@ -230,17 +171,18 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             {((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
               (currentUser?.role !== 'admin' && userNotificationsCount > 0) ||
               updateAvailable) && (
-                <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium shadow-sm">
-                  {updateAvailable && !((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
-                    (currentUser?.role !== 'admin' && userNotificationsCount > 0))
-                    ? '!'
-                    : currentUser?.role === 'admin' ? pendingProposalsCount : userNotificationsCount}
-                </span>
-              )}
+              <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium shadow-sm">
+                {updateAvailable && !((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
+                  (currentUser?.role !== 'admin' && userNotificationsCount > 0))
+                  ? '!'
+                  : currentUser?.role === 'admin'
+                    ? pendingProposalsCount
+                    : userNotificationsCount}
+              </span>
+            )}
           </button>
         </div>
 
-        {/* Filtros */}
         <div className="relative">
           <TerritoryFilters
             filterStatus={filterStatus}
@@ -248,7 +190,6 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             stats={stats}
           />
 
-          {/* FASE 3: Indicador sutil de swipe navigation */}
           <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 opacity-30">
             <div className="flex items-center space-x-1 text-xs text-gray-500">
               <Icon name="chevronLeft" size={12} />
@@ -257,43 +198,24 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             </div>
           </div>
         </div>
-
-
       </header>
 
-
-
-      {/* Contenido principal */}
       <main className="px-4 sm:px-6 lg:px-8 mt-3">
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {[...Array(10)].map((_, i) => <SkeletonCard key={i} />)}
+            {[...Array(10)].map((_, index) => <SkeletonCard key={index} />)}
           </div>
         ) : filteredAndSortedTerritories.length > 0 ? (
-          <div
-            ref={containerRef}
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 territory-list"
-            style={{
-              // OPTIMIZACIÓN: CSS para scroll performance ⚡
-              contain: 'layout style paint',
-              willChange: 'scroll-position',
-              transform: 'translateZ(0)' // Forza GPU acceleration
-            }}
-          >
-            {filteredAndSortedTerritories.map(t => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 territory-list">
+            {filteredAndSortedTerritories.map((territory) => (
               <div
-                key={t.id}
-                data-territory-id={t.id}
+                key={territory.id}
+                data-territory-id={territory.id}
                 className="territory-card"
-                style={{
-                  // OPTIMIZACIÓN: Cada tarjeta optimizada ⚡
-                  contain: 'layout',
-                  willChange: 'transform'
-                }}
               >
                 <TerritoryCard
-                  territory={t}
-                  onSelect={createTerritorySelectHandler(t)}
+                  territory={territory}
+                  onSelect={createTerritorySelectHandler(territory)}
                 />
               </div>
             ))}
@@ -318,7 +240,6 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
         )}
       </main>
 
-      {/* Modal de Mapa General */}
       <GeneralMapModal
         isOpen={isGeneralMapOpen}
         onClose={() => {
@@ -329,4 +250,4 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   );
 };
 
-export default TerritoriesView; 
+export default TerritoriesView;

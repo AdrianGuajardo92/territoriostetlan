@@ -427,16 +427,25 @@
   <div id="root"></div>
 
   <script>
-    // Hide splash screen when app loads
-    window.addEventListener('load', () => {
-      setTimeout(() => {
+    (function () {
+      function hideSplashScreen() {
         const splash = document.getElementById('splash-screen');
-        if (splash) {
-          splash.classList.add('hide');
-          setTimeout(() => splash.remove(), 500);
+        if (!splash || splash.dataset.hidden === 'true') {
+          return;
         }
-      }, 1000);
-    });
+
+        splash.dataset.hidden = 'true';
+        splash.classList.add('hide');
+        setTimeout(() => {
+          if (splash.parentNode) {
+            splash.remove();
+          }
+        }, 350);
+      }
+
+      window.hideSplashScreen = hideSplashScreen;
+      window.addEventListener('boot-screen-mounted', hideSplashScreen, { once: true });
+    })();
   </script>
 
   <!-- Cache busting simplificado -->

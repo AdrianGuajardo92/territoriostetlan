@@ -28,9 +28,8 @@ export default defineConfig({
     extensions: ['.js', '.jsx']
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'firebase/app', 'firebase/firestore', 'firebase/auth'],
-    exclude: [],
-    force: true
+    include: ['react', 'react-dom', 'firebase/app', 'firebase/firestore'],
+    exclude: []
   },
   esbuild: {
     loader: 'jsx',
