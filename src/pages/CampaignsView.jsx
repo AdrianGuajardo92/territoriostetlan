@@ -233,6 +233,15 @@ const PublisherAssignmentsSection = ({
     );
   }
 
+  const completedCount = assignments.filter((a) => a.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED).length;
+  const pendingCount = assignments.length - completedCount;
+  const totalCount = assignments.length;
+
+  const filterCounts = {
+    [CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS]: pendingCount,
+    [CAMPAIGN_PROGRESS_STATUSES.COMPLETED]: completedCount
+  };
+
   return (
     <div className="space-y-4">
       <SectionCard
@@ -253,6 +262,18 @@ const PublisherAssignmentsSection = ({
           </div>
         )}
       >
+        {totalCount > 0 && (
+          <div className="mb-3 flex items-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50 px-3 py-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+              <Icon name={pendingCount > 0 ? 'mapPin' : 'checkCircle'} size={15} />
+            </div>
+            <p className="min-w-0 text-sm font-semibold text-indigo-900">
+              {pendingCount > 0
+                ? (<>Te faltan <strong>{pendingCount}</strong> {pendingCount === 1 ? 'dirección' : 'direcciones'}</>)
+                : 'Completaste todas tus direcciones'}
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {filterOptions.map((option) => (
             <button
@@ -265,7 +286,7 @@ const PublisherAssignmentsSection = ({
                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
               }`}
             >
-              {option.label}
+              {option.label}{filterCounts[option.id] != null ? ` (${filterCounts[option.id]})` : ''}
             </button>
           ))}
         </div>
@@ -410,17 +431,30 @@ const CampaignsView = ({ onBack }) => {
   }, [campaignAssignments, selectedCampaign]);
 
   const campaignSourceAddresses = useMemo(() => {
-    const includedTerritoryIds = new Set(allTerritoryIds);
+    const includedTerritoryIds = new Set(campaignForm.sourceTerritoryIds.length > 0 ? campaignForm.sourceTerritoryIds : allTerritoryIds);
+    const excludedIds = new Set(campaignForm.excludedAddressIds || []);
     const sourceAddresses = addresses.filter((address) => {
       if (!includedTerritoryIds.has(address.territoryId)) return false;
       if (address.deleted) return false;
+      if (excludedIds.has(address.id)) return false;
       return true;
     });
 
     return sortCampaignSourceAddresses(sourceAddresses, territoryMap);
-  }, [addresses, allTerritoryIds, territoryMap]);
+  }, [addresses, allTerritoryIds, campaignForm.excludedAddressIds, campaignForm.sourceTerritoryIds, territoryMap]);
 
   const selectedCandidateAddresses = useMemo(() => campaignSourceAddresses, [campaignSourceAddresses]);
+
+  const allTerritoryAddresses = useMemo(() => {
+    const includedTerritoryIds = new Set(campaignForm.sourceTerritoryIds.length > 0 ? campaignForm.sourceTerritoryIds : allTerritoryIds);
+    return addresses
+      .filter((a) => includedTerritoryIds.has(a.territoryId) && !a.deleted)
+      .sort((a, b) => {
+        const tA = territoryMap[a.territoryId]?.name || '';
+        const tB = territoryMap[b.territoryId]?.name || '';
+        return tA.localeCompare(tB, 'es', { numeric: true }) || (a.street || a.address || '').localeCompare(b.street || b.address || '', 'es');
+      });
+  }, [addresses, allTerritoryIds, campaignForm.sourceTerritoryIds, territoryMap]);
 
   const isReadOnlyCampaign = selectedCampaign && [CAMPAIGN_STATUSES.COMPLETED, CAMPAIGN_STATUSES.ARCHIVED].includes(selectedCampaign.status);
 
@@ -505,12 +539,52 @@ const CampaignsView = ({ onBack }) => {
   }, [expandedParticipantId, participantsDraft]);
 
   useEffect(() => {
-    setIsStepOneExpanded(false);
-    setIsStepTwoExpanded(false);
-    setIsStepThreeExpanded(false);
-    setIsTrackingExpanded(false);
-    setIsAssignmentsExpanded(false);
-  }, [selectedCampaignId]);
+    if (!isAdmin || adminViewMode !== 'admin') {
+      setIsStepOneExpanded(false);
+      setIsStepTwoExpanded(false);
+      setIsStepThreeExpanded(false);
+      setIsTrackingExpanded(false);
+      setIsAssignmentsExpanded(false);
+      return;
+    }
+
+    const campaign = campaigns.find((c) => c.id === selectedCampaignId);
+    const hasAssignments = campaignAssignments.some((a) => a.campaignId === selectedCampaignId);
+    const hasParticipants = campaignParticipants.some((p) => p.campaignId === selectedCampaignId);
+    const isActive = campaign?.status === CAMPAIGN_STATUSES.ACTIVE;
+
+    if (isActive && hasAssignments) {
+      setIsStepOneExpanded(false);
+      setIsStepTwoExpanded(false);
+      setIsStepThreeExpanded(false);
+      setIsTrackingExpanded(true);
+      setIsAssignmentsExpanded(false);
+    } else if (hasParticipants && !hasAssignments) {
+      setIsStepOneExpanded(false);
+      setIsStepTwoExpanded(false);
+      setIsStepThreeExpanded(true);
+      setIsTrackingExpanded(false);
+      setIsAssignmentsExpanded(false);
+    } else if (campaign && !hasParticipants) {
+      setIsStepOneExpanded(false);
+      setIsStepTwoExpanded(true);
+      setIsStepThreeExpanded(false);
+      setIsTrackingExpanded(false);
+      setIsAssignmentsExpanded(false);
+    } else if (!campaign) {
+      setIsStepOneExpanded(true);
+      setIsStepTwoExpanded(false);
+      setIsStepThreeExpanded(false);
+      setIsTrackingExpanded(false);
+      setIsAssignmentsExpanded(false);
+    } else {
+      setIsStepOneExpanded(false);
+      setIsStepTwoExpanded(false);
+      setIsStepThreeExpanded(false);
+      setIsTrackingExpanded(false);
+      setIsAssignmentsExpanded(false);
+    }
+  }, [adminViewMode, campaignAssignments, campaignParticipants, campaigns, isAdmin, selectedCampaignId]);
 
   const usersAvailableForCampaign = useMemo(
     () => [...users].sort((a, b) => a.name.localeCompare(b.name, 'es')),
@@ -633,7 +707,13 @@ const CampaignsView = ({ onBack }) => {
   const pendingAssignmentsCount = selectedCampaignAssignments.filter(
     (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.PENDING
   ).length;
+  const inProgressAssignmentsCount = selectedCampaignAssignments.filter(
+    (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
+  ).length;
   const enabledParticipantsCount = participantsDraft.filter((participant) => participant.isEnabled !== false).length;
+  const progressPercent = selectedCampaignAssignments.length > 0
+    ? Math.round((completedAssignmentsCount / selectedCampaignAssignments.length) * 100)
+    : 0;
   const basicsReady = Boolean(campaignForm.name.trim()) && Boolean(campaignForm.eventDate);
   const participantsReady = enabledParticipantsCount > 0;
   const assignmentsGenerated = selectedCampaignAssignments.length > 0;
@@ -1019,6 +1099,34 @@ const CampaignsView = ({ onBack }) => {
             </div>
           </div>
         </section>
+
+        {selectedCampaign && assignmentsGenerated && (
+          <section className="rounded-[30px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <Icon name="barChart" size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-900">
+                    {completedAssignmentsCount} de {selectedCampaignAssignments.length} completadas
+                    <span className="ml-2 text-emerald-700">({progressPercent}%)</span>
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {pendingAssignmentsCount} pendientes · {inProgressAssignmentsCount} en progreso
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </section>
+        )}
+
         {!shouldHideSetupSteps && (
           <>
         <SectionCard
@@ -1049,43 +1157,189 @@ const CampaignsView = ({ onBack }) => {
             </span>
           </div>
 
-          {campaigns.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              {'A\u00fan no hay campa\u00f1as guardadas. Llena los datos de abajo y guarda la campa\u00f1a.'}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {campaigns.map((campaign) => {
-                const isSelected = campaign.id === selectedCampaignId;
+          {(() => {
+            const editableCampaigns = campaigns.filter((c) => [CAMPAIGN_STATUSES.DRAFT, CAMPAIGN_STATUSES.ACTIVE].includes(c.status));
+            const closedCampaigns = campaigns.filter((c) => [CAMPAIGN_STATUSES.COMPLETED, CAMPAIGN_STATUSES.ARCHIVED].includes(c.status));
 
-                return (
-                  <button
-                    key={campaign.id}
-                    onClick={() => setSelectedCampaignId(campaign.id)}
-                    className={`text-left rounded-3xl border p-4 transition-all ${
-                      isSelected
-                        ? 'border-slate-800 bg-slate-800 text-white shadow-lg'
-                        : 'border-gray-200 bg-white hover:border-slate-400 hover:shadow-sm'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className={`text-xs font-bold uppercase tracking-wide ${isSelected ? 'text-slate-200' : 'text-gray-500'}`}>
-                          {formatCampaignTypeLabel(campaign.type)}
-                        </p>
-                        <h3 className="text-lg font-bold mt-1">{campaign.name}</h3>
-                        <p className={`text-sm mt-1 ${isSelected ? 'text-slate-200' : 'text-gray-500'}`}>
-                          {formatCampaignDate(campaign.eventDate)}
-                        </p>
-                      </div>
+            if (campaigns.length === 0) {
+              return (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  {'A\u00fan no hay campa\u00f1as guardadas. Llena los datos de abajo y guarda la campa\u00f1a.'}
+                </div>
+              );
+            }
+
+            const renderCampaignCard = (campaign) => {
+              const isSelected = campaign.id === selectedCampaignId;
+              return (
+                <button
+                  key={campaign.id}
+                  onClick={() => setSelectedCampaignId(campaign.id)}
+                  className={`text-left rounded-3xl border p-4 transition-all ${
+                    isSelected
+                      ? 'border-slate-800 bg-slate-800 text-white shadow-lg'
+                      : 'border-gray-200 bg-white hover:border-slate-400 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className={`text-xs font-bold uppercase tracking-wide ${isSelected ? 'text-slate-200' : 'text-gray-500'}`}>
+                        {formatCampaignTypeLabel(campaign.type)}
+                      </p>
+                      <h3 className="text-lg font-bold mt-1">{campaign.name}</h3>
+                      <p className={`text-sm mt-1 ${isSelected ? 'text-slate-200' : 'text-gray-500'}`}>
+                        {formatCampaignDate(campaign.eventDate)}
+                      </p>
                     </div>
-                    <p className={`text-sm mt-3 ${isSelected ? 'text-slate-100' : 'text-gray-600'}`}>
-                      Territorios: {allTerritoryIds.length} · Direcciones: {campaign.addressCountSnapshot || 0}
-                    </p>
-                  </button>
+                  </div>
+                  <p className={`text-sm mt-3 ${isSelected ? 'text-slate-100' : 'text-gray-600'}`}>
+                    Territorios: {campaign.sourceTerritoryIds?.length || allTerritoryIds.length} · Direcciones: {campaign.addressCountSnapshot || 0}
+                  </p>
+                </button>
+              );
+            };
+
+            return (
+              <div className="space-y-4">
+                {editableCampaigns.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">En curso o borrador</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {editableCampaigns.map(renderCampaignCard)}
+                    </div>
+                  </div>
+                )}
+                {closedCampaigns.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Cerradas</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {closedCampaigns.map(renderCampaignCard)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <p className="text-sm font-semibold text-slate-700">Territorios incluidos</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCampaignForm((prev) => ({ ...prev, sourceTerritoryIds: [...allTerritoryIds] }))}
+                  disabled={isBusy || isReadOnlyCampaign}
+                  className="text-xs font-semibold text-indigo-700 hover:text-indigo-900 disabled:opacity-60"
+                >
+                  Todos
+                </button>
+                <span className="text-xs text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => setCampaignForm((prev) => ({ ...prev, sourceTerritoryIds: [] }))}
+                  disabled={isBusy || isReadOnlyCampaign}
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-700 disabled:opacity-60"
+                >
+                  Ninguno
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto pr-1">
+              {territories.map((territory) => {
+                const isIncluded = campaignForm.sourceTerritoryIds.includes(territory.id);
+                const addressCount = addresses.filter((a) => a.territoryId === territory.id && !a.deleted).length;
+                return (
+                  <label
+                    key={territory.id}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm cursor-pointer transition-all ${
+                      isIncluded
+                        ? 'border-indigo-200 bg-indigo-50 text-indigo-900'
+                        : 'border-slate-200 bg-white text-slate-500'
+                    } ${isBusy || isReadOnlyCampaign ? 'opacity-60 pointer-events-none' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isIncluded}
+                      onChange={() => {
+                        setCampaignForm((prev) => ({
+                          ...prev,
+                          sourceTerritoryIds: isIncluded
+                            ? prev.sourceTerritoryIds.filter((id) => id !== territory.id)
+                            : [...prev.sourceTerritoryIds, territory.id]
+                        }));
+                      }}
+                      disabled={isBusy || isReadOnlyCampaign}
+                      className="rounded"
+                    />
+                    <span className="truncate font-semibold">{territory.name || territory.number || territory.id}</span>
+                    <span className="ml-auto text-xs text-slate-400">{addressCount}</span>
+                  </label>
                 );
               })}
             </div>
+          </div>
+
+          {allTerritoryAddresses.length > 0 && (
+            <details className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 group">
+              <summary className="flex cursor-pointer items-center justify-between gap-3 p-4 select-none list-none [&::-webkit-details-marker]:hidden">
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-semibold text-slate-700">Excluir direcciones</p>
+                  {campaignForm.excludedAddressIds.length > 0 && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800">
+                      {campaignForm.excludedAddressIds.length} excluidas
+                    </span>
+                  )}
+                </div>
+                <Icon name="chevronDown" size={16} className="text-slate-400 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-slate-200 p-4">
+                {campaignForm.excludedAddressIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCampaignForm((prev) => ({ ...prev, excludedAddressIds: [] }))}
+                    disabled={isBusy || isReadOnlyCampaign}
+                    className="mb-3 text-xs font-semibold text-indigo-700 hover:text-indigo-900 disabled:opacity-60"
+                  >
+                    Incluir todas
+                  </button>
+                )}
+                <div className="max-h-[240px] overflow-y-auto pr-1 space-y-1">
+                  {allTerritoryAddresses.map((address) => {
+                    const isExcluded = campaignForm.excludedAddressIds.includes(address.id);
+                    const territory = territories.find((t) => t.id === address.territoryId);
+                    return (
+                      <label
+                        key={address.id}
+                        className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-sm cursor-pointer transition-all ${
+                          isExcluded
+                            ? 'border-amber-200 bg-amber-50 text-amber-800 line-through'
+                            : 'border-slate-100 bg-white text-slate-700'
+                        } ${isBusy || isReadOnlyCampaign ? 'opacity-60 pointer-events-none' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!isExcluded}
+                          onChange={() => {
+                            setCampaignForm((prev) => ({
+                              ...prev,
+                              excludedAddressIds: isExcluded
+                                ? prev.excludedAddressIds.filter((id) => id !== address.id)
+                                : [...prev.excludedAddressIds, address.id]
+                            }));
+                          }}
+                          disabled={isBusy || isReadOnlyCampaign}
+                          className="rounded"
+                        />
+                        <span className="truncate">{address.street || address.address || address.id}</span>
+                        {territory && (
+                          <span className="ml-auto shrink-0 text-xs text-slate-400">T{territory.name || territory.number}</span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </details>
           )}
 
           <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -1127,8 +1381,8 @@ const CampaignsView = ({ onBack }) => {
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-semibold text-slate-700">Resumen</p>
               <div className="mt-3 space-y-2 text-sm text-slate-600">
-                <p>Territorios: {allTerritoryIds.length}</p>
-                <p>Direcciones: {selectedCandidateAddresses.length}</p>
+                <p>Territorios: {campaignForm.sourceTerritoryIds.length} de {allTerritoryIds.length}</p>
+                <p>Direcciones: {selectedCandidateAddresses.length}{campaignForm.excludedAddressIds.length > 0 ? ` (${campaignForm.excludedAddressIds.length} excluidas)` : ''}</p>
                 <p>Hermanos: {enabledParticipantsCount}</p>
                 <p>Repartidas: {selectedCampaignAssignments.length}</p>
               </div>
@@ -1232,8 +1486,8 @@ const CampaignsView = ({ onBack }) => {
                             </div>
                             <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
                               <span>{participantGroupLabel}</span>
-                              <span>Capacidad: {participant.capacityWeight}</span>
-                              <span>Maximo: {participant.hardLimit === '' ? 'Sin limite' : participant.hardLimit}</span>
+                              <span>Carga: {participant.capacityWeight}</span>
+                              <span>{'L\u00edmite'}: {participant.hardLimit === '' ? 'Sin limite' : participant.hardLimit}</span>
                             </div>
                           </div>
                           <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 ring-1 ring-slate-200 transition-transform ${
@@ -1261,7 +1515,7 @@ const CampaignsView = ({ onBack }) => {
                         <div className="border-t border-slate-200 px-3 pb-3 pt-3">
                           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                             <label className="space-y-1">
-                              <span className="text-xs font-semibold text-gray-500">Capacidad</span>
+                              <span className="text-xs font-semibold text-gray-500">Carga relativa</span>
                               <input
                                 type="number"
                                 min="1"
@@ -1270,9 +1524,10 @@ const CampaignsView = ({ onBack }) => {
                                 disabled={isBusy || isReadOnlyCampaign || !isIncluded}
                                 className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
                               />
+                              <p className="text-[11px] text-slate-400">{'Pon 2 si puede visitar el doble que los dem\u00e1s'}</p>
                             </label>
                             <label className="space-y-1">
-                              <span className="text-xs font-semibold text-gray-500">Maximo</span>
+                              <span className="text-xs font-semibold text-gray-500">{'L\u00edmite de direcciones'}</span>
                               <input
                                 type="number"
                                 min="0"
@@ -1282,6 +1537,7 @@ const CampaignsView = ({ onBack }) => {
                                 placeholder="Sin limite"
                                 className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
                               />
+                              <p className="text-[11px] text-slate-400">{'M\u00e1ximo de direcciones que recibir\u00e1'}</p>
                             </label>
                             <label className="space-y-1">
                               <span className="text-xs font-semibold text-gray-500">Grupo</span>
@@ -1394,50 +1650,82 @@ const CampaignsView = ({ onBack }) => {
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            {!campaignIsActive && (
-              <button
-                onClick={() => executeAdminAction('save')}
-                disabled={isBusy || isReadOnlyCampaign}
-                className="px-5 py-3 rounded-2xl bg-slate-800 text-white font-semibold disabled:opacity-60"
-              >
-                Guardar campaña
-              </button>
-            )}
-            <button
-              onClick={() => executeAdminAction('generate')}
-              disabled={isBusy || isReadOnlyCampaign}
-              className="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-semibold disabled:opacity-60"
-            >
-              {'Generar asignaci\u00f3n autom\u00e1tica'}
-            </button>
-            {!campaignIsActive && (
-              <button
-                onClick={() => executeAdminAction('activate')}
-                disabled={isBusy || isReadOnlyCampaign}
-                className="px-5 py-3 rounded-2xl bg-emerald-600 text-white font-semibold disabled:opacity-60"
-              >
-                {'Activar campa\u00f1a'}
-              </button>
-            )}
-            {selectedCampaign && selectedCampaign.status === CAMPAIGN_STATUSES.ACTIVE && (
-              <button
-                onClick={() => setConfirmAction('complete')}
-                disabled={isBusy}
-                className="px-5 py-3 rounded-2xl bg-blue-600 text-white font-semibold disabled:opacity-60"
-              >
-                {'Completar campa\u00f1a'}
-              </button>
-            )}
-            {selectedCampaign && selectedCampaign.status !== CAMPAIGN_STATUSES.ARCHIVED && (
-              <button
-                onClick={() => setConfirmAction('archive')}
-                disabled={isBusy}
-                className="px-5 py-3 rounded-2xl bg-gray-700 text-white font-semibold disabled:opacity-60"
-              >
-                Archivar
-              </button>
-            )}
+          <div className="space-y-3">
+            {(() => {
+              if (campaignIsActive) return null;
+              if (assignmentsGenerated) return (
+                <button
+                  onClick={() => setConfirmAction('activate')}
+                  disabled={isBusy || isReadOnlyCampaign}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 text-white font-bold text-base shadow-sm hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <Icon name="zap" size={18} />
+                    {'Activar campa\u00f1a'}
+                  </span>
+                </button>
+              );
+              if (!assignmentsGenerated && participantsReady) return (
+                <button
+                  onClick={() => executeAdminAction('generate')}
+                  disabled={isBusy || isReadOnlyCampaign}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-indigo-600 text-white font-bold text-base shadow-sm hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <Icon name="shuffle" size={18} />
+                    {'Generar asignaci\u00f3n autom\u00e1tica'}
+                  </span>
+                </button>
+              );
+              return (
+                <button
+                  onClick={() => executeAdminAction('save')}
+                  disabled={isBusy || isReadOnlyCampaign}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-800 text-white font-bold text-base shadow-sm hover:bg-slate-900 disabled:opacity-60 transition-colors"
+                >
+                  {'Guardar campa\u00f1a'}
+                </button>
+              );
+            })()}
+
+            <div className="flex flex-wrap gap-2">
+              {!campaignIsActive && assignmentsGenerated && (
+                <button
+                  onClick={() => executeAdminAction('save')}
+                  disabled={isBusy || isReadOnlyCampaign}
+                  className="px-4 py-2 rounded-2xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:border-slate-400 disabled:opacity-60 transition-colors"
+                >
+                  {'Guardar campa\u00f1a'}
+                </button>
+              )}
+              {assignmentsGenerated && (
+                <button
+                  onClick={() => executeAdminAction('generate')}
+                  disabled={isBusy || isReadOnlyCampaign}
+                  className="px-4 py-2 rounded-2xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:border-slate-400 disabled:opacity-60 transition-colors"
+                >
+                  Regenerar reparto
+                </button>
+              )}
+              {campaignIsActive && (
+                <button
+                  onClick={() => setConfirmAction('complete')}
+                  disabled={isBusy}
+                  className="px-4 py-2 rounded-2xl border border-blue-300 bg-blue-50 text-blue-700 text-sm font-semibold hover:border-blue-400 disabled:opacity-60 transition-colors"
+                >
+                  {'Completar campa\u00f1a'}
+                </button>
+              )}
+              {selectedCampaign && selectedCampaign.status !== CAMPAIGN_STATUSES.ARCHIVED && (
+                <button
+                  onClick={() => setConfirmAction('archive')}
+                  disabled={isBusy}
+                  className="px-4 py-2 rounded-2xl border border-slate-300 bg-white text-slate-500 text-sm font-semibold hover:border-slate-400 disabled:opacity-60 transition-colors"
+                >
+                  Archivar
+                </button>
+              )}
+            </div>
           </div>
 
           {!assignmentsGenerated && (
@@ -1637,6 +1925,24 @@ const CampaignsView = ({ onBack }) => {
         campaign={personalCampaign}
         assignments={personalAssignments}
         onStatusChange={handlePublisherStatusChange}
+        isProcessing={isBusy}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmAction === 'activate'}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => executeAdminAction('activate')}
+                  title={'Activar campa\u00f1a'}
+                  message={(() => {
+                    const counts = participantSummary.filter((p) => p.total > 0).map((p) => p.total);
+                    const minCount = counts.length > 0 ? Math.min(...counts) : 0;
+                    const maxCount = counts.length > 0 ? Math.max(...counts) : 0;
+                    const participantCount = counts.length;
+                    return `Vas a activar "${selectedCampaign?.name || ''}" con ${selectedCampaignAssignments.length} direcciones repartidas entre ${participantCount} hermanos. Cada uno recibir\u00e1 entre ${minCount} y ${maxCount} direcciones. Una vez activa, los hermanos podr\u00e1n ver sus asignaciones.`;
+                  })()}
+        confirmText={'S\u00ed, activar'}
+        cancelText="Cancelar"
+        type="success"
         isProcessing={isBusy}
       />
 

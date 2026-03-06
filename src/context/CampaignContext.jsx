@@ -268,9 +268,9 @@ export const CampaignProvider = ({ children }) => {
     eventDate: payload.eventDate || '',
     status: payload.status || CAMPAIGN_STATUSES.DRAFT,
     sourceTerritoryIds: Array.from(new Set(
-      allTerritoryIds.length > 0
-        ? allTerritoryIds
-        : (Array.isArray(payload.sourceTerritoryIds) ? payload.sourceTerritoryIds : [])
+      Array.isArray(payload.sourceTerritoryIds) && payload.sourceTerritoryIds.length > 0
+        ? payload.sourceTerritoryIds
+        : allTerritoryIds
     )),
     excludedAddressIds: Array.from(new Set(Array.isArray(payload.excludedAddressIds) ? payload.excludedAddressIds : [])),
     addressCountSnapshot: Number(payload.addressCountSnapshot) || 0
