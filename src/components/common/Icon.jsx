@@ -120,7 +120,6 @@ const Icon = ({ name, size = 24, color = 'currentColor', className = '', ...prop
   const LucideIcon = ICON_COMPONENTS[name];
 
   if (!LucideIcon) {
-    console.warn(`Icon "${name}" not found`);
     return null;
   }
 

@@ -49,9 +49,12 @@ const BootScreen = ({
   const showRetry = phase === 'error' && typeof onRetry === 'function';
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center px-6">
-      <div className="w-full max-w-sm text-center">
-        <div className="mx-auto mb-6 w-20 h-20 rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md flex items-center justify-center shadow-2xl">
+    <div
+      className="min-h-screen text-white flex items-center justify-center px-6"
+      style={{ background: 'linear-gradient(135deg, #334155 0%, #1e293b 100%)' }}
+    >
+      <div className="text-center max-w-[300px]">
+        <div className="mx-auto mb-5 w-20 h-20 rounded-[20px] border border-white/20 bg-white/15 backdrop-blur-[10px] flex items-center justify-center">
           <svg
             width="40"
             height="40"
@@ -68,12 +71,14 @@ const BootScreen = ({
           </svg>
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight">Estacion Tetlan Senas</h1>
-        <p className="mt-2 text-base text-white/80">Gestion de Territorios</p>
+        <h1 className="text-[28px] font-bold tracking-tight leading-tight">
+          Estación Tetlán Señas
+        </h1>
+        <p className="mt-2 text-base text-white/90">Gestión de Territorios</p>
 
-        <div className="mt-10 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md px-6 py-7 shadow-2xl">
+        <div className="mt-8">
           {phase === 'error' ? (
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 text-red-200">
+            <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-red-500/15 text-red-200">
               <svg
                 width="24"
                 height="24"
@@ -91,11 +96,10 @@ const BootScreen = ({
               </svg>
             </div>
           ) : (
-            <div className="mx-auto mb-4 h-12 w-12 rounded-full border-[3px] border-white/25 border-t-white animate-spin" />
+            <div className="mx-auto mb-4 h-10 w-10 rounded-full border-[3px] border-white/30 border-t-white animate-spin" />
           )}
 
-          <p className="text-lg font-semibold">{title}</p>
-          <p className="mt-2 text-sm leading-6 text-white/75">{resolvedSubtitle}</p>
+          <p className="mt-3 text-sm text-white/60">{resolvedSubtitle}</p>
 
           {showRetry && (
             <button

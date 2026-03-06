@@ -1,13 +1,10 @@
 {
   "name": "territorios-tetlan",
-  "version": "1.0.1",
+  "version": "2.16.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "dev:clean": "taskkill /F /IM node.exe 2>nul || true && vite",
-    "dev:stable": "vite --config vite.dev.config.js",
-    "dev:3000": "vite --port 3000",
-    "dev:force": "vite --force",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
@@ -24,8 +21,6 @@
     "react-dom": "^18.2.0",
     "react-leaflet": "^4.2.1",
     "react-leaflet-cluster": "^3.1.1",
-    "workbox-core": "^7.3.0",
-    "workbox-strategies": "^7.3.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

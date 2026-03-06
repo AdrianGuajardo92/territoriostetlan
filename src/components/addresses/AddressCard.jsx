@@ -2,38 +2,7 @@ import React, { memo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import Icon from '../common/Icon';
-
-// 🔄 PASO 12: Funciones helper para asignaciones múltiples
-const normalizeAssignedTo = (assignedTo) => {
-  if (!assignedTo) return [];
-  if (Array.isArray(assignedTo)) return assignedTo;
-  return [assignedTo];
-};
-
-const getAssignedNames = (assignedTo) => {
-  const normalized = normalizeAssignedTo(assignedTo);
-  return normalized.filter(name => name && name.trim() !== '');
-};
-
-const isUserAssigned = (assignedTo, userName) => {
-  if (!userName) return false;
-  const names = getAssignedNames(assignedTo);
-  return names.includes(userName);
-};
-
-const formatTeamNames = (names, isMobile = false) => {
-  if (names.length === 0) return '';
-  if (names.length === 1) return names[0];
-  
-  if (isMobile && names.length > 1) {
-    const firstNames = names.map(name => name.split(' ')[0]);
-    if (firstNames.length === 2) return `${firstNames[0]} y ${firstNames[1]}`;
-    return `${firstNames.slice(0, -1).join(', ')} y ${firstNames[firstNames.length - 1]}`;
-  }
-  
-  if (names.length === 2) return `${names[0]} y ${names[1]}`;
-  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
-};
+import { normalizeAssignedTo, getAssignedNames, isUserAssigned, formatTeamNames } from '../../utils/territoryHelpers';
 
 const AddressCard = memo(({ 
     address, 

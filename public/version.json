@@ -1,37 +1,30 @@
 {
-  "version": "1.0.1",
-  "buildDate": "2024-12-19",
+  "version": "2.16.0",
+  "buildDate": "2026-03-06",
   "features": [
-    "Sistema completo de gestión de territorios",
-    "Navegación con Google Maps",
+    "Sistema completo de gestion de territorios",
+    "Navegacion con Google Maps",
     "Sistema de propuestas para usuarios",
     "Panel administrativo completo",
     "Sistema de backup de datos",
-    "Optimización de rutas",
+    "Optimizacion de rutas",
     "Modo offline",
     "PWA instalable",
     "Mis Revisitas y Estudios",
-    "Sistema de asignaciones múltiples (equipos)"
+    "Sistema de asignaciones multiples (equipos)"
   ],
-  "timestamp": "2024-12-19T20:45:00.000Z",
-  "releaseDate": "2024-12-19",
+  "timestamp": "2026-03-06T00:00:00.000Z",
+  "releaseDate": "2026-03-06",
   "forceUpdate": false,
   "silent": true,
-  "_comment": "Para actualizar la versión, solo modifica este archivo. La app lo leerá automáticamente.",
   "changes": [
-    "🎯 SISTEMA COMPLETO: Asignaciones múltiples para equipos de 2-3 personas",
-    "👥 EQUIPOS: Modal rediseñado para seleccionar múltiples publicadores",
-    "✅ CORRECCIÓN CRÍTICA: Territorios completados muestran todos los nombres del equipo",
-    "🔧 CORRECCIÓN: Completado manual y automático mantienen asignación completa",
-    "📱 INTERFAZ: Modal responsive con pantalla completa en móviles",
-    "🎨 DISEÑO: Tarjetas de territorios con iconos dinámicos para equipos",
-    "🔍 FILTROS: Sistema simplificado sin elementos innecesarios",
-    "📊 ESTADÍSTICAS: Conteo correcto de publicadores individuales en equipos",
-    "🔇 SILENCIOSO: Actualizaciones automáticas sin notificaciones molestas",
-    "⚡ OPTIMIZACIÓN: Funciones helper optimizadas para mejor rendimiento",
-    "🧹 LIMPIEZA: Código optimizado y console.logs de producción eliminados",
-    "🎯 COMPATIBILIDAD: Mantiene compatibilidad total con asignaciones individuales"
+    "Auditoria profunda: eliminacion de codigo muerto y archivos sin usar",
+    "Deduplicacion de funciones helper en territoryHelpers.js",
+    "Limpieza de console.logs de debug y codigo comentado",
+    "Sincronizacion de versiones en todos los archivos",
+    "Eliminacion de dependencias no usadas",
+    "Organizacion de documentacion historica"
   ],
   "critical": false,
-  "description": "Sistema completo de asignaciones múltiples con optimizaciones y correcciones críticas"
+  "description": "Auditoria profunda y limpieza de codigo muerto, duplicado y desincronizado"
 }

@@ -4,6 +4,7 @@ import Icon from '../common/Icon';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import { getAssignedNames } from '../../utils/territoryHelpers';
 
 const TerritoryManagementModal = ({ isOpen, onClose }) => {
 
@@ -50,12 +51,6 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // Normalizar assignedTo a array de nombres
-  const getAssignedNames = (assignedTo) => {
-    if (!assignedTo) return [];
-    if (Array.isArray(assignedTo)) return assignedTo.filter(n => n && n.trim());
-    return [assignedTo];
-  };
 
   // Calcular días desde una fecha - formato: hoy, ayer, hace X días
   const formatDaysSince = (date, isCompleted = false) => {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../common/Icon';
 import { useToast } from '../../hooks/useToast';
-import { useLocationTracking } from '../../hooks/useLocationTracking';
+import useLocationTracking from '../../hooks/useLocationTracking';
 import { optimizeRoute } from '../../utils/routeOptimizer';
 import {
   CAMPAIGN_PROGRESS_STATUSES,
@@ -9,6 +9,7 @@ import {
   formatCampaignTypeLabel,
   getCampaignProgressMeta
 } from '../../utils/campaignUtils';
+import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
 
 const GUADALAJARA_CENTER = { lat: 20.6597, lng: -103.3496 };
 const BASE_TILE_LAYERS = [
@@ -44,29 +45,6 @@ const getEffectiveAssignmentStatus = (assignment) => (
     ? CAMPAIGN_PROGRESS_STATUSES.COMPLETED
     : CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
 );
-
-const extractCoordinatesFromUrl = (url) => {
-  if (!url) return null;
-
-  const patterns = [
-    /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-    /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-    /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-    /q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-    /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/,
-    /place\/.*@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-    /dir\/[^/]+\/(-?\d+\.?\d*),(-?\d+\.?\d*)/
-  ];
-
-  for (const pattern of patterns) {
-    const match = String(url).match(pattern);
-    if (match) {
-      return normalizeCoordinates(match[1], match[2]);
-    }
-  }
-
-  return null;
-};
 
 const getSnapshotCoordinates = (snapshot = {}) => {
   const directCoordinates = normalizeCoordinates(snapshot.latitude, snapshot.longitude);

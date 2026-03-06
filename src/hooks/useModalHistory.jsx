@@ -20,7 +20,6 @@ export const useModalHistory = (isOpen, onClose, modalId = 'modal') => {
             timestamp: Date.now()
           }, '', window.location.href);
           hasAddedHistoryRef.current = true;
-          console.log(`📱 Modal abierto: ${modalId}`);
         } catch (error) {
           console.warn('Error agregando al historial:', error);
         }
@@ -34,7 +33,6 @@ export const useModalHistory = (isOpen, onClose, modalId = 'modal') => {
         }
 
         try {
-          console.log(`📱 Botón volver presionado - Cerrando modal: ${modalId}`);
           isClosingRef.current = true;
           
           // Cerrar el modal

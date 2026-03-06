@@ -4,18 +4,7 @@ import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import { LazyS13ReportModal } from './LazyModals';
-
-// 🔄 PASO 19: Funciones helper para estadísticas de equipos
-const normalizeAssignedTo = (assignedTo) => {
-  if (!assignedTo) return [];
-  if (Array.isArray(assignedTo)) return assignedTo;
-  return [assignedTo];
-};
-
-const getAssignedNames = (assignedTo) => {
-  const normalized = normalizeAssignedTo(assignedTo);
-  return normalized.filter(name => name && name.trim() !== '');
-};
+import { getAssignedNames } from '../../utils/territoryHelpers';
 
 const StatsModal = ({ isOpen, onClose }) => {
   const { territories, addresses, users, territoryHistory = [], publishers, currentUser } = useApp();

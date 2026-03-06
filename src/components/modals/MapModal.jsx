@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useToast } from '../../hooks/useToast';
 import Icon from '../common/Icon';
+import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
 
 const TerritoryMapModal = ({
   isOpen,
@@ -30,29 +31,7 @@ const TerritoryMapModal = ({
     const markersRef = useRef({});
     const routeLineRef = useRef(null);
     
-    // OPTIMIZACIÓN: Memoizar coordenadas para evitar recálculos ⚡
     const addressesWithCoords = useMemo(() => {
-        const extractCoordinatesFromUrl = (url) => {
-            if (!url) return null;
-            const patterns = [
-                /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-                /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-                /q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-                /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/
-            ];
-            
-            for (const pattern of patterns) {
-                const match = url.match(pattern);
-                if (match) {
-                    return {
-                        lat: parseFloat(match[1]),
-                        lng: parseFloat(match[2])
-                    };
-                }
-            }
-            return null;
-        };
-
         const getCoordinates = (address) => {
             // Prioridad 1: latitude/longitude directo
             if (address.latitude && address.longitude) {

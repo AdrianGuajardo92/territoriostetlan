@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import Icon from '../common/Icon';
+import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 
 const GeneralMapModal = ({ isOpen, onClose }) => {
@@ -60,28 +61,6 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
         return colorMap;
     }, [territories]);
 
-    // Función para extraer coordenadas de diferentes formatos
-    const extractCoordinatesFromUrl = useCallback((url) => {
-        if (!url) return null;
-        const patterns = [
-            /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-            /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-            /q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
-            /!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/
-        ];
-
-        for (const pattern of patterns) {
-            const match = url.match(pattern);
-            if (match) {
-                return {
-                    lat: parseFloat(match[1]),
-                    lng: parseFloat(match[2])
-                };
-            }
-        }
-        return null;
-    }, []);
-
     const getCoordinates = useCallback((address) => {
         // Prioridad 1: latitude/longitude directo
         if (address.latitude && address.longitude) {
@@ -100,7 +79,7 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
         }
 
         return null;
-    }, [extractCoordinatesFromUrl]);
+    }, []);
 
     // Preparar direcciones con coordenadas y territorio
     const addressesWithData = useMemo(() => {

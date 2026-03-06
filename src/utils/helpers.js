@@ -41,7 +41,6 @@ export const formatRelativeTime = (date) => {
     
     // Usar solo formato de días
     if (days === 0) {
-        if (hours < 1) return 'Hoy';
         return 'Hoy';
     } else if (days === 1) {
         return 'Ayer';

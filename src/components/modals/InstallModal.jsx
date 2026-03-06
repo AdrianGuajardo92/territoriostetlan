@@ -61,7 +61,6 @@ const InstallModal = ({ isOpen, onClose }) => {
 
       // Esperar la decisión del usuario
       const choiceResult = await deferredPrompt.userChoice;
-      console.log('👤 Decisión del usuario:', choiceResult.outcome);
 
       if (choiceResult.outcome === 'accepted') {
         showToast('¡Instalando aplicación...! 📱', 'success');

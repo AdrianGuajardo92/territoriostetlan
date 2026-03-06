@@ -45,14 +45,12 @@ const UpdatesModal = ({ isOpen, onClose }) => {
       // 1. Limpiar TODO el cache
       if ('caches' in window) {
         const cacheNames = await caches.keys();
-        console.log('🗑️ Limpiando caches:', cacheNames);
         await Promise.all(cacheNames.map(name => caches.delete(name)));
       }
       
       // 2. Desregistrar TODOS los service workers
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
-        console.log('🔧 Desregistrando SWs:', registrations.length);
         await Promise.all(registrations.map(reg => reg.unregister()));
       }
       

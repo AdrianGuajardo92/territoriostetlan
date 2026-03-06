@@ -14,8 +14,6 @@ const ConfirmDialog = ({
 }) => {
 
   if (!isOpen) return null;
-  
-  console.log('✅ ConfirmDialog renderizando con título:', title);
 
   const typeConfig = {
     warning: {

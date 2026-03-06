@@ -1,46 +1,26 @@
 import React, { memo, useMemo, useCallback } from 'react';
 import Icon from '../common/Icon';
 import { formatRelativeTime } from '../../utils/helpers';
+import { getAssignedNames, formatTeamNames } from '../../utils/territoryHelpers';
 
-// 🔄 PASO 9: Funciones helper para asignaciones múltiples
-const normalizeAssignedTo = (assignedTo) => {
-  if (!assignedTo) return [];
-  if (Array.isArray(assignedTo)) return assignedTo;
-  return [assignedTo];
-};
-
-const getAssignedNames = (assignedTo) => {
-  const normalized = normalizeAssignedTo(assignedTo);
-  return normalized.filter(name => name && name.trim() !== '');
-};
-
-const formatTeamNames = (names, isMobile = false) => {
+// Variante con abreviación inteligente para tarjetas compactas
+const formatTeamNamesCompact = (names) => {
   if (names.length === 0) return '';
   if (names.length === 1) return names[0];
-  
-  // 🔄 MEJORA: Lógica de abreviación inteligente
+
   if (names.length === 2) {
-    // Para 2 personas: Nombre + inicial del apellido (ej: "Adrian G. y Fabiola G.")
     const abbreviatedNames = names.map(name => {
       const parts = name.trim().split(' ');
       if (parts.length >= 2) {
-        const firstName = parts[0];
-        const lastNameInitial = parts[1].charAt(0).toUpperCase();
-        return `${firstName} ${lastNameInitial}.`;
+        return `${parts[0]} ${parts[1].charAt(0).toUpperCase()}.`;
       }
-      return parts[0]; // Si solo tiene un nombre
+      return parts[0];
     });
     return `${abbreviatedNames[0]} y ${abbreviatedNames[1]}`;
   }
-  
-  // Para 3+ personas: usar abreviación (solo primeros nombres)
-  if (names.length >= 3) {
-    const firstNames = names.map(name => name.split(' ')[0]); // Solo primeros nombres
-    return `${firstNames.slice(0, -1).join(', ')} y ${firstNames[firstNames.length - 1]}`;
-  }
-  
-  // Fallback (no debería llegar aquí)
-  return names.join(', ');
+
+  const firstNames = names.map(name => name.split(' ')[0]);
+  return `${firstNames.slice(0, -1).join(', ')} y ${firstNames[firstNames.length - 1]}`;
 };
 
 // Helper para extraer el número del territorio
@@ -158,8 +138,8 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
       const names = getAssignedNames(assignedTo);
       isTeam = names.length > 1;
       return {
-        displayName: formatTeamNames(names, isMobile),
-        fullDisplayName: formatTeamNames(names, false), // Siempre formato completo para tooltip
+        displayName: formatTeamNamesCompact(names),
+        fullDisplayName: formatTeamNames(names),
         names: names,
         isTeam: isTeam,
         count: names.length

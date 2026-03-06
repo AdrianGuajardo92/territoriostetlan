@@ -7,7 +7,6 @@ import LoginView from './components/auth/LoginView';
 import BootScreen from './components/common/BootScreen';
 import MobileMenu from './components/common/MobileMenu';
 import { markBoot } from './utils/bootMetrics';
-// import { UpdateNotification } from './components/common/UpdateNotification'; // ðŸ”§ TEMPORALMENTE DESACTIVADO
 
 // ðŸš€ PÃGINAS LAZY - CODE SPLITTING MÃTICO 100% âš¡
 import { 
@@ -78,50 +77,6 @@ function AppContent() {
   const activeCampaignProgressLabel = activeCampaign
     ? `${activeCampaign.name} · ${activeCampaignCompletedCount}/${activeCampaignAssignments.length || 0} completadas`
     : 'Sin campaña activa';
-
-
-
-  // ðŸ”§ TEMPORALMENTE DESACTIVADO PARA TESTING
-  // Sistema de Service Worker ESTABLE - Sin bucles
-  // useEffect(() => {
-  //   if ('serviceWorker' in navigator) {
-  //     const registerSW = async () => {
-  //       try {
-    
-          
-  //         const registration = await navigator.serviceWorker.register('/sw.js', {
-  //           scope: '/',
-  //           updateViaCache: 'none'
-  //         });
-          
-          
-          
-  //         // Solo escuchar updatefound, sin forzar actualizaciones
-  //         registration.addEventListener('updatefound', () => {
-  //           const newWorker = registration.installing;
-            
-            
-  //           newWorker.addEventListener('statechange', () => {
-  //             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-  //               console.log('âœ¨ SW: Nueva versiÃ³n lista');
-  //               showToast('Nueva versiÃ³n disponible. Recarga para actualizar.', 'info', { duration: 10000 });
-  //             }
-  //           });
-  //         });
-          
-  //       } catch (error) {
-  //         console.error('âŒ SW: Error en registro:', error);
-  //       }
-  //     };
-
-  //     // Registrar solo una vez cuando la pÃ¡gina estÃ© cargada
-  //     if (document.readyState === 'complete') {
-  //     registerSW();
-  //     } else {
-  //       window.addEventListener('load', registerSW, { once: true });
-  //     }
-  //   }
-  // }, [showToast]);
 
   // FunciÃ³n simplificada para limpiar cache
   const handleClearCache = () => {
@@ -611,9 +566,6 @@ function AppContent() {
           </div>
         </div>
       )}
-
-      {/* Sistema de Actualizaciones AutomÃ¡ticas */}
-      {/* <UpdateNotification /> */} {/* ðŸ”§ TEMPORALMENTE DESACTIVADO PARA TESTING */}
 
       {/* Vista principal */}
       {showCampaigns ? (

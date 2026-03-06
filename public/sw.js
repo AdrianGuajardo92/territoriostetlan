@@ -1,5 +1,5 @@
 // Service Worker OFFLINE-FIRST CON ACTUALIZACIONES INTELIGENTES - Territorios LS v1.0.3
-const VERSION = 'v1.0.3';
+const VERSION = 'v2.16.0';
 const DYNAMIC_CACHE = `dynamic-${VERSION}`;
 const STATIC_CACHE = `static-${VERSION}`;
 

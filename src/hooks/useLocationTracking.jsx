@@ -224,5 +224,4 @@ const useLocationTracking = (options = {}) => {
   };
 };
 
-export { useLocationTracking };
 export default useLocationTracking;

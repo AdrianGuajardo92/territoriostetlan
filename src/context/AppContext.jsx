@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-// Firebase Auth no necesario - usamos sistema personalizado
-import { 
+import { normalizeAssignedTo, getAssignedNames, isUserAssigned } from '../utils/territoryHelpers';
+import {
   collection, 
   query, 
   onSnapshot, 
@@ -1489,36 +1489,11 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // 🔄 PASO 1: Funciones helper para asignaciones múltiples (MEMOIZADAS)
-  const normalizeAssignedTo = useCallback((assignedTo) => {
-    if (!assignedTo) return [];
-    if (Array.isArray(assignedTo)) return assignedTo;
-    return [assignedTo];
-  }, []);
-
-  const getAssignedNames = useCallback((assignedTo) => {
-    const normalized = normalizeAssignedTo(assignedTo);
-    return normalized.filter(name => name && name.trim() !== '');
-  }, [normalizeAssignedTo]);
-
-  const isUserAssigned = useCallback((assignedTo, userName) => {
-    if (!userName) return false;
-    const names = getAssignedNames(assignedTo);
-    return names.includes(userName);
-  }, [getAssignedNames]);
 
   // 📋 Cargar versión al iniciar la aplicación
   useEffect(() => {
     loadAppVersion();
-    
-    // COMENTADO TEMPORALMENTE: Esto puede causar recargas infinitas
-    // const versionInterval = setInterval(() => {
-    //   console.log('⏰ DEBUG - Recargando versión...');
-    //   loadAppVersion();
-    // }, 30000);
-    
-    // return () => clearInterval(versionInterval);
-  }, []); // Solo se ejecuta una vez al montar
+  }, []);
 
   useEffect(() => {
     let isActive = true;

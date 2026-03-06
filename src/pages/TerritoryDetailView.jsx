@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../hooks/useToast';
-import { useLocationTracking } from '../hooks/useLocationTracking';
+import useLocationTracking from '../hooks/useLocationTracking';
 import TerritoryDetailHeader from '../components/territories/TerritoryDetailHeader';
 import AddressCard from '../components/addresses/AddressCard';
 import { LazyAddressFormModal as AddressFormModal } from '../components/modals/LazyModals';
@@ -10,38 +10,7 @@ import { LazyMapModal as MapModal } from '../components/modals/LazyModals';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
 import { optimizeRoute, getCurrentLocation, calculateRouteStats } from '../utils/routeOptimizer';
-
-// 🔄 PASO 11: Funciones helper para asignaciones múltiples
-const normalizeAssignedTo = (assignedTo) => {
-  if (!assignedTo) return [];
-  if (Array.isArray(assignedTo)) return assignedTo;
-  return [assignedTo];
-};
-
-const getAssignedNames = (assignedTo) => {
-  const normalized = normalizeAssignedTo(assignedTo);
-  return normalized.filter(name => name && name.trim() !== '');
-};
-
-const isUserAssigned = (assignedTo, userName) => {
-  if (!userName) return false;
-  const names = getAssignedNames(assignedTo);
-  return names.includes(userName);
-};
-
-const formatTeamNames = (names, isMobile = false) => {
-  if (names.length === 0) return '';
-  if (names.length === 1) return names[0];
-
-  if (isMobile && names.length > 1) {
-    const firstNames = names.map(name => name.split(' ')[0]);
-    if (firstNames.length === 2) return `${firstNames[0]} y ${firstNames[1]}`;
-    return `${firstNames.slice(0, -1).join(', ')} y ${firstNames[firstNames.length - 1]}`;
-  }
-
-  if (names.length === 2) return `${names[0]} y ${names[1]}`;
-  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
-};
+import { getAssignedNames, isUserAssigned, formatTeamNames } from '../utils/territoryHelpers';
 
 // Función helper para detectar cambios reales entre dirección original y editada
 const getChangedFields = (original, updated) => {

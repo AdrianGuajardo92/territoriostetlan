@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Modal from '../common/Modal';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import { formatTeamNames } from '../../utils/territoryHelpers';
 
 const AssignTerritoryModal = ({
   isOpen,
@@ -20,17 +21,6 @@ const AssignTerritoryModal = ({
   const [pendingWarnings, setPendingWarnings] = useState([]);
 
 
-
-  // 🔄 PASO 7: Logging y debugging (DESACTIVADO EN PRODUCCIÓN)
-  const logAssignmentAttempt = (data) => {
-    // console.log('🎯 ASSIGNMENT ATTEMPT:', {
-    //   territory: territoryName,
-    //   selectedPublishers: data.selectedPublishers,
-    //   assigneeData: data.assigneeData,
-    //   currentAssignee: data.currentAssignee,
-    //   timestamp: new Date().toISOString()
-    // });
-  };
 
   // 🔄 PASO 5: Función para normalizar texto (quitar acentos)
   const normalizeText = (text) => {
@@ -165,14 +155,6 @@ const AssignTerritoryModal = ({
     });
   };
 
-  // 🔄 PASO 5: Formatear nombres del equipo para mostrar
-  const formatTeamNames = (names) => {
-    if (names.length === 0) return '';
-    if (names.length === 1) return names[0];
-    if (names.length === 2) return `${names[0]} y ${names[1]}`;
-    return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`;
-  };
-
   // 🔄 PASO 7: Manejar envío del formulario con validaciones finales y casos edge
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -218,14 +200,6 @@ const AssignTerritoryModal = ({
       ? selectedPublishers[0] 
       : selectedPublishers;
 
-    // 🔄 PASO 7: Logging antes del envío
-    logAssignmentAttempt({
-      selectedPublishers,
-      assigneeData,
-      currentAssignee,
-      overloadedCount: overloadedPublishers.length
-    });
-
     setIsProcessing(true);
     try {
       await onAssign(assigneeData);
@@ -261,13 +235,6 @@ const AssignTerritoryModal = ({
   // 🔄 PASO 7: Manejar cierre del modal con limpieza completa
   const handleClose = () => {
     if (!isProcessing) {
-      // 🔄 PASO 7: Logging de cierre (DESACTIVADO EN PRODUCCIÓN)
-      // console.log('🚪 MODAL CLOSED:', {
-      //   territory: territoryName,
-      //   hadSelections: selectedPublishers.length > 0,
-      //   hadSearch: searchTerm.length > 0
-      // });
-      
       setSelectedPublishers([]);
       setSearchTerm('');
       setShowAdvancedWarnings(true); // Reset a estado por defecto
@@ -293,11 +260,6 @@ const AssignTerritoryModal = ({
       availablePublishers.push(...overloadedPublishers);
     }
     
-    // console.log('🎯 SELECT ALL:', {
-    //   available: availablePublishers,
-    //   filtered: filteredAndSortedPublishers.length
-    // });
-    
     setSelectedPublishers(availablePublishers);
   }, [filteredAndSortedPublishers]);
 
@@ -306,22 +268,9 @@ const AssignTerritoryModal = ({
     setSelectedPublishers([]);
   }, []);
 
-  // 🔄 PASO 7: Efectos de optimización y logging
-  useEffect(() => {
-    if (isOpen) {
-      // console.log('🔄 MODAL OPENED:', {
-      //   territory: territoryName,
-      //   currentAssignee: currentAssignee,
-      //   publishersCount: publishers.length,
-      //   territoriesCount: territories.length
-      // });
-    }
-  }, [isOpen, territoryName, currentAssignee, publishers.length, territories.length]);
-
-  // 🔄 PASO 7: Efecto para limpiar selecciones cuando cambia el territorio
+  // 🔄 Efecto para limpiar selecciones cuando cambia el territorio
   useEffect(() => {
     if (isOpen && selectedPublishers.length > 0) {
-              // console.log('🔄 TERRITORY CHANGED - Clearing selections');
       setSelectedPublishers([]);
     }
   }, [territoryName, isOpen]); // Limpiar cuando cambia el territorio
@@ -334,7 +283,6 @@ const AssignTerritoryModal = ({
       );
       
       if (stillValid.length !== selectedPublishers.length) {
-        // console.log('⚠️ INVALID SELECTIONS DETECTED - Cleaning up');
         setSelectedPublishers(stillValid);
       }
     }

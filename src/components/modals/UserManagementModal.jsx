@@ -137,7 +137,6 @@ const UserManagementModal = ({
   };
 
   const handleDeleteClick = (user) => {
-    console.log('🗑️ Abriendo diálogo de confirmación para eliminar:', user.name);
     setUserToDelete(user);
     setShowDeleteConfirm(true);
   };

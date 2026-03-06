@@ -7,23 +7,7 @@ import Icon from '../components/common/Icon';
 import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
 import { LazyGeneralMapModal as GeneralMapModal } from '../components/modals/LazyModals';
-
-const normalizeAssignedTo = (assignedTo) => {
-  if (!assignedTo) return [];
-  if (Array.isArray(assignedTo)) return assignedTo;
-  return [assignedTo];
-};
-
-const getAssignedNames = (assignedTo) => {
-  const normalized = normalizeAssignedTo(assignedTo);
-  return normalized.filter(name => name && name.trim() !== '');
-};
-
-const isUserAssigned = (assignedTo, userName) => {
-  if (!userName) return false;
-  const names = getAssignedNames(assignedTo);
-  return names.includes(userName);
-};
+import { isUserAssigned } from '../utils/territoryHelpers';
 
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const {

@@ -106,8 +106,6 @@ const MyProposalsView = ({ onBack }) => {
   // ✅ NUEVO: Marcar propuestas como leídas cuando se abre la vista
   useEffect(() => {
     if (currentUser && currentUser.role !== 'admin') {
-      // ✅ MEJORA: Ejecutar inmediatamente al montar el componente
-      console.log('📱 Marcando propuestas como leídas al entrar a MyProposalsView');
       markProposalsAsRead();
     }
   }, [currentUser?.id]); // ✅ MEJORA: Ejecutar cuando cambie el usuario actual
