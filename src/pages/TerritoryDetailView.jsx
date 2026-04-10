@@ -4,7 +4,8 @@ import { useToast } from '../hooks/useToast';
 import useLocationTracking from '../hooks/useLocationTracking';
 import TerritoryDetailHeader from '../components/territories/TerritoryDetailHeader';
 import AddressCard from '../components/addresses/AddressCard';
-import { LazyAddressFormModal as AddressFormModal } from '../components/modals/LazyModals';
+// Import directo (sin lazy) para eliminar parpadeo - componente crítico usado frecuentemente
+import AddressFormModal from '../components/modals/AddressFormModal';
 import { LazyAssignTerritoryModal as AssignTerritoryModal } from '../components/modals/LazyModals';
 import { LazyMapModal as MapModal } from '../components/modals/LazyModals';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -754,26 +755,23 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         )}
       </main>
 
-      {/* Modales */}
-      {isFormModalOpen && (
-        <AddressFormModal
-          isOpen={isFormModalOpen}
-          onClose={() => {
-            setIsFormModalOpen(false);
-            setEditingAddress(null);
-            // Limpiar el estado del historial al cerrar el modal
-            if (window.history.state?.modalType === 'edit-address-modal') {
-              window.history.back();
-            }
-          }}
-          address={editingAddress}
-          territoryId={territory.id}
-          onSave={handleSaveAddress}
-          onDelete={editingAddress ? handleDeleteAddressAndClose : null}
-          isProcessing={isProcessing}
-          modalId={editingAddress ? 'edit-address-modal' : 'add-address-modal'}
-        />
-      )}
+      {/* Modales - siempre montado para permitir animación de salida */}
+      <AddressFormModal
+        isOpen={isFormModalOpen}
+        onClose={() => {
+          setIsFormModalOpen(false);
+          setEditingAddress(null);
+          if (window.history.state?.modalType === 'edit-address-modal') {
+            window.history.back();
+          }
+        }}
+        address={editingAddress}
+        territoryId={territory.id}
+        onSave={handleSaveAddress}
+        onDelete={editingAddress ? handleDeleteAddressAndClose : null}
+        isProcessing={isProcessing}
+        modalId={editingAddress ? 'edit-address-modal' : 'add-address-modal'}
+      />
 
       {isAssignModalOpen && (
         <AssignTerritoryModal

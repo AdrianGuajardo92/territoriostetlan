@@ -1,52 +1,88 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Icon from './Icon';
 import { useModalHistory } from '../../hooks/useModalHistory';
 
-const Modal = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  size = 'md', // sm, md, lg, xl, 2xl, full
+const ANIM_DURATION = 250; // ms - duración de la animación de salida
+
+const Modal = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
   showCloseButton = true,
   closeOnBackdrop = true,
   closeOnEscape = true,
-  modalId = 'modal' // ID único para identificar el modal en el historial
+  modalId = 'modal',
+  animation = 'fade-scale'
 }) => {
-  // Hook para manejar historial del navegador consistentemente
-  const { closeModal } = useModalHistory(isOpen, onClose, modalId);
+  // shouldRender: controla si el DOM del modal existe
+  // closing: controla la clase de animación de salida
+  const [shouldRender, setShouldRender] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const closingTimerRef = useRef(null);
 
-  // Función que maneja el cierre (usa closeModal para consistencia pero mantiene onClose como fallback)
+  const { closeModal } = useModalHistory(isOpen, onClose, modalId);
   const handleClose = closeModal || onClose;
+
+  // Detectar cambios en isOpen para animar entrada/salida
+  useEffect(() => {
+    if (isOpen) {
+      // Abrir: montar inmediatamente
+      setShouldRender(true);
+      setClosing(false);
+      if (closingTimerRef.current) {
+        clearTimeout(closingTimerRef.current);
+        closingTimerRef.current = null;
+      }
+    } else if (shouldRender && !closing) {
+      // Cerrar: activar animación de salida, luego desmontar
+      setClosing(true);
+      closingTimerRef.current = setTimeout(() => {
+        setClosing(false);
+        setShouldRender(false);
+        closingTimerRef.current = null;
+      }, ANIM_DURATION);
+    }
+  }, [isOpen]); // Solo depende de isOpen
+
+  // Cleanup del timer al desmontar
+  useEffect(() => {
+    return () => {
+      if (closingTimerRef.current) {
+        clearTimeout(closingTimerRef.current);
+      }
+    };
+  }, []);
 
   // Manejar tecla Escape
   useEffect(() => {
-    if (!isOpen || !closeOnEscape) return;
-    
+    if (!shouldRender || !closeOnEscape) return;
+
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
         handleClose();
       }
     };
-    
+
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, handleClose, closeOnEscape]);
+  }, [shouldRender, handleClose, closeOnEscape]);
 
-  // Prevenir scroll del body cuando el modal está abierto
+  // Prevenir scroll del body
   useEffect(() => {
-    if (isOpen) {
+    if (shouldRender) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
-    
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen]);
+  }, [shouldRender]);
 
-  if (!isOpen) return null;
+  // No renderizar si no debemos
+  if (!shouldRender) return null;
 
   const sizeClasses = {
     sm: 'max-w-md',
@@ -55,35 +91,41 @@ const Modal = ({
     xl: 'max-w-4xl',
     '2xl': 'max-w-6xl',
     full: 'w-full h-full max-w-none',
-    // Opción B: Pantalla completa en móviles, más grande en desktop
     'responsive-large': 'w-full h-full max-w-none sm:max-w-5xl sm:max-h-[90vh] sm:h-auto'
   };
 
-  // Configuración especial para modal full screen
   const isFullScreen = size === 'full';
   const isResponsiveLarge = size === 'responsive-large';
 
+  // Clase de animación: entrada o salida
+  const getAnimationClass = () => {
+    if (animation === 'slide-left') {
+      return closing ? 'modal-slide-left-exit' : 'modal-slide-left';
+    }
+    return closing ? 'modal-fade-scale-exit' : 'modal-fade-scale';
+  };
+
   return (
     <>
-      {/* Backdrop con animación suave */}
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] transition-opacity modal-backdrop"
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] ${closing ? 'modal-backdrop-exit' : 'modal-backdrop'}`}
         onClick={closeOnBackdrop ? handleClose : undefined}
       />
-      
-      {/* Modal con animación Fade + Scale */}
+
+      {/* Modal */}
       <div className={`fixed inset-0 z-[9999] ${isFullScreen ? '' : isResponsiveLarge ? 'p-0 sm:flex sm:items-center sm:justify-center sm:p-4' : 'flex items-center justify-center p-4'} pointer-events-none`}>
         <div className={`
-          bg-white shadow-2xl w-full transform pointer-events-auto modal-fade-scale
-          ${isFullScreen 
-            ? 'h-full w-full rounded-none' 
-            : isResponsiveLarge 
-              ? 'h-full w-full rounded-none sm:rounded-3xl sm:max-h-[90vh] sm:h-auto sm:max-w-5xl'
-              : `${sizeClasses[size]} rounded-3xl max-h-[85vh] sm:max-h-[90vh]`
-          } 
+          bg-white shadow-2xl w-full transform pointer-events-auto ${getAnimationClass()}
+          ${isFullScreen
+            ? 'h-full w-full rounded-none'
+            : isResponsiveLarge
+              ? 'h-full w-full rounded-none sm:rounded-3xl sm:max-h-[90vh] sm:h-auto sm:max-w-5xl overflow-hidden'
+              : `${sizeClasses[size]} rounded-3xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden`
+          }
           flex flex-col
         `}>
-          {/* Header - Solo para modales no full screen o con título explícito */}
+          {/* Header */}
           {(title || showCloseButton) && !isFullScreen && !isResponsiveLarge && (
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               {title && (
@@ -100,7 +142,7 @@ const Modal = ({
               )}
             </div>
           )}
-          
+
           {/* Content */}
           <div className={`flex-1 ${isFullScreen || isResponsiveLarge ? 'h-full' : 'overflow-hidden'}`}>
             {children}
@@ -111,4 +153,4 @@ const Modal = ({
   );
 };
 
-export default Modal; 
+export default Modal;

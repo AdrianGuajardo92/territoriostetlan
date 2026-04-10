@@ -36,6 +36,9 @@ export const preloadPrimaryViews = () => Promise.all([
   preloadTerritoryDetailView()
 ]);
 
+// Preload del AddressFormModal para evitar parpadeo al abrir
+export const preloadAddressFormModal = () => import('./AddressFormModal');
+
 // OPTIMIZACIÓN: Lazy Loading para modales no críticos ⚡
 // Estos modales no se cargan hasta que realmente se necesiten
 
@@ -236,15 +239,15 @@ export const LazyAddressFormModal = ({ isOpen, ...props }) => {
   );
 
   if (!isOpen) return null;
-  
+
   if (error) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
+        <div className="bg-white rounded-2xl p-6 max-w-md shadow-2xl">
           <p className="text-red-600">Error al cargar formulario</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg"
           >
             Recargar
           </button>
@@ -254,9 +257,11 @@ export const LazyAddressFormModal = ({ isOpen, ...props }) => {
   }
 
   if (isLoading || !Component) {
+    // Fallback transparente - sin backdrop propio para evitar parpadeo
+    // El Modal real pondrá su propio backdrop cuando cargue
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-xl pointer-events-auto">
           <LazyFallback message="Cargando formulario..." />
         </div>
       </div>

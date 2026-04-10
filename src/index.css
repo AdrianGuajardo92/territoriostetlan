@@ -1054,7 +1054,37 @@ select:focus-visible {
 }
 
 .modal-fade-scale {
-  animation: modalFadeScale 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalFadeScale 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Fade Scale Exit */
+@keyframes modalFadeScaleExit {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.95); }
+}
+
+.modal-fade-scale-exit {
+  animation: modalFadeScaleExit 200ms ease-in forwards;
+}
+
+/* Slide from left - Entrada */
+@keyframes modalSlideFromLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.modal-slide-left {
+  animation: modalSlideFromLeft 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Slide to left - Salida */
+@keyframes modalSlideToLeft {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-30px); }
+}
+
+.modal-slide-left-exit {
+  animation: modalSlideToLeft 250ms ease-in forwards;
 }
 
 /* Backdrop fade-in suave */
@@ -1068,7 +1098,16 @@ select:focus-visible {
 }
 
 .modal-backdrop {
-  animation: backdropFadeIn 200ms ease-out;
+  animation: backdropFadeIn 200ms ease-out forwards;
+}
+
+@keyframes backdropFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.modal-backdrop-exit {
+  animation: backdropFadeOut 200ms ease-in forwards;
 }
 
 /* Animaciones para notificaciones de actualización */
