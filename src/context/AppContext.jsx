@@ -85,6 +85,7 @@ export const AppProvider = ({ children }) => {
   const [publishers, setPublishers] = useState([]);
   const [users, setUsers] = useState([]);
   const [proposals, setProposals] = useState([]);
+  const [proposalsError, setProposalsError] = useState(null);
   const [territoryHistory, setTerritoryHistory] = useState([]); // Agregar estado para historial
   const [authLoading, setAuthLoading] = useState(true);
   const [territoriesLoading, setTerritoriesLoading] = useState(true);
@@ -1055,11 +1056,12 @@ export const AppProvider = ({ children }) => {
         createdAt: serverTimestamp()
       };
 
-      await addDoc(collection(db, 'proposals'), proposalData);
+      const docRef = await addDoc(collection(db, 'proposals'), proposalData);
+      console.log('[proposals] Proposal written to Firestore:', docRef.id, proposalData);
 
       showToast('¡Gracias por tu propuesta! Se ha enviado para revisión y te notificaremos cuando sea evaluada.', 'success', 4000);
     } catch (error) {
-      console.error('Error creating proposal:', error);
+      console.error('[proposals] Error creating proposal:', error);
       showToast('Error al crear propuesta', 'error');
       throw error;
     }
@@ -1079,11 +1081,12 @@ export const AppProvider = ({ children }) => {
         createdAt: serverTimestamp()
       };
 
-      await addDoc(collection(db, 'proposals'), proposalData);
+      const docRef = await addDoc(collection(db, 'proposals'), proposalData);
+      console.log('[proposals] New address proposal written to Firestore:', docRef.id);
 
       showToast('¡Muchas gracias! Tu propuesta de nueva dirección se ha enviado para revisión.', 'success', 4000);
     } catch (error) {
-      console.error('Error creating proposal:', error);
+      console.error('[proposals] Error creating new address proposal:', error);
       showToast('Error al crear propuesta', 'error');
       throw error;
     }
@@ -1109,11 +1112,12 @@ export const AppProvider = ({ children }) => {
         createdAt: serverTimestamp()
       };
 
-      await addDoc(collection(db, 'proposals'), proposalData);
+      const docRef = await addDoc(collection(db, 'proposals'), proposalData);
+      console.log('[proposals] Deletion proposal written to Firestore:', docRef.id);
 
       showToast('Tu solicitud de eliminación se ha enviado para revisión del administrador.', 'success', 4000);
     } catch (error) {
-      console.error('Error creating deletion proposal:', error);
+      console.error('[proposals] Error creating deletion proposal:', error);
       showToast('Error al crear solicitud de eliminación', 'error');
       throw error;
     }
@@ -1858,7 +1862,8 @@ export const AppProvider = ({ children }) => {
 
     let unsubProposals = () => {};
     if (currentUser.role === 'admin') {
-      const proposalsQuery = query(collection(db, 'proposals'), orderBy('createdAt', 'desc'));
+      // Sin orderBy para evitar exclusión silenciosa de docs sin createdAt o fallos de índice
+      const proposalsQuery = query(collection(db, 'proposals'));
       unsubProposals = onSnapshot(
         proposalsQuery,
         (snapshot) => {
@@ -1869,10 +1874,21 @@ export const AppProvider = ({ children }) => {
             ...proposalDoc.data()
           }));
 
+          // Ordenar client-side (mismo patrón que non-admin)
+          proposalsData.sort((a, b) => {
+            const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+            const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+            return dateB - dateA;
+          });
+
+          console.log('[proposals:admin] Listener fired, received', proposalsData.length, 'proposals');
+          setProposalsError(null);
           setProposals(proposalsData);
           markFirstSnapshot('proposals');
         },
         (error) => {
+          console.error('[proposals:admin] Listener error:', error.code, error.message);
+          setProposalsError(error);
           handleSecondaryError('proposals', error);
         }
       );
@@ -1898,10 +1914,13 @@ export const AppProvider = ({ children }) => {
             return dateB - dateA;
           });
 
+          setProposalsError(null);
           setProposals(proposalsData);
           markFirstSnapshot('proposals');
         },
         (error) => {
+          console.error('[proposals:user] Listener error:', error.code, error.message);
+          setProposalsError(error);
           handleSecondaryError('proposals', error);
         }
       );
@@ -2164,6 +2183,7 @@ export const AppProvider = ({ children }) => {
     publishers,
     users,
     proposals,
+    proposalsError,
     territoryHistory, // Agregar territoryHistory al contexto
     isLoading,
     authLoading,

@@ -19,7 +19,12 @@ const fieldLabels = {
   isRevisita: '📖 Es Revisita',
   revisitaBy: '📖 Revisita por',
   isEstudio: '📚 Es Estudio',
-  estudioBy: '📚 Estudio por'
+  estudioBy: '📚 Estudio por',
+  isVisited: '✅ Visitada',
+  isPhoneOnly: '📱 Solo Teléfono',
+  latitude: '🌐 Latitud',
+  longitude: '🌐 Longitud',
+  mapUrl: '🗺️ URL del Mapa'
 };
 
 // Función para filtrar cambios reales (respaldo para propuestas legacy)

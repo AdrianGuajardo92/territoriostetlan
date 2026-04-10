@@ -19,7 +19,8 @@ const getChangedFields = (original, updated) => {
   // Campos que SÍ deben compararse (relevantes para el admin)
   const camposRelevantes = [
     'address', 'phone', 'name', 'notes', 'gender',
-    'isRevisita', 'revisitaBy', 'isEstudio', 'estudioBy'
+    'isRevisita', 'revisitaBy', 'isEstudio', 'estudioBy',
+    'isVisited', 'isPhoneOnly', 'latitude', 'longitude', 'mapUrl'
   ];
 
   // Campos booleanos que deben tratar undefined/null/false como equivalentes
@@ -490,9 +491,11 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         } else {
           // Solo enviar campos que realmente cambiaron
           const changedFields = getChangedFields(editingAddress, formData);
+          console.log('[proposals] Changed fields detected:', JSON.stringify(changedFields));
 
           // Verificar si hay cambios reales
           if (Object.keys(changedFields).length === 0) {
+            console.warn('[proposals] No changes detected - proposal NOT created');
             showToast('No se detectaron cambios en la dirección.', 'info');
             setIsFormModalOpen(false);
             setEditingAddress(null);
@@ -509,6 +512,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           const actionType = dataChanged ? 'modify' : (statusChanged ? 'status' : 'modify');
 
           // Enviar solo changedFields, no formData completo
+          console.log('[proposals] Creating proposal:', { addressId: editingAddress.id, changedFields, changeReason, actionType });
           await handleProposeAddressChange(editingAddress.id, changedFields, changeReason, actionType);
         }
       } else {

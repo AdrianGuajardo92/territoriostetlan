@@ -516,9 +516,10 @@ const UserManagementModal = ({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
+              className="p-2.5 rounded-xl transition-all hover:scale-105"
+              style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
             >
-              <Icon name="times" className="text-lg sm:text-xl" />
+              <i className="fas fa-arrow-left text-white text-lg"></i>
             </button>
           </div>
 

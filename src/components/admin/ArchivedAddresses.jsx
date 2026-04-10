@@ -138,11 +138,10 @@ const ArchivedAddresses = ({ onClose }) => {
             </div>
             <button
               onClick={onClose}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-              aria-label="Cerrar"
+              className="p-2.5 rounded-xl transition-all hover:scale-105 bg-white/10 hover:bg-white/20"
+              aria-label="Volver"
             >
-              <X className="w-5 h-5" />
-              <span className="font-medium">Cerrar</span>
+              <i className="fas fa-arrow-left text-white text-lg"></i>
             </button>
           </div>
         </div>

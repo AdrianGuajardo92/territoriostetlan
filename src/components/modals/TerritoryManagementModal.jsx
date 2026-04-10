@@ -236,9 +236,9 @@ const TerritoryManagementModal = ({ isOpen, onClose }) => {
             </div>
             <button
               onClick={onClose}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              className="p-2.5 rounded-xl transition-all hover:scale-105 bg-white/10 hover:bg-white/20"
             >
-              <Icon name="x" className="text-xl" />
+              <i className="fas fa-arrow-left text-white text-lg"></i>
             </button>
           </div>
         </div>

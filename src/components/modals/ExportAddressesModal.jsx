@@ -34,9 +34,9 @@ const ExportAddressesModal = ({
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
+                className="p-2.5 rounded-xl transition-all hover:scale-105 bg-white/20 hover:bg-white/30"
               >
-                <Icon name="x" className="text-xl text-white" />
+                <i className="fas fa-arrow-left text-white text-lg"></i>
               </button>
             </div>
           </div>

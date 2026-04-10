@@ -618,12 +618,12 @@ const StatsModal = ({ isOpen, onClose }) => {
               </button>
               <button
                 onClick={onClose}
-                className="p-3 rounded-xl transition-all transform hover:scale-105 group"
+                className="p-3 rounded-xl transition-all transform hover:scale-105"
                 style={{ backgroundColor: '#34495e' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
               >
-                <Icon name="x" size={20} className="text-white group-hover:rotate-90 transition-transform" />
+                <i className="fas fa-arrow-left text-white text-lg"></i>
               </button>
             </div>
           </div>

@@ -200,7 +200,7 @@ const AddressFormModal = ({
 
         {/* Contenido con scroll garantizado */}
         <div className="flex-1 overflow-y-auto bg-gray-50" style={{ maxHeight: 'calc(85vh - 140px)' }}>
-          <form onSubmit={handleSubmit} className="px-4 py-4">
+          <form id="address-form" onSubmit={handleSubmit} className="px-4 py-4">
             <div className="space-y-4 max-w-2xl mx-auto">
               
               {/* 1. Información básica */}
