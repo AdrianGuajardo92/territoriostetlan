@@ -30,6 +30,7 @@ import {
   LazyUpdatesModal
 } from './components/modals/LazyModals';
 import { CAMPAIGN_PROGRESS_STATUSES } from './utils/campaignUtils';
+import DevClickToSource from './components/common/DevClickToSource';
 
 
 
@@ -638,6 +639,7 @@ function App() {
       <AppProvider>
         <CampaignProvider>
           <AppContent />
+          <DevClickToSource />
         </CampaignProvider>
       </AppProvider>
     </ToastProvider>

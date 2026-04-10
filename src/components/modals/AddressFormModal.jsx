@@ -38,6 +38,8 @@ const AddressFormModal = ({
 
   const [changeReason, setChangeReason] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteRequest, setShowDeleteRequest] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
   
   // Estado para la sección colapsable de ubicación
   const [isLocationExpanded, setIsLocationExpanded] = useState(false);
@@ -85,6 +87,8 @@ const AddressFormModal = ({
       });
     }
     setChangeReason('');
+    setShowDeleteRequest(false);
+    setDeleteReason('');
     // Siempre contraer la ubicación al abrir/cambiar
     setIsLocationExpanded(false);
   }, [address?.id, isOpen]);
@@ -136,6 +140,14 @@ const AddressFormModal = ({
     if (onDelete) {
       onDelete(address.id);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleDeleteRequest = () => {
+    if (onDelete && deleteReason.trim()) {
+      onDelete(address.id, deleteReason.trim());
+      setShowDeleteRequest(false);
+      setDeleteReason('');
     }
   };
 
@@ -286,13 +298,13 @@ const AddressFormModal = ({
                 </div>
               </div>
 
-              {/* 4. Estados especiales */}
+              {/* 4. Actividad */}
               <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
                 <div className="flex items-center space-x-2 mb-4">
                   <div className="p-1.5 rounded-lg" style={{ backgroundColor: '#2C3E50' }}>
-                    <i className="fas fa-star text-white text-xs"></i>
+                    <i className="fas fa-clipboard-list text-white text-xs"></i>
                   </div>
-                  <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Estados Especiales</h3>
+                  <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Actividad</h3>
                 </div>
 
                 <div className="space-y-3">
@@ -469,9 +481,9 @@ const AddressFormModal = ({
         {/* Footer con botones - SIEMPRE VISIBLE */}
         <div className="px-4 py-4 bg-white border-t border-gray-200 flex-shrink-0">
           <div className="flex justify-between items-center max-w-2xl mx-auto">
-            {/* Botón eliminar */}
+            {/* Botón eliminar / solicitar eliminación */}
             <div>
-              {onDelete && isEditing && (
+              {onDelete && isEditing && isAdmin && (
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
@@ -480,6 +492,17 @@ const AddressFormModal = ({
                 >
                   <i className="fas fa-trash mr-2"></i>
                   Eliminar
+                </button>
+              )}
+              {onDelete && isEditing && isPublisher && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteRequest(true)}
+                  className="px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm"
+                  disabled={isProcessing}
+                >
+                  <i className="fas fa-trash mr-2"></i>
+                  Solicitar eliminación
                 </button>
               )}
             </div>
@@ -527,7 +550,7 @@ const AddressFormModal = ({
         </div>
       </div>
 
-      {/* Confirmación de eliminación */}
+      {/* Confirmación de eliminación (admin) */}
       {showDeleteConfirm && (
         <div className="absolute inset-0 bg-white rounded-2xl flex items-center justify-center p-6">
           <div className="text-center max-w-sm">
@@ -552,6 +575,53 @@ const AddressFormModal = ({
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
               >
                 Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Solicitud de eliminación (publicador) */}
+      {showDeleteRequest && (
+        <div className="absolute inset-0 bg-white rounded-2xl flex items-center justify-center p-6">
+          <div className="w-full max-w-sm">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+                <i className="fas fa-trash text-red-500 text-2xl"></i>
+              </div>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: '#2C3E50' }}>
+                Solicitar eliminación
+              </h3>
+              <p className="text-gray-600 mb-4 text-sm">
+                Tu solicitud será revisada por un administrador antes de aplicarse.
+              </p>
+            </div>
+            <div className="mb-5">
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                Razón <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-300 focus:border-transparent text-sm"
+                rows="3"
+                placeholder="Ej: Ya no vive aquí, Se mudó, Falleció..."
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-center space-x-3">
+              <button
+                onClick={() => { setShowDeleteRequest(false); setDeleteReason(''); }}
+                className="px-4 py-2 border-2 border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteRequest}
+                disabled={!deleteReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Enviar solicitud
               </button>
             </div>
           </div>

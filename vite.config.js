@@ -15,7 +15,7 @@ export default defineConfig({
     port: 3500,
     strictPort: false,
     open: true,
-    host: 'localhost',
+    host: true,
     hmr: {
       overlay: true
     }

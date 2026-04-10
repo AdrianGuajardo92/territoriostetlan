@@ -765,7 +765,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           address={editingAddress}
           territoryId={territory.id}
           onSave={handleSaveAddress}
-          onDelete={isAdmin && editingAddress ? handleDeleteAddressAndClose : null}
+          onDelete={editingAddress ? handleDeleteAddressAndClose : null}
           isProcessing={isProcessing}
           modalId={editingAddress ? 'edit-address-modal' : 'add-address-modal'}
         />
