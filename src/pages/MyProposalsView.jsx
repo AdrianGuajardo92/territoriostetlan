@@ -429,245 +429,242 @@ const MyProposalsView = ({ onBack }) => {
                   ? addresses.find(a => a.id === proposal.addressId)
                   : null;
 
-                return (
-                  <div 
-                    key={proposal.id} 
-                    className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-all duration-300"
-                  >
-                    {/* Header de la propuesta - Optimizado para móvil */}
-                    <div className="flex items-start justify-between mb-4 sm:mb-6">
-                      <div className="flex items-start gap-3 sm:gap-4 flex-1">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-600 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
-                          <i className={`fas ${proposal.type === 'new' ? 'fa-plus' : proposal.type === 'delete' ? 'fa-trash' : 'fa-edit'} text-white text-sm sm:text-base`}></i>
-                        </div>
+                const typeConfig = {
+                  new: { icon: 'fa-plus', color: 'from-emerald-500 to-green-600' },
+                  delete: { icon: 'fa-trash', color: 'from-red-500 to-rose-600' },
+                  edit: { icon: 'fa-edit', color: 'from-blue-500 to-indigo-600' }
+                };
+                const typeStyle = typeConfig[proposal.type] || typeConfig.edit;
 
-                        <div className="w-full">
-                          {/* Header con formato aprobado */}
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2 flex-1 mr-3">
-                              <ActionTypeBadge actionType={getActionType(proposal)} size="md" />
+                const statusBadge = {
+                  pending: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Pendiente' },
+                  approved: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Aprobada' },
+                  rejected: { bg: 'bg-red-100', text: 'text-red-700', label: 'Rechazada' }
+                };
+                const badge = statusBadge[proposal.status] || statusBadge.pending;
+
+                return (
+                  <div
+                    key={proposal.id}
+                    className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                  >
+                    {/* Header */}
+                    <div className="px-5 pt-5 pb-4 border-b border-gray-100">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-11 h-11 bg-gradient-to-br ${typeStyle.color} rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                          <i className={`fas ${typeStyle.icon} text-white text-sm`}></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <ActionTypeBadge actionType={getActionType(proposal)} size="sm" />
                             </div>
-                            <p className="text-xs text-gray-500 flex items-center flex-shrink-0">
-                              <i className="fas fa-calendar mr-1"></i>
-                              <span className="hidden sm:inline">
-                                {formatDate(proposal.createdAt)}
-                              </span>
-                              <span className="sm:hidden">
-                                {formatDateMobile(proposal.createdAt)}
-                              </span>
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
-                              🏷️ Territorio {territory?.name?.replace(/territorio\s*/i, '') || proposal.territoryId}
+                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${badge.bg} ${badge.text} flex-shrink-0`}>
+                              {badge.label}
                             </span>
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ml-2 bg-slate-100 text-slate-700">
-                              {proposal.status === 'pending' ? '⏳ Pendiente' :
-                               proposal.status === 'approved' ? '✅ Aprobada' :
-                               '❌ Rechazada'}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1.5 flex-wrap">
+                            {proposal.territoryId ? (
+                              <span className="inline-flex items-center gap-1 font-medium text-gray-600">
+                                <i className="fas fa-map-marker-alt text-[10px] text-gray-400"></i>
+                                T-{territory?.name?.replace(/territorio\s*/i, '') || proposal.territoryId}
+                              </span>
+                            ) : proposal.status === 'approved' && proposal.assignedTerritoryId ? (
+                              <span className="inline-flex items-center gap-1 font-medium text-emerald-600">
+                                <i className="fas fa-map-marker-alt text-[10px]"></i>
+                                Asignada a {territories.find(t => t.id === proposal.assignedTerritoryId)?.name || proposal.assignedTerritoryId}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 font-semibold text-orange-600">
+                                <i className="fas fa-bolt text-[10px]"></i>
+                                Nueva dirección
+                              </span>
+                            )}
+                            <span className="text-gray-300">·</span>
+                            <span>
+                              <span className="hidden sm:inline">{formatDate(proposal.createdAt)}</span>
+                              <span className="sm:hidden">{formatDateMobile(proposal.createdAt)}</span>
                             </span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Contenido con barras verdes individuales */}
-                    <div className="space-y-3">
-                      {/* Dirección - Siempre primero (excepto para delete que tiene su propia sección) */}
-                      {proposal.type !== 'delete' && (
-                        <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-slate-300">
-                          <p className="text-sm font-semibold text-gray-700 mb-2">
-                            📍 Dirección:
-                          </p>
-                          <p className="text-sm text-gray-800 break-words">
-                            {proposal.type === 'new'
-                              ? (proposal.addressData?.address || proposal.address)
-                              : (proposal.currentData?.address || proposal.changes?.address || 'Dirección no disponible')
-                            }
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Para propuestas nuevas */}
+                    {/* Cuerpo */}
+                    <div className="px-5 py-4 space-y-4">
+                      {/* Propuestas nuevas */}
                       {proposal.type === 'new' && proposal.addressData && (
                         <>
-                          {/* Revisita - Formato como notas */}
-                          {proposal.addressData.isRevisita && proposal.addressData.revisitaBy && (
-                            <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                              <p className="text-sm font-semibold text-slate-700 mb-1">📖 Revisita:</p>
-                              <p className="text-sm text-gray-800 break-words">
-                                {proposal.addressData.revisitaBy}
+                          {/* Dirección — Hero */}
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Dirección propuesta</p>
+                            <p className="text-base font-semibold text-gray-900 break-words leading-snug">
+                              {proposal.addressData.address || proposal.address || 'No especificada'}
+                            </p>
+                            {proposal.addressData.entreCalles && (
+                              <p className="text-xs text-gray-600 mt-2">
+                                <span className="text-gray-400">Entre calles:</span>{' '}
+                                <span className="text-gray-700">{proposal.addressData.entreCalles}</span>
                               </p>
+                            )}
+                          </div>
+
+                          {/* Atributos cortos en grid */}
+                          {(proposal.addressData.gender ||
+                            (proposal.addressData.isRevisita && proposal.addressData.revisitaBy) ||
+                            (proposal.addressData.isEstudio && proposal.addressData.estudioBy)) && (
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                              {proposal.addressData.gender && (
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Género</p>
+                                  <p className="text-sm text-gray-900 mt-0.5">{proposal.addressData.gender}</p>
+                                </div>
+                              )}
+                              {proposal.addressData.isRevisita && proposal.addressData.revisitaBy && (
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Revisita</p>
+                                  <p className="text-sm text-gray-900 mt-0.5">{proposal.addressData.revisitaBy}</p>
+                                </div>
+                              )}
+                              {proposal.addressData.isEstudio && proposal.addressData.estudioBy && (
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Estudio</p>
+                                  <p className="text-sm text-gray-900 mt-0.5">{proposal.addressData.estudioBy}</p>
+                                </div>
+                              )}
                             </div>
                           )}
-                          
-                          {/* Estudio - Formato como notas */}
-                          {proposal.addressData.isEstudio && proposal.addressData.estudioBy && (
-                            <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                              <p className="text-sm font-semibold text-slate-700 mb-1">📚 Estudio:</p>
-                              <p className="text-sm text-gray-800 break-words">
-                                {proposal.addressData.estudioBy}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {/* Género - Formato como notas */}
-                          {proposal.addressData.gender && (
-                            <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                              <p className="text-sm font-semibold text-slate-700 mb-1">👥 Género:</p>
-                              <p className="text-sm text-gray-800 break-words">
-                                {proposal.addressData.gender}
-                              </p>
-                            </div>
-                          )}
-                          
+
                           {/* Notas */}
                           {proposal.addressData.notes && (
-                            <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                              <p className="text-sm font-semibold text-slate-700 mb-1">📝 Notas:</p>
-                              <p className="text-sm text-gray-800 italic break-words">
-                                "{proposal.addressData.notes}"
-                              </p>
+                            <div className="border-l-2 border-gray-300 pl-3">
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Notas</p>
+                              <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.addressData.notes}</p>
+                            </div>
+                          )}
+
+                          {/* Ubicación */}
+                          {(proposal.addressData.mapUrl || proposal.addressData.latitude) && (
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Ubicación</p>
+                              {proposal.addressData.mapUrl && (
+                                <a
+                                  href={proposal.addressData.mapUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                                >
+                                  <i className="fas fa-external-link-alt text-[10px]"></i>
+                                  Abrir en Google Maps
+                                </a>
+                              )}
+                              {proposal.addressData.latitude && proposal.addressData.longitude && (
+                                <p className="text-xs text-gray-500 mt-1 font-mono">
+                                  {proposal.addressData.latitude}, {proposal.addressData.longitude}
+                                </p>
+                              )}
                             </div>
                           )}
                         </>
                       )}
 
-                      {/* Para ediciones - Filtrar y mostrar solo campos que realmente cambiaron */}
+                      {/* Para ediciones */}
                       {proposal.type === 'edit' && proposal.changes && (() => {
-                        // Usar getDisplayChanges para filtrar propuestas legacy
                         const displayChanges = getDisplayChanges(proposal.changes, currentAddress);
                         const changesEntries = Object.entries(displayChanges);
 
-                        // Si no hay cambios reales después del filtrado
                         if (changesEntries.length === 0) {
-                          return (
-                            <>
-                              <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-gray-300">
-                                <p className="text-sm text-gray-600 italic">
-                                  No se detectaron cambios significativos en esta propuesta.
-                                </p>
-                              </div>
-                              {/* Razón del cambio - Siempre mostrar si existe */}
-                              {proposal.reason && (
-                                <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                  <p className="text-sm font-semibold text-slate-700 mb-1">💬 Razón del cambio:</p>
-                                  <p className="text-sm text-gray-800 italic break-words">
-                                    "{proposal.reason}"
-                                  </p>
-                                </div>
-                              )}
-                            </>
-                          );
+                          return <p className="text-sm italic text-gray-400">No se detectaron cambios significativos en esta propuesta.</p>;
                         }
 
                         return (
-                          <>
-                            {changesEntries.map(([campo, valorNuevo]) => {
-                              const etiqueta = fieldLabels[campo] || campo;
-                              return (
-                                <div key={campo} className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                                  <p className="text-sm font-semibold text-slate-700 mb-1">{etiqueta}:</p>
-                                  <p className="text-sm text-gray-800 break-words">
-                                    {formatValue(valorNuevo)}
-                                  </p>
-                                </div>
-                              );
-                            })}
-                          </>
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">Cambios propuestos</p>
+                            <div className="space-y-2.5">
+                              {changesEntries.map(([campo, valorNuevo]) => {
+                                const etiqueta = fieldLabels[campo] || campo;
+                                return (
+                                  <div key={campo}>
+                                    <p className="text-xs text-gray-500 mb-0.5">{etiqueta}</p>
+                                    <p className="text-sm text-gray-900 font-medium break-words">{formatValue(valorNuevo)}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         );
                       })()}
 
-                      {/* Para propuestas de eliminación */}
+                      {/* Para eliminaciones */}
                       {proposal.type === 'delete' && proposal.addressInfo && (
-                        <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-slate-400">
-                          <p className="text-sm font-bold text-slate-800 mb-3 flex items-center">
-                            <i className="fas fa-exclamation-triangle mr-2"></i>
-                            SOLICITUD DE ELIMINACIÓN
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-red-600 mb-2 flex items-center gap-1.5">
+                            <i className="fas fa-exclamation-triangle text-xs"></i>
+                            Solicitud de eliminación
                           </p>
-                          <div className="space-y-2 text-sm">
+                          <div className="space-y-1.5 text-sm">
                             {proposal.addressInfo.address && (
-                              <p className="text-gray-800">
-                                <span className="font-medium text-gray-600">Dirección:</span> {proposal.addressInfo.address}
-                              </p>
+                              <p><span className="text-gray-400">Dirección:</span> <span className="text-gray-900 font-medium">{proposal.addressInfo.address}</span></p>
                             )}
                             {proposal.addressInfo.name && (
-                              <p className="text-gray-800">
-                                <span className="font-medium text-gray-600">Nombre:</span> {proposal.addressInfo.name}
-                              </p>
+                              <p><span className="text-gray-400">Nombre:</span> <span className="text-gray-900">{proposal.addressInfo.name}</span></p>
                             )}
                             {proposal.addressInfo.phone && (
-                              <p className="text-gray-800">
-                                <span className="font-medium text-gray-600">Teléfono:</span> {proposal.addressInfo.phone}
-                              </p>
+                              <p><span className="text-gray-400">Teléfono:</span> <span className="text-gray-900">{proposal.addressInfo.phone}</span></p>
                             )}
                           </div>
                         </div>
                       )}
 
-                      {/* Razón del cambio */}
+                      {/* Motivo — aparece para todos los tipos si existe */}
                       {proposal.reason && (
-                        <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-slate-300">
-                          <p className="text-sm font-semibold text-slate-700 mb-1">
-                            💬 {proposal.type === 'delete' ? 'Razón de eliminación:' : 'Razón del cambio:'}
+                        <div className="border-l-2 border-amber-400 pl-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">
+                            {proposal.type === 'delete' ? 'Razón de eliminación' : 'Motivo'}
                           </p>
-                          <p className="text-sm text-gray-800 italic break-words">
-                            "{proposal.reason}"
-                          </p>
+                          <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.reason}</p>
                         </div>
                       )}
                     </div>
 
-                    {/* Información de procesamiento para propuestas aprobadas/rechazadas */}
+                    {/* Info de procesamiento */}
                     {proposal.status !== 'pending' && (
-                      <div className="rounded-xl p-4 border mt-4 bg-gray-50 border-gray-200">
-                        <div className="flex items-start justify-between">
-                          <h6 className="font-semibold mb-2 flex items-center text-slate-800">
-                            <i className={`${
-                              proposal.status === 'approved' ? 'fas fa-check-circle' : 'fas fa-times-circle'
-                            } mr-2`}></i>
-                            {proposal.status === 'approved' ? 'Propuesta Aprobada' : 'Propuesta Rechazada'}
-                          </h6>
-                          
-                          {/* Botón eliminar individual */}
+                      <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/40">
+                        <div className={`flex items-center gap-2 mb-2 ${proposal.status === 'approved' ? 'text-emerald-700' : 'text-red-700'}`}>
+                          <i className={`fas ${proposal.status === 'approved' ? 'fa-check-circle' : 'fa-times-circle'} text-sm`}></i>
+                          <span className="font-semibold text-sm">{proposal.status === 'approved' ? 'Aprobada' : 'Rechazada'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                          <div>
+                            <p className="text-gray-400">Por</p>
+                            <p className="text-gray-800 font-medium">{proposal.approvedBy || proposal.rejectedBy || 'Administrador'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Fecha</p>
+                            <p className="text-gray-800 font-medium">{formatDate(proposal.approvedAt || proposal.rejectedAt)}</p>
+                          </div>
+                        </div>
+                        {proposal.status === 'rejected' && proposal.rejectionReason && (
+                          <div className="mt-3 border-l-2 border-red-300 pl-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-0.5">Razón del rechazo</p>
+                            <p className="text-sm text-red-600 italic leading-relaxed">{proposal.rejectionReason}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Footer — botón eliminar para propuestas ya procesadas */}
+                    {proposal.status !== 'pending' && (
+                      <div className="px-5 pt-3 pb-5 border-t border-gray-100">
+                        <div className="flex justify-end">
                           <button
                             onClick={() => openDeleteConfirm('single', { id: proposal.id })}
-                            className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                             title="Eliminar propuesta"
                           >
-                            <i className="fas fa-trash text-sm"></i>
+                            <i className="fas fa-trash text-[10px]"></i>
+                            <span>Eliminar</span>
                           </button>
-                        </div>
-                        
-                        <div className="bg-white p-3 rounded-lg border border-opacity-50">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                            <div>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Procesada por:</span>
-                              </p>
-                              <p className="text-gray-800">
-                                {proposal.approvedBy || proposal.rejectedBy || 'Administrador'}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Fecha:</span>
-                              </p>
-                              <p className="text-gray-800">
-                                {formatDate(proposal.approvedAt || proposal.rejectedAt)}
-                              </p>
-                            </div>
-                          </div>
-                          {proposal.status === 'rejected' && proposal.rejectionReason && (
-                            <div className="mt-3 pt-3 border-t border-red-200">
-                              <p className="text-gray-600 text-sm">
-                                <span className="font-medium">Razón del rechazo:</span>
-                              </p>
-                              <p className="text-red-800 text-sm mt-1 italic">
-                                "{proposal.rejectionReason}"
-                              </p>
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}

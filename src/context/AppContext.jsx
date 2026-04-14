@@ -1092,6 +1092,33 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Propuesta rápida sin territorio: el admin asigna territorio al aprobar
+  const handleProposeQuickAddress = async (addressData) => {
+    try {
+      const proposalData = {
+        type: 'new',
+        actionType: 'add',
+        territoryId: null,
+        isQuickProposal: true,
+        addressData,
+        reason: 'Propuesta rápida desde botón flotante',
+        status: 'pending',
+        proposedBy: currentUser?.id || 'unknown',
+        proposedByName: currentUser?.name || 'Usuario',
+        createdAt: serverTimestamp()
+      };
+
+      const docRef = await addDoc(collection(db, 'proposals'), proposalData);
+      console.log('[proposals] Quick address proposal written to Firestore:', docRef.id);
+
+      showToast('Gracias, tu propuesta se está evaluando. La revisaremos y la sumaremos al territorio.', 'gentle', 4500);
+    } catch (error) {
+      console.error('[proposals] Error creating quick address proposal:', error);
+      showToast('Error al enviar propuesta rápida', 'error');
+      throw error;
+    }
+  };
+
   const handleProposeAddressDeletion = async (addressId, reason) => {
     try {
       const address = addresses.find(a => a.id === addressId);
@@ -1123,7 +1150,8 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const handleApproveProposal = async (proposalId) => {
+  const handleApproveProposal = async (proposalId, options = {}) => {
+    const { assignedTerritoryId, extraAddressData } = options;
     try {
       const proposal = proposals.find(p => p.id === proposalId);
       if (!proposal) return;
@@ -1132,23 +1160,42 @@ export const AppProvider = ({ children }) => {
         // Usar showSuccessToast: false para evitar notificación duplicada
         await handleUpdateAddress(proposal.addressId, proposal.changes, { showSuccessToast: false });
       } else if (proposal.type === 'new') {
-        await handleAddNewAddress(proposal.territoryId, proposal.addressData);
+        // Si la propuesta no tiene territorio (propuesta rápida), requiere assignedTerritoryId
+        const territoryIdToUse = proposal.territoryId || assignedTerritoryId;
+        if (!territoryIdToUse) {
+          showToast('Selecciona un territorio antes de aprobar la propuesta', 'warning');
+          throw new Error('Territorio requerido para propuesta rápida');
+        }
+        // Combinar addressData original con datos extra ingresados por el admin (p.ej. ubicación)
+        const mergedAddressData = { ...proposal.addressData, ...(extraAddressData || {}) };
+        await handleAddNewAddress(territoryIdToUse, mergedAddressData);
       } else if (proposal.type === 'delete') {
         // Eliminar la dirección
         await handleDeleteAddress(proposal.addressId, { showSuccessToast: false });
       }
 
-      await updateDoc(doc(db, 'proposals', proposalId), {
+      const updatePayload = {
         status: 'approved',
         approvedBy: currentUser?.name || 'Administrador',
         approvedAt: serverTimestamp(),
         notificationRead: false // Marcar como no leída para que aparezca notificación
-      });
+      };
+      if (assignedTerritoryId && !proposal.territoryId) {
+        updatePayload.territoryId = assignedTerritoryId;
+        updatePayload.assignedTerritoryId = assignedTerritoryId;
+      }
+      if (extraAddressData && Object.keys(extraAddressData).length > 0) {
+        updatePayload.approvedWithLocation = extraAddressData;
+      }
+
+      await updateDoc(doc(db, 'proposals', proposalId), updatePayload);
 
       showToast('Propuesta aprobada', 'success');
     } catch (error) {
       console.error('Error approving proposal:', error);
-      showToast('Error al aprobar propuesta', 'error');
+      if (error.message !== 'Territorio requerido para propuesta rápida') {
+        showToast('Error al aprobar propuesta', 'error');
+      }
       throw error;
     }
   };
@@ -2223,6 +2270,7 @@ export const AppProvider = ({ children }) => {
     // Proposal functions
     handleProposeAddressChange,
     handleProposeNewAddress,
+    handleProposeQuickAddress,
     handleProposeAddressDeletion,
     handleApproveProposal,
     handleRejectProposal,

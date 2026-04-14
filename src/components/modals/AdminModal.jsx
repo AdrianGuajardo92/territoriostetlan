@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import ActionTypeBadge, { getActionType } from '../common/ActionTypeBadge';
@@ -10,6 +10,8 @@ import UserListModal from './UserListModal';
 import ExportAddressesModal from './ExportAddressesModal';
 import TerritoryManagementModal from './TerritoryManagementModal';
 import ArchivedAddressesPortal from '../admin/ArchivedAddressesPortal';
+import QuickProposalReviewMap from '../admin/QuickProposalReviewMap';
+import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
 
 const AdminModal = (props = {}) => {
   const {
@@ -41,6 +43,97 @@ const AdminModal = (props = {}) => {
   const [showUserManagement, setShowUserManagement] = useState(false); // Estado para el modal de gestión de usuarios
   const [proposalFilter, setProposalFilter] = useState('pending'); // Filtro para propuestas: all, pending, approved, rejected
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // Estado para confirmación de eliminación
+  const [quickProposalTerritory, setQuickProposalTerritory] = useState({}); // Mapa proposalId -> territoryId seleccionado
+  const [quickProposalLocation, setQuickProposalLocation] = useState({}); // Mapa proposalId -> { mapUrl, coordsText, latitude, longitude }
+  const [openTerritoryDropdown, setOpenTerritoryDropdown] = useState(null); // proposalId | null
+  const territoryDropdownRef = useRef(null);
+  const [copiedProposalId, setCopiedProposalId] = useState(null);
+
+  const handleCopyAddress = async (proposalId, address) => {
+    if (!address) return;
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedProposalId(proposalId);
+      showToast('Dirección copiada', 'gentle', 2000);
+      setTimeout(() => setCopiedProposalId(prev => prev === proposalId ? null : prev), 2000);
+    } catch (err) {
+      showToast('No se pudo copiar', 'error');
+    }
+  };
+
+  // Cierra el dropdown de territorio al tocar fuera
+  useEffect(() => {
+    if (!openTerritoryDropdown) return;
+    const handleClickOutside = (e) => {
+      if (territoryDropdownRef.current && !territoryDropdownRef.current.contains(e.target)) {
+        setOpenTerritoryDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [openTerritoryDropdown]);
+
+  const getQuickLocation = (proposalId) => quickProposalLocation[proposalId] || { mapUrl: '', coordsText: '', latitude: null, longitude: null };
+
+  const formatCoordsText = (lat, lng) => {
+    if (lat === null || lng === null || Number.isNaN(lat) || Number.isNaN(lng)) return '';
+    return `${lat}, ${lng}`;
+  };
+
+  const parseCoordsText = (text) => {
+    if (!text) return null;
+    const match = String(text).trim().match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+    if (!match) return null;
+    const lat = parseFloat(match[1]);
+    const lng = parseFloat(match[2]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+  };
+
+  const handleQuickCoordsTextChange = (proposalId, text) => {
+    const parsed = parseCoordsText(text);
+    setQuickProposalLocation(prev => ({
+      ...prev,
+      [proposalId]: {
+        ...getQuickLocation(proposalId),
+        coordsText: text,
+        latitude: parsed ? parsed.lat : null,
+        longitude: parsed ? parsed.lng : null
+      }
+    }));
+  };
+
+  const handleQuickMapUrlChange = (proposalId, url) => {
+    const coords = extractCoordinatesFromUrl(url);
+    setQuickProposalLocation(prev => ({
+      ...prev,
+      [proposalId]: {
+        ...getQuickLocation(proposalId),
+        mapUrl: url,
+        ...(coords ? {
+          latitude: coords.lat,
+          longitude: coords.lng,
+          coordsText: formatCoordsText(coords.lat, coords.lng)
+        } : {})
+      }
+    }));
+  };
+
+  const handleQuickMapClick = (proposalId, lat, lng) => {
+    setQuickProposalLocation(prev => ({
+      ...prev,
+      [proposalId]: {
+        ...getQuickLocation(proposalId),
+        latitude: lat,
+        longitude: lng,
+        coordsText: formatCoordsText(lat, lng)
+      }
+    }));
+  };
   
   // Estados para acordeón de usuarios (ahora usaremos modales)
   const [expandedAdmins, setExpandedAdmins] = useState(false);
@@ -372,10 +465,40 @@ const AdminModal = (props = {}) => {
   
   const handleApprove = async (proposal) => {
     try {
-      await handleApproveProposal(proposal.id);
-      // Notificación eliminada - ya se muestra en handleApproveProposal
+      const needsTerritory = proposal.type === 'new' && !proposal.territoryId;
+      const assignedTerritoryId = needsTerritory ? quickProposalTerritory[proposal.id] : undefined;
+
+      if (needsTerritory && !assignedTerritoryId) {
+        showToast('Selecciona un territorio antes de aprobar', 'warning');
+        return;
+      }
+
+      // Datos de ubicación ingresados por el admin (solo para propuestas rápidas)
+      let extraAddressData;
+      if (needsTerritory) {
+        const loc = getQuickLocation(proposal.id);
+        extraAddressData = {};
+        if (loc.mapUrl) extraAddressData.mapUrl = loc.mapUrl;
+        if (loc.latitude !== null && loc.latitude !== '') extraAddressData.latitude = Number(loc.latitude);
+        if (loc.longitude !== null && loc.longitude !== '') extraAddressData.longitude = Number(loc.longitude);
+      }
+
+      await handleApproveProposal(proposal.id, { assignedTerritoryId, extraAddressData });
+
+      if (needsTerritory) {
+        setQuickProposalTerritory(prev => {
+          const next = { ...prev };
+          delete next[proposal.id];
+          return next;
+        });
+        setQuickProposalLocation(prev => {
+          const next = { ...prev };
+          delete next[proposal.id];
+          return next;
+        });
+      }
     } catch (error) {
-      showToast('Error al aprobar propuesta', 'error');
+      // Error toasts se muestran en handleApproveProposal
     }
   };
   
@@ -742,67 +865,242 @@ const AdminModal = (props = {}) => {
                   return (
                     <div
                       key={proposal.id}
-                      className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm hover:shadow-md transition-all p-5"
+                      className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                     >
                       {/* Header */}
-                      <div className="flex items-start gap-3 mb-4">
-                        <div className={`w-10 h-10 bg-gradient-to-br ${typeStyle.color} rounded-xl flex items-center justify-center flex-shrink-0 shadow`}>
-                          <i className={`fas ${typeStyle.icon} text-white text-sm`}></i>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <h4 className="text-base font-bold text-gray-800 truncate">{proposal.proposedByName}</h4>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${badge.bg} ${badge.text} border ${badge.border} flex-shrink-0`}>
-                              {badge.label}
-                            </span>
+                      <div className="px-5 pt-5 pb-4 border-b border-gray-100">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-11 h-11 bg-gradient-to-br ${typeStyle.color} rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                            <i className={`fas ${typeStyle.icon} text-white text-sm`}></i>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-medium">
-                              T-{territory?.name?.replace(/territorio\s*/i, '') || proposal.territoryId}
-                            </span>
-                            <span>
-                              {proposal.createdAt?.toDate ? proposal.createdAt.toDate().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Sin fecha'}
-                            </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-base font-bold text-gray-900 truncate">{proposal.proposedByName}</h4>
+                              <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${badge.bg} ${badge.text} flex-shrink-0`}>
+                                {badge.label}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1 flex-wrap">
+                              {proposal.territoryId ? (
+                                <span className="inline-flex items-center gap-1 font-medium text-gray-600">
+                                  <i className="fas fa-map-marker-alt text-[10px] text-gray-400"></i>
+                                  T-{territory?.name?.replace(/territorio\s*/i, '') || proposal.territoryId}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 font-semibold text-orange-600">
+                                  <i className="fas fa-bolt text-[10px]"></i>
+                                  Nueva dirección
+                                </span>
+                              )}
+                              <span className="text-gray-300">·</span>
+                              <span>
+                                {proposal.createdAt?.toDate ? proposal.createdAt.toDate().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Sin fecha'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="border-t border-gray-100 pt-4 space-y-3">
+                      <div className="px-5 py-4 space-y-4">
                         {/* Propuestas nuevas */}
                         {proposal.type === 'new' && proposal.addressData && (
                           <>
-                            <div className="bg-gray-50 rounded-xl p-3 border-l-3 border-l-emerald-400" style={{ borderLeftWidth: '3px' }}>
-                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Nueva dirección</p>
-                              <p className="text-sm font-medium text-gray-800">{proposal.addressData.address || 'No especificada'}</p>
+                            {/* Dirección — Hero */}
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Dirección propuesta</p>
+                              <div className="flex items-start gap-2">
+                                <p className="text-base font-semibold text-gray-900 flex-1 break-words leading-snug">
+                                  {proposal.addressData.address || 'No especificada'}
+                                </p>
+                                {proposal.addressData.address && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyAddress(proposal.id, proposal.addressData.address)}
+                                    className={`flex-shrink-0 p-1.5 rounded-lg transition-all ${
+                                      copiedProposalId === proposal.id
+                                        ? 'bg-emerald-50 text-emerald-600'
+                                        : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+                                    }`}
+                                    title="Copiar dirección"
+                                    aria-label="Copiar dirección"
+                                  >
+                                    <i className={`fas ${copiedProposalId === proposal.id ? 'fa-check' : 'fa-copy'} text-sm`}></i>
+                                  </button>
+                                )}
+                              </div>
+                              {proposal.addressData.entreCalles && (
+                                <p className="text-xs text-gray-600 mt-2">
+                                  <span className="text-gray-400">Entre calles:</span>{' '}
+                                  <span className="text-gray-700">{proposal.addressData.entreCalles}</span>
+                                </p>
+                              )}
                             </div>
-                            {proposal.addressData.isRevisita && proposal.addressData.revisitaBy && (
-                              <div className="bg-gray-50 rounded-xl p-3 border-l-3 border-l-blue-400" style={{ borderLeftWidth: '3px' }}>
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Revisita</p>
-                                <p className="text-sm text-gray-700">{proposal.addressData.revisitaBy}</p>
+
+                            {/* Atributos cortos en grid */}
+                            {(proposal.addressData.gender ||
+                              (proposal.addressData.isRevisita && proposal.addressData.revisitaBy) ||
+                              (proposal.addressData.isEstudio && proposal.addressData.estudioBy)) && (
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                                {proposal.addressData.gender && (
+                                  <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Género</p>
+                                    <p className="text-sm text-gray-900 mt-0.5">{proposal.addressData.gender}</p>
+                                  </div>
+                                )}
+                                {proposal.addressData.isRevisita && proposal.addressData.revisitaBy && (
+                                  <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Revisita</p>
+                                    <p className="text-sm text-gray-900 mt-0.5">{proposal.addressData.revisitaBy}</p>
+                                  </div>
+                                )}
+                                {proposal.addressData.isEstudio && proposal.addressData.estudioBy && (
+                                  <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Estudio</p>
+                                    <p className="text-sm text-gray-900 mt-0.5">{proposal.addressData.estudioBy}</p>
+                                  </div>
+                                )}
                               </div>
                             )}
-                            {proposal.addressData.isEstudio && proposal.addressData.estudioBy && (
-                              <div className="bg-gray-50 rounded-xl p-3 border-l-3 border-l-purple-400" style={{ borderLeftWidth: '3px' }}>
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Estudio</p>
-                                <p className="text-sm text-gray-700">{proposal.addressData.estudioBy}</p>
-                              </div>
-                            )}
-                            {proposal.addressData.gender && (
-                              <div className="bg-gray-50 rounded-xl p-3 border-l-3 border-l-gray-300" style={{ borderLeftWidth: '3px' }}>
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Género</p>
-                                <p className="text-sm text-gray-700">{proposal.addressData.gender}</p>
-                              </div>
-                            )}
+
+                            {/* Notas */}
                             {proposal.addressData.notes && (
-                              <div className="bg-gray-50 rounded-xl p-3 border-l-3 border-l-gray-300" style={{ borderLeftWidth: '3px' }}>
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Notas</p>
-                                <p className="text-sm text-gray-600 italic">"{proposal.addressData.notes}"</p>
+                              <div className="border-l-2 border-gray-300 pl-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Notas</p>
+                                <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.addressData.notes}</p>
                               </div>
                             )}
+
+                            {/* Motivo */}
                             {proposal.reason && (
-                              <div className="bg-amber-50 rounded-xl p-3 border-l-3 border-l-amber-400" style={{ borderLeftWidth: '3px' }}>
-                                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Motivo</p>
-                                <p className="text-sm text-gray-700 italic">"{proposal.reason}"</p>
+                              <div className="border-l-2 border-amber-400 pl-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">Motivo</p>
+                                <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.reason}</p>
+                              </div>
+                            )}
+
+                            {/* Panel de ubicación y asignación para propuestas rápidas pendientes */}
+                            {proposal.status === 'pending' && !proposal.territoryId && (() => {
+                              const loc = getQuickLocation(proposal.id);
+                              const selectedTid = quickProposalTerritory[proposal.id] || '';
+                              return (
+                                <div className="mt-2 rounded-xl border border-orange-200 bg-orange-50/60 p-4 space-y-4">
+                                  <p className="text-[11px] font-semibold uppercase tracking-wider text-orange-700 flex items-center gap-1.5">
+                                    <i className="fas fa-location-crosshairs text-xs"></i>
+                                    Ubicar la propuesta
+                                  </p>
+
+                                  <div>
+                                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Enlace de Google Maps</label>
+                                    <input
+                                      type="url"
+                                      value={loc.mapUrl}
+                                      onChange={(e) => handleQuickMapUrlChange(proposal.id, e.target.value)}
+                                      className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                      placeholder="Pega aquí el enlace de Google Maps…"
+                                    />
+                                    <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1">
+                                      <i className="fas fa-wand-magic-sparkles text-orange-500"></i>
+                                      Al pegar un enlace válido se extraen las coordenadas automáticamente.
+                                    </p>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+                                      Coordenadas <span className="text-gray-400 font-normal normal-case tracking-normal">(lat, lng)</span>
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={loc.coordsText ?? ''}
+                                      onChange={(e) => handleQuickCoordsTextChange(proposal.id, e.target.value)}
+                                      className="w-full px-3 py-2 bg-white border border-orange-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-mono"
+                                      placeholder="20.6917345, -103.2995191"
+                                    />
+                                    <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1">
+                                      <i className="fas fa-clipboard text-orange-500"></i>
+                                      Pega tal cual como las copias de Google Maps.
+                                    </p>
+                                  </div>
+
+                                  <QuickProposalReviewMap
+                                    latitude={loc.latitude}
+                                    longitude={loc.longitude}
+                                    onLocationChange={(lat, lng) => handleQuickMapClick(proposal.id, lat, lng)}
+                                    addresses={addresses}
+                                    territories={territories}
+                                    highlightedTerritoryId={selectedTid || null}
+                                  />
+
+                                  <div>
+                                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-orange-700 mb-1.5 flex items-center gap-1.5">
+                                      <i className="fas fa-bullseye text-xs"></i>
+                                      Asignar territorio *
+                                    </label>
+                                    <div ref={openTerritoryDropdown === proposal.id ? territoryDropdownRef : null}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setOpenTerritoryDropdown(openTerritoryDropdown === proposal.id ? null : proposal.id)}
+                                        className={`w-full px-4 py-3 bg-white border rounded-lg text-sm flex items-center justify-between transition-all ${
+                                          selectedTid ? 'border-orange-400 text-gray-900 font-semibold' : 'border-orange-200 text-gray-400'
+                                        } ${openTerritoryDropdown === proposal.id ? 'ring-2 ring-orange-500 border-orange-500' : 'hover:border-orange-300'}`}
+                                      >
+                                        <span className="truncate">
+                                          {selectedTid
+                                            ? territories.find(t => t.id === selectedTid)?.name
+                                            : 'Selecciona un territorio…'}
+                                        </span>
+                                        <i className={`fas fa-chevron-down text-xs text-orange-500 transition-transform flex-shrink-0 ml-2 ${
+                                          openTerritoryDropdown === proposal.id ? 'rotate-180' : ''
+                                        }`}></i>
+                                      </button>
+
+                                      {openTerritoryDropdown === proposal.id && (
+                                        <div className="mt-2 bg-white border border-orange-200 rounded-xl p-3 shadow-inner">
+                                          <div className="grid grid-cols-5 gap-1.5">
+                                            {[...territories]
+                                              .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }))
+                                              .map(t => {
+                                                const num = (t.name || '').match(/\d+/)?.[0] || t.name?.charAt(0) || '?';
+                                                const isSelected = selectedTid === t.id;
+                                                return (
+                                                  <button
+                                                    key={t.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                      setQuickProposalTerritory(prev => ({
+                                                        ...prev,
+                                                        [proposal.id]: t.id
+                                                      }));
+                                                      setOpenTerritoryDropdown(null);
+                                                    }}
+                                                    className={`aspect-square rounded-lg font-bold text-sm transition-all min-h-[44px] flex items-center justify-center ${
+                                                      isSelected
+                                                        ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-300'
+                                                        : 'bg-white text-gray-700 border border-orange-200 hover:border-orange-400 hover:bg-orange-50 active:scale-95'
+                                                    }`}
+                                                    title={t.name}
+                                                    aria-label={t.name}
+                                                  >
+                                                    {num}
+                                                  </button>
+                                                );
+                                              })}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Muestra el territorio asignado en propuestas rápidas ya aprobadas */}
+                            {proposal.status !== 'pending' && !proposal.territoryId && proposal.assignedTerritoryId && (
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">Territorio asignado al aprobar</p>
+                                <p className="text-sm text-gray-900 font-medium inline-flex items-center gap-1.5">
+                                  <i className="fas fa-map-marker-alt text-[10px] text-emerald-500"></i>
+                                  {territories.find(t => t.id === proposal.assignedTerritoryId)?.name || proposal.assignedTerritoryId}
+                                </p>
                               </div>
                             )}
                           </>
@@ -816,13 +1114,11 @@ const AdminModal = (props = {}) => {
                           if (changesEntries.length === 0) {
                             return (
                               <>
-                                <div className="bg-gray-50 rounded-xl p-3">
-                                  <p className="text-sm italic text-gray-400">No se detectaron cambios significativos.</p>
-                                </div>
+                                <p className="text-sm italic text-gray-400">No se detectaron cambios significativos.</p>
                                 {proposal.reason && (
-                                  <div className="bg-amber-50 rounded-xl p-3 border-l-3 border-l-amber-400" style={{ borderLeftWidth: '3px' }}>
-                                    <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Motivo</p>
-                                    <p className="text-sm text-gray-700 italic">"{proposal.reason}"</p>
+                                  <div className="border-l-2 border-amber-400 pl-3">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">Motivo</p>
+                                    <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.reason}</p>
                                   </div>
                                 )}
                               </>
@@ -831,33 +1127,30 @@ const AdminModal = (props = {}) => {
 
                           return (
                             <>
-                              {changesEntries.map(([campo, valorNuevo]) => {
-                                const valorAnterior = currentAddress ? currentAddress[campo] : undefined;
-                                const etiqueta = fieldLabels[campo] || campo;
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">Cambios propuestos</p>
+                                <div className="space-y-3">
+                                  {changesEntries.map(([campo, valorNuevo]) => {
+                                    const valorAnterior = currentAddress ? currentAddress[campo] : undefined;
+                                    const etiqueta = fieldLabels[campo] || campo;
 
-                                return (
-                                  <div key={campo} className="bg-gray-50 rounded-xl p-3 border-l-3 border-l-blue-400" style={{ borderLeftWidth: '3px' }}>
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{etiqueta}</p>
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex-1">
-                                        <p className="text-xs text-gray-400 mb-0.5">Antes</p>
-                                        <p className="text-sm text-gray-500 line-through">{formatValue(valorAnterior)}</p>
+                                    return (
+                                      <div key={campo}>
+                                        <p className="text-xs text-gray-500 mb-1">{etiqueta}</p>
+                                        <div className="flex items-center gap-2.5 text-sm">
+                                          <span className="text-gray-400 line-through flex-1 min-w-0 truncate">{formatValue(valorAnterior)}</span>
+                                          <i className="fas fa-arrow-right text-[10px] text-gray-300 flex-shrink-0"></i>
+                                          <span className="text-gray-900 font-medium flex-1 min-w-0 truncate">{formatValue(valorNuevo)}</span>
+                                        </div>
                                       </div>
-                                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <i className="fas fa-arrow-right text-blue-500 text-[10px]"></i>
-                                      </div>
-                                      <div className="flex-1">
-                                        <p className="text-xs text-gray-400 mb-0.5">Después</p>
-                                        <p className="text-sm font-semibold text-gray-800">{formatValue(valorNuevo)}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                                    );
+                                  })}
+                                </div>
+                              </div>
                               {proposal.reason && (
-                                <div className="bg-amber-50 rounded-xl p-3 border-l-3 border-l-amber-400" style={{ borderLeftWidth: '3px' }}>
-                                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Motivo</p>
-                                  <p className="text-sm text-gray-700 italic">"{proposal.reason}"</p>
+                                <div className="border-l-2 border-amber-400 pl-3">
+                                  <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">Motivo</p>
+                                  <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.reason}</p>
                                 </div>
                               )}
                             </>
@@ -867,29 +1160,29 @@ const AdminModal = (props = {}) => {
                         {/* Eliminaciones */}
                         {proposal.type === 'delete' && (
                           <>
-                            <div className="bg-red-50 rounded-xl p-3 border-l-3 border-l-red-400" style={{ borderLeftWidth: '3px' }}>
-                              <p className="text-xs font-semibold text-red-500 uppercase tracking-wider mb-2 flex items-center">
-                                <i className="fas fa-exclamation-triangle mr-1.5"></i>
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-red-600 mb-2 flex items-center gap-1.5">
+                                <i className="fas fa-exclamation-triangle text-xs"></i>
                                 Solicitud de eliminación
                               </p>
                               {proposal.addressInfo && (
-                                <div className="space-y-1 text-sm">
+                                <div className="space-y-1.5 text-sm">
                                   {proposal.addressInfo.address && (
-                                    <p className="text-gray-700"><span className="text-gray-400">Dirección:</span> {proposal.addressInfo.address}</p>
+                                    <p><span className="text-gray-400">Dirección:</span> <span className="text-gray-900 font-medium">{proposal.addressInfo.address}</span></p>
                                   )}
                                   {proposal.addressInfo.name && (
-                                    <p className="text-gray-700"><span className="text-gray-400">Nombre:</span> {proposal.addressInfo.name}</p>
+                                    <p><span className="text-gray-400">Nombre:</span> <span className="text-gray-900">{proposal.addressInfo.name}</span></p>
                                   )}
                                   {proposal.addressInfo.phone && (
-                                    <p className="text-gray-700"><span className="text-gray-400">Teléfono:</span> {proposal.addressInfo.phone}</p>
+                                    <p><span className="text-gray-400">Teléfono:</span> <span className="text-gray-900">{proposal.addressInfo.phone}</span></p>
                                   )}
                                 </div>
                               )}
                             </div>
                             {proposal.reason && (
-                              <div className="bg-amber-50 rounded-xl p-3 border-l-3 border-l-amber-400" style={{ borderLeftWidth: '3px' }}>
-                                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">Razón de eliminación</p>
-                                <p className="text-sm text-gray-700 italic">"{proposal.reason}"</p>
+                              <div className="border-l-2 border-amber-400 pl-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">Razón de eliminación</p>
+                                <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.reason}</p>
                               </div>
                             )}
                           </>
@@ -898,19 +1191,19 @@ const AdminModal = (props = {}) => {
 
                       {/* Info de procesamiento */}
                       {proposal.status !== 'pending' && (
-                        <div className={`rounded-xl p-3 mt-3 ${proposal.status === 'approved' ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}`}>
-                          <h6 className={`font-semibold mb-2 flex items-center text-sm ${proposal.status === 'approved' ? 'text-emerald-700' : 'text-red-700'}`}>
-                            <i className={`${proposal.status === 'approved' ? 'fas fa-check-circle' : 'fas fa-times-circle'} mr-2`}></i>
-                            {proposal.status === 'approved' ? 'Aprobada' : 'Rechazada'}
-                          </h6>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/40">
+                          <div className={`flex items-center gap-2 mb-2 ${proposal.status === 'approved' ? 'text-emerald-700' : 'text-red-700'}`}>
+                            <i className={`fas ${proposal.status === 'approved' ? 'fa-check-circle' : 'fa-times-circle'} text-sm`}></i>
+                            <span className="font-semibold text-sm">{proposal.status === 'approved' ? 'Aprobada' : 'Rechazada'}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                             <div>
-                              <p className="text-gray-400 text-xs">Por:</p>
-                              <p className="text-gray-700 font-medium">{proposal.approvedBy || proposal.rejectedBy || 'Admin'}</p>
+                              <p className="text-gray-400">Por</p>
+                              <p className="text-gray-800 font-medium">{proposal.approvedBy || proposal.rejectedBy || 'Admin'}</p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-xs">Fecha:</p>
-                              <p className="text-gray-700 font-medium">
+                              <p className="text-gray-400">Fecha</p>
+                              <p className="text-gray-800 font-medium">
                                 {(proposal.approvedAt || proposal.rejectedAt)?.toDate
                                   ? (proposal.approvedAt || proposal.rejectedAt).toDate().toLocaleDateString('es-MX')
                                   : 'No disponible'}
@@ -918,30 +1211,30 @@ const AdminModal = (props = {}) => {
                             </div>
                           </div>
                           {proposal.status === 'rejected' && proposal.rejectionReason && (
-                            <div className="mt-2 pt-2 border-t border-red-100">
-                              <p className="text-xs text-gray-400">Razón:</p>
-                              <p className="text-sm text-red-600 italic mt-0.5">"{proposal.rejectionReason}"</p>
+                            <div className="mt-3 border-l-2 border-red-300 pl-3">
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-0.5">Razón del rechazo</p>
+                              <p className="text-sm text-red-600 italic leading-relaxed">{proposal.rejectionReason}</p>
                             </div>
                           )}
                         </div>
                       )}
 
                       {/* Botones */}
-                      <div className="mt-4 pt-3 border-t border-gray-100">
+                      <div className="px-5 pt-3 pb-5 border-t border-gray-100">
                         {proposal.status === 'pending' ? (
-                          <div className="flex flex-col sm:flex-row justify-end gap-2">
+                          <div className="flex justify-end gap-2">
                             <button
                               onClick={() => setSelectedProposal(proposal)}
-                              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-50 transition-all font-medium text-sm w-full sm:w-auto"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors font-medium text-sm"
                             >
-                              <i className="fas fa-times"></i>
+                              <i className="fas fa-times text-xs"></i>
                               <span>Rechazar</span>
                             </button>
                             <button
                               onClick={() => handleApprove(proposal)}
-                              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 transition-all font-semibold text-sm shadow-md w-full sm:w-auto"
+                              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 transition-all font-semibold text-sm shadow-sm"
                             >
-                              <i className="fas fa-check"></i>
+                              <i className="fas fa-check text-xs"></i>
                               <span>Aprobar</span>
                             </button>
                           </div>
@@ -949,10 +1242,10 @@ const AdminModal = (props = {}) => {
                           <div className="flex justify-end">
                             <button
                               onClick={() => openDeleteConfirm('single', { id: proposal.id })}
-                              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all text-sm"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                               title="Eliminar propuesta"
                             >
-                              <i className="fas fa-trash text-xs"></i>
+                              <i className="fas fa-trash text-[10px]"></i>
                               <span>Eliminar</span>
                             </button>
                           </div>

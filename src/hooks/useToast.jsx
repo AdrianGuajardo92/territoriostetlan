@@ -150,6 +150,11 @@ const ToastItem = ({ toast, onRemove }) => {
           bg: 'bg-yellow-500',
           icon: '⚠'
         };
+      case 'gentle':
+        return {
+          bg: 'bg-slate-700',
+          icon: '✓'
+        };
       default:
         return {
           bg: 'bg-blue-500',

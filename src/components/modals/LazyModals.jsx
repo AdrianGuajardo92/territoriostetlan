@@ -461,6 +461,44 @@ export const LazyInstallModal = ({ isOpen, ...props }) => {
   return <Component isOpen={isOpen} {...props} />;
 };
 
+// Lazy QuickProposalModal - Formulario rápido para proponer direcciones
+export const LazyQuickProposalModal = ({ isOpen, ...props }) => {
+  const { Component, isLoading, error } = useLazyComponent(
+    () => import('./QuickProposalModal'),
+    [isOpen]
+  );
+
+  if (!isOpen) return null;
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
+        <div className="bg-white rounded-2xl p-6 max-w-md shadow-2xl">
+          <p className="text-red-600">Error al cargar el formulario rápido</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg"
+          >
+            Recargar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !Component) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-xl pointer-events-auto">
+          <LazyFallback message="Cargando propuesta rápida..." />
+        </div>
+      </div>
+    );
+  }
+
+  return <Component isOpen={isOpen} {...props} />;
+};
+
 // Lazy UpdatesModal - PEQUEÑO PERO FINAL AL 95% (3.8KB) - PRIORIDAD #9 ⚡
 export const LazyUpdatesModal = ({ isOpen, ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
@@ -743,6 +781,7 @@ export default {
   LazySearchModal,
   LazyAssignTerritoryModal,
   LazyInstallModal,
+  LazyQuickProposalModal,
   LazyUpdatesModal,
   LazyMyProposalsView,
   LazyTerritoryDetailView,

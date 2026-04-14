@@ -6,7 +6,10 @@ import SkeletonCard from '../components/common/SkeletonCard';
 import Icon from '../components/common/Icon';
 import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
-import { LazyGeneralMapModal as GeneralMapModal } from '../components/modals/LazyModals';
+import {
+  LazyGeneralMapModal as GeneralMapModal,
+  LazyQuickProposalModal as QuickProposalModal
+} from '../components/modals/LazyModals';
 import { isUserAssigned } from '../utils/territoryHelpers';
 
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
@@ -19,6 +22,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   } = useApp();
   const [filterStatus, setFilterStatus] = useState('all');
   const [isGeneralMapOpen, setIsGeneralMapOpen] = useState(false);
+  const [isQuickProposalOpen, setIsQuickProposalOpen] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const { swipeFeedback } = usePremiumFeedback();
@@ -229,6 +233,26 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
         onClose={() => {
           setIsGeneralMapOpen(false);
         }}
+      />
+
+      {/* FAB: Propuesta rápida de dirección */}
+      {currentUser && (
+        <button
+          onClick={() => setIsQuickProposalOpen(true)}
+          className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl transform hover:scale-110 active:scale-95 transition-all flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)'
+          }}
+          aria-label="Proponer nueva dirección"
+          title="Me acordé de una dirección"
+        >
+          <i className="fas fa-plus text-xl"></i>
+        </button>
+      )}
+
+      <QuickProposalModal
+        isOpen={isQuickProposalOpen}
+        onClose={() => setIsQuickProposalOpen(false)}
       />
     </div>
   );
