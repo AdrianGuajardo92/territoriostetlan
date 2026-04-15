@@ -1101,7 +1101,7 @@ export const AppProvider = ({ children }) => {
         territoryId: null,
         isQuickProposal: true,
         addressData,
-        reason: 'Propuesta rápida desde botón flotante',
+        reason: null,
         status: 'pending',
         proposedBy: currentUser?.id || 'unknown',
         proposedByName: currentUser?.name || 'Usuario',

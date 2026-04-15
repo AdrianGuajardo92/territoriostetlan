@@ -220,7 +220,7 @@ const QuickProposalReviewMap = ({
     <div className="w-full relative">
       <div
         ref={mapContainerRef}
-        className="w-full h-56 rounded-lg border-2 border-gray-200 overflow-hidden"
+        className="quick-proposal-map w-full h-56 rounded-lg border-2 border-gray-200 overflow-hidden"
         style={{ background: '#e5e7eb' }}
       />
       {!leafletReady && (

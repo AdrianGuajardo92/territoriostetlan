@@ -12,6 +12,7 @@ import TerritoryManagementModal from './TerritoryManagementModal';
 import ArchivedAddressesPortal from '../admin/ArchivedAddressesPortal';
 import QuickProposalReviewMap from '../admin/QuickProposalReviewMap';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
+import { formatRelativeTime } from '../../utils/helpers';
 
 const AdminModal = (props = {}) => {
   const {
@@ -856,7 +857,7 @@ const AdminModal = (props = {}) => {
                   const badge = statusBadge[proposal.status] || statusBadge.pending;
 
                   const typeConfig = {
-                    new: { icon: 'fa-plus', color: 'from-emerald-500 to-green-600', label: 'Nueva' },
+                    new: { icon: 'fa-house', color: 'from-emerald-500 to-green-600', label: 'Nueva' },
                     delete: { icon: 'fa-trash', color: 'from-red-500 to-rose-600', label: 'Eliminar' },
                     edit: { icon: 'fa-edit', color: 'from-blue-500 to-indigo-600', label: 'Editar' }
                   };
@@ -876,9 +877,6 @@ const AdminModal = (props = {}) => {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <h4 className="text-base font-bold text-gray-900 truncate">{proposal.proposedByName}</h4>
-                              <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${badge.bg} ${badge.text} flex-shrink-0`}>
-                                {badge.label}
-                              </span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-gray-500 mt-1 flex-wrap">
                               {proposal.territoryId ? (
@@ -887,14 +885,14 @@ const AdminModal = (props = {}) => {
                                   T-{territory?.name?.replace(/territorio\s*/i, '') || proposal.territoryId}
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 font-semibold text-orange-600">
-                                  <i className="fas fa-bolt text-[10px]"></i>
+                                <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded">
                                   Nueva dirección
                                 </span>
                               )}
                               <span className="text-gray-300">·</span>
-                              <span>
-                                {proposal.createdAt?.toDate ? proposal.createdAt.toDate().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Sin fecha'}
+                              <span className="inline-flex items-center gap-1 text-gray-500">
+                                <i className="far fa-clock text-[10px]"></i>
+                                {formatRelativeTime(proposal.createdAt) || 'Sin fecha'}
                               </span>
                             </div>
                           </div>
@@ -970,8 +968,8 @@ const AdminModal = (props = {}) => {
                               </div>
                             )}
 
-                            {/* Motivo */}
-                            {proposal.reason && (
+                            {/* Motivo — solo si hay uno real (no para propuestas rápidas) */}
+                            {proposal.reason && !proposal.isQuickProposal && proposal.reason !== 'Propuesta rápida desde botón flotante' && (
                               <div className="border-l-2 border-amber-400 pl-3">
                                 <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">Motivo</p>
                                 <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.reason}</p>
@@ -986,7 +984,7 @@ const AdminModal = (props = {}) => {
                                 <div className="mt-2 rounded-xl border border-orange-200 bg-orange-50/60 p-4 space-y-4">
                                   <p className="text-[11px] font-semibold uppercase tracking-wider text-orange-700 flex items-center gap-1.5">
                                     <i className="fas fa-location-crosshairs text-xs"></i>
-                                    Ubicar la propuesta
+                                    Ubicación de la dirección
                                   </p>
 
                                   <div>

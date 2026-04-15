@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import ActionTypeBadge, { getActionType } from '../components/common/ActionTypeBadge';
+import { formatRelativeTime } from '../utils/helpers';
 
 // Función helper para formatear valores en propuestas
 const formatValue = (value) => {
@@ -430,7 +431,7 @@ const MyProposalsView = ({ onBack }) => {
                   : null;
 
                 const typeConfig = {
-                  new: { icon: 'fa-plus', color: 'from-emerald-500 to-green-600' },
+                  new: { icon: 'fa-house', color: 'from-emerald-500 to-green-600' },
                   delete: { icon: 'fa-trash', color: 'from-red-500 to-rose-600' },
                   edit: { icon: 'fa-edit', color: 'from-blue-500 to-indigo-600' }
                 };
@@ -455,13 +456,8 @@ const MyProposalsView = ({ onBack }) => {
                           <i className={`fas ${typeStyle.icon} text-white text-sm`}></i>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <ActionTypeBadge actionType={getActionType(proposal)} size="sm" />
-                            </div>
-                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${badge.bg} ${badge.text} flex-shrink-0`}>
-                              {badge.label}
-                            </span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <ActionTypeBadge actionType={getActionType(proposal)} size="sm" />
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-500 mt-1.5 flex-wrap">
                             {proposal.territoryId ? (
@@ -475,15 +471,14 @@ const MyProposalsView = ({ onBack }) => {
                                 Asignada a {territories.find(t => t.id === proposal.assignedTerritoryId)?.name || proposal.assignedTerritoryId}
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 font-semibold text-orange-600">
-                                <i className="fas fa-bolt text-[10px]"></i>
+                              <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded">
                                 Nueva dirección
                               </span>
                             )}
                             <span className="text-gray-300">·</span>
-                            <span>
-                              <span className="hidden sm:inline">{formatDate(proposal.createdAt)}</span>
-                              <span className="sm:hidden">{formatDateMobile(proposal.createdAt)}</span>
+                            <span className="inline-flex items-center gap-1 text-gray-500">
+                              <i className="far fa-clock text-[10px]"></i>
+                              {formatRelativeTime(proposal.createdAt) || 'Sin fecha'}
                             </span>
                           </div>
                         </div>
@@ -616,8 +611,8 @@ const MyProposalsView = ({ onBack }) => {
                         </div>
                       )}
 
-                      {/* Motivo — aparece para todos los tipos si existe */}
-                      {proposal.reason && (
+                      {/* Motivo — solo si hay uno real (no para propuestas rápidas) */}
+                      {proposal.reason && !proposal.isQuickProposal && proposal.reason !== 'Propuesta rápida desde botón flotante' && (
                         <div className="border-l-2 border-amber-400 pl-3">
                           <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">
                             {proposal.type === 'delete' ? 'Razón de eliminación' : 'Motivo'}

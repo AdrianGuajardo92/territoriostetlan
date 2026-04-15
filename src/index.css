@@ -724,6 +724,16 @@ select:focus-visible {
   font-weight: 900;
 }
 
+/* Cursor crosshair para el mini-mapa de revisión de propuestas rápidas */
+.quick-proposal-map.leaflet-container {
+  cursor: crosshair !important;
+}
+/* Cuando Leaflet agrega .leaflet-dragging al body o al container, mostrar grabbing */
+.quick-proposal-map.leaflet-container.leaflet-dragging,
+body.leaflet-dragging .quick-proposal-map.leaflet-container {
+  cursor: grabbing !important;
+}
+
 /* Leaflet popup customization - Mobile optimized */
 .leaflet-popup-content-wrapper {
   border-radius: 8px;
