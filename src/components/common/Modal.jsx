@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Icon from './Icon';
-import { useModalHistory } from '../../hooks/useModalHistory';
+import { useBackHandler } from '../../hooks/useBackHandler';
 
 const ANIM_DURATION = 250; // ms - duración de la animación de salida
 
@@ -22,8 +22,8 @@ const Modal = ({
   const [closing, setClosing] = useState(false);
   const closingTimerRef = useRef(null);
 
-  const { closeModal } = useModalHistory(isOpen, onClose, modalId);
-  const handleClose = closeModal || onClose;
+  useBackHandler({ isOpen, onClose, id: modalId });
+  const handleClose = onClose;
 
   // Detectar cambios en isOpen para animar entrada/salida
   useEffect(() => {

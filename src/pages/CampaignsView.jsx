@@ -2,6 +2,7 @@
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
 import { useApp } from '../context/AppContext';
+import { useBackHandler } from '../hooks/useBackHandler';
 import { useCampaigns } from '../context/CampaignContext';
 import {
   CAMPAIGN_PROGRESS_STATUSES,
@@ -375,6 +376,14 @@ const CampaignsView = ({ onBack }) => {
   const [adminViewMode, setAdminViewMode] = useState('admin');
   const [isBusy, setIsBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
+
+  // ConfirmDialogs admin (activate / complete / archive) son mutuamente
+  // exclusivos; un solo registro cubre los tres.
+  useBackHandler({
+    isOpen: confirmAction !== null,
+    onClose: () => setConfirmAction(null),
+    id: 'campaigns-confirm-action'
+  });
   const [isStepOneExpanded, setIsStepOneExpanded] = useState(false);
   const [isStepTwoExpanded, setIsStepTwoExpanded] = useState(false);
   const [isStepThreeExpanded, setIsStepThreeExpanded] = useState(false);

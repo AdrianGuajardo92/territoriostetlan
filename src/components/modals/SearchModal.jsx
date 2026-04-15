@@ -256,16 +256,16 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
     return results;
   }, [searchTerm, addresses, territories]);
 
-  // Navegar al territorio y destacar la dirección - CORREGIDO
+  // Navegar al territorio y destacar la dirección.
+  // Cerramos search PRIMERO (sale del back stack vía useBackHandler), luego
+  // abrimos el territorio. Así el stack queda [app-territory] y un back físico
+  // cierra el territorio correctamente.
   const handleNavigateToAddress = useCallback((address) => {
     if (onNavigateToTerritory && address.territory) {
-      // PRIMERO: Navegar al territorio directamente
-      onNavigateToTerritory(address.territory, address.id);
-      
-      // SEGUNDO: Cerrar el modal SIN interferir con el historial
+      onClose();
       setTimeout(() => {
-        onClose();
-      }, 50); // Delay mínimo para evitar conflictos de estado
+        onNavigateToTerritory(address.territory, address.id);
+      }, 50);
     }
   }, [onNavigateToTerritory, onClose]);
 
@@ -279,8 +279,8 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
       isOpen={isOpen}
       onClose={onClose}
       title=""
-      size="full" // Pantalla completa
-      modalId={null} // Deshabilitar useModalHistory para evitar conflictos
+      size="full"
+      modalId={modalId || 'search-modal'}
     >
       <div className="h-full flex flex-col bg-gradient-to-br from-indigo-50 via-white to-blue-50">
         {/* Header del buscador con temática consistente */}

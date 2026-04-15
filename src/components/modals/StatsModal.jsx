@@ -6,7 +6,7 @@ import { useToast } from '../../hooks/useToast';
 import { LazyS13ReportModal } from './LazyModals';
 import { getAssignedNames } from '../../utils/territoryHelpers';
 
-const StatsModal = ({ isOpen, onClose }) => {
+const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
   const { territories, addresses, users, territoryHistory = [], publishers, currentUser } = useApp();
   const { showToast } = useToast();
   const [selectedStat, setSelectedStat] = useState('overview');
@@ -582,7 +582,7 @@ const StatsModal = ({ isOpen, onClose }) => {
   }, [stats]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" size="full">
+    <Modal isOpen={isOpen} onClose={onClose} title="" size="full" modalId={modalId}>
       <div className="h-full flex flex-col bg-gradient-to-br from-indigo-50 via-white to-blue-50">
         {/* Header elegante con temática consistente */}
         <div className="shadow-xl px-4 py-6 flex-shrink-0" style={{ backgroundColor: '#2C3E50' }}>
@@ -1133,6 +1133,7 @@ const StatsModal = ({ isOpen, onClose }) => {
         <LazyS13ReportModal
           isOpen={showS13Modal}
           onClose={() => setShowS13Modal(false)}
+          modalId={`${modalId}-s13`}
         />
       </div>
     </Modal>

@@ -4,6 +4,7 @@ import Icon from '../common/Icon';
 import ActionTypeBadge, { getActionType } from '../common/ActionTypeBadge';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import { useBackHandler } from '../../hooks/useBackHandler';
 import { LazyStatsModal } from './LazyModals'; // CORRECCIÓN: Usar lazy loading para stats
 import { LazyUserManagementModal as UserManagementModal } from './LazyModals';
 import UserListModal from './UserListModal';
@@ -49,6 +50,11 @@ const AdminModal = (props = {}) => {
   const [openTerritoryDropdown, setOpenTerritoryDropdown] = useState(null); // proposalId | null
   const territoryDropdownRef = useRef(null);
   const [copiedProposalId, setCopiedProposalId] = useState(null);
+
+  // El ConfirmDialog inline para borrar propuestas usa <Modal>, pero lo
+  // creamos con `isOpen={true}` condicional → su id del back stack debe ser
+  // estable. Registramos aquí con un id dedicado.
+  useBackHandler({ isOpen: !!showDeleteConfirm, onClose: () => setShowDeleteConfirm(null), id: 'admin-delete-proposal-confirm' });
 
   const handleCopyAddress = async (proposalId, address) => {
     if (!address) return;
@@ -1635,22 +1641,24 @@ const AdminModal = (props = {}) => {
         <LazyStatsModal
           isOpen={showStatsModal}
           onClose={() => setShowStatsModal(false)}
+          modalId="admin-stats-modal"
         />
       )}
-      
 
-      
+
+
       {/* Modal de Gestión de Usuarios */}
       {showUserManagement && (
         <UserManagementModal
           isOpen={showUserManagement}
           onClose={() => setShowUserManagement(false)}
+          modalId="admin-user-management-modal"
         />
       )}
 
       {/* Modal de confirmación para eliminar propuestas */}
       {showDeleteConfirm && (
-        <Modal isOpen={true} onClose={() => setShowDeleteConfirm(null)} size="sm">
+        <Modal isOpen={true} onClose={() => setShowDeleteConfirm(null)} size="sm" modalId={null}>
           <div className="p-6">
             {/* Header */}
             <div className="flex items-center gap-3 mb-4">
@@ -1716,6 +1724,7 @@ const AdminModal = (props = {}) => {
         isOpen={showAdminListModal}
         onClose={() => setShowAdminListModal(false)}
         userType="admin"
+        modalId="admin-user-list-admins"
       />
 
       {/* Modal de Lista de Publicadores */}
@@ -1723,6 +1732,7 @@ const AdminModal = (props = {}) => {
         isOpen={showPublisherListModal}
         onClose={() => setShowPublisherListModal(false)}
         userType="publisher"
+        modalId="admin-user-list-publishers"
       />
 
       {/* Modal de Todos los Usuarios */}
@@ -1730,6 +1740,7 @@ const AdminModal = (props = {}) => {
         isOpen={showAllUsersModal}
         onClose={() => setShowAllUsersModal(false)}
         userType="all"
+        modalId="admin-user-list-all"
       />
 
       {/* Modal de Exportación de Direcciones */}
@@ -1738,12 +1749,14 @@ const AdminModal = (props = {}) => {
         onClose={() => setShowExportAddressesModal(false)}
         onExportComplete={handleExportAddressesComplete}
         onExportSimplified={handleExportAddressesSimplified}
+        modalId="admin-export-addresses"
       />
 
       {/* Modal de Gestión de Territorios */}
-      <TerritoryManagementModal 
+      <TerritoryManagementModal
         isOpen={showTerritoryManagementModal}
         onClose={() => setShowTerritoryManagementModal(false)}
+        modalId="admin-territory-management"
       />
     </>
   );

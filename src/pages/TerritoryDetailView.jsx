@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../hooks/useToast';
+import { useBackHandler } from '../hooks/useBackHandler';
 import useLocationTracking from '../hooks/useLocationTracking';
 import TerritoryDetailHeader from '../components/territories/TerritoryDetailHeader';
 import AddressCard from '../components/addresses/AddressCard';
@@ -200,77 +201,30 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     };
   }, [resetAdminModeQuietly]);
 
-  // Referencias para event handlers - EVITA RE-SUSCRIPCIONES
-  const modalStatesRef = useRef();
+  // Ref solo para navigationState (usado por visibilitychange). El botón físico
+  // "atrás" lo coordina BackStackProvider: cada modal se registra a sí mismo
+  // vía <Modal modalId="...">, así que este componente NO necesita listener
+  // de popstate propio.
   const navigationStateRef = useRef();
-  
-  // Actualizar refs sin causar re-renders
-  modalStatesRef.current = {
-    isFormModalOpen,
-    isAssignModalOpen, 
-    isMapModalOpen,
-    showConfirmReturn,
-    showConfirmComplete,
-    setIsFormModalOpen,
-    setIsAssignModalOpen,
-    setIsMapModalOpen,
-    setShowConfirmReturn,
-    setShowConfirmComplete,
-    setEditingAddress
-  };
-  
   navigationStateRef.current = {
     navigatingAddressId,
     setIsNavigatingHighlightActive,
     setNavigatingAddressId
   };
 
-  // EVENT LISTENERS CONSOLIDADOS - OPTIMIZADO ⚡
-  useEffect(() => {
-    // Handler para botón físico de volver - USA REF para evitar re-suscripciones
-    const handleTerritoryPopState = (event) => {
-      const modalStates = modalStatesRef.current;
-      if (!modalStates) return;
-      
-      
-      // Solo manejar si hay modales abiertos en el territorio
-      // Si no hay modales, dejar que el listener de App.jsx maneje la navegación
-      const hasAnyModalOpen = modalStates.isFormModalOpen || 
-                              modalStates.isAssignModalOpen || 
-                              modalStates.isMapModalOpen || 
-                              modalStates.showConfirmReturn || 
-                              modalStates.showConfirmComplete;
-      
-      if (!hasAnyModalOpen) {
-        return; // Permitir que App.jsx maneje la navegación hacia la lista de territorios
-      }
-      
-      // Si hay modales abiertos, cerrarlos y prevenir navegación adicional
-      event.preventDefault();
-      event.stopPropagation();
-      
-      if (modalStates.isFormModalOpen) {
-        modalStates.setIsFormModalOpen(false);
-        modalStates.setEditingAddress(null);
-      } else if (modalStates.isAssignModalOpen) {
-        modalStates.setIsAssignModalOpen(false);
-      } else if (modalStates.isMapModalOpen) {
-        modalStates.setIsMapModalOpen(false);
-      } else if (modalStates.showConfirmReturn) {
-        modalStates.setShowConfirmReturn(false);
-      } else if (modalStates.showConfirmComplete) {
-        modalStates.setShowConfirmComplete(false);
-      }
-    };
+  // ConfirmDialog no usa <Modal>, así que registramos aquí en el padre.
+  useBackHandler({ isOpen: showConfirmReturn, onClose: () => setShowConfirmReturn(false), id: 'territory-confirm-return' });
+  useBackHandler({ isOpen: showConfirmComplete, onClose: () => setShowConfirmComplete(false), id: 'territory-confirm-complete' });
 
-    // Handler para cambio de visibilidad - USA REF para evitar re-suscripciones  
+  // Visibilitychange: al volver a la pestaña mientras hay una dirección en
+  // navegación GPS, re-activar el highlight por 20s.
+  useEffect(() => {
     const handleVisibilityChange = () => {
       const navState = navigationStateRef.current;
       if (!navState) return;
-      
+
       if (document.visibilityState === 'visible' && navState.navigatingAddressId) {
         navState.setIsNavigatingHighlightActive(true);
-        // Usar timeout actualizado del scope global
         if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
         highlightTimerRef.current = setTimeout(() => {
           navState.setIsNavigatingHighlightActive(false);
@@ -281,21 +235,15 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       }
     };
 
-    // SUSCRIPCIÓN ÚNICA - No se re-suscribe a menos que el componente se desmonte
-    window.addEventListener('popstate', handleTerritoryPopState);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // CLEANUP CENTRALIZADO
     return () => {
-      window.removeEventListener('popstate', handleTerritoryPopState);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Limpiar timer si existe
       if (highlightTimerRef.current) {
         clearTimeout(highlightTimerRef.current);
         highlightTimerRef.current = null;
       }
     };
-  }, []); // ✅ Sin dependencias - solo se ejecuta al montar/desmontar
+  }, []);
 
   // Hash simple y confiable para direcciones del territorio - PREVIENE BUGS
   const territoryAddressesHash = useMemo(() => {
@@ -440,17 +388,11 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   };
 
   // OPTIMIZACIÓN: Funciones memoizadas para evitar re-renders de AddressCard ⚡
+  // El history lo maneja BackStackProvider automáticamente vía <Modal modalId>.
   const openEditModal = useCallback((address) => {
     setEditingAddress(address);
     setIsFormModalOpen(true);
-    // Actualizar el historial para indicar que hay un modal de editar dirección abierto
-    window.history.pushState({ 
-      app: 'territorios', 
-      level: 'territory', 
-      territory: territory.id,
-      modalType: 'edit-address-modal'
-    }, '', window.location.href);
-  }, [territory.id]);
+  }, []);
 
   const openAddModal = useCallback(() => {
     setEditingAddress(null);
@@ -666,23 +608,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }
   }, [addresses, handleToggleAddressStatus, handleUpdateAddress, showToast]);
 
-  // Manejar el cierre del modal de editar dirección desde el botón físico de volver
-  useEffect(() => {
-    const handleCloseAddressFormModal = () => {
-      if (isFormModalOpen) {
-        setIsFormModalOpen(false);
-        setEditingAddress(null);
-        // Limpiar el estado del historial al cerrar el modal
-        if (window.history.state?.modalType === 'edit-address-modal') {
-          window.history.back();
-        }
-      }
-    };
-
-    window.addEventListener('closeAddressFormModal', handleCloseAddressFormModal);
-    return () => window.removeEventListener('closeAddressFormModal', handleCloseAddressFormModal);
-  }, [isFormModalOpen]);
-
   // OPTIMIZACIÓN: Handlers específicos memoizados ⚡
   const createEditHandler = useCallback((address) => () => openEditModal(address), [openEditModal]);
   const createNavigateHandler = useCallback((addressId) => () => handleNavigationStart(addressId), [handleNavigationStart]);
@@ -761,9 +686,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         onClose={() => {
           setIsFormModalOpen(false);
           setEditingAddress(null);
-          if (window.history.state?.modalType === 'edit-address-modal') {
-            window.history.back();
-          }
         }}
         address={editingAddress}
         territoryId={territory.id}

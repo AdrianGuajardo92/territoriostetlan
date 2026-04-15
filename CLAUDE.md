@@ -182,17 +182,58 @@ Archivos `.md` importantes en la raíz:
 - `GUIA_EMERGENCIA_DESARROLLO.md` - Soluciones a problemas comunes
 - `IMPLEMENTACION_BORRADO_SUAVE.md` - Documentación del soft delete
 
-## Manejo del Botón Atrás (Móvil)
+## Sistema centralizado del botón atrás (OBLIGATORIO)
 
-Prioridad de cierre en `App.jsx` → `handlePopState`:
-1. Vista de revisitas/estudios abierta → cerrar
-2. Vista de propuestas abierta → cerrar
-3. Territorio seleccionado → volver a lista
-4. Modal activo → cerrar
-5. Menú abierto → cerrar
-6. Modal de editar dirección → cerrar
-7. Historial disponible → navegación normal
-8. Sin historial → confirmar salida de app
+La app tiene un único `BackStackProvider` (`src/context/BackStackContext.jsx`) que coordina el botón físico "atrás" del celular con **todos** los overlays (modales, vistas overlay, paneles, ConfirmDialog). No hay múltiples listeners — hay uno solo en el Provider, y cada overlay se registra en un stack LIFO. El back físico siempre cierra **lo último que se abrió**, nunca brinca al inicio.
+
+### Regla obligatoria al agregar UN NUEVO componente con estado abierto/cerrado
+
+Todo estado booleano que controle un **modal, panel overlay, vista pantalla-completa o ConfirmDialog** DEBE registrarse con `useBackHandler`:
+
+```jsx
+import { useBackHandler } from '../../hooks/useBackHandler';
+
+function MyComponent() {
+  const [isOpen, setIsOpen] = useState(false);
+  useBackHandler({ isOpen, onClose: () => setIsOpen(false), id: 'unique-stable-id' });
+  // ...
+}
+```
+
+### Cuándo NO usar useBackHandler
+
+- **Dropdowns pequeños** (menú "⋮", selectores inline): cierre por click-outside.
+- **Acordeones expandibles**: mantienen su estado, no son overlays.
+- **Tooltips, popovers, hovers**.
+- Cuando el componente renderiza `<Modal modalId="...">` (`src/components/common/Modal.jsx`), el hook YA se llama internamente — **NO duplicar** en el padre.
+
+### Reglas del `id`
+
+- Único en toda la app mientras el overlay está abierto.
+- Convención: `'<ámbito>-<nombre>'` (ej. `'admin-user-management-modal'`, `'territory-confirm-return'`).
+- Variantes: `editingAddress ? 'edit-address-modal' : 'add-address-modal'`.
+- Para sub-dialogs anidados, prefijar con el `modalId` del padre: `` `${modalId}-delete-confirm` ``.
+
+### Prohibiciones estrictas
+
+- ❌ NO llamar `window.history.pushState` ni `window.history.back()` manualmente — todo pasa por el Provider.
+- ❌ NO registrar listeners de `popstate` en componentes — solo el Provider.
+- ❌ NO usar el hook antiguo `useModalHistory` (eliminado).
+
+### Verificación automática
+
+Antes de commit de cualquier cambio que toque overlays:
+
+```bash
+grep -rE "history\.pushState|history\.back\(\)|addEventListener.*popstate" src/ | grep -v BackStackContext | grep -v useBackHandler
+# Debe retornar 0 líneas.
+```
+
+### Cómo funciona internamente
+
+- Apertura: `setIsOpen(true)` → hook hace `register` + `pushState({backstack:true, id})`.
+- Back físico: Provider pop del stack LIFO → invoca `onClose` del top. El hook detecta isOpen=false sin la entry en stack → **no** vuelve a hacer history.back (evita loop).
+- Cierre programático (X/Escape/onSuccess): `onClose()` → setIsOpen(false) → hook unregistra + flag + `history.back()` → popstate ve flag y lo consume sin re-cerrar.
 
 ## Troubleshooting Común
 

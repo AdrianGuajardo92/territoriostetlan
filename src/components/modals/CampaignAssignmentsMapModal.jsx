@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../common/Icon';
 import { useToast } from '../../hooks/useToast';
+import { useBackHandler } from '../../hooks/useBackHandler';
 import useLocationTracking from '../../hooks/useLocationTracking';
 import { optimizeRoute } from '../../utils/routeOptimizer';
 import {
@@ -124,8 +125,12 @@ const CampaignAssignmentsMapModal = ({
   campaign,
   assignments = [],
   onStatusChange,
-  isProcessing = false
+  isProcessing = false,
+  modalId = 'campaign-assignments-map-modal'
 }) => {
+  // Este modal no usa <Modal>; se registra solo.
+  useBackHandler({ isOpen, onClose, id: modalId });
+
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef({});

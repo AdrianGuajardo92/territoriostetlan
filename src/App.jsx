@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { CampaignProvider, useCampaigns } from './context/CampaignContext';
+import { BackStackProvider } from './context/BackStackContext';
+import { useBackHandler } from './hooks/useBackHandler';
 import { ToastProvider, useToast } from './hooks/useToast';
 import './utils/errorLogger'; // Inicializar el sistema de captura de errores
 import LoginView from './components/auth/LoginView';
@@ -164,99 +166,15 @@ function AppContent() {
     }
   }, [currentUser, territories, selectedTerritory]);
 
-  // Manejar el botÃ³n fÃ­sico de volver
-  useEffect(() => {
-    const handlePopState = (event) => {
-      if (showCampaigns) {
-        setShowCampaigns(false);
-        event.preventDefault();
-        return;
-      }
-
-      // PRIORIDAD 1: Si hay vista de revisitas y estudios abierta, volver a lista
-      if (showMyStudiesAndRevisits) {
-        setShowMyStudiesAndRevisits(false);
-        event.preventDefault();
-        return;
-      }
-
-      // PRIORIDAD 2: Si hay vista de propuestas abierta, volver a lista
-      if (showMyProposals) {
-        setShowMyProposals(false);
-        event.preventDefault();
-        return;
-      }
-
-      // PRIORIDAD 3: Si hay territorio seleccionado, volver a lista
-      if (selectedTerritory) {
-        setSelectedTerritory(null);
-        event.preventDefault();
-        return;
-      }
-
-      // PRIORIDAD 4: Si hay modal activo, cerrarlo
-      if (activeModal) {
-        setActiveModal(null);
-        event.preventDefault();
-        return;
-      }
-
-      // PRIORIDAD 5: Si hay menÃº abierto, cerrarlo
-      if (isMenuOpen) {
-        setIsMenuOpen(false);
-        event.preventDefault();
-        return;
-      }
-
-      // PRIORIDAD 6: Si hay modal de editar direcciÃ³n abierto en territorio, cerrarlo
-      if (selectedTerritory && window.history.state?.modalType === 'edit-address-modal') {
-        // Simular el cierre del modal de editar direcciÃ³n
-        const closeEvent = new CustomEvent('closeAddressFormModal');
-        window.dispatchEvent(closeEvent);
-        event.preventDefault();
-        return;
-      }
-
-      // PRIORIDAD 7: Verificar el estado del historial para determinar acciÃ³n
-      const currentState = event.state;
-      
-      // Si tenemos un estado especÃ­fico de la app, manejarlo
-      if (currentState && currentState.app === 'territorios') {
-        if (currentState.level === 'territory') {
-          return; // Permitir navegaciÃ³n normal
-        }
-        if (currentState.level === 'proposals') {
-          return; // Permitir navegaciÃ³n normal
-        }
-        if (currentState.level === 'menu') {
-          return; // Permitir navegaciÃ³n normal
-        }
-        if (currentState.level === 'main') {
-          return; // Permitir navegaciÃ³n normal
-        }
-      }
-
-      // PRIORIDAD 8: Si hay historial disponible, permitir navegaciÃ³n normal  
-      if (window.history.length > 1) {
-        return; // Permitir navegaciÃ³n normal hacia atrÃ¡s
-      }
-
-      // PRIORIDAD 9: Solo mostrar confirmaciÃ³n si realmente no hay a dÃ³nde volver
-      event.preventDefault();
-      
-      const shouldExit = window.confirm('\u00bfQuieres salir de la aplicaci\u00f3n?');
-      if (shouldExit) {
-        // Cerrar ventana
-        window.close();
-      } else {
-        // Si no quiere salir, mantener en la misma pÃ¡gina
-        window.history.pushState({ app: 'territorios', level: 'main' }, '', window.location.href);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeModal, isMenuOpen, selectedTerritory, showCampaigns, showMyProposals, showMyStudiesAndRevisits]);
+  // Botón físico "atrás" del celular: coordinado por BackStackProvider.
+  // Cada overlay se registra a sí mismo en orden LIFO. El back siempre cierra
+  // el último que se abrió; si no hay nada abierto, permite navegación nativa.
+  useBackHandler({ isOpen: isMenuOpen, onClose: () => setIsMenuOpen(false), id: 'app-menu' });
+  useBackHandler({ isOpen: !!activeModal, onClose: () => setActiveModal(null), id: 'app-active-modal' });
+  useBackHandler({ isOpen: showCampaigns, onClose: () => setShowCampaigns(false), id: 'app-campaigns' });
+  useBackHandler({ isOpen: showMyProposals, onClose: () => setShowMyProposals(false), id: 'app-proposals' });
+  useBackHandler({ isOpen: showMyStudiesAndRevisits, onClose: () => setShowMyStudiesAndRevisits(false), id: 'app-studies-revisits' });
+  useBackHandler({ isOpen: !!selectedTerritory, onClose: () => setSelectedTerritory(null), id: 'app-territory' });
 
   // Menu items configuration
   const menuItems = [
@@ -362,103 +280,52 @@ function AppContent() {
     }
     
     setActiveModal(modalId);
-    // El historial ahora lo maneja automÃ¡ticamente useModalHistory
   };
 
   const handleCloseModal = () => {
     setActiveModal(null);
-    // El historial ahora lo maneja automÃ¡ticamente useModalHistory
   };
 
+  // El historial del browser lo coordina BackStackProvider vía useBackHandler.
+  // Los handlers solo actualizan el estado local.
   const handleSelectTerritory = (territory, addressIdToHighlight = null) => {
-    setSelectedTerritory({...territory, highlightedAddressId: addressIdToHighlight});
-    // Agregar entrada especÃ­fica al historial para el territorio
-    window.history.pushState({ 
-      app: 'territorios', 
-      level: 'territory', 
-      territory: territory.id,
-      highlightedAddressId: addressIdToHighlight
-    }, '', window.location.href);
+    setSelectedTerritory({ ...territory, highlightedAddressId: addressIdToHighlight });
   };
 
   const handleBackFromTerritory = () => {
     setSelectedTerritory(null);
-    // Si el estado actual es un territorio, navegar hacia atrÃ¡s
-    if (window.history.state?.level === 'territory') {
-      window.history.back();
-    }
   };
 
   const handleOpenMyProposals = () => {
     setShowMyProposals(true);
-    
-    // âœ… NUEVO: Marcar propuestas como leÃ­das usando la funciÃ³n del contexto
-    // (Esto se maneja automÃ¡ticamente en MyProposalsView.jsx)
-    
-    // Agregar entrada especÃ­fica al historial
-    window.history.pushState({ 
-      app: 'territorios', 
-      level: 'proposals'
-    }, '', window.location.href);
   };
 
   const handleBackFromMyProposals = () => {
     setShowMyProposals(false);
-    // Si el estado actual es propuestas, navegar hacia atrÃ¡s
-    if (window.history.state?.level === 'proposals') {
-      window.history.back();
-    }
   };
 
   const handleOpenCampaigns = () => {
     setShowCampaigns(true);
-
-    window.history.pushState({
-      app: 'territorios',
-      level: 'campaigns'
-    }, '', window.location.href);
   };
 
   const handleBackFromCampaigns = () => {
     setShowCampaigns(false);
-    if (window.history.state?.level === 'campaigns') {
-      window.history.back();
-    }
   };
 
   const handleOpenMyStudiesAndRevisits = () => {
     setShowMyStudiesAndRevisits(true);
-    
-    // Agregar entrada especÃ­fica al historial
-    window.history.pushState({ 
-      app: 'territorios', 
-      level: 'studiesAndRevisits'
-    }, '', window.location.href);
   };
 
   const handleBackFromMyStudiesAndRevisits = () => {
     setShowMyStudiesAndRevisits(false);
-    // Si el estado actual es estudios y revisitas, navegar hacia atrÃ¡s
-    if (window.history.state?.level === 'studiesAndRevisits') {
-      window.history.back();
-    }
   };
 
-  // Manejar apertura del menÃº
   const handleOpenMenu = () => {
     setIsMenuOpen(true);
-    window.history.pushState({
-      app: 'territorios',
-      level: 'menu'
-    }, '', window.location.href);
   };
 
-  // Manejar cierre del menÃº
   const handleCloseMenu = () => {
     setIsMenuOpen(false);
-    if (window.history.state?.level === 'menu') {
-      window.history.back();
-    }
   };
 
   useEffect(() => {
@@ -635,11 +502,13 @@ function AppContent() {
 function App() {
   return (
     <ToastProvider>
-      <AppProvider>
-        <CampaignProvider>
-          <AppContent />
-        </CampaignProvider>
-      </AppProvider>
+      <BackStackProvider>
+        <AppProvider>
+          <CampaignProvider>
+            <AppContent />
+          </CampaignProvider>
+        </AppProvider>
+      </BackStackProvider>
     </ToastProvider>
   );
 }

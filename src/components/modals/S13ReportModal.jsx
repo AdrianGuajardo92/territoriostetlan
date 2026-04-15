@@ -49,7 +49,7 @@ const VIEW_TABS = [
   { id: 's13', label: 'Formato S-13', icon: 'fas fa-file-alt' }
 ];
 
-const S13ReportModal = ({ isOpen, onClose }) => {
+const S13ReportModal = ({ isOpen, onClose, modalId = 's13-report-modal' }) => {
   const { territories, territoryHistory = [] } = useApp();
   const { showToast } = useToast();
 
@@ -162,7 +162,7 @@ const S13ReportModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" size="full">
+    <Modal isOpen={isOpen} onClose={onClose} title="" size="full" modalId={modalId}>
       <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50">
         {/* Header */}
         <div className="shadow-xl px-4 py-4 flex-shrink-0" style={{ backgroundColor: '#1e3a5f' }}>

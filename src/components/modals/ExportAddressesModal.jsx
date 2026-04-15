@@ -1,12 +1,17 @@
 import React from 'react';
 import Icon from '../common/Icon';
+import { useBackHandler } from '../../hooks/useBackHandler';
 
-const ExportAddressesModal = ({ 
-  isOpen, 
-  onClose, 
-  onExportComplete, 
-  onExportSimplified 
+const ExportAddressesModal = ({
+  isOpen,
+  onClose,
+  onExportComplete,
+  onExportSimplified,
+  modalId = 'export-addresses-modal'
 }) => {
+  // Registrar ANTES del early return para mantener el orden de hooks.
+  useBackHandler({ isOpen, onClose, id: modalId });
+
   if (!isOpen) return null;
 
   return (

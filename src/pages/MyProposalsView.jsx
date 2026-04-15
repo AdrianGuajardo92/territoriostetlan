@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { useBackHandler } from '../hooks/useBackHandler';
 import ActionTypeBadge, { getActionType } from '../components/common/ActionTypeBadge';
 import { formatRelativeTime } from '../utils/helpers';
 
@@ -98,6 +99,10 @@ const MyProposalsView = ({ onBack }) => {
   const [proposalFilter, setProposalFilter] = useState('pending');
   const [showInstructions, setShowInstructions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // { type: 'single', id: 'xxx' } o { type: 'bulk', status: 'approved' }
+
+  // Overlays custom (no usan <Modal>); registrar en el back stack.
+  useBackHandler({ isOpen: showInstructions, onClose: () => setShowInstructions(false), id: 'my-proposals-instructions' });
+  useBackHandler({ isOpen: !!showDeleteConfirm, onClose: () => setShowDeleteConfirm(null), id: 'my-proposals-delete-confirm' });
 
   // Filtrar propuestas del usuario actual
   const userProposals = proposals.filter(p => 

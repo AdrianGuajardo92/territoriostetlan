@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import { useBackHandler } from '../../hooks/useBackHandler';
 import Icon from '../common/Icon';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 
-const GeneralMapModal = ({ isOpen, onClose }) => {
+const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => {
+    // Este componente NO usa <Modal>, así que registramos el back handler
+    // directamente para el modal raíz y para el panel de acción rápida.
+    useBackHandler({ isOpen, onClose, id: modalId });
     const { territories, addresses, currentUser, isAdmin, adminEditMode } = useApp();
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
@@ -28,6 +32,10 @@ const GeneralMapModal = ({ isOpen, onClose }) => {
     // Estado para filtro de territorio por ID
     const [selectedTerritoryId, setSelectedTerritoryId] = useState(null);
     const [showTerritoryDropdown, setShowTerritoryDropdown] = useState(false);
+
+    // Panel de acción rápida: registrarlo como overlay para que el back físico
+    // lo cierre antes de cerrar el mapa completo.
+    useBackHandler({ isOpen: showQuickAction, onClose: () => setShowQuickAction(false), id: `${modalId}-quick-action` });
 
     // Coordenadas del centro de Guadalajara, Jalisco, México
     const GUADALAJARA_CENTER = { lat: 20.6597, lng: -103.3496 };

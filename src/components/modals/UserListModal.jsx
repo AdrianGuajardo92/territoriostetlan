@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useBackHandler } from '../../hooks/useBackHandler';
 import Icon from '../common/Icon';
 
-const UserListModal = ({ 
-  isOpen, 
+const UserListModal = ({
+  isOpen,
   onClose,
-  userType = 'all' // 'admin', 'publisher', 'all'
+  userType = 'all', // 'admin', 'publisher', 'all'
+  modalId
 }) => {
+  // Este modal no usa <Modal>; registramos directamente. El modalId se deriva
+  // del userType cuando no viene del padre, para que los 3 usos coexistan.
+  useBackHandler({ isOpen, onClose, id: modalId || `user-list-${userType}-modal` });
+
   const { users, currentUser } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
 

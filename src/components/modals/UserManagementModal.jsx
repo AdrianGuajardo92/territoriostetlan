@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import { useBackHandler } from '../../hooks/useBackHandler';
 import Icon from '../common/Icon';
 import ConfirmDialog from '../common/ConfirmDialog';
 
-const UserManagementModal = ({ 
-  isOpen, 
-  onClose
+const UserManagementModal = ({
+  isOpen,
+  onClose,
+  modalId = 'user-management-modal'
 }) => {
+  // Este modal no usa <Modal>; registramos raíz + sub-dialogs aquí.
+  useBackHandler({ isOpen, onClose, id: modalId });
   const { 
     users, 
     handleCreateUser, 
@@ -29,6 +33,9 @@ const UserManagementModal = ({
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [userToResetPassword, setUserToResetPassword] = useState(null);
+
+  useBackHandler({ isOpen: showDeleteConfirm, onClose: () => setShowDeleteConfirm(false), id: `${modalId}-delete-confirm` });
+  useBackHandler({ isOpen: showPasswordReset, onClose: () => setShowPasswordReset(false), id: `${modalId}-password-reset` });
 
   // Estados del formulario
   const [formData, setFormData] = useState({

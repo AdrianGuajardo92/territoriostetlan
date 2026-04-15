@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
+import { useBackHandler } from '../../hooks/useBackHandler';
 
 const AddressFormModal = ({ 
   isOpen, 
@@ -40,9 +41,14 @@ const AddressFormModal = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteRequest, setShowDeleteRequest] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
-  
+
   // Estado para la sección colapsable de ubicación
   const [isLocationExpanded, setIsLocationExpanded] = useState(false);
+
+  // Los ConfirmDialog internos no usan <Modal>; registrarlos aquí permite
+  // que el botón físico "atrás" los cierre antes de cerrar el form.
+  useBackHandler({ isOpen: showDeleteConfirm, onClose: () => setShowDeleteConfirm(false), id: `${modalId}-delete-confirm` });
+  useBackHandler({ isOpen: showDeleteRequest, onClose: () => setShowDeleteRequest(false), id: `${modalId}-delete-request` });
 
   useEffect(() => {
     // Solo ejecutar cuando el modal se abre por primera vez o cambia la dirección

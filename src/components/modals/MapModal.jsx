@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useToast } from '../../hooks/useToast';
+import { useBackHandler } from '../../hooks/useBackHandler';
 import Icon from '../common/Icon';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
 
@@ -19,7 +20,9 @@ const TerritoryMapModal = ({
   onForceLocationUpdate, // ✅ NUEVA PROP PARA FORZAR ACTUALIZACIÓN DE UBICACIÓN
   modalId = 'territory-map-modal' // ID único para el historial
 }) => {
-    
+    // Este componente NO usa <Modal>; registramos el back handler aquí.
+    useBackHandler({ isOpen, onClose, id: modalId });
+
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const [mapError, setMapError] = useState(false);
@@ -27,6 +30,8 @@ const TerritoryMapModal = ({
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [selectedAddressIndex, setSelectedAddressIndex] = useState(null);
     const [showQuickAction, setShowQuickAction] = useState(false);
+
+    useBackHandler({ isOpen: showQuickAction, onClose: () => setShowQuickAction(false), id: `${modalId}-quick-action` });
     const { showToast } = useToast();
     const markersRef = useRef({});
     const routeLineRef = useRef(null);

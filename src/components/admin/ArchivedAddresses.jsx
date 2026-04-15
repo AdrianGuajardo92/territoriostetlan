@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useBackHandler } from '../../hooks/useBackHandler';
 import { Archive, Search, RotateCcw, Trash2, Calendar, User, MapPin, Phone, FileText, X, AlertTriangle } from 'lucide-react';
 import { getArchivedAddresses, formatArchivedAddress } from '../../utils/softDelete';
 
-const ArchivedAddresses = ({ onClose }) => {
+const ArchivedAddresses = ({ onClose, modalId = 'archived-addresses' }) => {
   const { addresses, territories, showToast, currentUser, handleRestoreAddress, handleDeleteAddress } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTerritory, setSelectedTerritory] = useState('all');
@@ -11,6 +12,12 @@ const ArchivedAddresses = ({ onClose }) => {
   const [isRestoring, setIsRestoring] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+
+  // Este componente se monta cuando el padre decide abrirlo; su presencia en
+  // el DOM equivale a isOpen=true. Registramos el back handler como root y
+  // el ConfirmDialog interno como anidado.
+  useBackHandler({ isOpen: true, onClose, id: modalId });
+  useBackHandler({ isOpen: !!showConfirmDialog, onClose: () => setShowConfirmDialog(null), id: `${modalId}-confirm` });
 
   useEffect(() => {
     // Animación de entrada

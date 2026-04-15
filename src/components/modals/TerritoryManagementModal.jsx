@@ -4,15 +4,21 @@ import Icon from '../common/Icon';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import { useBackHandler } from '../../hooks/useBackHandler';
 import { getAssignedNames } from '../../utils/territoryHelpers';
 
-const TerritoryManagementModal = ({ isOpen, onClose }) => {
+const TerritoryManagementModal = ({ isOpen, onClose, modalId = 'territory-management-modal' }) => {
+  // Este modal no usa <Modal>; registramos raíz + sub-dialogs aquí.
+  useBackHandler({ isOpen, onClose, id: modalId });
 
   const { territories, users, releaseTerritories, assignTerritory } = useApp();
   const { showToast } = useToast();
   const [selectedTerritories, setSelectedTerritories] = useState(new Set());
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+
+  useBackHandler({ isOpen: showConfirmDialog, onClose: () => setShowConfirmDialog(false), id: `${modalId}-confirm` });
+  useBackHandler({ isOpen: showAssignModal, onClose: () => setShowAssignModal(false), id: `${modalId}-assign` });
   const [isReleasing, setIsReleasing] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
