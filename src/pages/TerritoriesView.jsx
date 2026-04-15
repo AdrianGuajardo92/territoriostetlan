@@ -239,14 +239,14 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       {currentUser && (
         <button
           onClick={() => setIsQuickProposalOpen(true)}
-          className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full text-white shadow-lg hover:shadow-xl transform hover:scale-110 active:scale-95 transition-all flex items-center justify-center"
+          className="fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full text-white shadow-lg hover:shadow-xl transform hover:scale-110 active:scale-95 transition-all flex items-center justify-center"
           style={{
             background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)'
           }}
           aria-label="Proponer nueva dirección"
           title="Me acordé de una dirección"
         >
-          <i className="fas fa-plus text-xl"></i>
+          <i className="fas fa-plus text-base"></i>
         </button>
       )}
 
