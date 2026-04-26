@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import { useBackHandler } from '../../hooks/useBackHandler';
@@ -33,6 +33,8 @@ const UserManagementModal = ({
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [userToResetPassword, setUserToResetPassword] = useState(null);
+  const [copiedCredentialsUserId, setCopiedCredentialsUserId] = useState(null);
+  const copyFeedbackTimeoutRef = useRef(null);
 
   useBackHandler({ isOpen: showDeleteConfirm, onClose: () => setShowDeleteConfirm(false), id: `${modalId}-delete-confirm` });
   useBackHandler({ isOpen: showPasswordReset, onClose: () => setShowPasswordReset(false), id: `${modalId}-password-reset` });
@@ -58,9 +60,18 @@ const UserManagementModal = ({
       setShowPasswordReset(false);
       setUserToDelete(null);
       setUserToResetPassword(null);
+      setCopiedCredentialsUserId(null);
       setSearchTerm(''); // Resetear búsqueda
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackTimeoutRef.current) {
+        clearTimeout(copyFeedbackTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Función de filtrado de usuarios por búsqueda
   const filterUsers = (userList) => {
@@ -169,6 +180,59 @@ const UserManagementModal = ({
     setShowPasswordReset(true);
   };
 
+  const buildCredentialsMessage = (user) => [
+    'Accesos para Estación Tetlán Señas Territorios',
+    '',
+    `Nombre: ${user.name || 'Sin nombre'}`,
+    `Usuario: ${user.accessCode || 'Sin usuario'}`,
+    `Contraseña: ${user.password || 'Sin contraseña registrada'}`
+  ].join('\n');
+
+  const copyTextToClipboard = async (text) => {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.setAttribute('readonly', '');
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textArea);
+
+    if (!copied) {
+      throw new Error('Clipboard fallback failed');
+    }
+  };
+
+  const handleCopyCredentials = async (user) => {
+    if (!user?.password) {
+      showToast('Este usuario no tiene contraseña registrada', 'error');
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(buildCredentialsMessage(user));
+      setCopiedCredentialsUserId(user.id);
+      showToast(`Credenciales de ${user.name || user.accessCode} copiadas`, 'success');
+
+      if (copyFeedbackTimeoutRef.current) {
+        clearTimeout(copyFeedbackTimeoutRef.current);
+      }
+      copyFeedbackTimeoutRef.current = setTimeout(() => {
+        setCopiedCredentialsUserId(null);
+      }, 2200);
+    } catch (error) {
+      console.error('Error copiando credenciales:', error);
+      showToast('No se pudieron copiar las credenciales', 'error');
+    }
+  };
+
   const handleConfirmPasswordReset = async () => {
     if (!userToResetPassword || !newPassword.trim() || isProcessing) return;
     
@@ -187,6 +251,8 @@ const UserManagementModal = ({
 
   const renderUserCard = (user, isAdmin = false) => {
     const isCurrentUser = user.id === currentUser?.id;
+    const hasPassword = Boolean(user.password);
+    const credentialsCopied = copiedCredentialsUserId === user.id;
 
     return (
       <div key={user.id} className="bg-white rounded-xl shadow-sm p-4 border border-gray-200 hover:shadow-md transition-all duration-200">
@@ -215,6 +281,35 @@ const UserManagementModal = ({
             }`}>
               {isAdmin ? 'Admin' : 'Publicador'}
             </span>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 sm:items-center">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase text-blue-700">Usuario</p>
+              <p className="mt-1 font-mono text-sm text-gray-900 break-all">{user.accessCode || 'Sin usuario'}</p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase text-blue-700">Contraseña</p>
+              <p className={`mt-1 font-mono text-sm break-all ${hasPassword ? 'text-gray-900' : 'text-gray-400'}`}>
+                {hasPassword ? user.password : 'Sin contraseña registrada'}
+              </p>
+            </div>
+            <button
+              onClick={() => handleCopyCredentials(user)}
+              disabled={!hasPassword}
+              className={`w-full sm:w-auto min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                credentialsCopied
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed'
+              }`}
+              title="Copiar usuario y contraseña"
+              aria-label={`Copiar credenciales de ${user.name || user.accessCode}`}
+            >
+              <Icon name={credentialsCopied ? 'checkCircle' : 'copy'} className="w-4 h-4" />
+              <span>{credentialsCopied ? 'Copiado' : 'Copiar credenciales'}</span>
+            </button>
           </div>
         </div>
 
