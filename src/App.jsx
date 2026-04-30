@@ -33,6 +33,10 @@ import {
 } from './components/modals/LazyModals';
 import { CAMPAIGN_PROGRESS_STATUSES } from './utils/campaignUtils';
 
+// Herramientas de inspección (solo desarrollo, eliminadas en producción por tree-shaking)
+import DevClickToSource from './components/DevClickToSource.jsx';
+import DebugPanel from './components/debug/DebugPanel.jsx';
+
 
 
 function AppContent() {
@@ -507,6 +511,8 @@ function App() {
           <CampaignProvider>
             <AppContent />
           </CampaignProvider>
+          {import.meta.env.DEV && <DevClickToSource />}
+          {import.meta.env.DEV && <DebugPanel />}
         </AppProvider>
       </BackStackProvider>
     </ToastProvider>
