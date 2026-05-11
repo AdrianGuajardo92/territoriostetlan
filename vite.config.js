@@ -50,9 +50,11 @@ export default defineConfig({
 
           req.on('end', async () => {
             let tmpPath = null;
+            let tmpTextPath = null;
             try {
               const payload = JSON.parse(body || '{}');
               const rawImage = String(payload.imageBase64 || '');
+              const clipboardText = String(payload.text || '').slice(0, 80_000);
               const base64 = rawImage.includes(',')
                 ? rawImage.slice(rawImage.indexOf(',') + 1)
                 : rawImage;
@@ -66,21 +68,31 @@ export default defineConfig({
 
               tmpPath = path.join(os.tmpdir(), `territoriostetlan-inspector-${Date.now()}.png`);
               fs.writeFileSync(tmpPath, imageBuffer);
+              tmpTextPath = path.join(os.tmpdir(), `territoriostetlan-inspector-${Date.now()}.txt`);
+              fs.writeFileSync(tmpTextPath, clipboardText, 'utf8');
 
               const escapedPath = tmpPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+              const escapedTextPath = tmpTextPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
               await execFileAsync('osascript', [
                 '-e',
-                `set the clipboard to (read (POSIX file "${escapedPath}") as «class PNGf»)`
+                `set clipboardText to read (POSIX file "${escapedTextPath}") as «class utf8»`,
+                '-e',
+                `set the clipboard to {text:clipboardText, «class PNGf»:(read (POSIX file "${escapedPath}") as «class PNGf»)}`
               ]);
 
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ ok: true, bytes: imageBuffer.length }));
+              res.end(JSON.stringify({
+                ok: true,
+                bytes: imageBuffer.length,
+                textBytes: Buffer.byteLength(clipboardText, 'utf8')
+              }));
             } catch (err) {
               console.error('[dev-inspector-clipboard] Error:', err);
               res.writeHead(500, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ ok: false, error: err.message }));
             } finally {
               if (tmpPath) fs.unlink(tmpPath, () => {});
+              if (tmpTextPath) fs.unlink(tmpTextPath, () => {});
             }
           });
         });

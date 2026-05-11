@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import Modal from '../common/Modal';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
@@ -19,6 +19,8 @@ const AssignTerritoryModal = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAdvancedWarnings, setShowAdvancedWarnings] = useState(true);
   const [pendingWarnings, setPendingWarnings] = useState([]);
+  const publishersListRef = useRef(null);
+  const shouldRestoreScrollRef = useRef(false);
 
 
 
@@ -111,8 +113,38 @@ const AssignTerritoryModal = ({
       });
   }, [publishersWithStats, searchTerm, applyAdvancedFilters]);
 
+  const restoreFullPublisherList = useCallback(() => {
+    shouldRestoreScrollRef.current = true;
+
+    if (searchTerm) {
+      setSearchTerm('');
+    }
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (!shouldRestoreScrollRef.current || searchTerm) return;
+
+    const frameId = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const listElement = publishersListRef.current;
+        if (!listElement) return;
+
+        listElement.scrollTop = 0;
+        listElement.scrollTo?.({
+          top: 0,
+          behavior: 'smooth'
+        });
+        shouldRestoreScrollRef.current = false;
+      });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [filteredAndSortedPublishers.length, searchTerm]);
+
   // 🔄 PASO 6: Manejar selección/deselección con validaciones avanzadas
   const handlePublisherToggle = (publisherName) => {
+    const shouldRestoreList = Boolean(searchTerm) && !selectedPublishers.includes(publisherName) && selectedPublishers.length < 3;
+
     setSelectedPublishers(prev => {
       const isSelected = prev.includes(publisherName);
       
@@ -153,6 +185,10 @@ const AssignTerritoryModal = ({
         return [...prev, publisherName];
       }
     });
+
+    if (shouldRestoreList) {
+      restoreFullPublisherList();
+    }
   };
 
   // 🔄 PASO 7: Manejar envío del formulario con validaciones finales y casos edge
@@ -353,7 +389,7 @@ const AssignTerritoryModal = ({
       closeOnEscape={!isProcessing}
       modalId={modalId}
     >
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-[100dvh] min-h-0 sm:h-[90vh]">
         {/* 🔄 PASO 5: Header mejorado para asignaciones múltiples */}
         <div className="px-4 py-2.5 flex-shrink-0" style={{ backgroundColor: '#2C3E50' }}>
           <div className="flex items-center justify-between">
@@ -525,7 +561,11 @@ const AssignTerritoryModal = ({
           <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
             <div className="px-4 py-2 flex-1 flex flex-col min-h-0">
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden flex-1 flex flex-col">
-                <div className="overflow-y-auto flex-1">
+                <div
+                  ref={publishersListRef}
+                  className="overflow-y-auto overscroll-contain touch-pan-y flex-1 min-h-0"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
                   {filteredAndSortedPublishers.length === 0 ? (
                     <div className="text-center py-6" role="status" aria-live="polite">
                       <div className="bg-gray-100 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -677,4 +717,4 @@ const AssignTerritoryModal = ({
   );
 };
 
-export default AssignTerritoryModal; 
+export default AssignTerritoryModal;

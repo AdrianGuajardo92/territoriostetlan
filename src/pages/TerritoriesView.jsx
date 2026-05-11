@@ -4,13 +4,21 @@ import TerritoryCard from '../components/territories/TerritoryCard';
 import TerritoryFilters from '../components/territories/TerritoryFilters';
 import SkeletonCard from '../components/common/SkeletonCard';
 import Icon from '../components/common/Icon';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
 import {
   LazyGeneralMapModal as GeneralMapModal,
+  LazyAssignTerritoryModal as AssignTerritoryModal,
   LazyQuickProposalModal as QuickProposalModal
 } from '../components/modals/LazyModals';
 import { isUserAssigned } from '../utils/territoryHelpers';
+
+const normalizeTerritoryStatus = (status) => (
+  status === 'Terminado' ? 'Completado' :
+  status === 'Available' ? 'Disponible' :
+  status
+);
 
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const {
@@ -18,14 +26,23 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     currentUser,
     isLoading,
     userNotificationsCount,
-    pendingProposalsCount
+    pendingProposalsCount,
+    handleAssignTerritory,
+    handleReturnTerritory,
+    handleCompleteTerritory
   } = useApp();
   const [filterStatus, setFilterStatus] = useState('all');
   const [isGeneralMapOpen, setIsGeneralMapOpen] = useState(false);
   const [isQuickProposalOpen, setIsQuickProposalOpen] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [quickActionsTerritoryId, setQuickActionsTerritoryId] = useState(null);
+  const [assignTerritoryId, setAssignTerritoryId] = useState(null);
+  const [releaseTerritoryId, setReleaseTerritoryId] = useState(null);
+  const [completeTerritoryId, setCompleteTerritoryId] = useState(null);
+  const [isAdminActionProcessing, setIsAdminActionProcessing] = useState(false);
 
   const { swipeFeedback } = usePremiumFeedback();
+  const isAdmin = currentUser?.role === 'admin';
 
   const filteredAndSortedTerritories = useMemo(() => {
     let filtered = territories;
@@ -65,6 +82,30 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     )).length
   }), [territories]);
 
+  const quickActionsTerritory = useMemo(() => (
+    quickActionsTerritoryId
+      ? territories.find((territory) => territory.id === quickActionsTerritoryId) || null
+      : null
+  ), [quickActionsTerritoryId, territories]);
+
+  const assignTerritory = useMemo(() => (
+    assignTerritoryId
+      ? territories.find((territory) => territory.id === assignTerritoryId) || null
+      : null
+  ), [assignTerritoryId, territories]);
+
+  const releaseTerritory = useMemo(() => (
+    releaseTerritoryId
+      ? territories.find((territory) => territory.id === releaseTerritoryId) || null
+      : null
+  ), [releaseTerritoryId, territories]);
+
+  const completeTerritory = useMemo(() => (
+    completeTerritoryId
+      ? territories.find((territory) => territory.id === completeTerritoryId) || null
+      : null
+  ), [completeTerritoryId, territories]);
+
   const handleFilterChange = useCallback((newFilter) => {
     setFilterStatus(newFilter);
   }, []);
@@ -76,6 +117,62 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const createTerritorySelectHandler = useCallback((territory) => {
     return () => onSelectTerritory(territory);
   }, [onSelectTerritory]);
+
+  const handleOpenAdminQuickActions = useCallback((territory) => {
+    if (!isAdmin) return;
+    setQuickActionsTerritoryId(territory.id);
+  }, [isAdmin]);
+
+  const handleCloseAdminQuickActions = useCallback(() => {
+    setQuickActionsTerritoryId(null);
+  }, []);
+
+  const handleOpenAssignFromQuickActions = useCallback((territory) => {
+    setAssignTerritoryId(territory.id);
+    setQuickActionsTerritoryId(null);
+  }, []);
+
+  const handleOpenReleaseConfirm = useCallback((territory) => {
+    setReleaseTerritoryId(territory.id);
+    setQuickActionsTerritoryId(null);
+  }, []);
+
+  const handleOpenCompleteConfirm = useCallback((territory) => {
+    setCompleteTerritoryId(territory.id);
+    setQuickActionsTerritoryId(null);
+  }, []);
+
+  const handleAssignToPublisher = useCallback(async (publisherName) => {
+    if (!assignTerritory) return;
+    await handleAssignTerritory(assignTerritory.id, publisherName);
+    setAssignTerritoryId(null);
+  }, [assignTerritory, handleAssignTerritory]);
+
+  const handleConfirmRelease = useCallback(async () => {
+    const territoryId = releaseTerritory?.id;
+    if (!territoryId) return;
+
+    setReleaseTerritoryId(null);
+    setIsAdminActionProcessing(true);
+    try {
+      await handleReturnTerritory(territoryId);
+    } finally {
+      setIsAdminActionProcessing(false);
+    }
+  }, [handleReturnTerritory, releaseTerritory]);
+
+  const handleConfirmComplete = useCallback(async () => {
+    const territoryId = completeTerritory?.id;
+    if (!territoryId) return;
+
+    setCompleteTerritoryId(null);
+    setIsAdminActionProcessing(true);
+    try {
+      await handleCompleteTerritory(territoryId);
+    } finally {
+      setIsAdminActionProcessing(false);
+    }
+  }, [completeTerritory, handleCompleteTerritory]);
 
   const handleSwipeLeft = useCallback(() => {
     swipeFeedback();
@@ -204,6 +301,8 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
                 <TerritoryCard
                   territory={territory}
                   onSelect={createTerritorySelectHandler(territory)}
+                  canUseAdminActions={isAdmin}
+                  onAdminQuickActions={handleOpenAdminQuickActions}
                 />
               </div>
             ))}
@@ -233,6 +332,156 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
         onClose={() => {
           setIsGeneralMapOpen(false);
         }}
+      />
+
+      {quickActionsTerritory && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            onClick={handleCloseAdminQuickActions}
+            aria-label="Cerrar opciones de administrador"
+          />
+
+          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-4 sm:p-5">
+            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-200 sm:hidden" />
+
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Opciones de administrador
+                </p>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {quickActionsTerritory.name}
+                </h2>
+              </div>
+
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                normalizeTerritoryStatus(quickActionsTerritory.status) === 'Disponible'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : normalizeTerritoryStatus(quickActionsTerritory.status) === 'En uso'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-rose-100 text-rose-700'
+              }`}>
+                {normalizeTerritoryStatus(quickActionsTerritory.status) === 'En uso'
+                  ? 'Predicando'
+                  : normalizeTerritoryStatus(quickActionsTerritory.status)}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  handleCloseAdminQuickActions();
+                  onSelectTerritory(quickActionsTerritory);
+                }}
+                className="w-full p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center gap-3 text-left transition-colors"
+              >
+                <span className="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center">
+                  <Icon name="map" size={18} />
+                </span>
+                <span>
+                  <span className="block font-semibold text-slate-900">Abrir territorio</span>
+                  <span className="block text-sm text-slate-500">Ver direcciones y detalles</span>
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpenAssignFromQuickActions(quickActionsTerritory)}
+                className="w-full p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 flex items-center gap-3 text-left transition-colors"
+              >
+                <span className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center">
+                  <Icon name="userPlus" size={18} />
+                </span>
+                <span>
+                  <span className="block font-semibold text-slate-900">
+                    {normalizeTerritoryStatus(quickActionsTerritory.status) === 'Disponible'
+                      ? 'Asignar publicador'
+                      : 'Cambiar publicador'}
+                  </span>
+                  <span className="block text-sm text-slate-500">Seleccionar una persona o equipo</span>
+                </span>
+              </button>
+
+              {normalizeTerritoryStatus(quickActionsTerritory.status) !== 'Disponible' && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenReleaseConfirm(quickActionsTerritory)}
+                  className="w-full p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-3 text-left transition-colors"
+                >
+                  <span className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+                    <Icon name="unlock" size={18} />
+                  </span>
+                  <span>
+                    <span className="block font-semibold text-slate-900">Marcar disponible</span>
+                    <span className="block text-sm text-slate-500">Liberar y desmarcar visitas</span>
+                  </span>
+                </button>
+              )}
+
+              {normalizeTerritoryStatus(quickActionsTerritory.status) === 'En uso' && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenCompleteConfirm(quickActionsTerritory)}
+                  className="w-full p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-3 text-left transition-colors"
+                >
+                  <span className="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center">
+                    <Icon name="checkCircle" size={18} />
+                  </span>
+                  <span>
+                    <span className="block font-semibold text-slate-900">Marcar completado</span>
+                    <span className="block text-sm text-slate-500">Registrar que ya se terminó</span>
+                  </span>
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCloseAdminQuickActions}
+              className="mt-4 w-full py-3 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <AssignTerritoryModal
+        isOpen={!!assignTerritory}
+        onClose={() => setAssignTerritoryId(null)}
+        onAssign={handleAssignToPublisher}
+        currentAssignee={assignTerritory?.assignedTo}
+        territoryName={assignTerritory?.name || ''}
+        modalId="quick-assign-territory-modal"
+      />
+
+      <ConfirmDialog
+        isOpen={!!releaseTerritory}
+        onClose={() => setReleaseTerritoryId(null)}
+        onConfirm={handleConfirmRelease}
+        title="Marcar como disponible"
+        message={`¿Liberar ${releaseTerritory?.name || 'este territorio'}? Se desmarcarán sus direcciones visitadas.`}
+        confirmText="Sí, marcar disponible"
+        cancelText="Cancelar"
+        type="success"
+        isProcessing={isAdminActionProcessing}
+        processingText="Marcando..."
+      />
+
+      <ConfirmDialog
+        isOpen={!!completeTerritory}
+        onClose={() => setCompleteTerritoryId(null)}
+        onConfirm={handleConfirmComplete}
+        title="Marcar como completado"
+        message={`¿Marcar ${completeTerritory?.name || 'este territorio'} como completado?`}
+        confirmText="Sí, completar"
+        cancelText="Cancelar"
+        type="warning"
+        isProcessing={isAdminActionProcessing}
+        processingText="Completando..."
       />
 
       {/* FAB: Propuesta rápida de dirección */}

@@ -851,11 +851,40 @@ export const AppProvider = ({ children }) => {
     // Marcar como en progreso
     if (!window.returnInProgress) window.returnInProgress = new Set();
     window.returnInProgress.add(callKey);
+
+    let previousTerritory = null;
+    let previousAddressesSnapshot = [];
     
     try {
       const territory = territories.find(t => t.id === territoryId);
       // 🔄 PASO 3: Obtener nombres asignados usando helper
       const assignedNames = getAssignedNames(territory?.assignedTo);
+      previousTerritory = territory ? { ...territory } : null;
+      previousAddressesSnapshot = addresses.filter(address => address.territoryId === territoryId);
+      const optimisticLastWorked = new Date();
+
+      // Cambio visual inmediato; el snapshot de Firestore reemplaza estos valores al sincronizar.
+      setTerritories(prevTerritories =>
+        prevTerritories.map(item =>
+          item.id === territoryId
+            ? {
+                ...item,
+                status: 'Disponible',
+                assignedTo: null,
+                assignedDate: null,
+                lastWorked: optimisticLastWorked
+              }
+            : item
+        )
+      );
+
+      setAddresses(prevAddresses =>
+        prevAddresses.map(address =>
+          address.territoryId === territoryId
+            ? { ...address, isVisited: false }
+            : address
+        )
+      );
       
       // 🔄 DESMARCAR TODAS LAS DIRECCIONES DEL TERRITORIO
       const addressesQuery = query(
@@ -915,6 +944,24 @@ export const AppProvider = ({ children }) => {
       showToast(message, 'success');
     } catch (error) {
       console.error('Error returning territory:', error);
+
+      if (previousTerritory) {
+        setTerritories(prevTerritories =>
+          prevTerritories.map(item =>
+            item.id === territoryId ? previousTerritory : item
+          )
+        );
+      }
+
+      if (previousAddressesSnapshot.length > 0) {
+        setAddresses(prevAddresses =>
+          prevAddresses.map(address => {
+            const originalAddress = previousAddressesSnapshot.find(item => item.id === address.id);
+            return originalAddress || address;
+          })
+        );
+      }
+
       showToast('Error al devolver territorio', 'error');
       throw error;
     } finally {
@@ -923,7 +970,7 @@ export const AppProvider = ({ children }) => {
         window.returnInProgress?.delete(callKey);
       }, 2000);
     }
-  }, [territories, currentUser]);
+  }, [addresses, territories, currentUser]);
 
   // Función para liberar múltiples territorios (para gestión masiva)
   const releaseTerritories = useCallback(async (territoryIds) => {

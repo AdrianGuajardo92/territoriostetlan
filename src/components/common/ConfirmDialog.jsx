@@ -10,7 +10,8 @@ const ConfirmDialog = ({
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
   type = 'warning', // warning, danger, info, success
-  isProcessing = false // Para deshabilitar botones durante el procesamiento
+  isProcessing = false, // Para deshabilitar botones durante el procesamiento
+  processingText = 'Procesando...'
 }) => {
 
   if (!isOpen) return null;
@@ -92,7 +93,7 @@ const ConfirmDialog = ({
                 {isProcessing ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Eliminando...
+                    {processingText}
                   </>
                 ) : (
                   confirmText
@@ -106,4 +107,4 @@ const ConfirmDialog = ({
   );
 };
 
-export default ConfirmDialog; 
+export default ConfirmDialog;

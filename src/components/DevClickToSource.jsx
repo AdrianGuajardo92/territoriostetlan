@@ -263,7 +263,7 @@ const logInspectorDebug = (...args) => {
   if (isInspectorDebugEnabled()) console.info(...args);
 };
 
-const copyImageBlobToClipboard = async (blob) => {
+const copyImageBlobToClipboard = async (blob, text = '') => {
   if (!blob) return 'error';
   if (typeof navigator === 'undefined' || !navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
     return 'unsupported';
@@ -271,8 +271,13 @@ const copyImageBlobToClipboard = async (blob) => {
   if (ClipboardItem.supports && !ClipboardItem.supports('image/png')) return 'unsupported';
   if (isCodexLikePreview()) return 'codex-preview';
 
+  const clipboardItems = { 'image/png': blob };
+  if (text && (!ClipboardItem.supports || ClipboardItem.supports('text/plain'))) {
+    clipboardItems['text/plain'] = new Blob([text], { type: 'text/plain' });
+  }
+
   const writePromise = navigator.clipboard
-    .write([new ClipboardItem({ 'image/png': blob })])
+    .write([new ClipboardItem(clipboardItems)])
     .then(() => 'ok')
     .catch((err) => {
       console.warn('[Inspector] clipboard image falló:', err?.name || err?.message || err);
@@ -324,7 +329,7 @@ const canUseNativeClipboardBridge = () => {
   return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 };
 
-const copyImageBlobToNativeClipboard = async (blob) => {
+const copyImageBlobToNativeClipboard = async (blob, text = '') => {
   if (!blob || !canUseNativeClipboardBridge()) return 'unsupported';
 
   try {
@@ -332,7 +337,7 @@ const copyImageBlobToNativeClipboard = async (blob) => {
     const response = await fetch('/api/dev-inspector-clipboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64 }),
+      body: JSON.stringify({ imageBase64, text }),
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok && data?.ok) return 'ok';
@@ -563,11 +568,11 @@ const copyInspectorCardToClipboard = async (item) => {
   }));
   logInspectorDebug('[Inspector] entorno clipboard:', JSON.stringify(getClipboardEnvironment()));
 
-  const nativeStatus = await copyImageBlobToNativeClipboard(card.blob);
+  const nativeStatus = await copyImageBlobToNativeClipboard(card.blob, item.compactText);
   logInspectorDebug('[Inspector] clipboard nativo:', nativeStatus);
   if (nativeStatus === 'ok') return { status: 'native', card };
 
-  const imageStatus = await copyImageBlobToClipboard(card.blob);
+  const imageStatus = await copyImageBlobToClipboard(card.blob, item.compactText);
   if (imageStatus === 'ok') return { status: 'ok', card };
 
   const htmlStatus = await copyHtmlImageToClipboard(card.blob, item.compactText);

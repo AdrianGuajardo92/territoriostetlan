@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useCallback } from 'react';
+import React, { memo, useMemo, useCallback, useRef } from 'react';
 import Icon from '../common/Icon';
 import { formatRelativeTime } from '../../utils/helpers';
 import { getAssignedNames, formatTeamNames } from '../../utils/territoryHelpers';
@@ -32,7 +32,15 @@ const extractTerritoryNumber = (name) => {
 };
 
 // OPTIMIZACIÓN FASE 2: TerritoryCard memoizada para evitar re-renders ⚡
-const TerritoryCard = memo(({ territory, onSelect }) => {
+const TerritoryCard = memo(({
+  territory,
+  onSelect,
+  canUseAdminActions = false,
+  onAdminQuickActions
+}) => {
+  const longPressTimerRef = useRef(null);
+  const didLongPressRef = useRef(false);
+
   // 🔄 PASO 15: Memoizar detectores de estado para evitar recálculos
   const isMobile = useMemo(() => {
     return window.innerWidth < 640; // sm breakpoint
@@ -159,14 +167,72 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
     return territory.lastWorked;
   }, [normalizedStatus, territory.completedDate, territory.terminadoDate, territory.lastWorked, territory.assignedDate]);
 
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const openAdminQuickActions = useCallback(() => {
+    if (!canUseAdminActions || !onAdminQuickActions) return;
+    onAdminQuickActions(territory);
+  }, [canUseAdminActions, onAdminQuickActions, territory]);
+
+  const handleTouchStart = useCallback(() => {
+    if (!canUseAdminActions) return;
+
+    didLongPressRef.current = false;
+    clearLongPressTimer();
+    longPressTimerRef.current = setTimeout(() => {
+      didLongPressRef.current = true;
+      openAdminQuickActions();
+    }, 550);
+  }, [canUseAdminActions, clearLongPressTimer, openAdminQuickActions]);
+
+  const handleTouchEnd = useCallback((event) => {
+    clearLongPressTimer();
+
+    if (didLongPressRef.current) {
+      event.preventDefault();
+      setTimeout(() => {
+        didLongPressRef.current = false;
+      }, 500);
+    }
+  }, [clearLongPressTimer]);
+
+  const handleContextMenu = useCallback((event) => {
+    if (!canUseAdminActions) return;
+
+    event.preventDefault();
+    openAdminQuickActions();
+  }, [canUseAdminActions, openAdminQuickActions]);
+
+  const handleAdminButtonClick = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openAdminQuickActions();
+  }, [openAdminQuickActions]);
+
   // OPTIMIZACIÓN: Memoizar handler de click ⚡
-  const handleClick = useCallback(() => {
+  const handleClick = useCallback((event) => {
+    if (didLongPressRef.current) {
+      event.preventDefault();
+      didLongPressRef.current = false;
+      return;
+    }
+
     onSelect(territory);
   }, [onSelect, territory]);
 
   return (
     <div
       onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchMove={clearLongPressTimer}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={clearLongPressTimer}
+      onContextMenu={handleContextMenu}
       className={`
         relative group cursor-pointer
         bg-gradient-to-br ${config.bgGradient}
@@ -214,6 +280,20 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
                   {normalizedStatus === 'En uso' ? 'Predicando' : normalizedStatus}
                 </span>
               </div>
+
+              {canUseAdminActions && (
+                <button
+                  type="button"
+                  onClick={handleAdminButtonClick}
+                  onTouchStart={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  className="w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow-sm flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors flex-shrink-0"
+                  aria-label={`Opciones de administrador para ${territory.name}`}
+                  title="Opciones de administrador"
+                >
+                  <Icon name="moreVertical" size={17} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -301,4 +381,4 @@ const TerritoryCard = memo(({ territory, onSelect }) => {
 // OPTIMIZACIÓN: Display name para React DevTools ⚡
 TerritoryCard.displayName = 'TerritoryCard';
 
-export default TerritoryCard; 
+export default TerritoryCard;
