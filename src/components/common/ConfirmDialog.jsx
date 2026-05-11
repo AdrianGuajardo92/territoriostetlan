@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from './Icon';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const ConfirmDialog = ({
   isOpen,
@@ -13,6 +14,7 @@ const ConfirmDialog = ({
   isProcessing = false, // Para deshabilitar botones durante el procesamiento
   processingText = 'Procesando...'
 }) => {
+  useBodyScrollLock(isOpen);
 
   if (!isOpen) return null;
 

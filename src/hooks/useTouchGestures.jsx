@@ -25,8 +25,22 @@ export const useTouchGestures = (element, options = {}) => {
     return;
   }, []);
 
+  const shouldIgnoreTouchTarget = useCallback((target) => {
+    return Boolean(target?.closest?.('[data-admin-swipe-card="true"], [data-touch-gesture-ignore="true"]'));
+  }, []);
+
   // Touch Start - SEGURO
   const handleTouchStart = useCallback((e) => {
+    if (shouldIgnoreTouchTarget(e.target)) {
+      touchStartRef.current = null;
+      touchEndRef.current = null;
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      return;
+    }
+
     if (!e.touches || e.touches.length === 0) return;
 
     const touch = e.touches[0];
@@ -51,10 +65,11 @@ export const useTouchGestures = (element, options = {}) => {
         }
       }, defaultOptions.longPressDelay);
     }
-  }, [defaultOptions.enableLongPress, defaultOptions.longPressDelay]);
+  }, [defaultOptions.enableLongPress, defaultOptions.longPressDelay, shouldIgnoreTouchTarget]);
 
   // Touch Move - SEGURO
   const handleTouchMove = useCallback((e) => {
+    if (shouldIgnoreTouchTarget(e.target)) return;
     if (!touchStartRef.current) return;
 
     // Cancelar long press si se mueve
@@ -64,10 +79,11 @@ export const useTouchGestures = (element, options = {}) => {
     }
 
     safePreventDefault(e);
-  }, [safePreventDefault]);
+  }, [safePreventDefault, shouldIgnoreTouchTarget]);
 
   // Touch End - SEGURO
   const handleTouchEnd = useCallback((e) => {
+    if (shouldIgnoreTouchTarget(e.target)) return;
     if (!touchStartRef.current) return;
 
     // Limpiar long press timer
@@ -129,7 +145,7 @@ export const useTouchGestures = (element, options = {}) => {
     // Reset
     touchStartRef.current = null;
     touchEndRef.current = null;
-  }, [defaultOptions.enableSwipe, defaultOptions.swipeThreshold]);
+  }, [defaultOptions.enableSwipe, defaultOptions.swipeThreshold, shouldIgnoreTouchTarget]);
 
   // Agregar event listeners de forma segura
   useEffect(() => {
@@ -189,4 +205,4 @@ export const useSwipeNavigation = (onSwipeLeft, onSwipeRight, options = {}) => {
   return elementRef;
 };
 
-export default useTouchGestures; 
+export default useTouchGestures;

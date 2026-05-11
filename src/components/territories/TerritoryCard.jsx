@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useCallback, useRef } from 'react';
+import React, { memo, useMemo, useCallback, useRef, useState } from 'react';
 import Icon from '../common/Icon';
 import { formatRelativeTime } from '../../utils/helpers';
 import { getAssignedNames, formatTeamNames } from '../../utils/territoryHelpers';
@@ -38,8 +38,15 @@ const TerritoryCard = memo(({
   canUseAdminActions = false,
   onAdminQuickActions
 }) => {
-  const longPressTimerRef = useRef(null);
-  const didLongPressRef = useRef(false);
+  const touchStartRef = useRef(null);
+  const swipeModeRef = useRef(null);
+  const suppressClickRef = useRef(false);
+  const dragOffsetRef = useRef(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const swipeProgress = Math.min(Math.abs(dragOffset) / 96, 1);
+  const swipeDirection = dragOffset >= 0 ? 'right' : 'left';
 
   // 🔄 PASO 15: Memoizar detectores de estado para evitar recálculos
   const isMobile = useMemo(() => {
@@ -167,58 +174,101 @@ const TerritoryCard = memo(({
     return territory.lastWorked;
   }, [normalizedStatus, territory.completedDate, territory.terminadoDate, territory.lastWorked, territory.assignedDate]);
 
-  const clearLongPressTimer = useCallback(() => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }, []);
-
   const openAdminQuickActions = useCallback(() => {
     if (!canUseAdminActions || !onAdminQuickActions) return;
     onAdminQuickActions(territory);
   }, [canUseAdminActions, onAdminQuickActions, territory]);
 
-  const handleTouchStart = useCallback(() => {
-    if (!canUseAdminActions) return;
+  const resetSwipe = useCallback(() => {
+    dragOffsetRef.current = 0;
+    setDragOffset(0);
+    setIsDragging(false);
+    touchStartRef.current = null;
+    swipeModeRef.current = null;
+  }, []);
 
-    didLongPressRef.current = false;
-    clearLongPressTimer();
-    longPressTimerRef.current = setTimeout(() => {
-      didLongPressRef.current = true;
-      openAdminQuickActions();
-    }, 550);
-  }, [canUseAdminActions, clearLongPressTimer, openAdminQuickActions]);
+  const handleTouchStart = useCallback((event) => {
+    if (!canUseAdminActions) return;
+    if (!event.touches || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY
+    };
+    swipeModeRef.current = null;
+    setIsDragging(false);
+  }, [canUseAdminActions]);
+
+  const handleTouchMove = useCallback((event) => {
+    if (!canUseAdminActions || !touchStartRef.current || !event.touches || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = touch.clientY - touchStartRef.current.y;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (!swipeModeRef.current && (absX > 8 || absY > 8)) {
+      swipeModeRef.current = absX > absY * 1.2 ? 'horizontal' : 'vertical';
+    }
+
+    if (swipeModeRef.current !== 'horizontal') return;
+
+    event.stopPropagation();
+    setIsDragging(true);
+
+    const cappedOffset = Math.sign(deltaX) * Math.min(absX, 104);
+    dragOffsetRef.current = cappedOffset;
+    setDragOffset(cappedOffset);
+  }, [canUseAdminActions]);
 
   const handleTouchEnd = useCallback((event) => {
-    clearLongPressTimer();
+    if (!canUseAdminActions || !touchStartRef.current) return;
 
-    if (didLongPressRef.current) {
-      event.preventDefault();
-      setTimeout(() => {
-        didLongPressRef.current = false;
-      }, 500);
+    const wasHorizontalSwipe = swipeModeRef.current === 'horizontal';
+    const finalOffset = dragOffsetRef.current;
+    const shouldOpenActions = wasHorizontalSwipe && Math.abs(finalOffset) >= 72;
+    const shouldSuppressClick = wasHorizontalSwipe && Math.abs(finalOffset) > 18;
+
+    if (wasHorizontalSwipe) {
+      event.stopPropagation();
     }
-  }, [clearLongPressTimer]);
 
-  const handleContextMenu = useCallback((event) => {
-    if (!canUseAdminActions) return;
+    if (shouldOpenActions) {
+      suppressClickRef.current = true;
+      const openOffset = finalOffset > 0 ? 104 : -104;
+      dragOffsetRef.current = openOffset;
+      setDragOffset(openOffset);
+      setIsDragging(false);
 
-    event.preventDefault();
-    openAdminQuickActions();
-  }, [canUseAdminActions, openAdminQuickActions]);
+      if (navigator.vibrate) {
+        navigator.vibrate(20);
+      }
 
-  const handleAdminButtonClick = useCallback((event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    openAdminQuickActions();
-  }, [openAdminQuickActions]);
+      setTimeout(() => {
+        openAdminQuickActions();
+        suppressClickRef.current = false;
+        resetSwipe();
+      }, 120);
+      return;
+    }
+
+    if (shouldSuppressClick) {
+      suppressClickRef.current = true;
+      setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 250);
+    }
+
+    resetSwipe();
+  }, [canUseAdminActions, openAdminQuickActions, resetSwipe]);
 
   // OPTIMIZACIÓN: Memoizar handler de click ⚡
   const handleClick = useCallback((event) => {
-    if (didLongPressRef.current) {
+    if (suppressClickRef.current) {
       event.preventDefault();
-      didLongPressRef.current = false;
+      suppressClickRef.current = false;
       return;
     }
 
@@ -229,14 +279,12 @@ const TerritoryCard = memo(({
     <div
       onClick={handleClick}
       onTouchStart={handleTouchStart}
-      onTouchMove={clearLongPressTimer}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onTouchCancel={clearLongPressTimer}
-      onContextMenu={handleContextMenu}
+      onTouchCancel={resetSwipe}
+      data-admin-swipe-card={canUseAdminActions ? 'true' : undefined}
       className={`
         relative group cursor-pointer
-        bg-gradient-to-br ${config.bgGradient}
-        border-2 ${config.borderColor} ${config.hoverBorder}
         rounded-2xl overflow-hidden
         shadow-lg ${config.hoverShadow}
         hover:shadow-2xl hover:scale-[1.01]
@@ -244,134 +292,151 @@ const TerritoryCard = memo(({
         transition-all duration-300 ease-out
         touch-feedback btn-premium animate-premium-fade-scale micro-interact glow-effect
       `}
+      style={{ touchAction: canUseAdminActions ? 'pan-y' : undefined }}
     >
-      {/* Layout de dos columnas */}
-      <div className="flex">
-        {/* Columna izquierda - Número del territorio */}
-        <div className={`${config.iconBg} flex items-center justify-center px-4 py-4 min-w-[70px]`}>
-          <span className={`text-3xl font-bold ${config.iconColor}`}>
-            {extractTerritoryNumber(territory.name)}
-          </span>
+      {canUseAdminActions && (
+        <div
+          className={`
+            absolute inset-0 flex items-center
+            ${swipeDirection === 'right' ? 'justify-start pl-6' : 'justify-end pr-6'}
+            bg-slate-800 text-white
+          `}
+          style={{ opacity: Math.max(0.18, swipeProgress) }}
+          aria-hidden="true"
+        >
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            {swipeDirection === 'right' && <Icon name="chevronRight" size={18} />}
+            <span>Opciones</span>
+            {swipeDirection === 'left' && <Icon name="chevronLeft" size={18} />}
+          </div>
         </div>
+      )}
 
-        {/* Columna derecha - Contenido */}
-        <div className="flex-1 flex flex-col">
-          {/* Header con badges */}
-          <div className="px-3 py-2 bg-white/40 border-b border-gray-100/50">
-            <div className="flex items-center justify-between gap-2">
-              {/* Badge de direcciones */}
-              {territory.addressCount !== undefined && territory.addressCount > 0 && (
-                <div className={`${config.addressBadgeBg} px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-sm`}>
-                  <Icon
-                    name="home"
-                    size={14}
-                    className={config.addressBadgeIcon}
-                  />
-                  <span className={`text-xs font-medium ${config.addressBadgeText}`}>
-                    {territory.addressCount}
+      <div
+        className={`
+          relative bg-gradient-to-br ${config.bgGradient}
+          border-2 ${config.borderColor} ${config.hoverBorder}
+          rounded-2xl overflow-hidden
+        `}
+        style={{
+          transform: `translateX(${dragOffset}px)`,
+          transition: isDragging ? 'none' : 'transform 180ms ease-out'
+        }}
+      >
+        {/* Layout de dos columnas */}
+        <div className="flex">
+          {/* Columna izquierda - Número del territorio */}
+          <div className={`${config.iconBg} flex items-center justify-center px-4 py-4 min-w-[70px]`}>
+            <span className={`text-3xl font-bold ${config.iconColor}`}>
+              {extractTerritoryNumber(territory.name)}
+            </span>
+          </div>
+
+          {/* Columna derecha - Contenido */}
+          <div className="flex-1 flex flex-col">
+            {/* Header con badges */}
+            <div className="px-3 py-2 bg-white/40 border-b border-gray-100/50">
+              <div className="flex items-center justify-between gap-2">
+                {/* Badge de direcciones */}
+                {territory.addressCount !== undefined && territory.addressCount > 0 && (
+                  <div className={`${config.addressBadgeBg} px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-sm`}>
+                    <Icon
+                      name="home"
+                      size={14}
+                      className={config.addressBadgeIcon}
+                    />
+                    <span className={`text-xs font-medium ${config.addressBadgeText}`}>
+                      {territory.addressCount}
+                    </span>
+                  </div>
+                )}
+
+                {/* Estado badge */}
+                <div className={`${config.statusBg} px-3 py-1 rounded-full flex items-center space-x-1.5 shadow-sm ml-auto`}>
+                  <div className={`w-2 h-2 rounded-full ${config.statusDot} ${normalizedStatus === 'En uso' ? 'animate-pulse' : ''}`}></div>
+                  <span className={`text-xs font-medium ${config.statusText}`}>
+                    {normalizedStatus === 'En uso' ? 'Predicando' : normalizedStatus}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Contenido principal */}
+            <div className="px-3 py-2 space-y-1.5 flex-1">
+              {/* Persona responsable */}
+              {responsibleInfo && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 min-w-0">
+                    <Icon
+                      name="user"
+                      size={14}
+                      className="text-gray-400 flex-shrink-0"
+                    />
+                    <span className="text-xs text-gray-500">
+                      {normalizedStatus === 'Completado' ? 'Por' : 'Asignado'}:
+                    </span>
+                  </div>
+
+                  <span
+                    className={`${config.badgeBg} ${config.badgeText} px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm truncate max-w-[140px]`}
+                    title={responsibleInfo.isTeam && isMobile ? responsibleInfo.fullDisplayName : undefined}
+                  >
+                    {responsibleInfo.displayName}
                   </span>
                 </div>
               )}
 
-              {/* Estado badge */}
-              <div className={`${config.statusBg} px-3 py-1 rounded-full flex items-center space-x-1.5 shadow-sm ml-auto`}>
-                <div className={`w-2 h-2 rounded-full ${config.statusDot} ${normalizedStatus === 'En uso' ? 'animate-pulse' : ''}`}></div>
-                <span className={`text-xs font-medium ${config.statusText}`}>
-                  {normalizedStatus === 'En uso' ? 'Predicando' : normalizedStatus}
-                </span>
-              </div>
+              {/* Fecha relevante */}
+              {relevantDate && normalizedStatus !== 'Disponible' && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5">
+                    <Icon
+                      name="calendar"
+                      size={14}
+                      className="text-gray-400"
+                    />
+                    <span className="text-xs text-gray-500">
+                      {normalizedStatus === 'Completado' ? 'Fecha' : 'Desde'}:
+                    </span>
+                  </div>
+                  <span className="text-xs font-medium text-gray-600">
+                    {formatRelativeTime(relevantDate)}
+                  </span>
+                </div>
+              )}
 
-              {canUseAdminActions && (
-                <button
-                  type="button"
-                  onClick={handleAdminButtonClick}
-                  onTouchStart={(event) => event.stopPropagation()}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  className="w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow-sm flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors flex-shrink-0"
-                  aria-label={`Opciones de administrador para ${territory.name}`}
-                  title="Opciones de administrador"
-                >
-                  <Icon name="moreVertical" size={17} />
-                </button>
+              {/* Call to action para territorio disponible */}
+              {normalizedStatus === 'Disponible' && (
+                <div className="pt-1">
+                  <p className="text-xs text-center text-emerald-600 font-medium">
+                    ¡Listo para asignar!
+                  </p>
+                </div>
               )}
             </div>
           </div>
-
-          {/* Contenido principal */}
-          <div className="px-3 py-2 space-y-1.5 flex-1">
-            {/* Persona responsable */}
-            {responsibleInfo && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 min-w-0">
-                  <Icon
-                    name="user"
-                    size={14}
-                    className="text-gray-400 flex-shrink-0"
-                  />
-                  <span className="text-xs text-gray-500">
-                    {normalizedStatus === 'Completado' ? 'Por' : 'Asignado'}:
-                  </span>
-                </div>
-
-                <span
-                  className={`${config.badgeBg} ${config.badgeText} px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm truncate max-w-[140px]`}
-                  title={responsibleInfo.isTeam && isMobile ? responsibleInfo.fullDisplayName : undefined}
-                >
-                  {responsibleInfo.displayName}
-                </span>
-              </div>
-            )}
-
-            {/* Fecha relevante */}
-            {relevantDate && normalizedStatus !== 'Disponible' && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1.5">
-                  <Icon
-                    name="calendar"
-                    size={14}
-                    className="text-gray-400"
-                  />
-                  <span className="text-xs text-gray-500">
-                    {normalizedStatus === 'Completado' ? 'Fecha' : 'Desde'}:
-                  </span>
-                </div>
-                <span className="text-xs font-medium text-gray-600">
-                  {formatRelativeTime(relevantDate)}
-                </span>
-              </div>
-            )}
-
-            {/* Call to action para territorio disponible */}
-            {normalizedStatus === 'Disponible' && (
-              <div className="pt-1">
-                <p className="text-xs text-center text-emerald-600 font-medium">
-                  ¡Listo para asignar!
-                </p>
-              </div>
-            )}
-          </div>
         </div>
-      </div>
 
-      {/* Barra de acento inferior */}
-      <div
-        className="h-1 w-full bg-gradient-to-r opacity-75 group-hover:opacity-100 transition-opacity"
-        style={{
-          backgroundImage: `linear-gradient(to right, ${config.accentColor}, ${config.accentColor}dd)`
-        }}
-      />
+        {/* Barra de acento inferior */}
+        <div
+          className="h-1 w-full bg-gradient-to-r opacity-75 group-hover:opacity-100 transition-opacity"
+          style={{
+            backgroundImage: `linear-gradient(to right, ${config.accentColor}, ${config.accentColor}dd)`
+          }}
+        />
 
-      {/* Overlay sutil en hover */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        {/* Overlay sutil en hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-      {/* Icono de flecha en hover */}
-      <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-70 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-        <div className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md">
-          <Icon
-            name="chevronRight"
-            size={16}
-            className="text-gray-600"
-          />
+        {/* Icono de flecha en hover */}
+        <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-70 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+          <div className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md">
+            <Icon
+              name="chevronRight"
+              size={16}
+              className="text-gray-600"
+            />
+          </div>
         </div>
       </div>
     </div>

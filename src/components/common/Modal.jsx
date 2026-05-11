@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Icon from './Icon';
 import { useBackHandler } from '../../hooks/useBackHandler';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const ANIM_DURATION = 250; // ms - duración de la animación de salida
 
@@ -24,6 +25,7 @@ const Modal = ({
 
   useBackHandler({ isOpen, onClose, id: modalId });
   const handleClose = onClose;
+  useBodyScrollLock(isOpen || shouldRender);
 
   // Detectar cambios en isOpen para animar entrada/salida
   useEffect(() => {
@@ -69,18 +71,6 @@ const Modal = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [shouldRender, handleClose, closeOnEscape]);
 
-  // Prevenir scroll del body
-  useEffect(() => {
-    if (shouldRender) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [shouldRender]);
-
   // No renderizar si no debemos
   if (!shouldRender) return null;
 
@@ -114,7 +104,10 @@ const Modal = ({
       />
 
       {/* Modal */}
-      <div className={`fixed inset-0 z-[9999] ${isFullScreen ? '' : isResponsiveLarge ? 'p-0 sm:flex sm:items-center sm:justify-center sm:p-4' : 'flex items-center justify-center p-4'} pointer-events-none`}>
+      <div
+        className={`fixed inset-0 z-[9999] ${isFullScreen ? '' : isResponsiveLarge ? 'p-0 sm:flex sm:items-center sm:justify-center sm:p-4' : 'flex items-center justify-center p-4'} pointer-events-none`}
+        data-touch-gesture-ignore="true"
+      >
         <div className={`
           bg-white shadow-2xl w-full transform pointer-events-auto ${getAnimationClass()}
           ${isFullScreen

@@ -1,10 +1,12 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import TerritoryCard from '../components/territories/TerritoryCard';
 import TerritoryFilters from '../components/territories/TerritoryFilters';
 import SkeletonCard from '../components/common/SkeletonCard';
 import Icon from '../components/common/Icon';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import { useBackHandler } from '../hooks/useBackHandler';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
 import {
@@ -40,6 +42,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const [releaseTerritoryId, setReleaseTerritoryId] = useState(null);
   const [completeTerritoryId, setCompleteTerritoryId] = useState(null);
   const [isAdminActionProcessing, setIsAdminActionProcessing] = useState(false);
+  const quickActionActivationRef = useRef(0);
 
   const { swipeFeedback } = usePremiumFeedback();
   const isAdmin = currentUser?.role === 'admin';
@@ -106,6 +109,15 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       : null
   ), [completeTerritoryId, territories]);
 
+  const isAdminOverlayOpen = Boolean(
+    quickActionsTerritory ||
+    assignTerritory ||
+    releaseTerritory ||
+    completeTerritory
+  );
+
+  useBodyScrollLock(isAdminOverlayOpen);
+
   const handleFilterChange = useCallback((newFilter) => {
     setFilterStatus(newFilter);
   }, []);
@@ -128,19 +140,48 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   }, []);
 
   const handleOpenAssignFromQuickActions = useCallback((territory) => {
-    setAssignTerritoryId(territory.id);
     setQuickActionsTerritoryId(null);
+    setAssignTerritoryId(territory.id);
   }, []);
 
   const handleOpenReleaseConfirm = useCallback((territory) => {
-    setReleaseTerritoryId(territory.id);
     setQuickActionsTerritoryId(null);
+    setReleaseTerritoryId(territory.id);
   }, []);
 
   const handleOpenCompleteConfirm = useCallback((territory) => {
-    setCompleteTerritoryId(territory.id);
     setQuickActionsTerritoryId(null);
+    setCompleteTerritoryId(territory.id);
   }, []);
+
+  const runQuickAction = useCallback((action) => {
+    const now = Date.now();
+    if (now - quickActionActivationRef.current < 450) return;
+
+    quickActionActivationRef.current = now;
+    action();
+  }, []);
+
+  const handleQuickActionPointerUp = useCallback((event, action) => {
+    if (event.pointerType === 'mouse') return;
+
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+    event.stopPropagation();
+    runQuickAction(action);
+  }, [runQuickAction]);
+
+  const handleQuickActionClick = useCallback((event, action) => {
+    const now = Date.now();
+    if (now - quickActionActivationRef.current < 450) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    runQuickAction(action);
+  }, [runQuickAction]);
 
   const handleAssignToPublisher = useCallback(async (publisherName) => {
     if (!assignTerritory) return;
@@ -189,6 +230,24 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     const nextIndex = currentIndex === 0 ? filters.length - 1 : currentIndex - 1;
     handleFilterChange(filters[nextIndex]);
   }, [filterStatus, handleFilterChange, swipeFeedback]);
+
+  useBackHandler({
+    isOpen: !!quickActionsTerritory,
+    onClose: handleCloseAdminQuickActions,
+    id: 'territory-admin-quick-actions'
+  });
+
+  useBackHandler({
+    isOpen: !!releaseTerritory,
+    onClose: () => setReleaseTerritoryId(null),
+    id: 'territory-admin-release-confirm'
+  });
+
+  useBackHandler({
+    isOpen: !!completeTerritory,
+    onClose: () => setCompleteTerritoryId(null),
+    id: 'territory-admin-complete-confirm'
+  });
 
   const swipeNavRef = useSwipeNavigation(
     isGeneralMapOpen ? null : handleSwipeLeft,
@@ -335,15 +394,18 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       />
 
       {quickActionsTerritory && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          data-touch-gesture-ignore="true"
+        >
           <button
             type="button"
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 z-0 bg-black/40"
             onClick={handleCloseAdminQuickActions}
             aria-label="Cerrar opciones de administrador"
           />
 
-          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-4 sm:p-5">
+          <div className="relative z-10 w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-4 sm:p-5">
             <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-200 sm:hidden" />
 
             <div className="flex items-start justify-between gap-3 mb-4">
@@ -372,10 +434,14 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => {
+                onPointerUp={(event) => handleQuickActionPointerUp(event, () => {
                   handleCloseAdminQuickActions();
                   onSelectTerritory(quickActionsTerritory);
-                }}
+                })}
+                onClick={(event) => handleQuickActionClick(event, () => {
+                  handleCloseAdminQuickActions();
+                  onSelectTerritory(quickActionsTerritory);
+                })}
                 className="w-full p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center gap-3 text-left transition-colors"
               >
                 <span className="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center">
@@ -389,7 +455,12 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
 
               <button
                 type="button"
-                onClick={() => handleOpenAssignFromQuickActions(quickActionsTerritory)}
+                onPointerUp={(event) => handleQuickActionPointerUp(event, () => {
+                  handleOpenAssignFromQuickActions(quickActionsTerritory);
+                })}
+                onClick={(event) => handleQuickActionClick(event, () => {
+                  handleOpenAssignFromQuickActions(quickActionsTerritory);
+                })}
                 className="w-full p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 flex items-center gap-3 text-left transition-colors"
               >
                 <span className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center">
@@ -408,7 +479,12 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
               {normalizeTerritoryStatus(quickActionsTerritory.status) !== 'Disponible' && (
                 <button
                   type="button"
-                  onClick={() => handleOpenReleaseConfirm(quickActionsTerritory)}
+                  onPointerUp={(event) => handleQuickActionPointerUp(event, () => {
+                    handleOpenReleaseConfirm(quickActionsTerritory);
+                  })}
+                  onClick={(event) => handleQuickActionClick(event, () => {
+                    handleOpenReleaseConfirm(quickActionsTerritory);
+                  })}
                   className="w-full p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-3 text-left transition-colors"
                 >
                   <span className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
@@ -424,7 +500,12 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
               {normalizeTerritoryStatus(quickActionsTerritory.status) === 'En uso' && (
                 <button
                   type="button"
-                  onClick={() => handleOpenCompleteConfirm(quickActionsTerritory)}
+                  onPointerUp={(event) => handleQuickActionPointerUp(event, () => {
+                    handleOpenCompleteConfirm(quickActionsTerritory);
+                  })}
+                  onClick={(event) => handleQuickActionClick(event, () => {
+                    handleOpenCompleteConfirm(quickActionsTerritory);
+                  })}
                   className="w-full p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-3 text-left transition-colors"
                 >
                   <span className="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center">

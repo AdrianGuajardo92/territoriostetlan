@@ -131,6 +131,38 @@ const describeElement = (el) => {
   return parts.join(' ');
 };
 
+const getElementHighlight = (el) => {
+  if (!el?.getBoundingClientRect) return null;
+  const rect = el.getBoundingClientRect();
+  const tag = el.tagName.toLowerCase();
+  const cls = Array.from(el.classList || []).slice(0, 2).join('.');
+  return {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+    label: cls ? `<${tag}>.${cls}` : `<${tag}>`,
+    labelPosition: rect.top < 28 ? 'below' : 'above',
+  };
+};
+
+const getUnderlyingElementFromPoint = (x, y, overlayEl) => {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+
+  const previousPointerEvents = overlayEl?.style.pointerEvents;
+  if (overlayEl) overlayEl.style.pointerEvents = 'none';
+
+  try {
+    const elements = typeof document.elementsFromPoint === 'function'
+      ? document.elementsFromPoint(x, y)
+      : [document.elementFromPoint(x, y)];
+
+    return elements.find((el) => el && !el.closest?.('[data-dev-inspector]')) || null;
+  } finally {
+    if (overlayEl) overlayEl.style.pointerEvents = previousPointerEvents || 'auto';
+  }
+};
+
 const getInspectorRoute = () => {
   if (typeof window === 'undefined') return '';
   const params = new URLSearchParams(window.location.search);
@@ -657,6 +689,7 @@ const DevClickToSource = () => {
 
   const activeRef = useRef(false);
   const toastTimerRef = useRef(null);
+  const ignoreNextClickRef = useRef(false);
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
@@ -732,16 +765,7 @@ const DevClickToSource = () => {
         setHighlight(null);
         return;
       }
-      const rect = el.getBoundingClientRect();
-      const tag = el.tagName.toLowerCase();
-      const cls = Array.from(el.classList || []).slice(0, 2).join('.');
-      setHighlight({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-        label: cls ? `<${tag}>.${cls}` : `<${tag}>`,
-      });
+      setHighlight(getElementHighlight(el));
     };
 
     const onClick = (e) => {
@@ -820,33 +844,43 @@ const DevClickToSource = () => {
             window.scrollBy(e.deltaX, e.deltaY);
           }}
           onPointerMove={(e) => {
-            e.currentTarget.style.pointerEvents = 'none';
-            const el = document.elementFromPoint(e.clientX, e.clientY);
-            e.currentTarget.style.pointerEvents = 'auto';
-            if (!el || el.closest('[data-dev-inspector]')) {
+            const el = getUnderlyingElementFromPoint(e.clientX, e.clientY, e.currentTarget);
+            if (!el) {
               setHighlight(null);
               return;
             }
-            const rect = el.getBoundingClientRect();
-            const tag = el.tagName.toLowerCase();
-            const cls = Array.from(el.classList || []).slice(0, 2).join('.');
-            setHighlight({
-              top: rect.top,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
-              label: cls ? `<${tag}>.${cls}` : `<${tag}>`,
-            });
+            setHighlight(getElementHighlight(el));
+          }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const el = getUnderlyingElementFromPoint(e.clientX, e.clientY, e.currentTarget);
+            setHighlight(getElementHighlight(el));
+          }}
+          onPointerUp={(e) => {
+            if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            ignoreNextClickRef.current = true;
+
+            const el = getUnderlyingElementFromPoint(e.clientX, e.clientY, e.currentTarget);
+            if (!el) return;
+            setHighlight(getElementHighlight(el));
+            const info = captureElement(el);
+            handleCapture(info, e);
           }}
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            e.currentTarget.style.pointerEvents = 'none';
-            const el = document.elementFromPoint(e.clientX, e.clientY);
-            e.currentTarget.style.pointerEvents = 'auto';
-            if (!el || el.closest('[data-dev-inspector]')) return;
+            if (ignoreNextClickRef.current) {
+              ignoreNextClickRef.current = false;
+              return;
+            }
+
+            const el = getUnderlyingElementFromPoint(e.clientX, e.clientY, e.currentTarget);
+            if (!el) return;
             const info = captureElement(el);
             handleCapture(info, e);
           }}
@@ -916,7 +950,7 @@ const DevClickToSource = () => {
         >
           <span style={{
             position: 'absolute',
-            top: -22,
+            top: highlight.labelPosition === 'below' ? highlight.height + 4 : -22,
             left: 0,
             background: ACCENT,
             color: '#000',
@@ -926,6 +960,9 @@ const DevClickToSource = () => {
             fontFamily: 'ui-monospace, monospace',
             whiteSpace: 'nowrap',
             fontWeight: 700,
+            maxWidth: 'calc(100vw - 12px)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}>
             {highlight.label}
           </span>
