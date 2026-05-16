@@ -131,6 +131,59 @@ const describeElement = (el) => {
   return parts.join(' ');
 };
 
+const findPageComponent = (components = []) => {
+  return components.find((name) => /(View|Page|Route)$/i.test(name)) || '';
+};
+
+const describeZone = (el) => {
+  if (!el?.parentElement) return '';
+
+  let cur = el.parentElement;
+  let depth = 0;
+
+  while (cur && cur !== document.body && depth < 7) {
+    const tag = cur.tagName?.toLowerCase() || '';
+    const role = cur.getAttribute?.('role') || '';
+    const aria = cur.getAttribute?.('aria-label') || '';
+    const dataTestId = cur.getAttribute?.('data-testid') || '';
+    const id = cur.getAttribute?.('id') || '';
+    const isSemanticZone = [
+      'main',
+      'section',
+      'article',
+      'aside',
+      'nav',
+      'header',
+      'footer',
+      'form',
+      'dialog',
+    ].includes(tag);
+
+    if (isSemanticZone || role || aria || dataTestId || id) {
+      const parts = [`<${tag || '?'}>`];
+      const zoneText = getReadableText(cur, 90);
+
+      if (aria) parts.push(`aria="${trunc(aria, 55)}"`);
+      if (role) parts.push(`role="${role}"`);
+      if (id) parts.push(`id="${id}"`);
+      if (dataTestId) parts.push(`data-testid="${dataTestId}"`);
+      if (zoneText) parts.push(`texto cercano="${zoneText}"`);
+
+      return parts.join(' ');
+    }
+
+    cur = cur.parentElement;
+    depth++;
+  }
+
+  return '';
+};
+
+const getVisibleTextCue = (clickedEl, actionableEl) => {
+  return getReadableText(clickedEl, 90) ||
+    (actionableEl && actionableEl !== clickedEl ? getReadableText(actionableEl, 90) : '');
+};
+
 const getElementHighlight = (el) => {
   if (!el?.getBoundingClientRect) return null;
   const rect = el.getBoundingClientRect();
@@ -499,10 +552,18 @@ const wrapCanvasText = (ctx, text, maxWidth) => {
 };
 
 const getLineColor = (line) => {
-  if (line.startsWith('Archivo:')) return FILE_GREEN;
-  if (line.startsWith('Props/handlers:')) return '#fbbf24';
-  if (line.startsWith('Ruta:')) return TEXT_DIM;
-  if (line.startsWith('Elemento:') || line.startsWith('Accionable:')) return TEXT_MUTED;
+  if (line === 'Referencia técnica:' || line === 'Cómo encontrarlo:') return ACCENT;
+  if (line.startsWith('- Archivo detectado por inspector:') || line.startsWith('Archivo:')) return FILE_GREEN;
+  if (line.startsWith('- Handler/props:') || line.startsWith('Props/handlers:')) return '#fbbf24';
+  if (line.startsWith('- Ruta:') || line.startsWith('Ruta:')) return TEXT_DIM;
+  if (
+    line.startsWith('- Zona:') ||
+    line.startsWith('- Elemento:') ||
+    line.startsWith('- Elemento accionable:') ||
+    line.startsWith('- Texto visible:') ||
+    line.startsWith('Elemento:') ||
+    line.startsWith('Accionable:')
+  ) return TEXT_MUTED;
   return TEXT;
 };
 
@@ -647,15 +708,39 @@ const captureElement = (clickedEl) => {
   const componentChain = components.slice(0, 5).join(' → ');
   const elementDesc = describeElement(clickedEl);
   const actionableDesc = actionableEl !== clickedEl ? describeElement(actionableEl) : null;
+  const zoneDesc = describeZone(clickedEl);
+  const visibleText = getVisibleTextCue(clickedEl, actionableEl);
+  const pageName = findPageComponent(components);
+  const route = getInspectorRoute();
   const id = `${componentName}|${filePath || ''}|${elementDesc}|${actionableDesc || ''}`;
 
-  // Texto plano para copiar (limpio, sin instrucciones extra)
-  const lines = [`Componente: ${componentChain}`];
-  if (filePath) lines.push(`Archivo: ${filePath}`);
-  lines.push(`Elemento: ${elementDesc}`);
-  if (actionableDesc) lines.push(`Accionable: ${actionableDesc}`);
-  if (props.length) lines.push(`Props/handlers: ${props.join(', ')}`);
-  lines.push(`Ruta: ${getInspectorRoute()}`);
+  // Texto plano para pegar en Codex con datos técnicos y pistas de rastreo.
+  const lines = ['Referencia técnica:'];
+  lines.push(`- Componente detectado: ${componentName}`);
+  if (filePath) lines.push(`- Archivo detectado por inspector: ${filePath}`);
+  if (componentChain) lines.push(`- Ancestros útiles: ${componentChain}`);
+  if (zoneDesc) lines.push(`- Zona: ${zoneDesc}`);
+  lines.push(`- Elemento: ${elementDesc}`);
+  if (actionableDesc) lines.push(`- Elemento accionable: ${actionableDesc}`);
+  if (visibleText) lines.push(`- Texto visible: ${visibleText}`);
+  if (props.length) lines.push(`- Handler/props: ${props.join(', ')}`);
+  if (pageName) lines.push(`- Página: ${pageName}`);
+  if (route) lines.push(`- Ruta: ${route}`);
+  lines.push('');
+  lines.push('Cómo encontrarlo:');
+  lines.push(filePath
+    ? `- Empieza por ${filePath}.`
+    : '- Empieza por el archivo detectado por inspector si aparece; si no, busca el componente detectado.');
+  lines.push(componentChain
+    ? `- Si ese archivo solo monta el componente, sigue estos ancestros: ${componentChain}.`
+    : '- Si ese archivo solo monta el componente, sigue los ancestros útiles o componentes hijos.');
+  lines.push(visibleText
+    ? `- Busca el texto visible "${visibleText}" y textos cercanos de la zona.`
+    : '- Busca textos visibles cercanos de la zona inspeccionada.');
+  lines.push(props.length
+    ? `- Busca handlers o props relacionados: ${props.join(', ')}.`
+    : '- Si el cambio es de comportamiento, busca handlers o props relacionados.');
+  lines.push('- Aplica el cambio en el archivo real donde se renderiza el texto o se ejecuta esa lógica.');
   const compactText = lines.join('\n');
 
   return {
@@ -665,6 +750,9 @@ const captureElement = (clickedEl) => {
     filePath,
     elementDesc,
     actionableDesc,
+    zoneDesc,
+    visibleText,
+    pageName,
     props,
     compactText,
     element: clickedEl,

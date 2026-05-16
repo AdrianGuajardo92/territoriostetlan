@@ -101,6 +101,36 @@ const AdminModal = (props = {}) => {
     return { lat, lng };
   };
 
+  const normalizeCoordinate = (value) => {
+    const parsed = typeof value === 'number' ? value : parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const buildProposalMapsUrl = (addressData = {}, fallbackLocation = {}) => {
+    const mapUrl = String(addressData.mapUrl || fallbackLocation.mapUrl || '').trim();
+    if (mapUrl) return mapUrl;
+
+    const latitude = normalizeCoordinate(addressData.latitude ?? fallbackLocation.latitude);
+    const longitude = normalizeCoordinate(addressData.longitude ?? fallbackLocation.longitude);
+    if (latitude !== null && longitude !== null) {
+      return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    }
+
+    const addressText = String(addressData.address || '').trim();
+    if (!addressText) return '';
+
+    const normalizedAddress = addressText
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    const queryParts = [addressText];
+    if (!normalizedAddress.includes('guadalajara')) queryParts.push('Guadalajara');
+    if (!normalizedAddress.includes('jalisco')) queryParts.push('Jalisco');
+    if (!normalizedAddress.includes('mexico')) queryParts.push('Mexico');
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts.join(', '))}`;
+  };
+
   const handleQuickCoordsTextChange = (proposalId, text) => {
     const parsed = parseCoordsText(text);
     setQuickProposalLocation(prev => ({
@@ -868,6 +898,9 @@ const AdminModal = (props = {}) => {
                     edit: { icon: 'fa-edit', color: 'from-blue-500 to-indigo-600', label: 'Editar' }
                   };
                   const typeStyle = typeConfig[proposal.type] || typeConfig.edit;
+                  const proposalAddressMapsUrl = proposal.type === 'new' && proposal.addressData
+                    ? buildProposalMapsUrl(proposal.addressData, getQuickLocation(proposal.id))
+                    : '';
 
                   return (
                     <div
@@ -913,9 +946,21 @@ const AdminModal = (props = {}) => {
                             <div>
                               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Dirección propuesta</p>
                               <div className="flex items-start gap-2">
-                                <p className="text-base font-semibold text-gray-900 flex-1 break-words leading-snug">
-                                  {proposal.addressData.address || 'No especificada'}
-                                </p>
+                                {proposalAddressMapsUrl ? (
+                                  <a
+                                    href={proposalAddressMapsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-base font-semibold text-blue-700 hover:text-blue-800 hover:underline flex-1 break-words leading-snug"
+                                    title="Abrir dirección en Google Maps"
+                                  >
+                                    {proposal.addressData.address || 'No especificada'}
+                                  </a>
+                                ) : (
+                                  <p className="text-base font-semibold text-gray-900 flex-1 break-words leading-snug">
+                                    {proposal.addressData.address || 'No especificada'}
+                                  </p>
+                                )}
                                 {proposal.addressData.address && (
                                   <button
                                     type="button"
