@@ -14,6 +14,8 @@ import Icon from '../components/common/Icon';
 import { optimizeRoute, getCurrentLocation, calculateRouteStats } from '../utils/routeOptimizer';
 import { getAssignedNames, isUserAssigned, formatTeamNames } from '../utils/territoryHelpers';
 
+const DUPLICATE_ADDRESS_ERROR_CODE = 'duplicate-address';
+
 // Función helper para detectar cambios reales entre dirección original y editada
 const getChangedFields = (original, updated) => {
   const changes = {};
@@ -427,6 +429,11 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       if (!formData.isEstudio) formData.estudioBy = '';
 
       if (editingAddress) {
+        if (!editingAddress.id) {
+          showToast('No se pudo identificar esta dirección. Cierra y vuelve a abrirla antes de guardar.', 'error');
+          return;
+        }
+
         if (currentUser.role === 'admin') {
           // Usar showSuccessToast: false para evitar notificación duplicada
           await handleUpdateAddress(editingAddress.id, formData, { showSuccessToast: false });
@@ -468,7 +475,9 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       setIsFormModalOpen(false);
       setEditingAddress(null);
     } catch (error) {
-      showToast('Error al guardar', 'error');
+      if (error?.code !== DUPLICATE_ADDRESS_ERROR_CODE) {
+        showToast('Error al guardar', 'error');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -765,4 +774,4 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   );
 };
 
-export default TerritoryDetailView; 
+export default TerritoryDetailView;

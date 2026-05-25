@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
@@ -41,6 +41,9 @@ const AddressFormModal = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteRequest, setShowDeleteRequest] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
+  const [isSubmitLocked, setIsSubmitLocked] = useState(false);
+  const submitInFlightRef = useRef(false);
+  const isFormBusy = isProcessing || isSubmitLocked;
 
   // Estado para la sección colapsable de ubicación
   const [isLocationExpanded, setIsLocationExpanded] = useState(false);
@@ -95,19 +98,27 @@ const AddressFormModal = ({
     setChangeReason('');
     setShowDeleteRequest(false);
     setDeleteReason('');
+    submitInFlightRef.current = false;
+    setIsSubmitLocked(false);
     // Siempre contraer la ubicación al abrir/cambiar
     setIsLocationExpanded(false);
   }, [address?.id, isOpen]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.address.trim()) {
+    if (submitInFlightRef.current || isFormBusy || !formData.address.trim()) {
       return;
     }
 
+    submitInFlightRef.current = true;
+    setIsSubmitLocked(true);
 
-    
-    onSave(formData, changeReason);
+    try {
+      await onSave({ ...formData, address: formData.address.trim() }, changeReason);
+    } finally {
+      submitInFlightRef.current = false;
+      setIsSubmitLocked(false);
+    }
   };
 
   const handleInputChange = (field, value) => {
@@ -158,7 +169,7 @@ const AddressFormModal = ({
   };
 
   const handleClose = () => {
-    if (!isProcessing) {
+    if (!isFormBusy) {
       onClose();
     }
   };
@@ -170,8 +181,8 @@ const AddressFormModal = ({
       title=""
       size="lg"
       showCloseButton={false}
-      closeOnBackdrop={!isProcessing}
-      closeOnEscape={!isProcessing}
+      closeOnBackdrop={!isFormBusy}
+      closeOnEscape={!isFormBusy}
       modalId={modalId}
       animation="slide-left"
     >
@@ -196,7 +207,7 @@ const AddressFormModal = ({
             {/* Botón cerrar personalizado */}
             <button
               onClick={handleClose}
-              disabled={isProcessing}
+              disabled={isFormBusy}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Cerrar"
             >
@@ -232,7 +243,7 @@ const AddressFormModal = ({
                     style={{ '--tw-ring-color': '#546E7A' }}
                     placeholder="Ej: Calle Principal #123"
                     required
-                    disabled={isProcessing}
+                    disabled={isFormBusy}
                   />
                 </div>
               </div>
@@ -257,7 +268,7 @@ const AddressFormModal = ({
                     style={{ '--tw-ring-color': '#546E7A' }}
                     rows="3"
                     placeholder="Información sobre las personas, horarios, observaciones..."
-                    disabled={isProcessing}
+                    disabled={isFormBusy}
                   />
                 </div>
               </div>
@@ -278,14 +289,14 @@ const AddressFormModal = ({
                     { value: 'Pareja', icon: 'fas fa-user-group', label: 'Pareja' },
                     { value: 'Desconocido', icon: 'fas fa-ban', label: 'Desconocido' }
                   ].map(option => (
-                    <label 
+                    <label
                       key={option.value}
                       className={`relative flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                        formData.gender === option.value 
-                          ? 'border-gray-400 text-white' 
+                        formData.gender === option.value
+                          ? 'border-gray-400 text-white'
                           : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
-                      } ${isProcessing ? 'cursor-not-allowed opacity-50' : ''}`}
-                      style={{ 
+                      } ${isFormBusy ? 'cursor-not-allowed opacity-50' : ''}`}
+                      style={{
                         backgroundColor: formData.gender === option.value ? '#546E7A' : 'transparent'
                       }}
                     >
@@ -296,7 +307,7 @@ const AddressFormModal = ({
                         checked={formData.gender === option.value}
                         onChange={(e) => handleInputChange('gender', e.target.value)}
                         className="sr-only"
-                        disabled={isProcessing}
+                        disabled={isFormBusy}
                       />
                       <i className={`${option.icon} text-lg mb-2`}></i>
                       <span className="text-xs font-medium">{option.label}</span>
@@ -324,7 +335,7 @@ const AddressFormModal = ({
                         onChange={(e) => handleInputChange('isRevisita', e.target.checked)}
                         className="w-4 h-4 border-2 border-gray-300 rounded focus:ring-2 mt-1"
                         style={{ accentColor: '#546E7A' }}
-                        disabled={isProcessing}
+                        disabled={isFormBusy}
                       />
                       <div className="ml-3 flex-1">
                         <div className="flex items-center mb-2">
@@ -356,7 +367,7 @@ const AddressFormModal = ({
                         onChange={(e) => handleInputChange('isEstudio', e.target.checked)}
                         className="w-4 h-4 border-2 border-gray-300 rounded focus:ring-2 mt-1"
                         style={{ accentColor: '#546E7A' }}
-                        disabled={isProcessing}
+                        disabled={isFormBusy}
                       />
                       <div className="ml-3 flex-1">
                         <div className="flex items-center mb-2">
@@ -415,7 +426,7 @@ const AddressFormModal = ({
                             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent text-sm"
                             style={{ '--tw-ring-color': '#546E7A' }}
                             placeholder="https://maps.google.com/..."
-                            disabled={isProcessing}
+                            disabled={isFormBusy}
                           />
                         </div>
 
@@ -433,7 +444,7 @@ const AddressFormModal = ({
                               className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent text-sm"
                               style={{ '--tw-ring-color': '#546E7A' }}
                               placeholder="20.6736"
-                              disabled={isProcessing}
+                              disabled={isFormBusy}
                             />
                           </div>
                           <div>
@@ -448,7 +459,7 @@ const AddressFormModal = ({
                               className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent text-sm"
                               style={{ '--tw-ring-color': '#546E7A' }}
                               placeholder="-103.3370"
-                              disabled={isProcessing}
+                              disabled={isFormBusy}
                             />
                           </div>
                         </div>
@@ -474,7 +485,7 @@ const AddressFormModal = ({
                     rows="2"
                     placeholder="Explica brevemente por qué necesitas hacer este cambio..."
                     required
-                    disabled={isProcessing}
+                    disabled={isFormBusy}
                   />
                 </div>
               )}
@@ -495,7 +506,7 @@ const AddressFormModal = ({
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
                   className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  disabled={isProcessing}
+                  disabled={isFormBusy}
                   title="Eliminar"
                 >
                   <i className="fas fa-trash text-sm"></i>
@@ -506,7 +517,7 @@ const AddressFormModal = ({
                   type="button"
                   onClick={() => setShowDeleteRequest(true)}
                   className="p-2 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                  disabled={isProcessing}
+                  disabled={isFormBusy}
                   title="Solicitar eliminación"
                 >
                   <i className="fas fa-trash text-sm"></i>
@@ -520,7 +531,7 @@ const AddressFormModal = ({
                 type="button"
                 onClick={handleClose}
                 className="px-3 py-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all text-xs font-medium"
-                disabled={isProcessing}
+                disabled={isFormBusy}
               >
                 Cancelar
               </button>
@@ -531,13 +542,9 @@ const AddressFormModal = ({
                 style={{ backgroundColor: '#2C3E50' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2C3E50'}
-                disabled={isProcessing || !formData.address.trim() || (isPublisher && isEditing && !changeReason.trim())}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleSubmit(e);
-                }}
+                disabled={isFormBusy || !formData.address.trim() || (isPublisher && isEditing && !changeReason.trim())}
               >
-                {isProcessing ? (
+                {isFormBusy ? (
                   <span className="flex items-center">
                     <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5"></div>
                     Guardando...
@@ -635,4 +642,4 @@ const AddressFormModal = ({
   );
 };
 
-export default AddressFormModal; 
+export default AddressFormModal;

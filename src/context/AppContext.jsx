@@ -29,6 +29,34 @@ const BOOT_SCOPE_LABELS = {
   proposals: 'las propuestas',
   history: 'el historial'
 };
+const DUPLICATE_ADDRESS_ERROR_CODE = 'duplicate-address';
+
+const normalizeAddressForDuplicateCheck = (value = '') => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[.,#]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const getAddressDuplicateKey = (territoryId, addressText) => {
+  const normalizedAddress = normalizeAddressForDuplicateCheck(addressText);
+  if (!territoryId || !normalizedAddress) return null;
+  return `${String(territoryId)}|${normalizedAddress}`;
+};
+
+const createDuplicateAddressError = (message = 'Ya existe esta dirección en este territorio.') => {
+  const error = new Error(message);
+  error.code = DUPLICATE_ADDRESS_ERROR_CODE;
+  return error;
+};
+
+const isDuplicateAddressRecord = (address, territoryId, normalizedAddress, excludeAddressId = null) => {
+  if (!address || address.deleted || address.isArchived) return false;
+  if (excludeAddressId && address.id === excludeAddressId) return false;
+  return String(address.territoryId || '') === String(territoryId || '')
+    && normalizeAddressForDuplicateCheck(address.address) === normalizedAddress;
+};
 
 const buildSessionUser = (id, userData) => ({
   id,
@@ -109,9 +137,56 @@ export const AppProvider = ({ children }) => {
   const secondaryUnsubscribesRef = useRef([]);
   const hasMarkedTerritoriesSnapshotRef = useRef(false);
   const hasMarkedSecondaryReadyRef = useRef(false);
+  const addressSaveLocksRef = useRef(new Set());
   
   // CORRECCIÓN: Mover useToast DENTRO del componente
   const { showToast } = useToast();
+
+  const reserveAddressSave = useCallback((territoryId, addressText) => {
+    const duplicateKey = getAddressDuplicateKey(territoryId, addressText);
+    if (!duplicateKey) return () => {};
+
+    if (addressSaveLocksRef.current.has(duplicateKey)) {
+      showToast('Esta dirección ya se está guardando. Espera un momento.', 'warning');
+      throw createDuplicateAddressError('Esta dirección ya se está guardando.');
+    }
+
+    addressSaveLocksRef.current.add(duplicateKey);
+    return () => {
+      setTimeout(() => {
+        addressSaveLocksRef.current.delete(duplicateKey);
+      }, 1000);
+    };
+  }, [showToast]);
+
+  const ensureAddressIsUnique = useCallback(async (territoryId, addressText, excludeAddressId = null) => {
+    const normalizedAddress = normalizeAddressForDuplicateCheck(addressText);
+    if (!territoryId || !normalizedAddress) return;
+
+    const localDuplicate = addresses.find((address) => (
+      isDuplicateAddressRecord(address, territoryId, normalizedAddress, excludeAddressId)
+    ));
+
+    if (localDuplicate) {
+      showToast('Ya existe esta dirección en este territorio.', 'warning');
+      throw createDuplicateAddressError();
+    }
+
+    const territoryAddressesSnapshot = await getDocs(
+      query(collection(db, 'addresses'), where('territoryId', '==', territoryId))
+    );
+
+    const remoteDuplicate = territoryAddressesSnapshot.docs
+      .map((addressDoc) => ({ id: addressDoc.id, ...addressDoc.data() }))
+      .find((address) => (
+        isDuplicateAddressRecord(address, territoryId, normalizedAddress, excludeAddressId)
+      ));
+
+    if (remoteDuplicate) {
+      showToast('Ya existe esta dirección en este territorio.', 'warning');
+      throw createDuplicateAddressError();
+    }
+  }, [addresses, showToast]);
 
   const interactiveReady = useMemo(() => {
     if (bootstrapError && ['auth', 'territories', 'addresses'].includes(bootstrapError.scope)) {
@@ -375,7 +450,12 @@ export const AppProvider = ({ children }) => {
 
   // 🏠 ADDRESS FUNCTIONS
   const handleAddNewAddress = async (territoryId, addressData) => {
+    let releaseAddressSave = () => {};
+
     try {
+      releaseAddressSave = reserveAddressSave(territoryId, addressData.address);
+      await ensureAddressIsUnique(territoryId, addressData.address);
+
       const newData = {
         ...addressData,
         territoryId,
@@ -446,23 +526,38 @@ export const AppProvider = ({ children }) => {
       }
       
     } catch (error) {
-      console.error('Error adding address:', error);
-      
-      // 🔄 REVERTIR CAMBIOS OPTIMISTAS en caso de error
-      // Eliminar la dirección temporal del estado local
-      setAddresses(prevAddresses => 
-        prevAddresses.filter(addr => !addr.id.startsWith('temp_'))
-      );
-      
-      showToast('Error al agregar dirección', 'error');
+      if (error?.code !== DUPLICATE_ADDRESS_ERROR_CODE) {
+        console.error('Error adding address:', error);
+
+        // 🔄 REVERTIR CAMBIOS OPTIMISTAS en caso de error
+        // Eliminar la dirección temporal del estado local
+        setAddresses(prevAddresses =>
+          prevAddresses.filter(addr => !addr.id.startsWith('temp_'))
+        );
+
+        showToast('Error al agregar dirección', 'error');
+      }
       throw error;
+    } finally {
+      releaseAddressSave();
     }
   };
 
   const handleUpdateAddress = async (addressId, updates, options = {}) => {
     const { showSuccessToast = true } = options;
-    
+    let releaseAddressSave = () => {};
+
     try {
+      const currentAddress = addresses.find(addr => addr.id === addressId);
+      const nextTerritoryId = updates.territoryId || currentAddress?.territoryId;
+      const nextAddressText = updates.address ?? currentAddress?.address;
+      const shouldValidateDuplicate = updates.address !== undefined || updates.territoryId !== undefined;
+
+      if (shouldValidateDuplicate) {
+        releaseAddressSave = reserveAddressSave(nextTerritoryId, nextAddressText);
+        await ensureAddressIsUnique(nextTerritoryId, nextAddressText, addressId);
+      }
+
       // 🚀 ACTUALIZACIÓN OPTIMISTA: Actualizar inmediatamente el estado local
       setAddresses(prevAddresses => 
         prevAddresses.map(addr => 
@@ -483,12 +578,16 @@ export const AppProvider = ({ children }) => {
         showToast('Dirección actualizada correctamente', 'success');
       }
     } catch (error) {
-      console.error('Error updating address:', error);
-      
-      // 🔄 REVERTIR CAMBIOS OPTIMISTAS en caso de error
-      // El listener de Firebase se encargará de restaurar el estado correcto
-      showToast('Error al actualizar dirección', 'error');
+      if (error?.code !== DUPLICATE_ADDRESS_ERROR_CODE) {
+        console.error('Error updating address:', error);
+
+        // 🔄 REVERTIR CAMBIOS OPTIMISTAS en caso de error
+        // El listener de Firebase se encargará de restaurar el estado correcto
+        showToast('Error al actualizar dirección', 'error');
+      }
       throw error;
+    } finally {
+      releaseAddressSave();
     }
   };
 
