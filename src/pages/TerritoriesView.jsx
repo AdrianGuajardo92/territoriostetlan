@@ -22,6 +22,16 @@ const normalizeTerritoryStatus = (status) => (
   status
 );
 
+const toTimestamp = (date) => {
+  if (!date) return null;
+  const d = date.toDate ? date.toDate() : new Date(date);
+  const time = d.getTime();
+  return Number.isFinite(time) ? time : null;
+};
+
+const getCompletedTimestamp = (territory) =>
+  toTimestamp(territory.completedDate ?? territory.terminadoDate ?? territory.lastWorked);
+
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const {
     territories,
@@ -68,6 +78,17 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
 
         if (isAMine && !isBMine) return -1;
         if (!isAMine && isBMine) return 1;
+      }
+
+      if (filterStatus === 'completado') {
+        const timeA = getCompletedTimestamp(territoryA);
+        const timeB = getCompletedTimestamp(territoryB);
+
+        if (timeA != null && timeB != null && timeA !== timeB) {
+          return timeA - timeB;
+        }
+        if (timeA != null && timeB == null) return -1;
+        if (timeA == null && timeB != null) return 1;
       }
 
       return territoryA.name.localeCompare(territoryB.name, undefined, {
