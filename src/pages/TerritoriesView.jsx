@@ -14,8 +14,6 @@ import {
   LazyAssignTerritoryModal as AssignTerritoryModal,
   LazyQuickProposalModal as QuickProposalModal
 } from '../components/modals/LazyModals';
-import { isUserAssigned } from '../utils/territoryHelpers';
-
 const normalizeTerritoryStatus = (status) => (
   status === 'Terminado' ? 'Completado' :
   status === 'Available' ? 'Disponible' :
@@ -31,6 +29,9 @@ const toTimestamp = (date) => {
 
 const getCompletedTimestamp = (territory) =>
   toTimestamp(territory.completedDate ?? territory.terminadoDate ?? territory.lastWorked);
+
+const getAssignedTimestamp = (territory) =>
+  toTimestamp(territory.assignedDate);
 
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const {
@@ -73,11 +74,14 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
 
     return [...filtered].sort((territoryA, territoryB) => {
       if (filterStatus === 'en uso') {
-        const isAMine = isUserAssigned(territoryA.assignedTo, currentUser?.name);
-        const isBMine = isUserAssigned(territoryB.assignedTo, currentUser?.name);
+        const timeA = getAssignedTimestamp(territoryA);
+        const timeB = getAssignedTimestamp(territoryB);
 
-        if (isAMine && !isBMine) return -1;
-        if (!isAMine && isBMine) return 1;
+        if (timeA != null && timeB != null && timeA !== timeB) {
+          return timeA - timeB;
+        }
+        if (timeA != null && timeB == null) return -1;
+        if (timeA == null && timeB != null) return 1;
       }
 
       if (filterStatus === 'completado') {
@@ -95,7 +99,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
         numeric: true
       });
     });
-  }, [territories, filterStatus, currentUser?.name]);
+  }, [territories, filterStatus]);
 
   const stats = useMemo(() => ({
     total: territories.length,
