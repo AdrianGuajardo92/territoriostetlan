@@ -84,6 +84,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     handleAssignTerritory,
     handleReturnTerritory,
     handleCompleteTerritory,
+    markTerritoryAddressesAsVisited,
     handleProposeAddressChange,
     handleProposeNewAddress,
     handleProposeAddressDeletion,
@@ -126,6 +127,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
 
   const highlightTimerRef = useRef(null);
   const adminModeRef = useRef(adminEditMode);
+  const completedAddressesSyncRef = useRef(false);
 
   // Asegurar que el estado de cálculos esté limpio al montar el componente
   useEffect(() => {
@@ -257,6 +259,31 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     const addressHash = territoryAddrs.map(a => `${a.id}:${a.address}`).sort().join(',');
     return `${territoryAddrs.length}|${idsHash}|${visitedHash}|${addressHash}`;
   }, [addresses, territory.id]);
+
+  // Sincronizar direcciones pendientes en territorios ya completados (p. ej. completados manualmente)
+  useEffect(() => {
+    completedAddressesSyncRef.current = false;
+  }, [territory.id]);
+
+  useEffect(() => {
+    const isCompleted = territory.status === 'Completado' || territory.status === 'Terminado';
+    if (!isCompleted) return;
+
+    const hasUnvisited = addresses.some(
+      address => address.territoryId === territory.id && !address.deleted && !address.isVisited
+    );
+    if (!hasUnvisited || completedAddressesSyncRef.current) return;
+
+    completedAddressesSyncRef.current = true;
+    markTerritoryAddressesAsVisited(territory.id, { silent: true }).catch(() => {
+      completedAddressesSyncRef.current = false;
+    });
+  }, [
+    territory.id,
+    territory.status,
+    territoryAddressesHash,
+    markTerritoryAddressesAsVisited
+  ]);
 
   // Obtener direcciones del territorio - OPTIMIZADO Y SEGURO
   const territoryAddresses = useMemo(() => {

@@ -1120,6 +1120,70 @@ export const AppProvider = ({ children }) => {
     }
   }, [territories]);
 
+  const markTerritoryAddressesAsVisited = useCallback(async (territoryId, { silent = true } = {}) => {
+    const callKey = `mark_visited_${territoryId}`;
+    if (window.markVisitedInProgress?.has(callKey)) {
+      return;
+    }
+    if (!window.markVisitedInProgress) window.markVisitedInProgress = new Set();
+    window.markVisitedInProgress.add(callKey);
+
+    const previousAddressesSnapshot = addresses
+      .filter(address => address.territoryId === territoryId)
+      .map(address => ({ ...address }));
+
+    const hasUnvisitedLocally = previousAddressesSnapshot.some(address => !address.isVisited);
+    if (!hasUnvisitedLocally) {
+      window.markVisitedInProgress.delete(callKey);
+      return;
+    }
+
+    try {
+      setAddresses(prevAddresses =>
+        prevAddresses.map(address =>
+          address.territoryId === territoryId
+            ? { ...address, isVisited: true, lastUpdated: new Date() }
+            : address
+        )
+      );
+
+      const addressesQuery = query(
+        collection(db, 'addresses'),
+        where('territoryId', '==', territoryId)
+      );
+      const addressesSnapshot = await getDocs(addressesQuery);
+
+      const addressUpdates = addressesSnapshot.docs
+        .filter(addressDoc => addressDoc.data().isVisited !== true)
+        .map(addressDoc =>
+          updateDoc(addressDoc.ref, {
+            isVisited: true,
+            lastUpdated: serverTimestamp()
+          })
+        );
+
+      if (addressUpdates.length > 0) {
+        await Promise.all(addressUpdates);
+      }
+    } catch (error) {
+      setAddresses(prevAddresses =>
+        prevAddresses.map(address => {
+          const previousAddress = previousAddressesSnapshot.find(item => item.id === address.id);
+          return previousAddress
+            ? { ...address, isVisited: previousAddress.isVisited, lastUpdated: previousAddress.lastUpdated }
+            : address;
+        })
+      );
+
+      if (!silent) {
+        showToast('Error al marcar direcciones como visitadas', 'error');
+      }
+      throw error;
+    } finally {
+      window.markVisitedInProgress.delete(callKey);
+    }
+  }, [addresses, showToast]);
+
   const handleCompleteTerritory = useCallback(async (territoryId) => {
     // Prevenir doble llamada con debouncing
     const callKey = `complete_${territoryId}`;
@@ -1130,24 +1194,62 @@ export const AppProvider = ({ children }) => {
     // Marcar como en progreso
     if (!window.completeInProgress) window.completeInProgress = new Set();
     window.completeInProgress.add(callKey);
+
+    const territory = territories.find(t => t.id === territoryId);
+    const previousTerritory = territory ? { ...territory } : null;
+    const previousAddressesSnapshot = addresses
+      .filter(address => address.territoryId === territoryId)
+      .map(address => ({ ...address }));
+    const optimisticLastWorked = new Date();
     
     try {
-      const territory = territories.find(t => t.id === territoryId);
-      
       // 🔄 MANTENER TODO EL EQUIPO: Conservar exactamente los mismos nombres asignados al completar
       // Sin importar quién haga clic en "Completado", mantener la asignación original
-      
+      setTerritories(prevTerritories =>
+        prevTerritories.map(item =>
+          item.id === territoryId
+            ? {
+                ...item,
+                status: 'Completado',
+                assignedTo: territory?.assignedTo,
+                completedDate: optimisticLastWorked,
+                completedBy: currentUser?.name || 'Usuario',
+                lastWorked: optimisticLastWorked
+              }
+            : item
+        )
+      );
 
-      
-      await updateDoc(doc(db, 'territories', territoryId), {
+      setAddresses(prevAddresses =>
+        prevAddresses.map(address =>
+          address.territoryId === territoryId
+            ? { ...address, isVisited: true, lastUpdated: optimisticLastWorked }
+            : address
+        )
+      );
+
+      const addressesQuery = query(
+        collection(db, 'addresses'),
+        where('territoryId', '==', territoryId)
+      );
+      const addressesSnapshot = await getDocs(addressesQuery);
+
+      const territoryUpdate = updateDoc(doc(db, 'territories', territoryId), {
         status: 'Completado',
         assignedTo: territory?.assignedTo, // ✅ MANTENER ASIGNACIÓN ORIGINAL COMPLETA
         completedDate: serverTimestamp(),
         completedBy: currentUser?.name || 'Usuario',
         lastWorked: serverTimestamp()
       });
-      
 
+      const addressUpdates = addressesSnapshot.docs.map(addressDoc =>
+        updateDoc(addressDoc.ref, {
+          isVisited: true,
+          lastUpdated: serverTimestamp()
+        })
+      );
+
+      await Promise.all([territoryUpdate, ...addressUpdates]);
 
       if (territory) {
         // 🔄 PASO 4: Usar helpers para manejar equipos en historial
@@ -1175,6 +1277,23 @@ export const AppProvider = ({ children }) => {
         
       showToast(`${displayName} completado`, 'success');
     } catch (error) {
+      if (previousTerritory) {
+        setTerritories(prevTerritories =>
+          prevTerritories.map(item =>
+            item.id === territoryId ? previousTerritory : item
+          )
+        );
+      }
+
+      setAddresses(prevAddresses =>
+        prevAddresses.map(address => {
+          const previousAddress = previousAddressesSnapshot.find(item => item.id === address.id);
+          return previousAddress
+            ? { ...address, isVisited: previousAddress.isVisited, lastUpdated: previousAddress.lastUpdated }
+            : address;
+        })
+      );
+
       console.error('Error completing territory:', error);
       showToast('Error al completar territorio', 'error');
       throw error;
@@ -1184,7 +1303,7 @@ export const AppProvider = ({ children }) => {
         window.completeInProgress?.delete(callKey);
       }, 2000);
     }
-  }, [territories, currentUser]);
+  }, [territories, addresses, currentUser, showToast]);
 
   // 📝 PROPOSAL FUNCTIONS
   const handleProposeAddressChange = async (addressId, changes, reason, actionType = 'modify') => {
@@ -2402,6 +2521,7 @@ export const AppProvider = ({ children }) => {
     handleAssignTerritory,
     handleReturnTerritory,
     handleCompleteTerritory,
+    markTerritoryAddressesAsVisited,
     releaseTerritories,
     
     // Address functions
