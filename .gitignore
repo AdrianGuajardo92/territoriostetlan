@@ -30,6 +30,13 @@ npm-debug.log*
 .netlify
 .claude/settings.local.json
 
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+**/service-account*.json
+**/*-service-account.json
+
 # Nombres reservados de Windows
 nul
 NUL

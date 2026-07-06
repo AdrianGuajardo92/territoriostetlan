@@ -611,7 +611,11 @@ export const AppProvider = ({ children }) => {
   };
 
   const handleDeleteAddress = async (addressId, options = {}) => {
-    const { showSuccessToast = true, permanentDelete = false } = options;
+    const {
+      showSuccessToast = true,
+      permanentDelete = false,
+      deletedReason = 'Eliminado por usuario'
+    } = options;
 
     try {
       if (permanentDelete) {
@@ -628,7 +632,7 @@ export const AppProvider = ({ children }) => {
           deletedAt: serverTimestamp(),
           deletedBy: currentUser?.id || 'unknown',
           deletedByName: currentUser?.name || 'Sistema',
-          deletedReason: 'Eliminado por usuario',
+          deletedReason: deletedReason.trim() || 'Eliminado por usuario',
           // Preservar datos originales
           originalData: {
             ...address,
@@ -668,7 +672,7 @@ export const AppProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error deleting address:', error);
-      showToast('Error al eliminar dirección', 'error');
+      showToast('Error al archivar dirección', 'error');
       throw error;
     }
   };
@@ -731,10 +735,6 @@ export const AppProvider = ({ children }) => {
         });
         await batch.commit();
       }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7883/ingest/f58f84f6-2583-4fb1-8e28-eac808e869d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2c01f2'},body:JSON.stringify({sessionId:'2c01f2',runId:'post-fix-verify',location:'AppContext.jsx:handleRestoreArchivedAddresses',message:'archived addresses restored',data:{restoredCount:addressesToRestore.length,territoryFilterCount:territoryIdSet?.size ?? null},timestamp:Date.now(),hypothesisId:'G'})}).catch(()=>{});
-      // #endregion
 
       if (showSuccessToast) {
         showToast(
@@ -1462,6 +1462,17 @@ export const AppProvider = ({ children }) => {
 
   const handleProposeAddressDeletion = async (addressId, reason) => {
     try {
+      const existingPending = proposals.find(
+        (proposal) => proposal.addressId === addressId
+          && proposal.type === 'delete'
+          && proposal.status === 'pending'
+      );
+
+      if (existingPending) {
+        showToast('Ya hay una solicitud de archivo pendiente para esta dirección.', 'info', 4000);
+        return;
+      }
+
       const address = addresses.find(a => a.id === addressId);
       const proposalData = {
         type: 'delete',
@@ -1483,10 +1494,10 @@ export const AppProvider = ({ children }) => {
       const docRef = await addDoc(collection(db, 'proposals'), proposalData);
       console.log('[proposals] Deletion proposal written to Firestore:', docRef.id);
 
-      showToast('Tu solicitud de eliminación se ha enviado para revisión del administrador.', 'success', 4000);
+      showToast('Tu solicitud de archivo se ha enviado para revisión del administrador.', 'success', 4000);
     } catch (error) {
       console.error('[proposals] Error creating deletion proposal:', error);
-      showToast('Error al crear solicitud de eliminación', 'error');
+      showToast('Error al crear solicitud de archivo', 'error');
       throw error;
     }
   };
@@ -1511,8 +1522,10 @@ export const AppProvider = ({ children }) => {
         const mergedAddressData = { ...proposal.addressData, ...(extraAddressData || {}) };
         await handleAddNewAddress(territoryIdToUse, mergedAddressData);
       } else if (proposal.type === 'delete') {
-        // Eliminar la dirección
-        await handleDeleteAddress(proposal.addressId, { showSuccessToast: false });
+        await handleDeleteAddress(proposal.addressId, {
+          showSuccessToast: false,
+          deletedReason: proposal.reason || 'Aprobado desde propuesta de archivo'
+        });
       }
 
       const updatePayload = {
@@ -1531,7 +1544,10 @@ export const AppProvider = ({ children }) => {
 
       await updateDoc(doc(db, 'proposals', proposalId), updatePayload);
 
-      showToast('Propuesta aprobada', 'success');
+      showToast(
+        proposal.type === 'delete' ? 'Dirección archivada correctamente' : 'Propuesta aprobada',
+        'success'
+      );
     } catch (error) {
       console.error('Error approving proposal:', error);
       if (error.message !== 'Territorio requerido para propuesta rápida') {
@@ -2136,10 +2152,6 @@ export const AppProvider = ({ children }) => {
         addressesData.sort((a, b) => (
           String(a.address || a.street || '').localeCompare(String(b.address || b.street || ''), 'es', { numeric: true })
         ));
-
-        // #region agent log
-        fetch('http://127.0.0.1:7883/ingest/f58f84f6-2583-4fb1-8e28-eac808e869d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2c01f2'},body:JSON.stringify({sessionId:'2c01f2',runId:'post-fix',location:'AppContext.jsx:addressesSnapshot',message:'addresses snapshot loaded',data:{snapshotSize:addressesData.length,notDeletedCount:addressesData.filter((a)=>!a.deleted).length,deletedCount:addressesData.filter((a)=>a.deleted).length,withAddressField:addressesData.filter((a)=>a.address).length,withStreetOnly:addressesData.filter((a)=>!a.address&&a.street).length},timestamp:Date.now(),hypothesisId:'F'})}).catch(()=>{});
-        // #endregion
 
         setAddresses(addressesData);
         setHasAddressesSnapshot(true);

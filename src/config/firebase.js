@@ -23,4 +23,4 @@ const app = initializeApp(firebaseConfig);
 // Inicializar Firestore
 export const db = getFirestore(app);
 
-export default app; 
+export default app;

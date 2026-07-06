@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Modal from '../common/Modal';
 import Icon from '../common/Icon';
+import { ArchiveConfirmDialog, ArchiveProposalDialog } from '../addresses/AddressArchiveDialogs';
 import { useApp } from '../../context/AppContext';
-import { useBackHandler } from '../../hooks/useBackHandler';
 
 const AddressFormModal = ({ 
   isOpen, 
@@ -40,18 +40,12 @@ const AddressFormModal = ({
   const [changeReason, setChangeReason] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteRequest, setShowDeleteRequest] = useState(false);
-  const [deleteReason, setDeleteReason] = useState('');
   const [isSubmitLocked, setIsSubmitLocked] = useState(false);
   const submitInFlightRef = useRef(false);
   const isFormBusy = isProcessing || isSubmitLocked;
 
   // Estado para la sección colapsable de ubicación
   const [isLocationExpanded, setIsLocationExpanded] = useState(false);
-
-  // Los ConfirmDialog internos no usan <Modal>; registrarlos aquí permite
-  // que el botón físico "atrás" los cierre antes de cerrar el form.
-  useBackHandler({ isOpen: showDeleteConfirm, onClose: () => setShowDeleteConfirm(false), id: `${modalId}-delete-confirm` });
-  useBackHandler({ isOpen: showDeleteRequest, onClose: () => setShowDeleteRequest(false), id: `${modalId}-delete-request` });
 
   useEffect(() => {
     // Solo ejecutar cuando el modal se abre por primera vez o cambia la dirección
@@ -96,8 +90,8 @@ const AddressFormModal = ({
       });
     }
     setChangeReason('');
+    setShowDeleteConfirm(false);
     setShowDeleteRequest(false);
-    setDeleteReason('');
     submitInFlightRef.current = false;
     setIsSubmitLocked(false);
     // Siempre contraer la ubicación al abrir/cambiar
@@ -153,18 +147,17 @@ const AddressFormModal = ({
     });
   };
 
-  const handleDelete = () => {
+  const handleArchiveConfirm = (reason) => {
     if (onDelete) {
-      onDelete(address.id);
+      onDelete(address.id, reason);
       setShowDeleteConfirm(false);
     }
   };
 
-  const handleDeleteRequest = () => {
-    if (onDelete && deleteReason.trim()) {
-      onDelete(address.id, deleteReason.trim());
+  const handleArchiveProposal = (reason) => {
+    if (onDelete) {
+      onDelete(address.id, reason);
       setShowDeleteRequest(false);
-      setDeleteReason('');
     }
   };
 
@@ -179,14 +172,14 @@ const AddressFormModal = ({
       isOpen={isOpen}
       onClose={handleClose}
       title=""
-      size="lg"
+      size="full"
       showCloseButton={false}
       closeOnBackdrop={!isFormBusy}
       closeOnEscape={!isFormBusy}
       modalId={modalId}
       animation="slide-left"
     >
-      <div className="flex flex-col" style={{ height: '85vh' }}>
+      <div className="relative flex flex-col h-full">
         {/* Header personalizado */}
         <div className="px-4 py-3 flex-shrink-0" style={{ backgroundColor: '#2C3E50' }}>
           <div className="flex items-center justify-between">
@@ -216,8 +209,8 @@ const AddressFormModal = ({
           </div>
         </div>
 
-        {/* Contenido con scroll garantizado */}
-        <div className="flex-1 overflow-y-auto bg-gray-50" style={{ maxHeight: 'calc(85vh - 140px)' }}>
+        {/* Contenido con scroll */}
+        <div className="flex-1 min-h-0 overflow-y-auto bg-gray-50">
           <form id="address-form" onSubmit={handleSubmit} className="px-4 py-4">
             <div className="space-y-4 max-w-2xl mx-auto">
               
@@ -489,9 +482,6 @@ const AddressFormModal = ({
                   />
                 </div>
               )}
-              
-              {/* Espacio adicional al final para scroll completo */}
-              <div className="h-20"></div>
             </div>
           </form>
         </div>
@@ -505,22 +495,22 @@ const AddressFormModal = ({
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-4 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
                   disabled={isFormBusy}
-                  title="Eliminar"
                 >
-                  <i className="fas fa-trash text-sm"></i>
+                  <i className="fas fa-trash mr-1.5 text-[11px]"></i>
+                  Borrar dirección
                 </button>
               )}
               {onDelete && isEditing && isPublisher && (
                 <button
                   type="button"
                   onClick={() => setShowDeleteRequest(true)}
-                  className="p-2 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
                   disabled={isFormBusy}
-                  title="Solicitar eliminación"
                 >
-                  <i className="fas fa-trash text-sm"></i>
+                  <Icon name="trash" size={16} />
+                  Solicitar archivo
                 </button>
               )}
             </div>
@@ -561,83 +551,23 @@ const AddressFormModal = ({
         </div>
       </div>
 
-      {/* Confirmación de eliminación (admin) */}
-      {showDeleteConfirm && (
-        <div className="absolute inset-0 bg-white rounded-2xl flex items-center justify-center p-6">
-          <div className="text-center max-w-sm">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-              <i className="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
-            </div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: '#2C3E50' }}>
-              ¿Eliminar esta dirección?
-            </h3>
-            <p className="text-gray-600 mb-6 text-sm">
-              Esta acción no se puede deshacer y se eliminará permanentemente de la base de datos.
-            </p>
-            <div className="flex justify-center space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 border-2 border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
-              >
-                Sí, eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ArchiveConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleArchiveConfirm}
+        isProcessing={isFormBusy}
+        backHandlerId={`${modalId}-archive-confirm`}
+        addressLabel={formData.address}
+      />
 
-      {/* Solicitud de eliminación (publicador) */}
-      {showDeleteRequest && (
-        <div className="absolute inset-0 bg-white rounded-2xl flex items-center justify-center p-6">
-          <div className="w-full max-w-sm">
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-                <i className="fas fa-trash text-red-500 text-2xl"></i>
-              </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: '#2C3E50' }}>
-                Solicitar eliminación
-              </h3>
-              <p className="text-gray-600 mb-4 text-sm">
-                Tu solicitud será revisada por un administrador antes de aplicarse.
-              </p>
-            </div>
-            <div className="mb-5">
-              <label className="block text-sm font-medium mb-2 text-gray-700">
-                Razón <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={deleteReason}
-                onChange={(e) => setDeleteReason(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-300 focus:border-transparent text-sm"
-                rows="3"
-                placeholder="Ej: Ya no vive aquí, Se mudó, Falleció..."
-                autoFocus
-              />
-            </div>
-            <div className="flex justify-center space-x-3">
-              <button
-                onClick={() => { setShowDeleteRequest(false); setDeleteReason(''); }}
-                className="px-4 py-2 border-2 border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDeleteRequest}
-                disabled={!deleteReason.trim()}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Enviar solicitud
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ArchiveProposalDialog
+        isOpen={showDeleteRequest}
+        onClose={() => setShowDeleteRequest(false)}
+        onConfirm={handleArchiveProposal}
+        isProcessing={isFormBusy}
+        backHandlerId={`${modalId}-archive-proposal`}
+        addressLabel={formData.address}
+      />
     </Modal>
   );
 };

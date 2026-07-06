@@ -13,7 +13,12 @@ import TerritoryManagementModal from './TerritoryManagementModal';
 import ArchivedAddressesPortal from '../admin/ArchivedAddressesPortal';
 import QuickProposalReviewMap from '../admin/QuickProposalReviewMap';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
-import { formatRelativeTime, getDisplayAddress } from '../../utils/helpers';
+import { formatRelativeTime, getDisplayAddress, getProposalAddressDisplay } from '../../utils/helpers';
+import {
+  buildAddressesTerritoriesBackupPayload,
+  getAddressesTerritoriesBackupFileName,
+  downloadBackupJson,
+} from '../../utils/backupUtils';
 
 const AdminModal = (props = {}) => {
   const {
@@ -184,6 +189,9 @@ const AdminModal = (props = {}) => {
   // Estado para el modal de exportación de direcciones
   const [showExportAddressesModal, setShowExportAddressesModal] = useState(false);
 
+  const DRIVE_BACKUP_FOLDER_URL = 'https://drive.google.com/drive/folders/1uMpc1_nqXHyJLL2cler63hcxhFZJO8Fj';
+  const [isUploadingDriveBackup, setIsUploadingDriveBackup] = useState(false);
+
   // Estado para el modal de gestión de territorios
   const [showTerritoryManagementModal, setShowTerritoryManagementModal] = useState(false);
 
@@ -198,7 +206,6 @@ const AdminModal = (props = {}) => {
   const fieldLabels = {
     address: '📍 Dirección',
     phone: '📞 Teléfono',
-    name: '👤 Nombre',
     notes: '📝 Notas',
     gender: '👥 Género',
     isRevisita: '📖 Es Revisita',
@@ -280,28 +287,11 @@ const AdminModal = (props = {}) => {
   // Funciones de backup
   const handleBackupAddressesAndTerritories = async () => {
     try {
-      const backupData = {
-        version: '1.0',
-        timestamp: new Date().toISOString(),
-        type: 'addresses_territories',
-        data: {
-          territories: territories,
-          addresses: addresses
-        }
-      };
-      
-      const dataStr = JSON.stringify(backupData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `backup_direcciones_territorios_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
+      const backupData = buildAddressesTerritoriesBackupPayload(territories, addresses);
+      downloadBackupJson(
+        backupData,
+        getAddressesTerritoriesBackupFileName()
+      );
       showToast('Backup de direcciones y territorios descargado', 'success');
     } catch (error) {
       console.error('Error creando backup:', error);
@@ -894,7 +884,7 @@ const AdminModal = (props = {}) => {
 
                   const typeConfig = {
                     new: { icon: 'fa-house', color: 'from-emerald-500 to-green-600', label: 'Nueva' },
-                    delete: { icon: 'fa-trash', color: 'from-red-500 to-rose-600', label: 'Eliminar' },
+                    delete: { icon: 'fa-trash', color: 'from-red-500 to-rose-600', label: 'Archivar' },
                     edit: { icon: 'fa-edit', color: 'from-blue-500 to-indigo-600', label: 'Editar' }
                   };
                   const typeStyle = typeConfig[proposal.type] || typeConfig.edit;
@@ -934,6 +924,13 @@ const AdminModal = (props = {}) => {
                                 {formatRelativeTime(proposal.createdAt) || 'Sin fecha'}
                               </span>
                             </div>
+                            <p className="flex items-start gap-1.5 mt-2 text-sm">
+                              <Icon name="mapPin" size={14} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                              <span className="text-gray-500 flex-shrink-0">Dirección:</span>
+                              <span className="font-medium text-gray-900 break-words min-w-0">
+                                {getProposalAddressDisplay(proposal, currentAddress)}
+                              </span>
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1209,18 +1206,18 @@ const AdminModal = (props = {}) => {
                         {/* Eliminaciones */}
                         {proposal.type === 'delete' && (
                           <>
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                              Al aprobar, la dirección saldrá del territorio activo y quedará en Direcciones Archivadas con la razón indicada.
+                            </div>
                             <div>
                               <p className="text-[11px] font-semibold uppercase tracking-wider text-red-600 mb-2 flex items-center gap-1.5">
                                 <i className="fas fa-exclamation-triangle text-xs"></i>
-                                Solicitud de eliminación
+                                Solicitud de archivo
                               </p>
                               {proposal.addressInfo && (
                                 <div className="space-y-1.5 text-sm">
                                   {proposal.addressInfo.address && (
                                     <p><span className="text-gray-400">Dirección:</span> <span className="text-gray-900 font-medium">{getDisplayAddress(proposal.addressInfo.address, 'Sin dirección')}</span></p>
-                                  )}
-                                  {proposal.addressInfo.name && (
-                                    <p><span className="text-gray-400">Nombre:</span> <span className="text-gray-900">{proposal.addressInfo.name}</span></p>
                                   )}
                                   {proposal.addressInfo.phone && (
                                     <p><span className="text-gray-400">Teléfono:</span> <span className="text-gray-900">{proposal.addressInfo.phone}</span></p>
@@ -1230,7 +1227,7 @@ const AdminModal = (props = {}) => {
                             </div>
                             {proposal.reason && (
                               <div className="border-l-2 border-amber-400 pl-3">
-                                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">Razón de eliminación</p>
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">Razón de archivo</p>
                                 <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.reason}</p>
                               </div>
                             )}
@@ -1283,8 +1280,8 @@ const AdminModal = (props = {}) => {
                               onClick={() => handleApprove(proposal)}
                               className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 transition-all font-semibold text-sm shadow-sm"
                             >
-                              <i className="fas fa-check text-xs"></i>
-                              <span>Aprobar</span>
+                              <i className={`fas ${proposal.type === 'delete' ? 'fa-archive' : 'fa-check'} text-xs`}></i>
+                              <span>{proposal.type === 'delete' ? 'Aprobar y archivar' : 'Aprobar'}</span>
                             </button>
                           </div>
                         ) : (
@@ -1467,6 +1464,18 @@ const AdminModal = (props = {}) => {
               </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-2">Respaldo de Datos</h3>
               <p className="text-gray-600 max-w-md mx-auto">Crea copias de seguridad de la información del sistema</p>
+              <p className="text-sm text-indigo-700 max-w-lg mx-auto mt-3 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
+                Para guardar en Google Drive: descarga el backup y súbelo manualmente a la{' '}
+                <a
+                  href={DRIVE_BACKUP_FOLDER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold underline hover:text-indigo-900"
+                >
+                  carpeta de respaldos
+                </a>
+                . No requiere plan de pago en Firebase.
+              </p>
             </div>
 
             {/* Opciones de backup */}
@@ -1492,6 +1501,7 @@ const AdminModal = (props = {}) => {
                     </div>
                   </div>
                 </div>
+                <div className="space-y-3">
                 <button
                   onClick={handleBackupAddressesAndTerritories}
                   className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all transform hover:scale-105 font-medium shadow-lg"
@@ -1499,6 +1509,16 @@ const AdminModal = (props = {}) => {
                   <i className="fas fa-download"></i>
                   <span>Descargar Backup</span>
                 </button>
+                <a
+                  href={DRIVE_BACKUP_FOLDER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-700 border-2 border-blue-300 rounded-xl hover:bg-blue-50 transition-all font-medium shadow-sm"
+                >
+                  <i className="fab fa-google-drive"></i>
+                  <span>Abrir carpeta de Google Drive</span>
+                </a>
+                </div>
               </div>
 
               {/* Nuevo: Backup Solo Direcciones */}

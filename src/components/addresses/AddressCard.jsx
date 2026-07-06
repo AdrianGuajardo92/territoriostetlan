@@ -159,18 +159,6 @@ const AddressCard = memo(({
     const walkingUrl = getNavigationUrl('walking');
     const transitUrl = getNavigationUrl('transit');
 
-    // Componente para mostrar el icono de género (usando FontAwesome)
-    const GenderTag = ({ gender, colorClass = '' }) => {
-        const styleConfig = {
-            'Hombre':      { icon: 'fa-person', color: 'text-blue-600' },
-            'Mujer':       { icon: 'fa-person-dress', color: 'text-pink-600' }, 
-            'Pareja':      { icon: 'fa-user-group', color: 'text-purple-600' },
-            'Desconocido': { icon: 'fa-ban', color: 'text-gray-500' }
-        };
-        const config = styleConfig[gender] || styleConfig['Desconocido'];
-        return <i className={`fas ${config.icon} ${colorClass || config.color} text-lg`}></i>;
-    };
-
     // Componente para mostrar la distancia
     const DistanceTag = ({ distance }) => {
         if (distance == null || distance === Infinity) { return null; }
@@ -303,13 +291,12 @@ const AddressCard = memo(({
                                 )}
                             </div>
                             
-                            {/* Dirección y género */}
+                            {/* Dirección */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-start space-x-2">
                                     <h3 className={`font-bold text-base break-words ${config.titleColor}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                         {displayAddress}
                                     </h3>
-                                    <GenderTag gender={address.gender} />
                                     <DistanceTag distance={address.distance} />
                                 </div>
                                 
@@ -410,10 +397,11 @@ const AddressCard = memo(({
                             <h3 className={`text-lg font-bold break-words ${config.titleColor}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                 {displayAddress}
                             </h3>
-                            <div className="flex items-center space-x-2 mt-1">
-                                <GenderTag gender={address.gender} />
-                                <DistanceTag distance={address.distance} />
-                            </div>
+                            {(address.distance != null && address.distance !== Infinity) && (
+                                <div className="mt-1">
+                                    <DistanceTag distance={address.distance} />
+                                </div>
+                            )}
                         </div>
                     </div>
 

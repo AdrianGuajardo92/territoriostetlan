@@ -161,6 +161,22 @@ export const getDisplayAddress = (address, fallback = 'Dirección sin dato') => 
   return displayAddress || fallback;
 };
 
+/** Texto corto de la dirección afectada según el tipo de propuesta. */
+export const getProposalAddressDisplay = (proposal, currentAddress, fallback = 'Sin dirección') => {
+  if (!proposal) return fallback;
+
+  let raw;
+  if (proposal.type === 'new') {
+    raw = proposal.addressData?.address ?? proposal.address;
+  } else if (proposal.type === 'edit') {
+    raw = currentAddress?.address;
+  } else if (proposal.type === 'delete') {
+    raw = proposal.addressInfo?.address;
+  }
+
+  return getDisplayAddress(raw, fallback);
+};
+
 // Función para quitar acentos de texto para búsqueda inteligente
 export const removeAccents = (text) => {
   if (!text) return '';

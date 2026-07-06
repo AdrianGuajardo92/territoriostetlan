@@ -121,25 +121,13 @@ export const getEligibleCampaignAddresses = (
     return true;
   });
 
-  // #region agent log
-  if (territoryIdSet) {
-    const deletedCount = addresses.filter((a) => a.deleted).length;
-    const excludedCount = addresses.filter((a) => !a.deleted && excludedIds.has(a.id)).length;
-    const orphanTerritoryCount = addresses.filter((a) => !a.deleted && !excludedIds.has(a.id) && !territoryIdSet.has(a.territoryId)).length;
-    const sampleOrphanIds = [...new Set(addresses.filter((a) => !a.deleted && !territoryIdSet.has(a.territoryId)).map((a) => String(a.territoryId ?? 'null')))].slice(0, 5);
-    fetch('http://127.0.0.1:7883/ingest/f58f84f6-2583-4fb1-8e28-eac808e869d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2c01f2'},body:JSON.stringify({sessionId:'2c01f2',location:'campaignUtils.js:getEligibleCampaignAddresses',message:'address filter breakdown',data:{totalIn:addresses.length,eligibleOut:filtered.length,deletedCount,excludedCount,orphanTerritoryCount,territoryIdsCount:territoryIdSet.size,sampleOrphanTerritoryIds:sampleOrphanIds,sampleTerritoryIdsInSet:[...territoryIdSet].slice(0,3)},timestamp:Date.now(),hypothesisId:'B-C-D'})}).catch(()=>{});
-  }
-  // #endregion
-
   return filtered;
 };
 
 export const getCampaignCandidateAddresses = ({ campaign, addresses = [], territoryMap = {} }) => {
   if (!campaign) return [];
 
-  const candidates = getEligibleCampaignAddresses(addresses, {
-    excludedAddressIds: campaign.excludedAddressIds
-  });
+  const candidates = getEligibleCampaignAddresses(addresses);
 
   return sortCampaignSourceAddresses(candidates, territoryMap);
 };

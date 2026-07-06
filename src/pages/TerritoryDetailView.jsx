@@ -514,11 +514,12 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     setIsProcessing(true);
     try {
       if (currentUser.role === 'admin') {
-        // Admin puede eliminar directamente
-        await handleDeleteAddress(addressId, { showSuccessToast: false });
-        showToast('Dirección eliminada correctamente.', 'success');
+        await handleDeleteAddress(addressId, {
+          showSuccessToast: false,
+          deletedReason: deleteReason || 'Archivado por administrador'
+        });
+        showToast('Dirección archivada correctamente.', 'success');
       } else {
-        // Usuarios normales proponen eliminación
         await handleProposeAddressDeletion(addressId, deleteReason);
       }
       setIsFormModalOpen(false);

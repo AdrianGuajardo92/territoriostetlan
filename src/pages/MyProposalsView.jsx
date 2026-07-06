@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useBackHandler } from '../hooks/useBackHandler';
 import ActionTypeBadge, { getActionType } from '../components/common/ActionTypeBadge';
-import { formatRelativeTime, getDisplayAddress } from '../utils/helpers';
+import Icon from '../components/common/Icon';
+import { formatRelativeTime, getDisplayAddress, getProposalAddressDisplay } from '../utils/helpers';
 
 // Función helper para formatear valores en propuestas
 const formatValue = (value) => {
@@ -15,7 +16,6 @@ const formatValue = (value) => {
 const fieldLabels = {
   address: '📍 Dirección',
   phone: '📞 Teléfono',
-  name: '👤 Nombre',
   notes: '📝 Notas',
   gender: '👥 Género',
   isRevisita: '📖 Es Revisita',
@@ -486,6 +486,13 @@ const MyProposalsView = ({ onBack }) => {
                               {formatRelativeTime(proposal.createdAt) || 'Sin fecha'}
                             </span>
                           </div>
+                          <p className="flex items-start gap-1.5 mt-2 text-sm">
+                            <Icon name="mapPin" size={14} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                            <span className="text-gray-500 flex-shrink-0">Dirección:</span>
+                            <span className="font-medium text-gray-900 break-words min-w-0">
+                              {getProposalAddressDisplay(proposal, currentAddress)}
+                            </span>
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -595,19 +602,16 @@ const MyProposalsView = ({ onBack }) => {
                         );
                       })()}
 
-                      {/* Para eliminaciones */}
+                      {/* Para solicitudes de archivo */}
                       {proposal.type === 'delete' && proposal.addressInfo && (
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-wider text-red-600 mb-2 flex items-center gap-1.5">
                             <i className="fas fa-exclamation-triangle text-xs"></i>
-                            Solicitud de eliminación
+                            Solicitud de archivo
                           </p>
                           <div className="space-y-1.5 text-sm">
                             {proposal.addressInfo.address && (
                               <p><span className="text-gray-400">Dirección:</span> <span className="text-gray-900 font-medium">{getDisplayAddress(proposal.addressInfo.address, 'Sin dirección')}</span></p>
-                            )}
-                            {proposal.addressInfo.name && (
-                              <p><span className="text-gray-400">Nombre:</span> <span className="text-gray-900">{proposal.addressInfo.name}</span></p>
                             )}
                             {proposal.addressInfo.phone && (
                               <p><span className="text-gray-400">Teléfono:</span> <span className="text-gray-900">{proposal.addressInfo.phone}</span></p>
@@ -620,7 +624,7 @@ const MyProposalsView = ({ onBack }) => {
                       {proposal.reason && !proposal.isQuickProposal && proposal.reason !== 'Propuesta rápida desde botón flotante' && (
                         <div className="border-l-2 border-amber-400 pl-3">
                           <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 mb-1">
-                            {proposal.type === 'delete' ? 'Razón de eliminación' : 'Motivo'}
+                            {proposal.type === 'delete' ? 'Razón de archivo' : 'Motivo'}
                           </p>
                           <p className="text-sm text-gray-700 italic leading-relaxed">{proposal.reason}</p>
                         </div>

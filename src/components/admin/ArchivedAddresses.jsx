@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useBackHandler } from '../../hooks/useBackHandler';
-import { Archive, Search, RotateCcw, Trash2, Calendar, User, MapPin, Phone, FileText, X, AlertTriangle } from 'lucide-react';
+import { Archive, Search, RotateCcw, Trash2, Calendar, MapPin, Phone, FileText, X, AlertTriangle } from 'lucide-react';
 import { getArchivedAddresses, formatArchivedAddress } from '../../utils/softDelete';
 
 const ArchivedAddresses = ({ onClose, modalId = 'archived-addresses' }) => {
@@ -254,15 +254,6 @@ const ArchivedAddresses = ({ onClose, modalId = 'archived-addresses' }) => {
 
                             {/* Detalles adicionales */}
                             <div className="mt-3 space-y-1">
-                              {formatted.name && (
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                  <User className="w-4 h-4" />
-                                  <span>{formatted.name}</span>
-                                  {formatted.gender && (
-                                    <span className="text-gray-400">• {formatted.gender}</span>
-                                  )}
-                                </div>
-                              )}
                               {formatted.phone && (
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                   <Phone className="w-4 h-4" />

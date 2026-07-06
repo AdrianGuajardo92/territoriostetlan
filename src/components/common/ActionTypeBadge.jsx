@@ -13,7 +13,7 @@ const actionTypeConfig = {
     icon: 'edit'
   },
   delete: {
-    label: 'ELIMINAR',
+    label: 'ARCHIVAR',
     color: 'bg-slate-100 text-slate-700 border-slate-300',
     icon: 'trash'
   },

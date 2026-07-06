@@ -24,18 +24,6 @@ const SearchAddressCard = ({ address, onClick }) => {
     navActive: 'bg-blue-600 text-white hover:bg-blue-700'
   };
 
-  // Componente para mostrar el icono de género
-  const GenderTag = ({ gender }) => {
-    const styleConfig = {
-      'Hombre': { icon: 'fa-person', color: 'text-blue-600' },
-      'Mujer': { icon: 'fa-person-dress', color: 'text-pink-600' },
-      'Pareja': { icon: 'fa-user-group', color: 'text-purple-600' },
-      'Desconocido': { icon: 'fa-ban', color: 'text-gray-500' }
-    };
-    const genderConfig = styleConfig[gender] || styleConfig['Desconocido'];
-    return <i className={`fas ${genderConfig.icon} ${genderConfig.color} text-lg`}></i>;
-  };
-
   // Componente para mostrar la distancia
   const DistanceTag = ({ distance }) => {
     if (distance == null || distance === Infinity) return null;
@@ -132,7 +120,6 @@ const SearchAddressCard = ({ address, onClick }) => {
                 {displayAddress}
               </h3>
               <div className="flex items-center space-x-2 mt-1">
-                <GenderTag gender={address.gender} />
                 <DistanceTag distance={address.distance} />
                 {/* Territorio integrado elegantemente */}
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">

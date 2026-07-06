@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import Icon from '../common/Icon';
+import { ArchiveConfirmDialog, ArchiveProposalDialog } from '../addresses/AddressArchiveDialogs';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
 import { getDisplayAddress, getFullAddress } from '../../utils/helpers';
 import MarkerClusterGroup from 'react-leaflet-cluster';
@@ -11,7 +12,15 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
     // Este componente NO usa <Modal>, así que registramos el back handler
     // directamente para el modal raíz y para el panel de acción rápida.
     useBackHandler({ isOpen, onClose, id: modalId });
-    const { territories, addresses, currentUser, isAdmin, adminEditMode } = useApp();
+    const {
+        territories,
+        addresses,
+        currentUser,
+        adminEditMode,
+        handleDeleteAddress,
+        handleProposeAddressDeletion
+    } = useApp();
+    const isAdmin = currentUser?.role === 'admin';
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const [mapError, setMapError] = useState(false);
@@ -33,10 +42,17 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
     // Estado para filtro de territorio por ID
     const [selectedTerritoryId, setSelectedTerritoryId] = useState(null);
     const [showTerritoryDropdown, setShowTerritoryDropdown] = useState(false);
+    const [archiveDialogMode, setArchiveDialogMode] = useState(null);
+    const [isArchiveProcessing, setIsArchiveProcessing] = useState(false);
 
     // Panel de acción rápida: registrarlo como overlay para que el back físico
     // lo cierre antes de cerrar el mapa completo.
     useBackHandler({ isOpen: showQuickAction, onClose: () => setShowQuickAction(false), id: `${modalId}-quick-action` });
+    useBackHandler({
+        isOpen: archiveDialogMode !== null,
+        onClose: () => setArchiveDialogMode(null),
+        id: `${modalId}-archive-dialog`
+    });
 
     // Coordenadas del centro de Guadalajara, Jalisco, México
     const GUADALAJARA_CENTER = { lat: 20.6597, lng: -103.3496 };
@@ -262,7 +278,7 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
 
         const shareData = {
             title: `${address.territory?.name || 'Territorio'} - ${displayAddress}`,
-            text: `📍 ${displayAddress}\n🏘️ ${address.territory?.name || 'Territorio'}\n${address.name ? `👤 ${address.name}\n` : ''}${address.phone ? `📞 ${address.phone}\n` : ''}`,
+            text: `📍 ${displayAddress}\n🏘️ ${address.territory?.name || 'Territorio'}\n${address.phone ? `📞 ${address.phone}\n` : ''}`,
             url: googleMapsUrl
         };
 
@@ -429,6 +445,35 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
             selectedMarkerRef.current = null;
         }
     }, []);
+
+    const closeQuickActionPanel = useCallback(() => {
+        setShowQuickAction(false);
+        setArchiveDialogMode(null);
+        clearMarkerHighlight();
+    }, [clearMarkerHighlight]);
+
+    const handleArchiveFromMap = async (reason) => {
+        if (!selectedAddress) return;
+
+        setIsArchiveProcessing(true);
+        try {
+            if (isAdmin) {
+                await handleDeleteAddress(selectedAddress.id, {
+                    deletedReason: reason || 'Archivado desde mapa general'
+                });
+            } else {
+                await handleProposeAddressDeletion(selectedAddress.id, reason);
+            }
+            setSelectedAddress(null);
+            setSelectedTerritory(null);
+            closeQuickActionPanel();
+        } catch (error) {
+            showToast('Error al procesar la solicitud de archivo.', 'error');
+        } finally {
+            setIsArchiveProcessing(false);
+            setArchiveDialogMode(null);
+        }
+    };
 
     // Actualizar marcadores en el mapa
     const updateMapMarkers = useCallback(() => {
@@ -770,7 +815,7 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[70] bg-white flex flex-col">
+        <div className="fixed inset-0 z-[70] bg-white flex flex-col relative">
             {/* Estilos CSS para animaciones */}
             <style>{`
                 @keyframes pulse-marker {
@@ -1062,7 +1107,7 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-bold text-gray-900 text-sm leading-tight inline">
-                                        {selectedAddress.address}
+                                        {getDisplayAddress(selectedAddress)}
                                         <button
                                             onClick={() => handleShare(selectedAddress)}
                                             className="inline-flex items-center justify-center ml-2 p-1 hover:bg-indigo-50 rounded-full transition-colors align-middle"
@@ -1073,7 +1118,6 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
                                     </h3>
                                     <p className="text-xs text-gray-600 mt-0.5">
                                         <span className="font-semibold">{selectedTerritory.name}</span>
-                                        {selectedAddress.name && ` • ${selectedAddress.name}`}
                                     </p>
                                 </div>
                             </div>
@@ -1167,9 +1211,41 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
                                 <i className="fas fa-bus text-lg"></i>
                             </button>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setArchiveDialogMode(isAdmin ? 'confirm' : 'proposal')}
+                            disabled={isArchiveProcessing}
+                            className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors disabled:opacity-60 ${
+                                isAdmin
+                                    ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                                    : 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                            }`}
+                        >
+                            <Icon name="trash" size={16} />
+                            {isAdmin ? 'Archivar dirección' : 'Solicitar archivo'}
+                        </button>
                     </div>
                 </div>
             )}
+
+            <ArchiveConfirmDialog
+                isOpen={archiveDialogMode === 'confirm'}
+                onClose={() => setArchiveDialogMode(null)}
+                onConfirm={handleArchiveFromMap}
+                isProcessing={isArchiveProcessing}
+                backHandlerId={`${modalId}-archive-confirm`}
+                addressLabel={selectedAddress ? getDisplayAddress(selectedAddress) : ''}
+            />
+
+            <ArchiveProposalDialog
+                isOpen={archiveDialogMode === 'proposal'}
+                onClose={() => setArchiveDialogMode(null)}
+                onConfirm={handleArchiveFromMap}
+                isProcessing={isArchiveProcessing}
+                backHandlerId={`${modalId}-archive-proposal`}
+                addressLabel={selectedAddress ? getDisplayAddress(selectedAddress) : ''}
+            />
         </div>
     );
 };
