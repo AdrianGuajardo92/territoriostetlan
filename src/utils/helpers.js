@@ -60,6 +60,107 @@ export const normalizeText = (text) => {
         .trim();
 };
 
+export const isCoordinateLikeAddress = (value = '') => {
+  const text = String(value || '').trim();
+  if (!text) return false;
+
+  const dmsPattern = /^-?\d{1,3}(?:\.\d+)?°(?:\s*\d{1,2}(?:\.\d+)?['′])?(?:\s*\d{1,2}(?:\.\d+)?["″])?\s*[NS]?\s+-?\d{1,3}(?:\.\d+)?°(?:\s*\d{1,2}(?:\.\d+)?['′])?(?:\s*\d{1,2}(?:\.\d+)?["″])?\s*[EW]?$/i;
+  const decimalPairPattern = /^-?\d{1,3}(?:\.\d+)?\s*,\s*-?\d{1,3}(?:\.\d+)?$/;
+
+  return dmsPattern.test(text) || decimalPairPattern.test(text);
+};
+
+const getAddressRawText = (address, { preferFull = false } = {}) => {
+  if (typeof address === 'string') return address;
+
+  if (preferFull) {
+    return address?.fullAddress || address?.street || address?.address;
+  }
+
+  return address?.street || address?.address || address?.fullAddress;
+};
+
+export const getFullAddress = (address, fallback = 'Dirección sin dato') => {
+  const text = String(getAddressRawText(address, { preferFull: true }) || '').trim();
+
+  if (!text || isCoordinateLikeAddress(text)) {
+    return fallback;
+  }
+
+  return text;
+};
+
+const hasExplicitAddressNumber = (text = '') => (
+  /(?:^|\s)#\s*[0-9]+[a-z]?(?:[-/][a-z0-9]+)?\b/i.test(text)
+  || /\b(?:no|num|núm|numero|número)\.?\s*[0-9]+[a-z]?(?:[-/][a-z0-9]+)?\b/i.test(text)
+);
+
+const normalizeStreetAndNumber = (value = '') => {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+
+  const withNormalizedMarker = text
+    .replace(/\b(?:no|num|núm|numero|número)\.?\s*#?\s*/gi, '#')
+    .replace(/\s*#\s*/g, ' #')
+    .trim();
+
+  if (/^(?:calle|c\.?|avenida|av\.?)\s+[0-9]+[a-z]?$/i.test(withNormalizedMarker)) {
+    return withNormalizedMarker;
+  }
+
+  const markedMatch = withNormalizedMarker.match(/^(.+?)\s+#([0-9]+[a-z]?(?:[-/][a-z0-9]+)?)(.*)$/i);
+  if (markedMatch) {
+    const [, street, number, suffix = ''] = markedMatch;
+    return `${street.trim()} #${number}${suffix.trim() ? ` ${suffix.trim()}` : ''}`;
+  }
+
+  const trailingNumberMatch = withNormalizedMarker.match(
+    /^(.+?)\s+([0-9]+[a-z]?(?:[-/][a-z0-9]+)?)(\s+(?:int(?:erior)?\.?|depto\.?|departamento|apt(?:o)?\.?|casa|local)\s*[a-z0-9-]+.*)?$/i
+  );
+
+  if (trailingNumberMatch) {
+    const [, street, number, suffix = ''] = trailingNumberMatch;
+    return `${street.trim()} #${number}${suffix.trim() ? ` ${suffix.trim()}` : ''}`;
+  }
+
+  return withNormalizedMarker;
+};
+
+const getStreetAddressLine = (text = '') => {
+  const normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*,\s*/g, ', ')
+    .trim();
+
+  if (!normalized) return '';
+
+  const segments = normalized.split(',').map(segment => segment.trim()).filter(Boolean);
+  if (segments.length === 0) return normalized;
+
+  let streetLine = segments[0];
+  const secondSegmentLooksLikeNumber = segments[1]
+    && /^(?:#|no\.?|num\.?|núm\.?|numero|número)?\s*[0-9]+[a-z]?(?:[-/][a-z0-9]+)?$/i.test(segments[1]);
+
+  if (!hasExplicitAddressNumber(streetLine) && secondSegmentLooksLikeNumber) {
+    streetLine = `${streetLine} ${segments[1]}`;
+  }
+
+  return streetLine.replace(/\s+\d{5}\b.*$/, '').trim();
+};
+
+export const getDisplayAddress = (address, fallback = 'Dirección sin dato') => {
+  const text = String(getAddressRawText(address) || '').trim();
+
+  if (!text || isCoordinateLikeAddress(text)) {
+    return fallback;
+  }
+
+  const streetLine = getStreetAddressLine(text);
+  const displayAddress = normalizeStreetAndNumber(streetLine);
+
+  return displayAddress || fallback;
+};
+
 // Función para quitar acentos de texto para búsqueda inteligente
 export const removeAccents = (text) => {
   if (!text) return '';
@@ -80,4 +181,4 @@ export const smartSearch = (searchTerm, targetText) => {
   const cleanTargetText = removeAccents(targetText);
   
   return cleanTargetText.includes(cleanSearchTerm);
-}; 
+};

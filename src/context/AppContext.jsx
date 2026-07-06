@@ -18,6 +18,14 @@ import {
 import { db } from '../config/firebase';
 import { useToast } from '../hooks/useToast';
 import { flushBootSummary, markBoot, resetBootMetrics } from '../utils/bootMetrics';
+import {
+  saveSession,
+  refreshSessionUser,
+  readSession,
+  clearSession,
+  touchSession,
+  isTransientAuthError
+} from '../utils/sessionManager';
 
 const AppContext = createContext();
 const AUTH_VALIDATION_TIMEOUT_MS = 4000;
@@ -58,13 +66,17 @@ const isDuplicateAddressRecord = (address, territoryId, normalizedAddress, exclu
     && normalizeAddressForDuplicateCheck(address.address) === normalizedAddress;
 };
 
-const buildSessionUser = (id, userData) => ({
-  id,
-  accessCode: userData.accessCode,
-  name: userData.name,
-  role: userData.role || 'user',
-  ...userData
-});
+const buildSessionUser = (id, userData) => {
+  const { password, ...safeUserData } = userData;
+
+  return {
+    id,
+    accessCode: userData.accessCode,
+    name: userData.name,
+    role: userData.role || 'user',
+    ...safeUserData
+  };
+};
 
 const withTimeout = (promise, timeoutMs, onTimeout) => new Promise((resolve, reject) => {
   const timeoutId = setTimeout(() => reject(onTimeout()), timeoutMs);
@@ -364,8 +376,7 @@ export const AppProvider = ({ children }) => {
 
       
       
-      // Guardar usuario en sessionStorage para persistencia
-      sessionStorage.setItem('currentUser', JSON.stringify(user));
+      saveSession(user);
       
       clearAllSubscriptions();
       resetLoadedData();
@@ -401,8 +412,7 @@ export const AppProvider = ({ children }) => {
       // Limpiar listeners de Firebase
       clearAllSubscriptions();
       
-      // Limpiar sessionStorage
-      sessionStorage.removeItem('currentUser');
+      clearSession();
       
       // Resetear estados
       resetLoadedData();
@@ -423,24 +433,33 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const updatePassword = async (newPassword) => {
+  const updatePassword = async (currentPassword, newPassword) => {
     try {
       if (!currentUser) {
         return { success: false, error: 'No hay usuario autenticado' };
       }
+
+      const userDoc = await getDoc(doc(db, 'users', currentUser.id));
+      if (!userDoc.exists()) {
+        return { success: false, error: 'Usuario no encontrado' };
+      }
+
+      const userData = userDoc.data();
+      if (!userData.password || userData.password !== currentPassword) {
+        return { success: false, error: 'La contraseña actual es incorrecta' };
+      }
       
-      // Actualizar contraseña en Firestore
       await updateDoc(doc(db, 'users', currentUser.id), {
         password: newPassword,
         lastPasswordUpdate: serverTimestamp()
       });
       
-      // Actualizar también el estado local del usuario
-      setCurrentUser(prev => ({
-        ...prev,
-        password: newPassword
-      }));
-      
+      const updatedUser = { ...currentUser };
+      delete updatedUser.password;
+
+      setCurrentUser(updatedUser);
+      refreshSessionUser(updatedUser);
+
       return { success: true };
     } catch (error) {
       console.error('Error updating password:', error);
@@ -671,6 +690,63 @@ export const AppProvider = ({ children }) => {
     } catch (error) {
       console.error('Error restoring address:', error);
       showToast('Error al restaurar dirección', 'error');
+      throw error;
+    }
+  };
+
+  const handleRestoreArchivedAddresses = async (options = {}) => {
+    const { territoryIds = null, showSuccessToast = true } = options;
+    const territoryIdSet = Array.isArray(territoryIds) && territoryIds.length > 0
+      ? new Set(territoryIds)
+      : null;
+
+    const addressesToRestore = addresses.filter((address) => {
+      if (!address.deleted) return false;
+      if (territoryIdSet && !territoryIdSet.has(address.territoryId)) return false;
+      return true;
+    });
+
+    if (addressesToRestore.length === 0) {
+      if (showSuccessToast) {
+        showToast('No hay direcciones archivadas para restaurar', 'info');
+      }
+      return { restoredCount: 0 };
+    }
+
+    try {
+      const BATCH_SIZE = 400;
+      for (let index = 0; index < addressesToRestore.length; index += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        addressesToRestore.slice(index, index + BATCH_SIZE).forEach((address) => {
+          batch.update(doc(db, 'addresses', address.id), {
+            deleted: false,
+            deletedAt: null,
+            deletedBy: null,
+            deletedByName: null,
+            deletedReason: null,
+            restoredAt: serverTimestamp(),
+            restoredBy: currentUser?.id || 'admin',
+            originalData: null
+          });
+        });
+        await batch.commit();
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7883/ingest/f58f84f6-2583-4fb1-8e28-eac808e869d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2c01f2'},body:JSON.stringify({sessionId:'2c01f2',runId:'post-fix-verify',location:'AppContext.jsx:handleRestoreArchivedAddresses',message:'archived addresses restored',data:{restoredCount:addressesToRestore.length,territoryFilterCount:territoryIdSet?.size ?? null},timestamp:Date.now(),hypothesisId:'G'})}).catch(()=>{});
+      // #endregion
+
+      if (showSuccessToast) {
+        showToast(
+          `${addressesToRestore.length} dirección${addressesToRestore.length === 1 ? '' : 'es'} restaurada${addressesToRestore.length === 1 ? '' : 's'}`,
+          'success'
+        );
+      }
+
+      return { restoredCount: addressesToRestore.length };
+    } catch (error) {
+      console.error('Error restoring archived addresses:', error);
+      showToast('Error al restaurar direcciones archivadas', 'error');
       throw error;
     }
   };
@@ -1820,9 +1896,14 @@ export const AppProvider = ({ children }) => {
       setSecondaryDataLoading(false);
 
       try {
-        const savedUser = sessionStorage.getItem('currentUser');
+        const session = readSession();
+        const expiredSession = readSession({ includeExpired: true });
 
-        if (!savedUser) {
+        if (!session) {
+          if (expiredSession) {
+            clearSession();
+          }
+
           if (!isActive) return;
 
           clearAllSubscriptions();
@@ -1837,14 +1918,16 @@ export const AppProvider = ({ children }) => {
           return;
         }
 
-        const parsedUser = JSON.parse(savedUser);
+        const parsedUser = session.user;
 
         if (!parsedUser?.id) {
+          clearSession();
           throw new Error('La sesion guardada no es valida.');
         }
 
         if (!isActive) return;
 
+        touchSession();
         setCurrentUser(parsedUser);
         setTerritoriesLoading(true);
         setAddressesLoading(true);
@@ -1868,7 +1951,7 @@ export const AppProvider = ({ children }) => {
           if (!isActive) return;
 
           if (!userDoc.exists()) {
-            sessionStorage.removeItem('currentUser');
+            clearSession();
             clearAllSubscriptions();
             resetLoadedData();
             setCurrentUser(null);
@@ -1885,16 +1968,16 @@ export const AppProvider = ({ children }) => {
               ? { ...prevUser, ...freshUser }
               : freshUser
           ));
-          sessionStorage.setItem('currentUser', JSON.stringify(freshUser));
+          refreshSessionUser(freshUser);
         } catch (error) {
           if (!isActive) return;
 
-          if (error?.code === 'bootstrap/auth-timeout') {
-            console.warn('[bootstrap:auth] Timeout validando sesion guardada. Se continua con la sesion local.');
+          if (isTransientAuthError(error)) {
+            console.warn('[bootstrap:auth] Error transitorio validando sesion guardada. Se continua con la sesion local.');
             return;
           }
 
-          sessionStorage.removeItem('currentUser');
+          clearSession();
           clearAllSubscriptions();
           resetLoadedData();
           setCurrentUser(null);
@@ -1912,7 +1995,7 @@ export const AppProvider = ({ children }) => {
       } catch (error) {
         if (!isActive) return;
 
-        sessionStorage.removeItem('currentUser');
+        clearSession();
         clearAllSubscriptions();
         resetLoadedData();
         setCurrentUser(null);
@@ -2039,7 +2122,7 @@ export const AppProvider = ({ children }) => {
     setAddressesLoading(true);
     setBootstrapPhase((prevPhase) => (prevPhase === 'error' ? prevPhase : 'addresses'));
 
-    const addressesQuery = query(collection(db, 'addresses'), orderBy('address'));
+    const addressesQuery = query(collection(db, 'addresses'));
     const unsubscribe = onSnapshot(
       addressesQuery,
       (snapshot) => {
@@ -2049,6 +2132,14 @@ export const AppProvider = ({ children }) => {
           id: addressDoc.id,
           ...addressDoc.data()
         }));
+
+        addressesData.sort((a, b) => (
+          String(a.address || a.street || '').localeCompare(String(b.address || b.street || ''), 'es', { numeric: true })
+        ));
+
+        // #region agent log
+        fetch('http://127.0.0.1:7883/ingest/f58f84f6-2583-4fb1-8e28-eac808e869d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2c01f2'},body:JSON.stringify({sessionId:'2c01f2',runId:'post-fix',location:'AppContext.jsx:addressesSnapshot',message:'addresses snapshot loaded',data:{snapshotSize:addressesData.length,notDeletedCount:addressesData.filter((a)=>!a.deleted).length,deletedCount:addressesData.filter((a)=>a.deleted).length,withAddressField:addressesData.filter((a)=>a.address).length,withStreetOnly:addressesData.filter((a)=>!a.address&&a.street).length},timestamp:Date.now(),hypothesisId:'F'})}).catch(()=>{});
+        // #endregion
 
         setAddresses(addressesData);
         setHasAddressesSnapshot(true);
@@ -2465,6 +2556,7 @@ export const AppProvider = ({ children }) => {
     }
     // 🚀 PASO 15: Crear mapa de direcciones por territorio para mejor rendimiento
     const addressesByTerritory = addresses.reduce((acc, addr) => {
+      if (addr.deleted || addr.isArchived) return acc;
       if (!acc[addr.territoryId]) {
         acc[addr.territoryId] = { total: 0, visited: 0 };
       }
@@ -2532,6 +2624,7 @@ export const AppProvider = ({ children }) => {
     handleUpdateAddress,
     handleDeleteAddress,
     handleRestoreAddress,
+    handleRestoreArchivedAddresses,
 
     // Proposal functions
     handleProposeAddressChange,

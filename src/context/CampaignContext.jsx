@@ -46,6 +46,17 @@ const mapSnapshotDocs = (snapshot) => snapshot.docs.map((itemDoc) => ({
   ...itemDoc.data()
 }));
 
+const FIRESTORE_BATCH_LIMIT = 500;
+
+const commitDeletesInBatches = async (docRefs = []) => {
+  for (let index = 0; index < docRefs.length; index += FIRESTORE_BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    const chunk = docRefs.slice(index, index + FIRESTORE_BATCH_LIMIT);
+    chunk.forEach((docRef) => batch.delete(docRef));
+    await batch.commit();
+  }
+};
+
 export const useCampaigns = () => {
   const context = useContext(CampaignContext);
 
@@ -61,7 +72,6 @@ export const CampaignProvider = ({ children }) => {
   const { showToast } = useToast();
 
   const [campaigns, setCampaigns] = useState([]);
-  const [campaignGroups, setCampaignGroups] = useState([]);
   const [campaignParticipants, setCampaignParticipants] = useState([]);
   const [campaignAssignments, setCampaignAssignments] = useState([]);
   const [campaignActivity, setCampaignActivity] = useState([]);
@@ -120,7 +130,6 @@ export const CampaignProvider = ({ children }) => {
 
   const resetCampaignState = useCallback(() => {
     setCampaigns([]);
-    setCampaignGroups([]);
     setCampaignParticipants([]);
     setCampaignAssignments([]);
     setCampaignActivity([]);
@@ -166,13 +175,6 @@ export const CampaignProvider = ({ children }) => {
       setCampaignsLoading(false);
     });
 
-    const unsubscribeGroups = onSnapshot(collection(db, 'campaignGroups'), (snapshot) => {
-      setCampaignGroups(snapshot.docs.map((groupDoc) => ({
-        id: groupDoc.id,
-        ...groupDoc.data()
-      })));
-    });
-
     const unsubscribeParticipants = onSnapshot(collection(db, 'campaignParticipants'), (snapshot) => {
       setCampaignParticipants(snapshot.docs.map((participantDoc) => ({
         id: participantDoc.id,
@@ -196,7 +198,6 @@ export const CampaignProvider = ({ children }) => {
 
     unsubscribesRef.current = [
       unsubscribeCampaigns,
-      unsubscribeGroups,
       unsubscribeParticipants,
       unsubscribeAssignments,
       unsubscribeActivity
@@ -254,24 +255,12 @@ export const CampaignProvider = ({ children }) => {
       });
   }, [activeCampaign, campaignParticipants]);
 
-  const activeCampaignGroups = useMemo(() => {
-    if (!activeCampaign) return [];
-
-    return campaignGroups
-      .filter((group) => group.campaignId === activeCampaign.id)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  }, [activeCampaign, campaignGroups]);
-
   const normalizeCampaignPayload = useCallback((payload = {}) => ({
     name: String(payload.name || '').trim(),
     type: String(payload.type || 'asamblea').trim().toLowerCase(),
     eventDate: payload.eventDate || '',
     status: payload.status || CAMPAIGN_STATUSES.DRAFT,
-    sourceTerritoryIds: Array.from(new Set(
-      Array.isArray(payload.sourceTerritoryIds) && payload.sourceTerritoryIds.length > 0
-        ? payload.sourceTerritoryIds
-        : allTerritoryIds
-    )),
+    sourceTerritoryIds: Array.from(new Set(allTerritoryIds)),
     excludedAddressIds: Array.from(new Set(Array.isArray(payload.excludedAddressIds) ? payload.excludedAddressIds : [])),
     addressCountSnapshot: Number(payload.addressCountSnapshot) || 0
   }), [allTerritoryIds]);
@@ -288,7 +277,7 @@ export const CampaignProvider = ({ children }) => {
     }
 
     if (normalizedPayload.sourceTerritoryIds.length === 0) {
-      throw new Error('Selecciona al menos un territorio para la campaña.');
+      throw new Error('No hay territorios disponibles para la campaña.');
     }
 
     const campaignRef = await addDoc(collection(db, 'campaigns'), {
@@ -329,7 +318,7 @@ export const CampaignProvider = ({ children }) => {
     }
 
     if (normalizedUpdates.sourceTerritoryIds.length === 0) {
-      throw new Error('Selecciona al menos un territorio para la campaña.');
+      throw new Error('No hay territorios disponibles para la campaña.');
     }
 
     await updateDoc(doc(db, 'campaigns', campaignId), {
@@ -354,7 +343,6 @@ export const CampaignProvider = ({ children }) => {
     }
 
     const rawParticipants = Array.isArray(structure?.participants) ? structure.participants : [];
-    const rawGroups = Array.isArray(structure?.groups) ? structure.groups : [];
 
     const duplicateUsers = new Set();
     const seenUsers = new Set();
@@ -372,7 +360,7 @@ export const CampaignProvider = ({ children }) => {
           campaignId,
           userId: participant.userId,
           userNameSnapshot: usersById[participant.userId]?.name || participant.userNameSnapshot || 'Usuario',
-          groupId: participant.groupId || null,
+          groupId: null,
           capacityWeight: Math.max(1, Number(participant.capacityWeight) || 1),
           hardLimit: participant.hardLimit === '' || participant.hardLimit === null || participant.hardLimit === undefined
             ? null
@@ -386,33 +374,16 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('No puedes repetir el mismo publicador dentro de la misma campaña.');
     }
 
-    const normalizedGroups = rawGroups
-      .map((group, index) => ({
-        id: group.id,
-        campaignId,
-        label: String(group.label || '').trim(),
-        sortOrder: index
-      }))
-      .filter((group) => group.label);
-
-    const validGroupIds = new Set(normalizedGroups.map((group) => group.id).filter(Boolean));
-    normalizedParticipants.forEach((participant) => {
-      if (participant.groupId && !validGroupIds.has(participant.groupId)) {
-        participant.groupId = null;
-      }
-    });
-
-    const existingGroups = campaignGroups.filter((group) => group.campaignId === campaignId);
+    const existingGroupsSnapshot = await getDocs(query(
+      collection(db, 'campaignGroups'),
+      where('campaignId', '==', campaignId)
+    ));
     const existingParticipants = campaignParticipants.filter((participant) => participant.campaignId === campaignId);
-    const nextGroupIds = new Set(normalizedGroups.map((group) => group.id).filter(Boolean));
     const nextParticipantIds = new Set(normalizedParticipants.map((participant) => participant.id).filter(Boolean));
     const batch = writeBatch(db);
-    const groupIdMap = {};
 
-    existingGroups.forEach((group) => {
-      if (!nextGroupIds.has(group.id)) {
-        batch.delete(doc(db, 'campaignGroups', group.id));
-      }
+    existingGroupsSnapshot.docs.forEach((groupDoc) => {
+      batch.delete(doc(db, 'campaignGroups', groupDoc.id));
     });
 
     existingParticipants.forEach((participant) => {
@@ -421,43 +392,16 @@ export const CampaignProvider = ({ children }) => {
       }
     });
 
-    normalizedGroups.forEach((group) => {
-      const groupRef = group.id ? doc(db, 'campaignGroups', group.id) : doc(collection(db, 'campaignGroups'));
-      groupIdMap[group.id || `temp-group-${group.sortOrder}`] = groupRef.id;
-    });
-
-    normalizedGroups.forEach((group) => {
-      const resolvedGroupId = groupIdMap[group.id || `temp-group-${group.sortOrder}`];
-      const memberUserIds = normalizedParticipants
-        .filter((participant) => participant.groupId === group.id)
-        .map((participant) => participant.userId);
-      const memberNamesSnapshot = memberUserIds.map((userId) => usersById[userId]?.name || 'Usuario');
-      const groupRef = doc(db, 'campaignGroups', resolvedGroupId);
-
-      batch.set(groupRef, {
-        campaignId,
-        label: group.label,
-        memberUserIds,
-        memberNamesSnapshot,
-        sortOrder: group.sortOrder,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-    });
-
     normalizedParticipants.forEach((participant) => {
       const participantRef = participant.id
         ? doc(db, 'campaignParticipants', participant.id)
         : doc(collection(db, 'campaignParticipants'));
-      const resolvedGroupId = participant.groupId
-        ? groupIdMap[participant.groupId] || participant.groupId
-        : null;
 
       batch.set(participantRef, {
         campaignId,
         userId: participant.userId,
         userNameSnapshot: participant.userNameSnapshot,
-        groupId: resolvedGroupId,
+        groupId: null,
         capacityWeight: participant.capacityWeight,
         hardLimit: participant.hardLimit,
         isEnabled: participant.isEnabled,
@@ -469,11 +413,10 @@ export const CampaignProvider = ({ children }) => {
 
     await batch.commit();
     await logCampaignActivity(campaignId, null, 'campaign_structure_saved', {
-      participantCount: normalizedParticipants.length,
-      groupCount: normalizedGroups.length
+      participantCount: normalizedParticipants.length
     });
-    showToast('Participantes y grupos guardados', 'success');
-  }, [campaignGroups, campaignParticipants, isAdmin, logCampaignActivity, resolveCampaign, showToast, usersById]);
+    showToast('Participantes guardados', 'success');
+  }, [campaignParticipants, isAdmin, logCampaignActivity, resolveCampaign, showToast, usersById]);
 
   const handleGenerateCampaignAssignments = useCallback(async (campaignId, options = {}) => {
     if (!isAdmin) {
@@ -508,13 +451,6 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Debes agregar al menos una persona antes de generar la campaña.');
     }
 
-    const campaignSpecificGroups = await resolveCampaignItems(
-      'campaignGroups',
-      campaignId,
-      campaignGroups,
-      options
-    );
-    const groupsById = buildLookup(campaignSpecificGroups);
     const existingAssignments = await resolveCampaignItems(
       'campaignAssignments',
       campaignId,
@@ -553,7 +489,6 @@ export const CampaignProvider = ({ children }) => {
       addresses: availableAddresses,
       participants: remainingParticipants,
       targets,
-      groupsById,
       territoryMap
     });
 
@@ -595,7 +530,6 @@ export const CampaignProvider = ({ children }) => {
   }, [
     addresses,
     campaignAssignments,
-    campaignGroups,
     campaignParticipants,
     isAdmin,
     logCampaignActivity,
@@ -696,6 +630,46 @@ export const CampaignProvider = ({ children }) => {
     showToast('Campaña archivada', 'success');
   }, [isAdmin, logCampaignActivity, showToast]);
 
+  const handleDeleteCampaign = useCallback(async (campaignId) => {
+    if (!isAdmin) {
+      throw new Error('Solo los administradores pueden eliminar campañas.');
+    }
+
+    const campaign = await resolveCampaign(campaignId, { preferLatest: true });
+    if (!campaign) {
+      throw new Error('No se encontró la campaña seleccionada.');
+    }
+
+    const [
+      assignmentsSnapshot,
+      groupsSnapshot,
+      participantsSnapshot,
+      activitySnapshot
+    ] = await Promise.all([
+      getDocs(query(collection(db, 'campaignAssignments'), where('campaignId', '==', campaignId))),
+      getDocs(query(collection(db, 'campaignGroups'), where('campaignId', '==', campaignId))),
+      getDocs(query(collection(db, 'campaignParticipants'), where('campaignId', '==', campaignId))),
+      getDocs(query(collection(db, 'campaignActivity'), where('campaignId', '==', campaignId)))
+    ]);
+
+    const assignmentCount = assignmentsSnapshot.docs.length;
+
+    const docRefsToDelete = [
+      ...assignmentsSnapshot.docs.map((assignmentDoc) => doc(db, 'campaignAssignments', assignmentDoc.id)),
+      ...groupsSnapshot.docs.map((groupDoc) => doc(db, 'campaignGroups', groupDoc.id)),
+      ...participantsSnapshot.docs.map((participantDoc) => doc(db, 'campaignParticipants', participantDoc.id)),
+      ...activitySnapshot.docs.map((activityDoc) => doc(db, 'campaignActivity', activityDoc.id)),
+      doc(db, 'campaigns', campaignId)
+    ];
+
+    await commitDeletesInBatches(docRefsToDelete);
+
+    showToast(
+      `Campaña "${campaign.name}" eliminada junto con ${assignmentCount} asignación${assignmentCount === 1 ? '' : 'es'}. Las direcciones de los territorios se conservan.`,
+      'success'
+    );
+  }, [isAdmin, resolveCampaign, showToast]);
+
   const handleUpdateCampaignAssignmentStatus = useCallback(async (assignmentId, nextStatus) => {
     const assignment = campaignAssignments.find((item) => item.id === assignmentId);
     if (!assignment) {
@@ -789,15 +763,11 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Selecciona una persona valida dentro de la campaña.');
     }
 
-    const relatedGroup = targetParticipant.groupId
-      ? campaignGroups.find((group) => group.id === targetParticipant.groupId)
-      : null;
-
     await updateDoc(doc(db, 'campaignAssignments', assignmentId), {
       assignedUserId: targetParticipant.userId,
       assignedUserName: targetParticipant.userNameSnapshot,
-      groupId: targetParticipant.groupId || null,
-      groupLabelSnapshot: relatedGroup?.label || null,
+      groupId: null,
+      groupLabelSnapshot: null,
       manualLocked: true,
       lastMovedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -809,7 +779,7 @@ export const CampaignProvider = ({ children }) => {
     });
 
     showToast('Asignacion movida y bloqueada', 'success');
-  }, [campaignAssignments, campaignGroups, campaignParticipants, isAdmin, logCampaignActivity, showToast]);
+  }, [campaignAssignments, campaignParticipants, isAdmin, logCampaignActivity, showToast]);
 
   const handleToggleCampaignAssignmentLock = useCallback(async (assignmentId) => {
     if (!isAdmin) {
@@ -833,14 +803,12 @@ export const CampaignProvider = ({ children }) => {
 
   const value = {
     campaigns: campaignsSorted,
-    campaignGroups,
     campaignParticipants,
     campaignAssignments,
     campaignActivity,
     campaignsLoading,
     activeCampaign,
     campaignHistory,
-    activeCampaignGroups,
     activeCampaignParticipants,
     activeCampaignAssignments,
     myCampaignAssignments,
@@ -852,6 +820,7 @@ export const CampaignProvider = ({ children }) => {
     handleActivateCampaign,
     handleCompleteCampaign,
     handleArchiveCampaign,
+    handleDeleteCampaign,
     handleUpdateCampaignAssignmentStatus,
     handleResetCampaignAssignment,
     handleMoveCampaignAssignment,

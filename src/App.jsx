@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { CampaignProvider, useCampaigns } from './context/CampaignContext';
 import { BackStackProvider } from './context/BackStackContext';
 import { useBackHandler } from './hooks/useBackHandler';
+import { useSessionActivity } from './hooks/useSessionActivity';
 import { ToastProvider, useToast } from './hooks/useToast';
 import './utils/errorLogger'; // Inicializar el sistema de captura de errores
 import LoginView from './components/auth/LoginView';
@@ -54,6 +55,7 @@ function AppContent() {
     userNotificationsCount, // âœ… NUEVO: Contador de notificaciones del usuario
     pendingProposalsCount // âœ… NUEVO: Contador de propuestas pendientes para admin
   } = useApp();
+  useSessionActivity(currentUser, logout);
   const {
     activeCampaign,
     activeCampaignAssignments,

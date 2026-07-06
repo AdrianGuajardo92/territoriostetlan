@@ -11,6 +11,7 @@ import {
   getCampaignProgressMeta
 } from '../../utils/campaignUtils';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
+import { getDisplayAddress, getFullAddress } from '../../utils/helpers';
 
 const GUADALAJARA_CENTER = { lat: 20.6597, lng: -103.3496 };
 const BASE_TILE_LAYERS = [
@@ -66,7 +67,7 @@ const getSnapshotCoordinates = (snapshot = {}) => {
 
 const buildGeocodeQuery = (snapshot = {}) => (
   [
-    snapshot.address,
+    getFullAddress(snapshot, getDisplayAddress(snapshot, '')),
     snapshot.territoryName,
     'Guadalajara',
     'Jalisco',
@@ -109,7 +110,7 @@ const getNavigationUrl = (snapshot = {}, mode = 'driving') => {
     return `https://www.google.com/maps/dir/?api=1&destination=${coordinates.lat},${coordinates.lng}&travelmode=${mode}`;
   }
 
-  const encodedAddress = encodeURIComponent(snapshot.address || '');
+  const encodedAddress = encodeURIComponent(getFullAddress(snapshot, getDisplayAddress(snapshot, '')));
   return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=${mode}`;
 };
 
@@ -397,7 +398,7 @@ const CampaignAssignmentsMapModal = ({
       const optimizedAssignments = await optimizeRoute(
         routeCandidates.map((assignment) => ({
           id: assignment.id,
-          address: assignment.snapshot.address,
+          address: getDisplayAddress(assignment.snapshot, ''),
           latitude: assignment.coordinates?.lat,
           longitude: assignment.coordinates?.lng,
           mapUrl: assignment.snapshot.mapUrl || '',
@@ -851,7 +852,7 @@ const CampaignAssignmentsMapModal = ({
                 {selectedAssignment.snapshot.territoryName || 'Territorio'}
               </span>
             </div>
-            <h3 className="truncate text-base font-bold text-slate-900">{selectedAssignment.snapshot.address || 'Direccion sin dato'}</h3>
+            <h3 className="truncate text-base font-bold text-slate-900">{getDisplayAddress(selectedAssignment.snapshot)}</h3>
             {selectedAssignment.snapshot.notes && (
               <p className="mt-2 text-sm text-slate-600">{selectedAssignment.snapshot.notes}</p>
             )}

@@ -4,6 +4,7 @@ import { useToast } from '../../hooks/useToast';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import Icon from '../common/Icon';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
+import { getDisplayAddress, getFullAddress } from '../../utils/helpers';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 
 const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => {
@@ -123,8 +124,11 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             result = result.filter(address => {
+                const displayAddress = getDisplayAddress(address, '');
+                const fullAddress = getFullAddress(address, '');
                 return (
-                    address.address?.toLowerCase().includes(query) ||
+                    displayAddress.toLowerCase().includes(query) ||
+                    fullAddress.toLowerCase().includes(query) ||
                     address.name?.toLowerCase().includes(query) ||
                     address.notes?.toLowerCase().includes(query) ||
                     address.phone?.toLowerCase().includes(query) ||
@@ -206,7 +210,7 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
             }
         }
 
-        const encodedAddress = encodeURIComponent(address.address);
+        const encodedAddress = encodeURIComponent(getFullAddress(address, getDisplayAddress(address)));
         switch (mode) {
             case 'driving':
                 return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
@@ -250,13 +254,15 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
             }
         }
 
+        const displayAddress = getDisplayAddress(address);
+        const fullAddress = getFullAddress(address, displayAddress);
         const googleMapsUrl = lat && lng
             ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address.address)}`;
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
 
         const shareData = {
-            title: `${address.territory?.name || 'Territorio'} - ${address.address}`,
-            text: `📍 ${address.address}\n🏘️ ${address.territory?.name || 'Territorio'}\n${address.name ? `👤 ${address.name}\n` : ''}${address.phone ? `📞 ${address.phone}\n` : ''}`,
+            title: `${address.territory?.name || 'Territorio'} - ${displayAddress}`,
+            text: `📍 ${displayAddress}\n🏘️ ${address.territory?.name || 'Territorio'}\n${address.name ? `👤 ${address.name}\n` : ''}${address.phone ? `📞 ${address.phone}\n` : ''}`,
             url: googleMapsUrl
         };
 

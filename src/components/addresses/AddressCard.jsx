@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import Icon from '../common/Icon';
 import { normalizeAssignedTo, getAssignedNames, isUserAssigned, formatTeamNames } from '../../utils/territoryHelpers';
+import { getDisplayAddress, getFullAddress } from '../../utils/helpers';
 
 const AddressCard = memo(({ 
     address, 
@@ -32,6 +33,7 @@ const AddressCard = memo(({
     
     const [isProcessing, setIsProcessing] = useState(false);
     const [isNavigatingLocal, setIsNavigatingLocal] = useState(false);
+    const displayAddress = getDisplayAddress(address);
 
     // Configuración de colores según el estado (visitado/no visitado)
     const statusConfig = {
@@ -140,7 +142,7 @@ const AddressCard = memo(({
         }
         
         // Fallback: Usar dirección de texto con modo específico (sin auto-inicio)
-        const encodedAddress = encodeURIComponent(address.address);
+        const encodedAddress = encodeURIComponent(getFullAddress(address, displayAddress));
         switch (mode) {
             case 'driving':
                 return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
@@ -305,7 +307,7 @@ const AddressCard = memo(({
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-start space-x-2">
                                     <h3 className={`font-bold text-base break-words ${config.titleColor}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                                        {address.address}
+                                        {displayAddress}
                                     </h3>
                                     <GenderTag gender={address.gender} />
                                     <DistanceTag distance={address.distance} />
@@ -406,7 +408,7 @@ const AddressCard = memo(({
                         </div>
                         <div className="flex-1 min-w-0">
                             <h3 className={`text-lg font-bold break-words ${config.titleColor}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                                {address.address}
+                                {displayAddress}
                             </h3>
                             <div className="flex items-center space-x-2 mt-1">
                                 <GenderTag gender={address.gender} />
@@ -610,4 +612,4 @@ const AddressCard = memo(({
     );
 });
 
-export default AddressCard; 
+export default AddressCard;

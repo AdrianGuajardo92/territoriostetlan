@@ -3,6 +3,47 @@ import { useToast } from '../../hooks/useToast';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import Icon from '../common/Icon';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
+import { getDisplayAddress, getFullAddress } from '../../utils/helpers';
+
+const getMapPerformanceProfile = () => {
+    const isFinePointer = typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    if (isFinePointer) {
+        return {
+            map: {
+                zoomSnap: 0.25,
+                zoomDelta: 0.5,
+                wheelPxPerZoomLevel: 52,
+                wheelDebounceTime: 30,
+                zoomAnimation: false,
+                markerZoomAnimation: false
+            },
+            tiles: {
+                updateWhenIdle: true,
+                updateWhenZooming: false,
+                keepBuffer: 2
+            }
+        };
+    }
+
+    return {
+        map: {
+            zoomSnap: 0.1,
+            zoomDelta: 0.5,
+            wheelPxPerZoomLevel: 60,
+            wheelDebounceTime: 40,
+            zoomAnimation: true,
+            markerZoomAnimation: true
+        },
+        tiles: {
+            updateWhenIdle: false,
+            updateWhenZooming: true,
+            keepBuffer: 4
+        }
+    };
+};
 
 const TerritoryMapModal = ({
   isOpen,
@@ -439,7 +480,7 @@ const TerritoryMapModal = ({
         }
         
         // Fallback: Usar dirección de texto con modo específico (sin auto-inicio)
-        const encodedAddress = encodeURIComponent(address.address);
+        const encodedAddress = encodeURIComponent(getFullAddress(address, getDisplayAddress(address)));
         switch (mode) {
             case 'driving':
                 return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
@@ -552,24 +593,22 @@ const TerritoryMapModal = ({
                     throw new Error('L.map no es una función válida');
                 }
                 
-                // Configuración súper optimizada para móviles (máximo rendimiento)
+                const mapPerformance = getMapPerformanceProfile();
+
+                // Configuración de mapa ajustada por tipo de puntero.
                 const map = L.map(mapRef.current, {
                     zoomControl: true,
                     attributionControl: true,
                     // Optimizaciones máximas para fluidez
                     preferCanvas: true,
-                    zoomSnap: 0.1,
-                    zoomDelta: 0.5,
-                    wheelPxPerZoomLevel: 60,
+                    ...mapPerformance.map,
                     maxBoundsViscosity: 0.8,
                     // Configuraciones adicionales para fluidez
                     inertia: true,
                     inertiaDeceleration: 3000,
                     inertiaMaxSpeed: Infinity,
-                    zoomAnimation: true,
                     zoomAnimationThreshold: 4,
                     fadeAnimation: true,
-                    markerZoomAnimation: true,
                     // Optimizaciones de touch
                     touchZoom: true,
                     bounceAtZoomLimits: false
@@ -586,9 +625,7 @@ const TerritoryMapModal = ({
                     maxZoom: 19,
                     minZoom: 10,
                     // Optimizaciones máximas de carga
-                    updateWhenIdle: false,
-                    updateWhenZooming: true,
-                    keepBuffer: 4,
+                    ...mapPerformance.tiles,
                     maxNativeZoom: 18,
                     detectRetina: true
                 });
@@ -1251,4 +1288,4 @@ const TerritoryMapModal = ({
     );
 };
 
-export default TerritoryMapModal; 
+export default TerritoryMapModal;

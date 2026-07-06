@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Modal from '../common/Modal';
 import { useToast } from '../../hooks/useToast';
+import { backupSession, restoreSession } from '../../utils/sessionManager';
 
 const UpdatesModal = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -21,9 +22,12 @@ const UpdatesModal = ({ isOpen, onClose }) => {
         await Promise.all(registrations.map(reg => reg.unregister()));
       }
       
-      // Limpiar sessionStorage y localStorage
+      const sessionBackup = backupSession();
+
       sessionStorage.clear();
       localStorage.clear();
+
+      restoreSession(sessionBackup);
       
       showToast('Cache limpiado. Recargando...', 'success');
       setTimeout(() => {
@@ -54,13 +58,12 @@ const UpdatesModal = ({ isOpen, onClose }) => {
         await Promise.all(registrations.map(reg => reg.unregister()));
       }
       
-      // 3. Limpiar almacenamiento local (excepto datos de sesión críticos)
-      const currentUser = sessionStorage.getItem('currentUser');
+      const sessionBackup = backupSession();
+
       sessionStorage.clear();
       localStorage.clear();
-      if (currentUser) {
-        sessionStorage.setItem('currentUser', currentUser);
-      }
+
+      restoreSession(sessionBackup);
       
       // 4. Forzar recarga completa con timestamp
       showToast('✨ Actualizando a la última versión...', 'success');

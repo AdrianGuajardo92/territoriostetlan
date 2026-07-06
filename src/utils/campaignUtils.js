@@ -1,4 +1,6 @@
-﻿export const CAMPAIGN_STATUSES = {
+﻿import { getDisplayAddress, getFullAddress } from './helpers';
+
+export const CAMPAIGN_STATUSES = {
   DRAFT: 'draft',
   ACTIVE: 'active',
   COMPLETED: 'completed',
@@ -83,7 +85,7 @@ export const sortCampaignSourceAddresses = (addresses = [], territoryMap = {}) =
     const territoryNameDiff = territoryNameA.localeCompare(territoryNameB, 'es', { numeric: true });
     if (territoryNameDiff !== 0) return territoryNameDiff;
 
-    return String(a.address || '').localeCompare(String(b.address || ''), 'es', { numeric: true });
+    return getDisplayAddress(a, '').localeCompare(getDisplayAddress(b, ''), 'es', { numeric: true });
   });
 };
 
@@ -91,7 +93,8 @@ export const buildCampaignAddressSnapshot = (address, territoryMap = {}) => ({
   id: address.id,
   territoryId: address.territoryId,
   territoryName: territoryMap[address.territoryId]?.name || address.territoryName || 'N/D',
-  address: address.address || '',
+  address: getDisplayAddress(address, ''),
+  fullAddress: getFullAddress(address, ''),
   name: address.name || '',
   phone: address.phone || '',
   notes: address.notes || '',
@@ -102,17 +105,40 @@ export const buildCampaignAddressSnapshot = (address, territoryMap = {}) => ({
   coords: Array.isArray(address.coords) ? address.coords : null
 });
 
+export const getEligibleCampaignAddresses = (
+  addresses = [],
+  { excludedAddressIds = [], territoryIds = null } = {}
+) => {
+  const excludedIds = new Set(Array.isArray(excludedAddressIds) ? excludedAddressIds : []);
+  const territoryIdSet = Array.isArray(territoryIds) && territoryIds.length > 0
+    ? new Set(territoryIds)
+    : null;
+
+  const filtered = addresses.filter((address) => {
+    if (address.deleted || address.isArchived) return false;
+    if (excludedIds.has(address.id)) return false;
+    if (territoryIdSet && !territoryIdSet.has(address.territoryId)) return false;
+    return true;
+  });
+
+  // #region agent log
+  if (territoryIdSet) {
+    const deletedCount = addresses.filter((a) => a.deleted).length;
+    const excludedCount = addresses.filter((a) => !a.deleted && excludedIds.has(a.id)).length;
+    const orphanTerritoryCount = addresses.filter((a) => !a.deleted && !excludedIds.has(a.id) && !territoryIdSet.has(a.territoryId)).length;
+    const sampleOrphanIds = [...new Set(addresses.filter((a) => !a.deleted && !territoryIdSet.has(a.territoryId)).map((a) => String(a.territoryId ?? 'null')))].slice(0, 5);
+    fetch('http://127.0.0.1:7883/ingest/f58f84f6-2583-4fb1-8e28-eac808e869d9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'2c01f2'},body:JSON.stringify({sessionId:'2c01f2',location:'campaignUtils.js:getEligibleCampaignAddresses',message:'address filter breakdown',data:{totalIn:addresses.length,eligibleOut:filtered.length,deletedCount,excludedCount,orphanTerritoryCount,territoryIdsCount:territoryIdSet.size,sampleOrphanTerritoryIds:sampleOrphanIds,sampleTerritoryIdsInSet:[...territoryIdSet].slice(0,3)},timestamp:Date.now(),hypothesisId:'B-C-D'})}).catch(()=>{});
+  }
+  // #endregion
+
+  return filtered;
+};
+
 export const getCampaignCandidateAddresses = ({ campaign, addresses = [], territoryMap = {} }) => {
   if (!campaign) return [];
 
-  const selectedTerritoryIds = new Set(Array.isArray(campaign.sourceTerritoryIds) ? campaign.sourceTerritoryIds : []);
-  const excludedAddressIds = new Set(Array.isArray(campaign.excludedAddressIds) ? campaign.excludedAddressIds : []);
-
-  const candidates = addresses.filter((address) => {
-    if (!selectedTerritoryIds.has(address.territoryId)) return false;
-    if (address.deleted) return false;
-    if (excludedAddressIds.has(address.id)) return false;
-    return true;
+  const candidates = getEligibleCampaignAddresses(addresses, {
+    excludedAddressIds: campaign.excludedAddressIds
   });
 
   return sortCampaignSourceAddresses(candidates, territoryMap);
@@ -212,7 +238,6 @@ export const distributeAddressesAcrossParticipants = ({
   addresses = [],
   participants = [],
   targets = [],
-  groupsById = {},
   territoryMap = {}
 }) => {
   if (addresses.length === 0) return [];
@@ -259,7 +284,6 @@ export const distributeAddressesAcrossParticipants = ({
 
     remainingByUserId.set(participant.userId, remaining - 1);
 
-    const relatedGroup = participant.groupId ? groupsById[participant.groupId] : null;
     participantIndex = (participantIndex + 1) % orderedParticipants.length;
     guard = 0;
 
@@ -269,8 +293,8 @@ export const distributeAddressesAcrossParticipants = ({
       addressSnapshot: buildCampaignAddressSnapshot(address, territoryMap),
       assignedUserId: participant.userId,
       assignedUserName: participant.userNameSnapshot,
-      groupId: participant.groupId || null,
-      groupLabelSnapshot: relatedGroup?.label || null,
+      groupId: null,
+      groupLabelSnapshot: null,
       status: CAMPAIGN_PROGRESS_STATUSES.PENDING,
       manualLocked: false
     };

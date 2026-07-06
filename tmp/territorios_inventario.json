@@ -1,0 +1,662 @@
+[
+  {
+    "territorio": "Territorio 1",
+    "direccion": "Perdiz 1515, Morelos, 44919 Guadalajara, Jal.",
+    "notas": "Nombre: Araceli | Nota: Matrimonio sordos, la señora es muy hábil en señas",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 1",
+    "direccion": "C. Pino 1257, Morelos, 44919 Guadalajara, Jal.",
+    "notas": "Nombre: Jose de Jesus Angel Bravo y Josefina | Nota: Matrimonio de sordos",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 1",
+    "direccion": "Verdín 1725, 8 de Julio, 44910 Guadalajara, Jal.",
+    "notas": "Nombre: Sra. Sorda | Nota: No sabe señas",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 1",
+    "direccion": "C. 10-A 2102A, Ferrocarril, 44440 Guadalajara, Jal.",
+    "notas": "Nombre: Maria Eugenia e hijas ( Elizabeth y Angelica ) | Nota: 3 hijas sordas",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 1",
+    "direccion": "C. 2 2042, Ferrocarril, 44440 Guadalajara, Jal.",
+    "notas": "Nombre: Sr. Sordo | Nota: Casa verde, aùn lado del #2042",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 1",
+    "direccion": "Del Furgón 2270, Valle del Alamo, 44440 Guadalajara, Jal.",
+    "notas": "Nombre: Sr. Sordo",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 2",
+    "direccion": "C. Valentín Gómez Farías 42, Reforma, 44890 Guadalajara, Jal.",
+    "notas": "Nombre: Judith",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 2",
+    "direccion": "C. Aldama 650, Reforma, 44450 Guadalajara, Jal.   MM98+HG Guadalajara, Jal",
+    "notas": "Nombre: Ana Guadalupe",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 2",
+    "direccion": "C. Esteban Alatorre 685, San Juan de Dios, 44360 Guadalajara, Jal.",
+    "notas": "Nombre: Alexis | Nota: Mujer joven, recibió estudio por un tiempo. Maneja bien senas.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 2",
+    "direccion": "C. Mariano Jiménez 438, San Juan de Dios, 44360 Guadalajara, Jal.",
+    "notas": "Nombre: Tomas A. Aguilera | Nota: Sin notas",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 2",
+    "direccion": "Pedro A. Galván 569, San Juan de Dios, 44360 Guadalajara, Jal.",
+    "notas": "Nombre: Karina | Nota: Nombre de su papá, Rafael",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 2",
+    "direccion": "Clemente Aguirre 71, La Perla, 44360 Guadalajara, Jal.",
+    "notas": "Nombre: No se sabe | Nota: Hombre sordo, Esposa Nancy, muy amable ( oyente )",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 2",
+    "direccion": "C. Jarauta 653, La Perla, 44360 Guadalajara, Jal.",
+    "notas": "Nombre: Araceli | Nota: Sorda, visita por las tardes o domingos",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 3",
+    "direccion": "C. Sierra Madre 140, Independencia Oriente, 44340 Guadalajara, Jal.",
+    "notas": "Nombre: Ramon Cuevas | Nota: Segundo piso",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 3",
+    "direccion": "Av. Circunvalación Oblatos 1337, Circunvalación Belisario, 44330 Guadalajara, Jal.",
+    "notas": "Nombre: Rosa Cuevas",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 3",
+    "direccion": "Calle Gral. Genovevo Rivas Guillén 1451, Colonia Oblatos, 44700 Guadalajara, Jal.",
+    "notas": "Nombre: Yaneth | Nota: Atienden los Merino",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 3",
+    "direccion": "Monte Alegre 388, Independencia Oriente, 44340 Guadalajara, Jal.",
+    "notas": "Nombre: Maria Isabel y Jesus | Nota: Matrimonio sordo",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 4",
+    "direccion": "Apolonio Moreno 1684, Santa Cecilia, 44780 Guadalajara, Jal.",
+    "notas": "Nombre: Héctor y Brenda | Nota: ( Sordos ) Revisita Todú7o6i86⁶o y Marisol",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 4",
+    "direccion": "Apolonio Moreno 1895, Santa Cecilia, 44700 Guadalajara, Jal.",
+    "notas": "Nombre: Joel | Nota: Tiene un hermano llamado Gerardo ( hipoacusico)",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 4",
+    "direccion": "Graciela Olmos 2300, Santa Cecilia, 44700 Guadalajara, Jal.",
+    "notas": "Nombre: Marcos y Norma | Nota: Vive en la planta de arriba, no hay timbre y sabe LSM",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 4",
+    "direccion": "C. 8 1975, La Joyita, 44390 Guadalajara, Jal.",
+    "notas": "Nombre: Rubén",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 5",
+    "direccion": "C. Hacienda Huescalapa 2170, Colonia Oblatos, 44700 Guadalajara, Jal.",
+    "notas": "Nombre: Josue | Nota: Sabe LSM, tiene un trastorno que lo hace depender de su mama, pero si es capaz de aprender.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 5",
+    "direccion": "C. Hacienda de la Erre 2541, Tetlán Río Verde, 44727 Guadalajara, Jal.",
+    "notas": "Nombre: Ana Maria",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 5",
+    "direccion": "Batalla de Chilapa 2497, Río Verde, 44700 Guadalajara, Jal.",
+    "notas": "Nombre: Desconocido | Nota: Familia Sordos",
+    "genero": "Desconocido"
+  },
+  {
+    "territorio": "Territorio 5",
+    "direccion": "Hacienda La Primavera 1040, Colonia Oblatos, 44700 Guadalajara, Jal.",
+    "notas": "Nombre: Roberto y Veronica | Nota: Ambos son sordo-ciegos, hermanos carnales, ya recibieron antes estudio, pero su estado de animo es muy inestable.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 5",
+    "direccion": "Hacienda San Martín de las Flores 2710, Colonia Oblatos, 44700 Guadalajara, Jal.",
+    "notas": "Nombre: Raul Sandoval | Nota: Ya recibieron estudio sabe LSM, visitar por las tardes despues de las 4pm y fines de semana.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 5",
+    "direccion": "C. Hacienda Hoaxtlan 1390, Colonia Oblatos, 44700 Guadalajara, Jal.",
+    "notas": "Nombre: Francisca | Nota: Señora mayor, no sabe LSM.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 5",
+    "direccion": "Hacienda La Llave 2261, Arandas, 44720 Guadalajara, Jal.",
+    "notas": "Nombre: Adriana | Nota: Tiene un hijo, ella se encuentra los fines de semana",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 6",
+    "direccion": "Sta. Casilda 2423, Popular, 44710 Guadalajara, Jal.",
+    "notas": "Nombre: Salvador | Nota: Gaby le da estudio a la sorda. Creemos qué son 3 sordos en total",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 6",
+    "direccion": "C. Rafael Buelna 1380, Popular, 44710 Guadalajara, Jal.",
+    "notas": "Nombre: Erika | Nota: Trabaja y es difícil encontrarla. Papá de la sorda, falleció hace como 9 meses.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 6",
+    "direccion": "Depto #34 Matrimonio de sordos. Tienen una hija sorda que se llama María Inés, son amables.  Av. Plutarco Elías Calles 864, Plutarco Elías Calles, 44750 Guadalajara, Jal.",
+    "notas": "Nombre: Ignacio e Inés | Nota: Plutarco Elias Calles #875 | Depto #34 Matrimonio de sordos. Tienen una hija sorda que se llama María Inés, son amables.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 6",
+    "direccion": "Hacienda Zenzontla 2816A, Balcones de Oblatos, 44720 Guadalajara, Jal.",
+    "notas": "Nombre: Lilia | Nota: No sabe LSM",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 6",
+    "direccion": "Sta. Casilda 2846, San Isidro Oblatos, 44740 Guadalajara, Jal.",
+    "notas": "Nombre: Ramon y Salvador | Nota: Dos hombres sordos, no se sabe si son hermanos o que parantesco tengan.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 6",
+    "direccion": "Bagdad 2 2958, Plutarco Elías Calles, 44723 Guadalajara, Jal.",
+    "notas": "Nombre: Silvia y Tomas",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 6",
+    "direccion": "C. Pablo Valdez 2618, Jardines de Guadalupe, 44740 Guadalajara, Jal.",
+    "notas": "Nombre: Carmen Ortiz",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 6",
+    "direccion": "C. Esteban Alatorre 2587, Jardines de Guadalupe, 44740 Guadalajara, Jal.",
+    "notas": "Nombre: Fátima",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 7",
+    "direccion": "C. Miguel Ramos Arizpe 277, San Antonio, 44800 Guadalajara, Jal.",
+    "notas": "Nombre: Martin | Nota: Martin se encuentra por las tardes.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 7",
+    "direccion": "C. Valentín Gómez Farías 2274, San Antonio, 44800 Guadalajara, Jal.",
+    "notas": "Nombre: Rigoberto",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 7",
+    "direccion": "C. H 2819, San Andrés, 44755 Guadalajara, Jal.",
+    "notas": "Nombre: Valeria | Nota: Revisita Alison ( año 2024 )",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 7",
+    "direccion": "Priv. Nautla 27, San Antonio, 44800 Guadalajara, Jal.",
+    "notas": "Nombre: Rosario",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 7",
+    "direccion": ",  Capas, Datos del mapa © 2026 INEGI, GoogleMéxicoCondicionesPrivacidadEnviar comentarios sobre el producto",
+    "notas": "sin dato",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 8",
+    "direccion": "C. Carrillo Puerto 254, San Juan, 45500 San Pedro Tlaquepaque, Jal.",
+    "notas": "Nombre: Laura | Nota: platicamos con Omar amable.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 8",
+    "direccion": "Río Cuale 2487, Atlas, 44899 Guadalajara, Jal.",
+    "notas": "Nombre: Edgar y Adriana | Nota: Esposos sordos",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 8",
+    "direccion": "Artículo 123 1190, Atlas, 44890 Guadalajara, Jal.",
+    "notas": "Nombre: David ( papá ) | Nota: Tienen 4 hijos sordos, Rocío ( hija ) está perdiendo la vista",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 8",
+    "direccion": "C. Glendale 222, Centro, 45500 San Pedro Tlaquepaque, Jal.",
+    "notas": "Nombre: Karina | Nota: Mujer sorda entre 45 y 50 años, no sabe señas",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 8",
+    "direccion": "C. Reforma 431, Rancho Blanco, 45560 San Pedro Tlaquepaque, Jal.",
+    "notas": "Nombre: Karla Paola | Nota: Joven sorda, vecindad entre 431 b y 431 c",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 8",
+    "direccion": "Calle Emiliano Zapata 82, San Juan, 45500 San Pedro Tlaquepaque, Jal.",
+    "notas": "Nombre: Jhoan, Miri y Elizabeth | Nota: Casa color blanco",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 8",
+    "direccion": "Av. Niños Héroes 210, Rancho Blanco, 45560 San Pedro Tlaquepaque, Jal.",
+    "notas": "Nombre: Lizeth Salome | Nota: Número Int. #101",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 8",
+    "direccion": "C. Río Reforma 1865, Lázaro Cárdenas, 44490 Guadalajara, Jal.",
+    "notas": "Nombre: Mario y Rosa Elvira | Nota: Hermanos carnales, la sorda es debil visual",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 9",
+    "direccion": "C. Artemio del Valle Arizpe 2999, Vicente Guerrero, 44860 Guadalajara, Jal.",
+    "notas": "Nombre: Belen y Esposo (no se sabe su nombre) | Nota: La mamá los niega, hijo se llama Octavio y sabes muy bien señas",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 9",
+    "direccion": "C. Artemio del Valle Arizpe 2907, Vicente Guerrero, 44860 Guadalajara, Jal.",
+    "notas": "Nombre: Iris Rodriguez | Nota: antes ya recibió estudio. Mamá amable.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 9",
+    "direccion": "C. San Carlos 136, Jardines de Los Historiadores, 44860 Guadalajara, Jal.",
+    "notas": "Nombre: Angel | Nota: Frente a una cerniceria, su Mamá se llama Lourdes",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 9",
+    "direccion": "Mariano Azuela 325, Hidalgo, 45540 San Pedro Tlaquepaque, Jal.",
+    "notas": "Nombre: Maria Guadalupe I",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 9",
+    "direccion": "Dunas 242, Lomas del Camichin I, 45417 Tonalá, Jal.",
+    "notas": "Nombre: Fabian Alejandro Gomez | Nota: Se encuentra fin de semana o por las tardes. Ya ha recibio estudio.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 9",
+    "direccion": "Int # 11, visitar solo hombres  Cto Malecón Ote 89-A, Infonavit La Soledad, 45417 Tonalá, Jal.",
+    "notas": "Nombre: Julio | Nota: Int # 11, visitar solo hombres",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 10",
+    "direccion": "Calle Jorge del Moral 3806, Aldama Tetlán, 44820 Guadalajara, Jal.",
+    "notas": "sin dato",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 10",
+    "direccion": "C. Laura Apodaca 14, Aldama Tetlán, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Alicia",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 10",
+    "direccion": "Enrique Granados 3576, Cantarranas, 44829 Guadalajara, Jal.",
+    "notas": "Nombre: Omar Espiritu | Nota: Apodado \" El Barbas \", a veces va a las reuniones, lo visita Adrián Merino",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 10",
+    "direccion": "C. María Uribe 359, Aldama Tetlán, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Alfredo",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 10",
+    "direccion": "Salvador Gálvez 3932, Aldama Tetlán, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Fabiola Rodriguez",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 10",
+    "direccion": "C. Ignacio T. Chávez 4418, Tetlán, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Desconocido | Nota: 2 sordas",
+    "genero": "Desconocido"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "La Casa de Toño en Zona Rosa 4.5 Restaurante mexicano",
+    "notas": "sin dato",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "Victoria Navarro 654, Insurgentes, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Marisela | Nota: Alrededor de 30 años | De preferencia visitar los jueves por las tardes.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "C. Leonor Pintado 138, Tetlán II, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Desconocido | Nota: La sorda se juntó con un hombre",
+    "genero": "Desconocido"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "C. Adrián Puga 4199, Obeliscos, 44820 Guadalajara, Jal.   Cerrado permanentemente   MP3C+4V Guadalajara, Jal",
+    "notas": "Nombre: Desconocido | Nota: Joven sordo.",
+    "genero": "Desconocido"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "Rosario Romero 441, Aldama Tetlán, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Jorge y esposa | Nota: Es casa de su mamá, ellos viven en la planta alta. Visitar los domingos.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "C. Aurelia Guevara 4232, Obeliscos, 44820 Guadalajara, Jal.   MP3F+M6 Guadalajara, Jal",
+    "notas": "Nombre: Desconocido",
+    "genero": "Desconocido"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "C. Teresa Reynoso 4163, Obeliscos, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Altagracia Quezada | Nota: Señora mayor. Entiende hablándole fuerte.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "C. Federico Medrano 4074, Insurgentes, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Maria de la Luz | Nota: Mujer adulta mayor. Esta por las mañanas.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "C. Marcelino Rentería 4236, Insurgentes, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Obdilia | Nota: Mujer adulta",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "C. Salvador M. Lima 4211, Insurgentes, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: Oscar | Nota: Hombre adulto. Su mamá es amable. Rectificar si ahí vive su sobrinito que es sordo también.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 11",
+    "direccion": "Jesús Romo de Vivar 4582, Insurgentes, 44820 Guadalajara, Jal.",
+    "notas": "Nombre: David | Nota: Joven, trabaja en Sabritas. Antes estudió. Se reúne con un grupo religioso.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 12",
+    "direccion": "Etiopía 536, Lagos de Oriente, 44750 Guadalajara, Jal.",
+    "notas": "Nombre: Lety y Esposo. | Nota: Mujer adulta. Se encuentra fines de semana",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 12",
+    "direccion": "C. Emilio Rabaza 3571, Miguel Hidalgo, 44760 Guadalajara, Jal.",
+    "notas": "Nombre: Lilia Y Carlos | Nota: Lilia recibió estudio pero lo dej por temor a su esposo.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 12",
+    "direccion": "Manuel Gutiérrez Nájera 3444, Beatriz Hernández, 44760 Guadalajara, Jal.",
+    "notas": "Nombre: Eliza Valenzuela",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 12",
+    "direccion": "Av José María Iglesias 3886, Los Arrayanes, 44766 Guadalajara, Jal.",
+    "notas": "Nombre: Desconocido | Nota: Sin dat",
+    "genero": "Desconocido"
+  },
+  {
+    "territorio": "Territorio 13",
+    "direccion": "C. Sucre 559, Benito Juárez, 44770 Guadalajara, Jal.",
+    "notas": "sin dato",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 13",
+    "direccion": "C. Presa Oviachi 340, Lagos de Oriente, 44790 Guadalajara, Jal.",
+    "notas": "Nombre: Martín González | Nota: Sin datos.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 13",
+    "direccion": "Presa del Infiernillo 3857, Lagos de Oriente, 44790 Guadalajara, Jal.",
+    "notas": "Nombre: Maria de Jesús | Nota: Recibió estudio hace tiempo.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 13",
+    "direccion": "Presa Sta Rosa 362, Lagos de Oriente, 44790 Guadalajara, Jal.",
+    "notas": "Nombre: Gabriela Sandoval | Nota: Hace tiempo recibió estudio ella y su mama.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 13",
+    "direccion": "Av Presa de Osorio 3975, San Joaquín, 44770 Guadalajara, Jal.",
+    "notas": "Nombre: Desconocido. | Nota: Matrimonio sordos. Son muy católicos.",
+    "genero": "Desconocido"
+  },
+  {
+    "territorio": "Territorio 13",
+    "direccion": "C. Fernando Solís 1175, Lomas del Gallo, 44769 Guadalajara, Jal.",
+    "notas": "sin dato",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 14",
+    "direccion": "La Manzanilla 11, Jalisco I Secc, 45403 Tonalá, Jal.",
+    "notas": "Nombre: Anima (sorda) | Nota: Su Hijo es Máx Bruce y es Testigo de Jehová",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 14",
+    "direccion": "C. José Pantoja Gómez 4236, Villas de Guadalaupe, 44720 Guadalajara, Jal.",
+    "notas": "Nombre: Juanito Manuel | Nota: Por lo regular se encuentra en la tienda a una cuadra. Estudia con la familia Isas.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 14",
+    "direccion": "Sayula 87, Jalisco II Secc, 45403 Tonalá, Jal.",
+    "notas": "Nombre: Francisco Trejo Perez | Nota: Sordo adulto. Le han dado estudio. Fabiola Guajardo le da estudio a sus sobrinas.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 14",
+    "direccion": "C. Carlos R. Arévalo 4122, La Campesina, 44769 Guadalajara, Jal.",
+    "notas": "Nombre: José Alejandro | Nota: Ya ha recibido estudio y asistió a las reuniones.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 14",
+    "direccion": "Careyes 84, Lomas del Laurel I, 45403 Tonalá, Jal.",
+    "notas": "Nombre: Hugo | Nota: Adulto joven, solo se encuentra los domingos.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 15",
+    "direccion": "Yahualica 79, Jalisco IV Secc, 45403 Tonalá, Jal.",
+    "notas": "Nombre: Agustina e hijos. | Nota: Mujer sorda y dos hijos sordos. Estudio de Abby",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 15",
+    "direccion": "Av. La Barca 6, Jalisco ÌII Secc, 45412 Tonalá, Jal.",
+    "notas": "Nombre: Sergio | Nota: Solo esta después de las 7pm.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 15",
+    "direccion": "Jamay 40, Jalisco IV Secc, 45403 Tonalá, Jal.",
+    "notas": "Nombre: Harry Paul | Nota: Solo se encuentra los domingos.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 15",
+    "direccion": "San Rafael 11A, Jalisco IV Secc, 45403 Tonalá, Jal.",
+    "notas": "Nombre: Gerardo | Nota: Se encuentra los fines de semana.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 16",
+    "direccion": "C. Pedro Moreno 69, San Gaspar, 45408 Tonalá, Jal.",
+    "notas": "Nombre: Angelica Orozco",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 17",
+    "direccion": "Manantiales 14, Lomas del Manantial, 45407 Tonalá, Jal.",
+    "notas": "Nombre: Luis | Nota: Su mamá se llama Nohemi y es muy amable, no sabe LSM, pero sabe leer un poco los labios",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 17",
+    "direccion": "Prol. Medrano 234, Leyes de Reforma, 45404 Tonalá, Jal.",
+    "notas": "Nombre: Rubén | Nota: ( Lo visita Claudio ) Sabe LSM y ASL se encuentra los domingos. Su mamá se llama Berta es muy amable.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 17",
+    "direccion": "Niño 9 años aproximadamente, no sabe señas. Mamá Lucia muy amable.  Capulín 109, Bosques de Tonalá, 45416 Tonalá, Jal.",
+    "notas": "Nombre: Emmanuel | Nota: Niño 9 años aproximadamente, no sabe señas. Mamá Lucia muy amable.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 17",
+    "direccion": "Morelos 117, Zalatitán, 45405 Tonalá, Jal.",
+    "notas": "Nombre: Norma | Nota: Mujer Hipoacúsica. Estudia con Alicia Ramos.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 17",
+    "direccion": "20°39'34.2\"N 103°15'18.9\"W",
+    "notas": "Nombre: Benjamin",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 17",
+    "direccion": "Francisco I. Madero 79, Zalatitán, 45405 Tonalá, Jal.",
+    "notas": "Nombre: Melesio Benitez",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 17",
+    "direccion": "C. Corregidora 13, Loma Bonita II, 45416 Tonalá, Jal.",
+    "notas": "Nombre: Raymundo",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 17",
+    "direccion": "Joaquín Aguirre 14, Basilio Badillo, 45406 Tonalá, Jal.",
+    "notas": "Nombre: Rosa Sanchez | Nota: Señora muy mayor. Su hija es demaciado cortante y no muestra interés.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 18",
+    "direccion": "C. Reforma 10, Santa Cruz de Las Huertas, 45402 Tonalá, Jal.",
+    "notas": "Nombre: Carlos (hijo)",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 18",
+    "direccion": "Loma Tapalpa Sur 8129, Loma Dorada Delegación B, 45418 Tonalá, Jal.",
+    "notas": "Nombre: Jared",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 19",
+    "direccion": "Av. Benito Juárez 168, Tonalá Centro, 45400 Tonalá, Jal.",
+    "notas": "Nombre: Francisco y Judith | Nota: Francisco es muy amable, su esposa muy catolico y su nuera (vive ahi) ella es muy receptiva.",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 19",
+    "direccion": "C. Altamira 155, Jardines de Tonalá, 45400 Tonalá, Jal.",
+    "notas": "Nombre: Teresa",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 19",
+    "direccion": "Jesús García 413C, Pachaguillo, 45400 Tonalá, Jal.",
+    "notas": "Nombre: Angel y Fernando | Nota: No necesita LSM",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 19",
+    "direccion": "Reina Tzapozintli 441, Pachaguillo, 45400 Tonalá, Jal.",
+    "notas": "Nombre: Milagros Guadalupe | Nota: Niña sorda, va a la escuela que está por Normalistas",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 19",
+    "direccion": "Calle Juan Escutia 387b, El Recodo, 45400 Tonalá, Jal.",
+    "notas": "Nombre: Guadalupe Rodriguez",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 20",
+    "direccion": "C. Zaragoza 62, Coyula, 45410 Coyula, Jal.",
+    "notas": "Nombre: Alto Huerta | Nota: Joven sordo",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 20",
+    "direccion": "20°39'34.6\"N 103°13'41.2\"W",
+    "notas": "Nombre: Hermano de Rita y Modesta | Nota: Tiene problemas de oído, hay que hablarle fuerte",
+    "genero": "sin dato"
+  },
+  {
+    "territorio": "Territorio 20",
+    "direccion": "C. Alvaro Obregon 195, Coyula, 45410 Coyula, Jal.",
+    "notas": "sin dato",
+    "genero": "sin dato"
+  }
+]

@@ -5,9 +5,11 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bookmark,
+  Building2,
   Calendar,
   Check,
   CheckCircle,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -53,6 +55,7 @@ import {
   Users,
   Wifi,
   WifiOff,
+  Wine,
   X,
   Zap
 } from 'lucide-react';
@@ -63,9 +66,11 @@ const ICON_COMPONENTS = {
   alertTriangle: AlertTriangle,
   arrowLeft: ArrowLeft,
   bookmark: Bookmark,
+  building: Building2,
   calendar: Calendar,
   check: Check,
   checkCircle: CheckCircle,
+  chevronDown: ChevronDown,
   chevronLeft: ChevronLeft,
   chevronRight: ChevronRight,
   clock: Clock,
@@ -114,6 +119,7 @@ const ICON_COMPONENTS = {
   'users-cog': Settings,
   wifi: Wifi,
   wifiOff: WifiOff,
+  wine: Wine,
   x: X,
   zap: Zap
 };

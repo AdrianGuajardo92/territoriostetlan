@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from './useToast';
+import { backupSession, restoreSession } from '../utils/sessionManager';
 
 export const useAppUpdates = () => {
     const [currentVersion, setCurrentVersion] = useState(null);
@@ -77,7 +78,8 @@ export const useAppUpdates = () => {
 
     // Función para forzar la actualización
     const forceAppUpdate = useCallback(() => {
-        // Limpiar cache del navegador
+        const sessionBackup = backupSession();
+
         if ('caches' in window) {
             caches.keys().then(names => {
                 names.forEach(name => {
@@ -86,11 +88,10 @@ export const useAppUpdates = () => {
             });
         }
 
-        // Limpiar localStorage y sessionStorage
         localStorage.clear();
         sessionStorage.clear();
+        restoreSession(sessionBackup);
 
-        // Recargar la página
         window.location.reload(true);
     }, []);
 

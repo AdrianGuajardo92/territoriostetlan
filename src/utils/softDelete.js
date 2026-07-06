@@ -1,6 +1,7 @@
 // Utilidades para manejo de borrado suave (soft delete)
 import { updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { getDisplayAddress } from './helpers';
 
 /**
  * Archivar una dirección en lugar de eliminarla permanentemente
@@ -115,7 +116,7 @@ export const formatArchivedAddress = (address) => {
 
   return {
     id: address.id,
-    address: originalData.address || address.address || 'Sin dirección',
+    address: getDisplayAddress(originalData.address || address.address, 'Sin dirección'),
     territoryId: originalData.territoryId || address.territoryId || 'Sin territorio',
     name: originalData.name || address.name || '',
     phone: originalData.phone || address.phone || '',

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useBackHandler } from '../hooks/useBackHandler';
 import ActionTypeBadge, { getActionType } from '../components/common/ActionTypeBadge';
-import { formatRelativeTime } from '../utils/helpers';
+import { formatRelativeTime, getDisplayAddress } from '../utils/helpers';
 
 // Función helper para formatear valores en propuestas
 const formatValue = (value) => {
@@ -499,7 +499,7 @@ const MyProposalsView = ({ onBack }) => {
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Dirección propuesta</p>
                             <p className="text-base font-semibold text-gray-900 break-words leading-snug">
-                              {proposal.addressData.address || proposal.address || 'No especificada'}
+                              {getDisplayAddress(proposal.addressData.address || proposal.address, 'No especificada')}
                             </p>
                             {proposal.addressData.entreCalles && (
                               <p className="text-xs text-gray-600 mt-2">
@@ -604,7 +604,7 @@ const MyProposalsView = ({ onBack }) => {
                           </p>
                           <div className="space-y-1.5 text-sm">
                             {proposal.addressInfo.address && (
-                              <p><span className="text-gray-400">Dirección:</span> <span className="text-gray-900 font-medium">{proposal.addressInfo.address}</span></p>
+                              <p><span className="text-gray-400">Dirección:</span> <span className="text-gray-900 font-medium">{getDisplayAddress(proposal.addressInfo.address, 'Sin dirección')}</span></p>
                             )}
                             {proposal.addressInfo.name && (
                               <p><span className="text-gray-400">Nombre:</span> <span className="text-gray-900">{proposal.addressInfo.name}</span></p>

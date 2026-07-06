@@ -72,9 +72,27 @@
                     console.log('✅ Caches eliminados');
                 }
                 
-                // 3. Limpiar storage
+                const sessionBackup = localStorage.getItem('appSession');
+                const SESSION_IDLE_TIMEOUT_MS = 12 * 60 * 60 * 1000;
+
                 localStorage.clear();
                 sessionStorage.clear();
+
+                if (sessionBackup) {
+                    try {
+                        const parsed = JSON.parse(sessionBackup);
+                        const now = Date.now();
+                        const isValid = parsed?.user?.id
+                            && now <= parsed.expiresAt
+                            && (now - parsed.lastActivityAt) <= SESSION_IDLE_TIMEOUT_MS;
+
+                        if (isValid) {
+                            localStorage.setItem('appSession', sessionBackup);
+                        }
+                    } catch (error) {
+                        console.warn('No se pudo restaurar la sesion:', error);
+                    }
+                }
                 console.log('✅ Storage limpiado');
                 
                 status.textContent = '✅ Cache limpiado. Redirigiendo...';

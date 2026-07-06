@@ -13,7 +13,7 @@ import TerritoryManagementModal from './TerritoryManagementModal';
 import ArchivedAddressesPortal from '../admin/ArchivedAddressesPortal';
 import QuickProposalReviewMap from '../admin/QuickProposalReviewMap';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
-import { formatRelativeTime } from '../../utils/helpers';
+import { formatRelativeTime, getDisplayAddress } from '../../utils/helpers';
 
 const AdminModal = (props = {}) => {
   const {
@@ -954,11 +954,11 @@ const AdminModal = (props = {}) => {
                                     className="text-base font-semibold text-blue-700 hover:text-blue-800 hover:underline flex-1 break-words leading-snug"
                                     title="Abrir dirección en Google Maps"
                                   >
-                                    {proposal.addressData.address || 'No especificada'}
+                                    {getDisplayAddress(proposal.addressData.address, 'No especificada')}
                                   </a>
                                 ) : (
                                   <p className="text-base font-semibold text-gray-900 flex-1 break-words leading-snug">
-                                    {proposal.addressData.address || 'No especificada'}
+                                    {getDisplayAddress(proposal.addressData.address, 'No especificada')}
                                   </p>
                                 )}
                                 {proposal.addressData.address && (
@@ -1217,7 +1217,7 @@ const AdminModal = (props = {}) => {
                               {proposal.addressInfo && (
                                 <div className="space-y-1.5 text-sm">
                                   {proposal.addressInfo.address && (
-                                    <p><span className="text-gray-400">Dirección:</span> <span className="text-gray-900 font-medium">{proposal.addressInfo.address}</span></p>
+                                    <p><span className="text-gray-400">Dirección:</span> <span className="text-gray-900 font-medium">{getDisplayAddress(proposal.addressInfo.address, 'Sin dirección')}</span></p>
                                   )}
                                   {proposal.addressInfo.name && (
                                     <p><span className="text-gray-400">Nombre:</span> <span className="text-gray-900">{proposal.addressInfo.name}</span></p>

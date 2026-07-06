@@ -2,11 +2,12 @@ import React, { useState, useMemo, useCallback } from 'react';
 import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
-import { smartSearch } from '../../utils/helpers';
+import { getDisplayAddress, getFullAddress, smartSearch } from '../../utils/helpers';
 
 // Componente específico para tarjetas de búsqueda
 const SearchAddressCard = ({ address, onClick }) => {
   const [isNavigatingLocal, setIsNavigatingLocal] = useState(false);
+  const displayAddress = getDisplayAddress(address);
 
   // Configuración de colores elegante y neutral
   const config = {
@@ -79,7 +80,7 @@ const SearchAddressCard = ({ address, onClick }) => {
       }
     }
     
-    const encodedAddress = encodeURIComponent(address.address);
+    const encodedAddress = encodeURIComponent(getFullAddress(address, displayAddress));
     switch (mode) {
       case 'driving':
         return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
@@ -128,7 +129,7 @@ const SearchAddressCard = ({ address, onClick }) => {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className={`text-xl font-bold truncate ${config.titleColor}`}>
-                {address.address}
+                {displayAddress}
               </h3>
               <div className="flex items-center space-x-2 mt-1">
                 <GenderTag gender={address.gender} />
@@ -234,7 +235,7 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
 
     const results = addresses.filter(address => {
       // Buscar en dirección
-      const matchesAddress = smartSearch(searchTerm, address.address);
+      const matchesAddress = smartSearch(searchTerm, `${getDisplayAddress(address, '')} ${getFullAddress(address, '')}`);
       
       // Buscar en notas
       const matchesNotes = address.notes && smartSearch(searchTerm, address.notes);
@@ -436,4 +437,4 @@ const SearchModal = ({ isOpen, onClose, onNavigateToTerritory, modalId = 'search
   );
 };
 
-export default SearchModal; 
+export default SearchModal;
