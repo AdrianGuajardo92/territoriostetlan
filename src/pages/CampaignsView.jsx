@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
 import { useApp } from '../context/AppContext';
@@ -26,7 +26,7 @@ import {
 } from '../utils/campaignDistributionDrafts';
 import { copiarAlPortapapeles } from '../utils/clipboard';
 import { LazyCampaignAssignmentsMapModal } from '../components/modals/LazyModals';
-import { getDisplayAddress, getFullAddress, getUserGender, splitDisplayAddress } from '../utils/helpers';
+import { getDisplayAddress, getFullAddress, getUserGender } from '../utils/helpers';
 import { getAddressNavigationUrls } from '../utils/addressNavigationUrls';
 import { ADDRESS_CARD_THEMES } from '../utils/addressCardThemes';
 import AddressNavigationButtons from '../components/common/AddressNavigationButtons';
@@ -45,9 +45,16 @@ const DEFAULT_CAMPAIGN_FORM = {
 };
 
 const PUBLISHER_FILTER_OPTIONS = [
-  { id: CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS, label: 'En progreso' },
+  { id: CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS, label: 'Pendientes' },
   { id: CAMPAIGN_PROGRESS_STATUSES.COMPLETED, label: 'Completadas' }
 ];
+
+const getPublisherFilterLabel = (optionId, count, fallbackLabel) => {
+  if (optionId === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS) {
+    return count === 1 ? 'Pendiente' : 'Pendientes';
+  }
+  return fallbackLabel;
+};
 
 const CAMPAIGN_TYPE_OPTIONS = [
   { value: 'asamblea', label: 'Asamblea', icon: 'building' },
@@ -334,7 +341,8 @@ const SectionCard = ({
   isExpanded = true,
   onToggle = null,
   summaryLabel = null,
-  sectionId = null
+  sectionId = null,
+  allowContentOverflow = false
 }) => {
   const toneClasses = {
     slate: 'from-slate-50 via-white to-white',
@@ -358,7 +366,7 @@ const SectionCard = ({
   };
 
   return (
-    <section className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm">
+    <section className={`${allowContentOverflow ? 'overflow-visible' : 'overflow-hidden'} rounded-[30px] border border-slate-200 bg-white shadow-sm`}>
       <div
         className={`bg-gradient-to-r px-5 ${isCollapsed ? 'py-3' : 'py-4'} ${toneClasses[tone] || toneClasses.slate} ${isCollapsed ? '' : 'border-b border-slate-100'}${collapsible ? ' cursor-pointer select-none transition-colors hover:from-slate-100/60' : ''}`}
         {...(collapsible ? {
@@ -437,82 +445,111 @@ const EmptyState = ({ icon = 'mail', title, description, variant = 'card' }) => 
   );
 };
 
-const PublisherAssignmentCard = ({
+const shouldAnimateAssignmentExit = (status, publisherFilter) => {
+  const completingFromPending = (
+    status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+    && publisherFilter === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
+  );
+  const reopeningFromCompleted = (
+    status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
+    && publisherFilter === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+  );
+  return completingFromPending || reopeningFromCompleted;
+};
+
+const pinExitingAssignmentInGroups = (groupedAssignments, overlay) => {
+  if (!overlay?.assignment) return groupedAssignments;
+
+  const { assignment, territoryId, index } = overlay;
+  const stillVisible = groupedAssignments.some((group) =>
+    group.assignments.some((item) => item.id === assignment.id)
+  );
+  if (stillVisible) return groupedAssignments;
+
+  const territoryName = assignment.addressSnapshot?.territoryName || assignment.territoryName || 'Territorio';
+  const nextGroups = groupedAssignments.map((group) => ({
+    ...group,
+    assignments: [...group.assignments]
+  }));
+
+  let targetGroup = nextGroups.find((group) => group.territoryId === territoryId);
+  if (!targetGroup) {
+    targetGroup = { territoryId, territoryName, assignments: [] };
+    nextGroups.push(targetGroup);
+    nextGroups.sort((a, b) => {
+      const territoryDiff = (a.territoryName || '').localeCompare(b.territoryName || '', 'es', { numeric: true });
+      if (territoryDiff !== 0) return territoryDiff;
+      return (a.territoryId || '').localeCompare(b.territoryId || '', 'es', { numeric: true });
+    });
+  }
+
+  const insertAt = index >= 0 && index <= targetGroup.assignments.length
+    ? index
+    : targetGroup.assignments.length;
+  targetGroup.assignments.splice(insertAt, 0, assignment);
+  return nextGroups;
+};
+
+const PublisherAssignmentCard = memo(({
   assignment,
   onStatusChange,
   isProcessing = false,
+  isExiting = false,
+  isExitLocked = false,
+  preserveCompletedTheme = false,
   statusResolver = getPublisherAssignmentStatus
 }) => {
   const displayStatus = statusResolver(assignment);
-  const isCompleted = displayStatus === CAMPAIGN_PROGRESS_STATUSES.COMPLETED;
+  const isCompleted = (
+    displayStatus === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+    && (
+      (!isExiting && !isExitLocked)
+      || (preserveCompletedTheme && (isExitLocked || isExiting))
+    )
+  );
   const config = isCompleted ? ADDRESS_CARD_THEMES.completed : ADDRESS_CARD_THEMES.inProgress;
   const snapshot = assignment.addressSnapshot || {};
   const displayAddress = getDisplayAddress(snapshot);
-  const { street: addressStreet, number: addressNumber } = splitDisplayAddress(displayAddress);
   const navigationUrls = getAddressNavigationUrls(snapshot);
-  const titleColorStrong = config.titleColor.replace('-800', '-950');
-  const statusLabel = isCompleted ? 'Completada' : 'En progreso';
   const actionLabel = isCompleted ? 'En progreso' : 'Completada';
   const nextStatus = isCompleted
     ? CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
     : CAMPAIGN_PROGRESS_STATUSES.COMPLETED;
 
-  const renderAddressTitle = (className) => (
-    <h4
-      className={`${className} break-words`}
-      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-    >
-      {addressNumber ? (
-        <>
-          <span className="md:hidden">
-            <span className={`block ${config.titleColor}`}>{addressStreet}</span>
-            <span className={`block ${titleColorStrong}`}>{addressNumber}</span>
-          </span>
-          <span className={`hidden md:inline ${config.titleColor}`}>{displayAddress}</span>
-        </>
-      ) : (
-        <span className={config.titleColor}>{displayAddress}</span>
-      )}
-    </h4>
-  );
+  const showProcessingLabel = isProcessing && !isExiting && !isExitLocked;
+  const buttonDisabled = isProcessing || isExiting || isExitLocked;
 
   return (
     <div
       id={`campaign-assignment-card-${assignment.id}`}
       className={`
-        group relative cursor-default
+        group relative cursor-default assignment-card-exit-target
         bg-gradient-to-br ${config.bgGradient}
         border-2 ${config.borderColor} ${config.hoverBorder}
         rounded-2xl overflow-hidden
         shadow-lg ${config.hoverShadow}
-        hover:shadow-2xl hover:scale-[1.01]
-        transition-all duration-300 ease-out
+        ${isExiting
+          ? (preserveCompletedTheme ? 'assignment-card--exiting-left' : 'assignment-card--exiting')
+          : 'hover:shadow-2xl'}
+        ${isExitLocked && !isExiting ? 'pointer-events-none' : ''}
       `}
     >
       <div className="relative px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-white/40">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <div className={`${config.iconBg} p-3 rounded-xl shadow-sm backdrop-blur-sm border border-white/20 group-hover:shadow-md transition-shadow`}>
-              {isCompleted ? (
-                <Icon name="checkCircle" size={24} className={config.iconColor} />
-              ) : (
-                <i className={`fas fa-house text-xl ${config.iconColor}`} />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              {renderAddressTitle('text-lg font-bold')}
-              <p className={`mt-1 text-sm font-medium ${config.subtitleColor}`}>
-                {snapshot.territoryName || 'Territorio'}
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className={`${config.iconBg} p-3 rounded-xl shadow-sm backdrop-blur-sm border border-white/20 group-hover:shadow-md transition-shadow`}>
+            {isCompleted ? (
+              <Icon name="checkCircle" size={24} className={config.iconColor} />
+            ) : (
+              <i className={`fas fa-house text-xl ${config.iconColor}`} />
+            )}
           </div>
-
-          <div className={`${config.badgeBg} px-3 py-1.5 rounded-full flex items-center space-x-2 shadow-sm border`}>
-            <div
-              className={`w-2 h-2 rounded-full ${isCompleted ? '' : 'animate-pulse'}`}
-              style={{ backgroundColor: config.accentColor }}
-            />
-            <span className="text-sm font-medium">{statusLabel}</span>
+          <div className="flex-1 min-w-0">
+            <h4
+              className={`text-lg font-bold break-words ${config.titleColor}`}
+              style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+            >
+              {displayAddress}
+            </h4>
           </div>
         </div>
       </div>
@@ -545,8 +582,8 @@ const PublisherAssignmentCard = ({
 
           <button
             type="button"
-            onClick={() => onStatusChange(nextStatus)}
-            disabled={isProcessing}
+            onClick={() => onStatusChange(assignment.id, nextStatus)}
+            disabled={buttonDisabled}
             className={`
               px-4 py-2 rounded-xl font-semibold text-sm shrink-0
               ${config.primaryButton}
@@ -555,7 +592,7 @@ const PublisherAssignmentCard = ({
               shadow-lg hover:shadow-xl
             `}
           >
-            {isProcessing ? 'Procesando...' : actionLabel}
+            {showProcessingLabel ? 'Procesando...' : actionLabel}
           </button>
         </div>
       </div>
@@ -570,7 +607,133 @@ const PublisherAssignmentCard = ({
       <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
     </div>
   );
-};
+}, (prev, next) => (
+  prev.assignment === next.assignment
+  && prev.isProcessing === next.isProcessing
+  && prev.isExiting === next.isExiting
+  && prev.isExitLocked === next.isExitLocked
+  && prev.preserveCompletedTheme === next.preserveCompletedTheme
+  && prev.onStatusChange === next.onStatusChange
+  && prev.statusResolver === next.statusResolver
+));
+
+const AnimatedAssignmentCardSlot = memo(({
+  assignment,
+  isExiting = false,
+  isPinnedRemnant = false,
+  preserveCompletedTheme = false,
+  isLast = false,
+  onStatusChange,
+  onExitAnimationComplete = null,
+  isProcessing = false,
+  statusResolver = getPublisherAssignmentStatus
+}) => {
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  const [rowCollapsed, setRowCollapsed] = useState(false);
+  const [measuredHeight, setMeasuredHeight] = useState(null);
+  const contentRef = useRef(null);
+  const rowRef = useRef(null);
+  const exitCompleteRef = useRef(false);
+
+  const handleRowAnimationEnd = useCallback((event) => {
+    if (event.target !== rowRef.current || !isAnimatingOut || exitCompleteRef.current) return;
+    const animationName = event.animationName || '';
+    if (animationName !== 'assignment-row-exit' && animationName !== 'assignment-row-exit-last') return;
+
+    exitCompleteRef.current = true;
+    setRowCollapsed(true);
+    window.requestAnimationFrame(() => {
+      onExitAnimationComplete?.(assignment.id);
+    });
+  }, [assignment.id, isAnimatingOut, onExitAnimationComplete]);
+
+  useLayoutEffect(() => {
+    if (!isExiting && !isPinnedRemnant) {
+      exitCompleteRef.current = false;
+      setRowCollapsed(false);
+    }
+  }, [isExiting, isPinnedRemnant]);
+
+  useLayoutEffect(() => {
+    if (isAnimatingOut || isPinnedRemnant || rowCollapsed) return;
+    const nextHeight = contentRef.current?.offsetHeight ?? 0;
+    if (nextHeight > 0 && nextHeight !== measuredHeight) {
+      setMeasuredHeight(nextHeight);
+    }
+  });
+
+  useLayoutEffect(() => {
+    if (!isExiting) {
+      setIsAnimatingOut(false);
+      return undefined;
+    }
+
+    if (!measuredHeight) return undefined;
+
+    let raf2 = 0;
+    const raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        setIsAnimatingOut(true);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+    };
+  }, [isExiting, measuredHeight, assignment.id]);
+
+  const useFloaterLayout = measuredHeight != null;
+
+  if (isPinnedRemnant || rowCollapsed) {
+    return (
+      <div
+        ref={rowRef}
+        className="assignment-card-exit-row assignment-card-exit-row--collapsed"
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={rowRef}
+      className="assignment-card-exit-row"
+      data-exiting={isAnimatingOut ? 'true' : 'false'}
+      data-exit-direction={preserveCompletedTheme ? 'left' : 'right'}
+      onAnimationEnd={handleRowAnimationEnd}
+      style={{
+        '--assignment-row-height': measuredHeight ? `${measuredHeight}px` : undefined,
+        '--assignment-row-gap': isLast ? '0px' : '1rem',
+        height: useFloaterLayout && !isAnimatingOut ? measuredHeight : undefined
+      }}
+    >
+      <div className={useFloaterLayout ? 'assignment-card-exit-floater' : undefined}>
+        <div ref={contentRef}>
+          <PublisherAssignmentCard
+            assignment={assignment}
+            onStatusChange={onStatusChange}
+            isProcessing={isProcessing}
+            isExiting={isAnimatingOut}
+            isExitLocked={isExiting}
+            preserveCompletedTheme={preserveCompletedTheme}
+            statusResolver={statusResolver}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}, (prev, next) => (
+  prev.assignment === next.assignment
+  && prev.isExiting === next.isExiting
+  && prev.isPinnedRemnant === next.isPinnedRemnant
+  && prev.preserveCompletedTheme === next.preserveCompletedTheme
+  && prev.isProcessing === next.isProcessing
+  && prev.isLast === next.isLast
+  && prev.onStatusChange === next.onStatusChange
+  && prev.onExitAnimationComplete === next.onExitAnimationComplete
+  && prev.statusResolver === next.statusResolver
+));
 
 const PublisherAssignmentsSection = ({
   activeCampaign,
@@ -584,6 +747,77 @@ const PublisherAssignmentsSection = ({
   statusResolver = getPublisherAssignmentStatus,
   onOpenTerritoryMap = null
 }) => {
+  const [exitingAssignmentId, setExitingAssignmentId] = useState(null);
+  const [processingAssignmentId, setProcessingAssignmentId] = useState(null);
+  const pendingExitRef = useRef(null);
+  const exitingOverlayRef = useRef(null);
+
+  const visibleGroupedAssignments = useMemo(() => {
+    if (!exitingAssignmentId || !exitingOverlayRef.current) return groupedAssignments;
+    return pinExitingAssignmentInGroups(groupedAssignments, exitingOverlayRef.current);
+  }, [groupedAssignments, exitingAssignmentId]);
+
+  const pinnedAssignmentIds = useMemo(() => {
+    if (!exitingAssignmentId) return new Set();
+    const stillInFilter = groupedAssignments.some((group) =>
+      group.assignments.some((item) => item.id === exitingAssignmentId)
+    );
+    return stillInFilter ? new Set() : new Set([exitingAssignmentId]);
+  }, [groupedAssignments, exitingAssignmentId]);
+
+  const runStatusChange = useCallback(async (assignmentId, status) => {
+    setProcessingAssignmentId(assignmentId);
+    try {
+      await onStatusChange(assignmentId, status);
+    } finally {
+      setProcessingAssignmentId(null);
+    }
+  }, [onStatusChange]);
+
+  const handleExitAnimationComplete = useCallback(async (assignmentId) => {
+    const pending = pendingExitRef.current;
+    if (!pending || pending.assignmentId !== assignmentId) return;
+
+    pendingExitRef.current = null;
+    try {
+      await onStatusChange(assignmentId, pending.status);
+      await new Promise((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(resolve);
+        });
+      });
+    } finally {
+      exitingOverlayRef.current = null;
+      setExitingAssignmentId(null);
+    }
+  }, [onStatusChange]);
+
+  const handleAnimatedStatusChange = useCallback(async (assignmentId, status) => {
+    const shouldAnimate = shouldAnimateAssignmentExit(status, publisherFilter) && !exitingAssignmentId;
+
+    if (!shouldAnimate) {
+      if (exitingAssignmentId) return;
+      await runStatusChange(assignmentId, status);
+      return;
+    }
+
+    const assignment = assignments.find((item) => item.id === assignmentId);
+    const territoryId = assignment?.territoryId || assignment?.addressSnapshot?.territoryId || 'sin-territorio';
+    const sourceGroup = groupedAssignments.find((group) => group.territoryId === territoryId);
+    const sourceIndex = sourceGroup?.assignments.findIndex((item) => item.id === assignmentId) ?? -1;
+
+    pendingExitRef.current = { assignmentId, status };
+    if (assignment) {
+      exitingOverlayRef.current = {
+        assignment,
+        territoryId,
+        index: sourceIndex
+      };
+    }
+
+    setExitingAssignmentId(assignmentId);
+  }, [assignments, exitingAssignmentId, groupedAssignments, publisherFilter, runStatusChange]);
+
   if (!activeCampaign) {
     return (
       <div className="flex min-h-[calc(100dvh-12rem)] items-center justify-center py-8">
@@ -620,24 +854,26 @@ const PublisherAssignmentsSection = ({
                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
               }`}
             >
-              {option.label}{filterCounts[option.id] != null ? ` (${filterCounts[option.id]})` : ''}
+              {getPublisherFilterLabel(option.id, filterCounts[option.id], option.label)}
+              {filterCounts[option.id] != null ? ` (${filterCounts[option.id]})` : ''}
             </button>
           ))}
         </div>
       </SectionCard>
 
-      {groupedAssignments.length === 0 ? (
+      {visibleGroupedAssignments.length === 0 ? (
         <EmptyState
           icon="bookmark"
           title="No hay direcciones en este filtro"
-          description={'Cambia entre En progreso y Completadas para revisar tus invitaciones.'}
+          description={'Cambia entre Pendientes y Completadas para revisar tus invitaciones.'}
         />
       ) : (
-        groupedAssignments.map((group) => (
+        visibleGroupedAssignments.map((group) => (
           <SectionCard
             key={group.territoryId}
             title={group.territoryName}
             subtitle={`${group.assignments.length} direcci\u00f3n${group.assignments.length !== 1 ? 'es' : ''}`}
+            allowContentOverflow
             rightSlot={onOpenTerritoryMap && group.assignments.length > 0 ? (
               <button
                 type="button"
@@ -649,13 +885,21 @@ const PublisherAssignmentsSection = ({
               </button>
             ) : null}
           >
-            <div className="space-y-4">
-              {group.assignments.map((assignment) => (
-                <PublisherAssignmentCard
+            <div>
+              {group.assignments.map((assignment, index) => (
+                <AnimatedAssignmentCardSlot
                   key={assignment.id}
                   assignment={assignment}
-                  onStatusChange={(status) => onStatusChange(assignment.id, status)}
-                  isProcessing={isProcessing}
+                  isExiting={exitingAssignmentId === assignment.id}
+                  isPinnedRemnant={pinnedAssignmentIds.has(assignment.id)}
+                  preserveCompletedTheme={
+                    exitingAssignmentId === assignment.id
+                    && publisherFilter === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+                  }
+                  isLast={index === group.assignments.length - 1}
+                  onStatusChange={handleAnimatedStatusChange}
+                  onExitAnimationComplete={handleExitAnimationComplete}
+                  isProcessing={processingAssignmentId === assignment.id}
                   statusResolver={statusResolver}
                 />
               ))}

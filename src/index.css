@@ -1134,4 +1134,144 @@ body.leaflet-dragging .quick-proposal-map.leaflet-container {
 
 .animate-slideInRight {
     animation: slideInRight 0.3s ease-out;
-} 
+}
+
+/* Salida de tarjeta de campaña al completar (variante C: escala + deslizar — igual al canvas) */
+@layer components {
+  .assignment-card-exit-row {
+    position: relative;
+    overflow: visible;
+    margin-bottom: 1rem;
+  }
+
+  div:has(> .assignment-card-exit-row[data-exiting='true']) > .assignment-card-exit-row:not([data-exiting='true']) {
+    will-change: transform;
+  }
+
+  .assignment-card-exit-row[data-exiting='true'] {
+    height: var(--assignment-row-height);
+    margin-bottom: var(--assignment-row-gap, 1rem);
+    overflow: hidden;
+    animation: assignment-row-exit 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    z-index: 2;
+  }
+
+  .assignment-card-exit-row[data-exiting='true'][data-exit-direction='left'] {
+    overflow: visible;
+  }
+
+  .assignment-card-exit-row--collapsed {
+    height: 0 !important;
+    margin-bottom: 0 !important;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .assignment-card-exit-row:last-child {
+    margin-bottom: 0;
+  }
+
+  @keyframes assignment-row-exit {
+    from {
+      height: var(--assignment-row-height);
+      margin-bottom: var(--assignment-row-gap, 1rem);
+    }
+
+    to {
+      height: 0;
+      margin-bottom: 0;
+    }
+  }
+
+  .assignment-card-exit-row:last-child[data-exiting='true'] {
+    animation-name: assignment-row-exit-last;
+  }
+
+  @keyframes assignment-row-exit-last {
+    from {
+      height: var(--assignment-row-height);
+      margin-bottom: 0;
+    }
+
+    to {
+      height: 0;
+      margin-bottom: 0;
+    }
+  }
+
+  .assignment-card-exit-floater {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+  }
+
+  .assignment-card-exit-target {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+
+  @keyframes assignment-card-exit-scale-slide {
+    from {
+      transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+      opacity: 1;
+    }
+
+    to {
+      transform: translate3d(105%, 0, 0) scale(0.88) rotate(2deg);
+      opacity: 0;
+    }
+  }
+
+  .assignment-card--exiting {
+    animation: assignment-card-exit-scale-slide 480ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  @keyframes assignment-card-exit-scale-slide-left {
+    from {
+      transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+      opacity: 1;
+    }
+
+    to {
+      transform: translate3d(-105%, 0, 0) scale(0.88) rotate(-2deg);
+      opacity: 0;
+    }
+  }
+
+  .assignment-card--exiting-left {
+    animation: assignment-card-exit-scale-slide-left 480ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .assignment-card-exit-row[data-exiting='true'] {
+      animation-duration: 120ms;
+    }
+
+    .assignment-card--exiting {
+      animation: assignment-card-exit-scale-slide 120ms ease forwards;
+    }
+
+    .assignment-card--exiting-left {
+      animation: assignment-card-exit-scale-slide-left 120ms ease forwards;
+    }
+
+    @keyframes assignment-card-exit-scale-slide {
+      to {
+        transform: translate3d(20%, 0, 0) scale(0.96) rotate(0deg);
+        opacity: 0;
+      }
+    }
+
+    @keyframes assignment-card-exit-scale-slide-left {
+      to {
+        transform: translate3d(-20%, 0, 0) scale(0.96) rotate(0deg);
+        opacity: 0;
+      }
+    }
+  }
+}

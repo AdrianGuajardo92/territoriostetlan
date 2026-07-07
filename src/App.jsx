@@ -80,9 +80,6 @@ function AppContent() {
   const activeCampaignCompletedCount = activeCampaignAssignments.filter(
     (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
   ).length;
-  const activeCampaignProgressLabel = activeCampaign
-    ? `${activeCampaign.name} · ${activeCampaignCompletedCount}/${activeCampaignAssignments.length || 0} completadas`
-    : 'Sin campaña activa';
 
   // FunciÃ³n simplificada para limpiar cache
   const handleClearCache = () => {
@@ -203,11 +200,18 @@ function AppContent() {
       view: 'campaigns',
       hasBadge: !!activeCampaign && myPendingCampaignAssignmentsCount > 0,
       badgeCount: myPendingCampaignAssignmentsCount,
-      description: activeCampaign
-        ? `Activa: ${activeCampaignProgressLabel}`
-        : (currentUser?.role === 'admin'
+      ...(activeCampaign ? {
+        campaignSubtitle: {
+          name: activeCampaign.name,
+          progress: currentUser?.role === 'admin'
+            ? `${activeCampaignCompletedCount}/${activeCampaignAssignments.length || 0} completadas`
+            : null
+        }
+      } : {
+        description: currentUser?.role === 'admin'
           ? 'Administrar campañas y revisar el avance'
-          : 'Ver tus direcciones asignadas')
+          : 'Ver tus direcciones asignadas'
+      })
     },
     {
       id: 'myProposals',

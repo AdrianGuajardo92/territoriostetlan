@@ -145,9 +145,16 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                     </div>
                     <div>
                       <p className="font-medium text-sm text-slate-700">{item.text}</p>
-                      {item.description && (
+                      {item.campaignSubtitle ? (
+                        <div className="mt-0.5">
+                          <p className="font-bold text-slate-900 text-xs">{item.campaignSubtitle.name}</p>
+                          {item.campaignSubtitle.progress ? (
+                            <p className="text-slate-500 text-xs">{item.campaignSubtitle.progress}</p>
+                          ) : null}
+                        </div>
+                      ) : item.description ? (
                         <p className="text-slate-400 text-xs mt-0.5">{item.description}</p>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </button>
