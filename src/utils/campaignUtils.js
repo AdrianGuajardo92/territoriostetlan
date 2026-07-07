@@ -389,7 +389,7 @@ export const buildDistributionTargetsFromAssignments = (
   return targets;
 };
 
-const sanitizeDistributionTargets = (
+export const sanitizeDistributionTargets = (
   rawTargets = {},
   participants = [],
   preservedCountsByUser = {},
@@ -405,6 +405,66 @@ const sanitizeDistributionTargets = (
   });
 
   return sanitized;
+};
+
+export const prepareDistributionTargetsForApply = (
+  rawTargets = {},
+  participants = [],
+  preservedCountsByUser = {},
+  totalAddresses = 0
+) => sanitizeDistributionTargets(
+  rawTargets,
+  participants,
+  preservedCountsByUser,
+  totalAddresses
+);
+
+export const countAssignmentsByUser = (assignments = []) => (
+  assignments.reduce((accumulator, assignment) => {
+    if (!assignment.assignedUserId) return accumulator;
+    accumulator[assignment.assignedUserId] = (accumulator[assignment.assignedUserId] || 0) + 1;
+    return accumulator;
+  }, {})
+);
+
+export const buildDistributionAssignmentFingerprint = (assignments = []) => {
+  const counts = countAssignmentsByUser(assignments);
+  return Object.keys(counts)
+    .sort()
+    .map((userId) => `${userId}:${counts[userId]}`)
+    .join('|');
+};
+
+export const buildDistributionTargetFingerprint = (targets = {}) => (
+  Object.entries(targets)
+    .filter(([, count]) => (Number(count) || 0) > 0)
+    .sort(([userIdA], [userIdB]) => userIdA.localeCompare(userIdB))
+    .map(([userId, count]) => `${userId}:${Number(count) || 0}`)
+    .join('|')
+);
+
+export const validateRedistributionAddressPool = (
+  pendingUnlockedAssignments = [],
+  addressesToRedistribute = []
+) => {
+  if (addressesToRedistribute.length !== pendingUnlockedAssignments.length) {
+    throw new Error(
+      'Hay asignaciones huérfanas fuera del reparto actual. Regenera el reparto para incluir solo direcciones válidas.'
+    );
+  }
+};
+
+export const verifyDistributionCounts = (assignments = [], participantTargets = {}) => {
+  const counts = countAssignmentsByUser(assignments);
+  const mismatches = Object.entries(participantTargets).filter(([userId, targetCount]) => {
+    const expected = Number(targetCount) || 0;
+    const actual = counts[userId] || 0;
+    return actual !== expected;
+  });
+
+  if (mismatches.length > 0) {
+    throw new Error('El reparto aplicado no coincide con los objetivos configurados. Intenta de nuevo o regenera el reparto.');
+  }
 };
 
 const isDraftCompatible = (draftMeta, addressCount) => {

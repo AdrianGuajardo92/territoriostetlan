@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { CampaignProvider, useCampaigns } from './context/CampaignContext';
 import { BackStackProvider } from './context/BackStackContext';
@@ -80,6 +80,20 @@ function AppContent() {
   const activeCampaignCompletedCount = activeCampaignAssignments.filter(
     (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
   ).length;
+
+  const menuHeaderBadgeCount = useMemo(() => {
+    const roleCount = currentUser?.role === 'admin'
+      ? pendingProposalsCount
+      : userNotificationsCount;
+    const campaignCount = activeCampaign ? myPendingCampaignAssignmentsCount : 0;
+    return roleCount + campaignCount;
+  }, [
+    activeCampaign,
+    currentUser?.role,
+    myPendingCampaignAssignmentsCount,
+    pendingProposalsCount,
+    userNotificationsCount
+  ]);
 
   // FunciÃ³n simplificada para limpiar cache
   const handleClearCache = () => {
@@ -464,6 +478,7 @@ function AppContent() {
         <LazyTerritoriesView
           onSelectTerritory={handleSelectTerritory}
           onOpenMenu={handleOpenMenu}
+          menuBadgeCount={menuHeaderBadgeCount}
         />
       )}
 

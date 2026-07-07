@@ -36,8 +36,11 @@ import {
   getPendingUnlockedCampaignAssignments,
   getPreservedCampaignAssignments,
   normalizeParticipantConfig,
+  prepareDistributionTargetsForApply,
   sortCampaigns,
-  validateDistributionTargets
+  validateDistributionTargets,
+  validateRedistributionAddressPool,
+  verifyDistributionCounts
 } from '../utils/campaignUtils';
 
 const CampaignContext = createContext();
@@ -181,26 +184,42 @@ export const CampaignProvider = ({ children }) => {
       setCampaignsLoading(false);
     });
 
-    const unsubscribeParticipants = onSnapshot(collection(db, 'campaignParticipants'), (snapshot) => {
-      setCampaignParticipants(snapshot.docs.map((participantDoc) => ({
-        id: participantDoc.id,
-        ...participantDoc.data()
-      })));
-    });
+    const unsubscribeParticipants = isAdmin
+      ? onSnapshot(collection(db, 'campaignParticipants'), (snapshot) => {
+        setCampaignParticipants(snapshot.docs.map((participantDoc) => ({
+          id: participantDoc.id,
+          ...participantDoc.data()
+        })));
+      })
+      : () => {
+        setCampaignParticipants([]);
+      };
 
-    const unsubscribeAssignments = onSnapshot(collection(db, 'campaignAssignments'), (snapshot) => {
-      setCampaignAssignments(snapshot.docs.map((assignmentDoc) => ({
+    const assignmentsQuery = isAdmin
+      ? collection(db, 'campaignAssignments')
+      : query(
+        collection(db, 'campaignAssignments'),
+        where('assignedUserId', '==', currentUser.id)
+      );
+
+    const unsubscribeAssignments = onSnapshot(assignmentsQuery, (snapshot) => {
+      const nextAssignments = snapshot.docs.map((assignmentDoc) => ({
         id: assignmentDoc.id,
         ...assignmentDoc.data()
-      })));
+      }));
+      setCampaignAssignments(nextAssignments);
     });
 
-    const unsubscribeActivity = onSnapshot(collection(db, 'campaignActivity'), (snapshot) => {
-      setCampaignActivity(snapshot.docs.map((activityDoc) => ({
-        id: activityDoc.id,
-        ...activityDoc.data()
-      })));
-    });
+    const unsubscribeActivity = isAdmin
+      ? onSnapshot(collection(db, 'campaignActivity'), (snapshot) => {
+        setCampaignActivity(snapshot.docs.map((activityDoc) => ({
+          id: activityDoc.id,
+          ...activityDoc.data()
+        })));
+      })
+      : () => {
+        setCampaignActivity([]);
+      };
 
     unsubscribesRef.current = [
       unsubscribeCampaigns,
@@ -215,7 +234,7 @@ export const CampaignProvider = ({ children }) => {
       });
       unsubscribesRef.current = [];
     };
-  }, [currentUser, resetCampaignState]);
+  }, [currentUser, isAdmin, resetCampaignState]);
 
   const campaignsSorted = useMemo(() => sortCampaigns(campaigns), [campaigns]);
 
@@ -467,14 +486,21 @@ export const CampaignProvider = ({ children }) => {
     const pendingUnlockedAssignments = getPendingUnlockedCampaignAssignments(existingAssignments);
     const preservedCountsByUser = countPreservedAssignmentsByUser(existingAssignments);
 
-    validateDistributionTargets({
+    const sanitizedTargets = prepareDistributionTargetsForApply(
       participantTargets,
+      campaignSpecificParticipants,
+      preservedCountsByUser,
+      candidateAddresses.length
+    );
+
+    validateDistributionTargets({
+      participantTargets: sanitizedTargets,
       totalAddresses: candidateAddresses.length,
       preservedCountsByUser
     });
 
     const redistributionNeeds = buildRedistributionNeeds({
-      participantTargets,
+      participantTargets: sanitizedTargets,
       preservedCountsByUser
     });
 
@@ -484,6 +510,8 @@ export const CampaignProvider = ({ children }) => {
 
     const pendingAddressIds = new Set(pendingUnlockedAssignments.map((assignment) => assignment.addressId));
     const addressesToRedistribute = candidateAddresses.filter((address) => pendingAddressIds.has(address.id));
+
+    validateRedistributionAddressPool(pendingUnlockedAssignments, addressesToRedistribute);
 
     const generatedAssignments = distributeAddressesAcrossParticipants({
       addresses: addressesToRedistribute,
@@ -522,6 +550,15 @@ export const CampaignProvider = ({ children }) => {
     });
 
     await batch.commit();
+
+    const updatedAssignments = await resolveCampaignItems(
+      'campaignAssignments',
+      campaignId,
+      [],
+      { preferLatest: true }
+    );
+    verifyDistributionCounts(updatedAssignments, sanitizedTargets);
+
     await logCampaignActivity(campaignId, null, 'campaign_assignments_redistributed', {
       redistributedCount: generatedAssignments.length,
       preservedCount: preservedAssignments.length,
@@ -840,7 +877,7 @@ export const CampaignProvider = ({ children }) => {
     await logCampaignActivity(assignment.campaignId, assignmentId, 'assignment_status_changed', {
       from: assignment.status,
       to: nextStatus
-    });
+    }).catch(() => {});
   }, [campaignAssignments, currentUser, isAdmin, logCampaignActivity]);
 
   const handleResetCampaignAssignment = useCallback(async (assignmentId) => {

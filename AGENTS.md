@@ -184,15 +184,20 @@ Archivos `.md` importantes en la raíz:
 
 ## Manejo del Botón Atrás (Móvil)
 
-Prioridad de cierre en `App.jsx` → `handlePopState`:
-1. Vista de revisitas/estudios abierta → cerrar
-2. Vista de propuestas abierta → cerrar
-3. Territorio seleccionado → volver a lista
-4. Modal activo → cerrar
-5. Menú abierto → cerrar
-6. Modal de editar dirección → cerrar
-7. Historial disponible → navegación normal
-8. Sin historial → confirmar salida de app
+Regla obligatoria: cualquier modal, panel, vista full-screen, menú contextual, subvista interna o flujo nuevo que tenga un botón visual de "Volver", "Cerrar" o que funcione como overlay debe responder igual al botón físico/gesto de regreso del celular.
+
+Patrón actual:
+- El historial lo coordina `BackStackProvider`.
+- Usar `useBackHandler({ isOpen, onClose, id })` con un `id` estable y único.
+- Si el componente usa `<Modal modalId="...">`, el `Modal` ya registra el back handler; no duplicarlo en el padre.
+- Si el componente es un portal/overlay custom que no usa `<Modal>`, debe registrar `useBackHandler` directamente.
+- Si dentro de un modal hay sub-vistas con flecha visual de volver, registrar también esa sub-vista para que el back físico vuelva al nivel anterior, no cierre todo el modal.
+- Al abrir una vista nueva inmediatamente después de cerrar otra, cuidar que el stack no quede desfasado; el back físico debe cerrar siempre el último nivel visible.
+
+Criterio de aceptación para cambios futuros:
+- Botón visual "Volver" y botón físico/gesto del celular deben producir el mismo resultado.
+- En flujos anidados, cada back debe retroceder un nivel: subvista → vista padre → modal/vista principal → lista raíz.
+- Validar al menos el flujo móvil afectado antes de cerrar el cambio.
 
 ## Troubleshooting Común
 

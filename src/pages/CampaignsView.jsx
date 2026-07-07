@@ -12,11 +12,14 @@ import {
   getCampaignProgressMeta,
   calculateCampaignTargets,
   getEligibleCampaignAddresses,
+  getCampaignCandidateAddresses,
   groupAssignmentsByTerritory,
   getCampaignAddressDrift,
   sortCampaignSourceAddresses,
   countPreservedAssignmentsByUser,
   resolveDistributionTargets,
+  buildDistributionAssignmentFingerprint,
+  buildDistributionTargetFingerprint,
   formatCampaignDistributionWhatsAppText
 } from '../utils/campaignUtils';
 import {
@@ -31,6 +34,7 @@ import { getAddressNavigationUrls } from '../utils/addressNavigationUrls';
 import { ADDRESS_CARD_THEMES } from '../utils/addressCardThemes';
 import AddressNavigationButtons from '../components/common/AddressNavigationButtons';
 import { isPioneerName, isPioneerUser } from '../config/congregationPioneers';
+import { getRegionalAssembly2026ProgramUrl } from '../config/campaignProgramLinks';
 import { useIsDesktop } from '../hooks/useMediaQuery';
 import {
   CampaignHubStepCard,
@@ -60,6 +64,11 @@ const CAMPAIGN_TYPE_OPTIONS = [
   { value: 'asamblea', label: 'Asamblea', icon: 'building' },
   { value: 'conmemoracion', label: 'Conmemoraci\u00f3n', icon: 'wine' }
 ];
+
+const getCampaignTypeIcon = (type) => {
+  const option = CAMPAIGN_TYPE_OPTIONS.find((item) => item.value === type);
+  return option?.icon || CAMPAIGN_TYPE_OPTIONS[0].icon;
+};
 
 const PARTICIPANT_ASSIGNMENT_MODES = [
   { id: 'auto', label: 'Automático' },
@@ -336,6 +345,7 @@ const SectionCard = ({
   icon = null,
   eyebrow = null,
   tone = 'slate',
+  headerVariant = 'default',
   isCollapsed: isCollapsedProp = false,
   collapsible = false,
   isExpanded = true,
@@ -351,6 +361,7 @@ const SectionCard = ({
     amber: 'from-amber-50 via-white to-white'
   };
 
+  const isDarkHeader = headerVariant === 'dark';
   const isCollapsed = collapsible ? !isExpanded : isCollapsedProp;
 
   const handleHeaderKeyDown = (event) => {
@@ -365,10 +376,15 @@ const SectionCard = ({
     event.stopPropagation();
   };
 
+  const headerClassName = isDarkHeader
+    ? `px-4 py-3 shadow-xl ${isCollapsed ? '' : 'border-b border-white/10'}${collapsible ? ' cursor-pointer select-none transition-colors hover:bg-[#34495e]' : ''}`
+    : `bg-gradient-to-r px-5 ${isCollapsed ? 'py-3' : 'py-4'} ${toneClasses[tone] || toneClasses.slate} ${isCollapsed ? '' : 'border-b border-slate-100'}${collapsible ? ' cursor-pointer select-none transition-colors hover:from-slate-100/60' : ''}`;
+
   return (
     <section className={`${allowContentOverflow ? 'overflow-visible' : 'overflow-hidden'} rounded-[30px] border border-slate-200 bg-white shadow-sm`}>
       <div
-        className={`bg-gradient-to-r px-5 ${isCollapsed ? 'py-3' : 'py-4'} ${toneClasses[tone] || toneClasses.slate} ${isCollapsed ? '' : 'border-b border-slate-100'}${collapsible ? ' cursor-pointer select-none transition-colors hover:from-slate-100/60' : ''}`}
+        className={headerClassName}
+        style={isDarkHeader ? { backgroundColor: '#2C3E50' } : undefined}
         {...(collapsible ? {
           role: 'button',
           tabIndex: 0,
@@ -381,20 +397,26 @@ const SectionCard = ({
         <div className={`flex justify-between gap-3 ${isCollapsed ? 'items-center' : 'items-start'}`}>
           <div className="flex min-w-0 items-start gap-3">
             {icon && (
-              <div className={`flex shrink-0 items-center justify-center bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 ${isCollapsed ? 'h-10 w-10 rounded-xl' : 'h-11 w-11 rounded-2xl'}`}>
+              <div className={`flex shrink-0 items-center justify-center shadow-sm ${isDarkHeader ? 'bg-white/10 text-white ring-1 ring-white/20' : 'bg-white text-slate-700 ring-1 ring-slate-200'} ${isCollapsed ? 'h-10 w-10 rounded-xl' : 'h-11 w-11 rounded-2xl'}`}>
                 <Icon name={icon} size={18} />
               </div>
             )}
             <div className="min-w-0">
-              {eyebrow && <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{eyebrow}</p>}
-              <h2 className={`${isCollapsed ? 'mt-0 text-base' : 'mt-1 text-lg'} font-bold text-gray-900`}>{title}</h2>
-              {!isCollapsed && subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
+              {eyebrow && (
+                <p className={`text-xs font-bold uppercase tracking-[0.18em] ${isDarkHeader ? 'text-white/60' : 'text-slate-500'}`}>
+                  {eyebrow}
+                </p>
+              )}
+              <h2 className={`${isCollapsed ? 'mt-0 text-base' : 'mt-1 text-lg'} font-bold ${isDarkHeader ? 'text-white' : 'text-gray-900'}`}>{title}</h2>
+              {!isCollapsed && subtitle && (
+                <p className={`mt-1 text-sm ${isDarkHeader ? 'text-white/70' : 'text-gray-500'}`}>{subtitle}</p>
+              )}
             </div>
           </div>
           {(rightSlot || collapsible || summaryLabel) && (
             <div className={`flex shrink-0 items-center gap-2 ${isCollapsed ? '' : 'pt-0.5'}`}>
               {summaryLabel && isCollapsed && (
-                <span className="hidden text-xs font-semibold text-slate-500 lg:inline">
+                <span className={`hidden text-xs font-semibold lg:inline ${isDarkHeader ? 'text-white/60' : 'text-slate-500'}`}>
                   {summaryLabel}
                 </span>
               )}
@@ -407,7 +429,7 @@ const SectionCard = ({
                 <Icon
                   name="chevronRight"
                   size={18}
-                  className={`shrink-0 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                  className={`shrink-0 transition-transform duration-200 ${isDarkHeader ? 'text-white/60' : 'text-slate-400'} ${isExpanded ? 'rotate-90' : ''}`}
                 />
               )}
             </div>
@@ -500,18 +522,12 @@ const PublisherAssignmentCard = memo(({
   statusResolver = getPublisherAssignmentStatus
 }) => {
   const displayStatus = statusResolver(assignment);
-  const isCompleted = (
-    displayStatus === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
-    && (
-      (!isExiting && !isExitLocked)
-      || (preserveCompletedTheme && (isExitLocked || isExiting))
-    )
-  );
+  const isCompleted = displayStatus === CAMPAIGN_PROGRESS_STATUSES.COMPLETED;
   const config = isCompleted ? ADDRESS_CARD_THEMES.completed : ADDRESS_CARD_THEMES.inProgress;
   const snapshot = assignment.addressSnapshot || {};
   const displayAddress = getDisplayAddress(snapshot);
   const navigationUrls = getAddressNavigationUrls(snapshot);
-  const actionLabel = isCompleted ? 'En progreso' : 'Completada';
+  const actionLabel = isCompleted ? 'Invitación entregada' : 'Marcar como entregada';
   const nextStatus = isCompleted
     ? CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
     : CAMPAIGN_PROGRESS_STATUSES.COMPLETED;
@@ -586,13 +602,21 @@ const PublisherAssignmentCard = memo(({
             disabled={buttonDisabled}
             className={`
               px-4 py-2 rounded-xl font-semibold text-sm shrink-0
+              flex items-center gap-2
               ${config.primaryButton}
               disabled:opacity-50 disabled:cursor-not-allowed
               transition-all transform hover:scale-105 active:scale-95
               shadow-lg hover:shadow-xl
             `}
           >
-            {showProcessingLabel ? 'Procesando...' : actionLabel}
+            {showProcessingLabel ? (
+              'Procesando...'
+            ) : (
+              <>
+                <Icon name={isCompleted ? 'mailCheck' : 'mail'} size={16} />
+                {actionLabel}
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -778,25 +802,22 @@ const PublisherAssignmentsSection = ({
     const pending = pendingExitRef.current;
     if (!pending || pending.assignmentId !== assignmentId) return;
 
-    pendingExitRef.current = null;
     try {
-      await onStatusChange(assignmentId, pending.status);
-      await new Promise((resolve) => {
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(resolve);
-        });
-      });
+      await runStatusChange(assignmentId, pending.status);
     } finally {
+      pendingExitRef.current = null;
       exitingOverlayRef.current = null;
       setExitingAssignmentId(null);
     }
-  }, [onStatusChange]);
+  }, [runStatusChange]);
 
   const handleAnimatedStatusChange = useCallback(async (assignmentId, status) => {
     const shouldAnimate = shouldAnimateAssignmentExit(status, publisherFilter) && !exitingAssignmentId;
 
     if (!shouldAnimate) {
-      if (exitingAssignmentId) return;
+      if (exitingAssignmentId && assignmentId === exitingAssignmentId) {
+        return;
+      }
       await runStatusChange(assignmentId, status);
       return;
     }
@@ -838,10 +859,25 @@ const PublisherAssignmentsSection = ({
     [CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS]: pendingCount,
     [CAMPAIGN_PROGRESS_STATUSES.COMPLETED]: completedCount
   };
+  const programUrl = getRegionalAssembly2026ProgramUrl(activeCampaign);
 
   return (
     <div className="space-y-4">
-      <SectionCard title={activeCampaign.name}>
+      <SectionCard
+        title={activeCampaign.name}
+        icon={getCampaignTypeIcon(activeCampaign.type)}
+        rightSlot={programUrl ? (
+          <a
+            href={programUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Abrir programa en JW.org"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+          >
+            <Icon name="externalLink" size={16} />
+          </a>
+        ) : null}
+      >
         <div className="flex flex-wrap gap-2">
           {filterOptions.map((option) => (
             <button
@@ -873,12 +909,13 @@ const PublisherAssignmentsSection = ({
             key={group.territoryId}
             title={group.territoryName}
             subtitle={`${group.assignments.length} direcci\u00f3n${group.assignments.length !== 1 ? 'es' : ''}`}
+            headerVariant="dark"
             allowContentOverflow
             rightSlot={onOpenTerritoryMap && group.assignments.length > 0 ? (
               <button
                 type="button"
                 onClick={() => onOpenTerritoryMap(group.assignments, group.territoryName)}
-                className="inline-flex items-center rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-100"
+                className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold text-white backdrop-blur-sm transition-colors hover:bg-white/20"
               >
                 <Icon name="map" size={15} className="mr-2" />
                 Ver mapa
@@ -892,10 +929,7 @@ const PublisherAssignmentsSection = ({
                   assignment={assignment}
                   isExiting={exitingAssignmentId === assignment.id}
                   isPinnedRemnant={pinnedAssignmentIds.has(assignment.id)}
-                  preserveCompletedTheme={
-                    exitingAssignmentId === assignment.id
-                    && publisherFilter === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
-                  }
+                  preserveCompletedTheme={publisherFilter === CAMPAIGN_PROGRESS_STATUSES.COMPLETED}
                   isLast={index === group.assignments.length - 1}
                   onStatusChange={handleAnimatedStatusChange}
                   onExitAnimationComplete={handleExitAnimationComplete}
@@ -1372,7 +1406,7 @@ const CampaignsView = ({ onBack }) => {
   const [publisherFilter, setPublisherFilter] = useState(CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS);
   const [publisherMapState, setPublisherMapState] = useState({
     isOpen: false,
-    assignments: [],
+    territoryId: null,
     territoryName: ''
   });
   const [participantMapState, setParticipantMapState] = useState({
@@ -1401,6 +1435,7 @@ const CampaignsView = ({ onBack }) => {
   const [step3DistributionFilter, setStep3DistributionFilter] = useState('all');
   const [distributionTargets, setDistributionTargets] = useState({});
   const distributionHydratedCampaignRef = useRef(null);
+  const distributionApplyLockRef = useRef(null);
   const distributionSkipSaveRef = useRef(true);
   const distributionSaveTimeoutRef = useRef(null);
   const distributionTargetsRef = useRef({});
@@ -1656,11 +1691,14 @@ const CampaignsView = ({ onBack }) => {
   }, [assignmentsByUserId, participantMapState.userId]);
 
   const handleOpenPublisherTerritoryMap = useCallback((assignments, territoryName) => {
-    setPublisherMapState({ isOpen: true, assignments, territoryName });
+    const territoryId = assignments[0]?.territoryId
+      || assignments[0]?.addressSnapshot?.territoryId
+      || 'sin-territorio';
+    setPublisherMapState({ isOpen: true, territoryId, territoryName });
   }, []);
 
   const handleClosePublisherMap = useCallback(() => {
-    setPublisherMapState({ isOpen: false, assignments: [], territoryName: '' });
+    setPublisherMapState({ isOpen: false, territoryId: null, territoryName: '' });
   }, []);
 
   const handleOpenParticipantMap = useCallback((userId, userName) => {
@@ -1814,9 +1852,22 @@ const CampaignsView = ({ onBack }) => {
     }
   }, []);
 
-  const totalDistributionAddresses = selectedCampaignAssignments.length > 0
-    ? selectedCampaignAssignments.length
-    : allTerritoryAddresses.length;
+  const totalDistributionAddresses = useMemo(() => {
+    if (selectedCampaign) {
+      return getCampaignCandidateAddresses({
+        campaign: selectedCampaign,
+        addresses,
+        territoryMap
+      }).length;
+    }
+
+    return allTerritoryAddresses.length;
+  }, [addresses, allTerritoryAddresses.length, selectedCampaign, territoryMap]);
+
+  const distributionAssignmentFingerprint = useMemo(
+    () => buildDistributionAssignmentFingerprint(selectedCampaignAssignments),
+    [selectedCampaignAssignments]
+  );
 
   const campaignAddressDrift = useMemo(
     () => getCampaignAddressDrift(selectedCampaignAssignments, allTerritoryAddresses),
@@ -1877,6 +1928,15 @@ const CampaignsView = ({ onBack }) => {
     [filteredPublisherAssignments]
   );
 
+  const publisherMapAssignments = useMemo(() => {
+    if (!publisherMapState.isOpen || !publisherMapState.territoryId) return [];
+
+    return personalAssignments.filter((assignment) => {
+      const territoryId = assignment.territoryId || assignment.addressSnapshot?.territoryId || 'sin-territorio';
+      return territoryId === publisherMapState.territoryId;
+    });
+  }, [personalAssignments, publisherMapState.isOpen, publisherMapState.territoryId]);
+
   const completedAssignmentsCount = selectedCampaignAssignments.filter(
     (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
   ).length;
@@ -1936,22 +1996,7 @@ const CampaignsView = ({ onBack }) => {
       return 'Sin campaña activa';
     }
 
-    const name = selectedCampaign.name || 'Campaña sin nombre';
-
-    if (selectedCampaign.status === CAMPAIGN_STATUSES.DRAFT) {
-      return `${name} · Borrador`;
-    }
-    if (selectedCampaign.status === CAMPAIGN_STATUSES.ACTIVE) {
-      return `${name} · ${formatCampaignDate(selectedCampaign.eventDate)}`;
-    }
-    if (selectedCampaign.status === CAMPAIGN_STATUSES.COMPLETED) {
-      return `${name} · Completada`;
-    }
-    if (selectedCampaign.status === CAMPAIGN_STATUSES.ARCHIVED) {
-      return `${name} · Archivada`;
-    }
-
-    return name;
+    return selectedCampaign.name || 'Campaña sin nombre';
   }, [selectedCampaign]);
 
   useEffect(() => {
@@ -1962,16 +2007,30 @@ const CampaignsView = ({ onBack }) => {
     if (!selectedCampaign?.id) {
       setDistributionTargets({});
       distributionHydratedCampaignRef.current = null;
+      distributionApplyLockRef.current = null;
       return;
     }
 
     if (!assignmentsGenerated) {
       setDistributionTargets({});
       distributionHydratedCampaignRef.current = null;
+      distributionApplyLockRef.current = null;
       return;
     }
 
-    const hydrationKey = `${selectedCampaign.id}:${totalDistributionAddresses}:${selectedCampaignAssignments.length}`;
+    if (distributionApplyLockRef.current) {
+      if (distributionAssignmentFingerprint !== distributionApplyLockRef.current) {
+        return;
+      }
+      distributionApplyLockRef.current = null;
+    }
+
+    const hydrationKey = [
+      selectedCampaign.id,
+      totalDistributionAddresses,
+      selectedCampaignAssignments.length,
+      distributionAssignmentFingerprint
+    ].join(':');
 
     if (distributionHydratedCampaignRef.current === hydrationKey) {
       return;
@@ -1993,6 +2052,7 @@ const CampaignsView = ({ onBack }) => {
     distributionHydratedCampaignRef.current = hydrationKey;
   }, [
     assignmentsGenerated,
+    distributionAssignmentFingerprint,
     preservedCountsByUser,
     selectedCampaign?.distributionTargetsDraft,
     selectedCampaign?.distributionTargetsDraftMeta,
@@ -2224,8 +2284,12 @@ const CampaignsView = ({ onBack }) => {
     try {
       await handleUpdateCampaignAssignmentStatus(assignmentId, status);
     } catch (error) {
+      const message = error?.code === 'resource-exhausted'
+        ? 'Firebase alcanzó el límite de uso. Espera unos minutos e intenta de nuevo.'
+        : (error?.message || 'No se pudo actualizar el avance.');
       console.error('Error actualizando estado de campa\u00f1a:', error);
-      showToast(error.message || 'No se pudo actualizar el avance.', 'error');
+      showToast(message, 'error');
+      throw error;
     } finally {
       setIsBusy(false);
     }
@@ -2295,16 +2359,19 @@ const CampaignsView = ({ onBack }) => {
   const handleApplyDistribution = async () => {
     if (!selectedCampaign?.id || !distributionIsBalanced) return;
 
+    const appliedTargets = { ...distributionTargetsRef.current };
+
     setIsBusy(true);
     try {
       await handleRedistributeCampaignAssignments(
         selectedCampaign.id,
-        distributionTargets,
+        appliedTargets,
         { preferLatest: true }
       );
       clearDistributionDraft(selectedCampaign.id);
-      distributionHydratedCampaignRef.current = null;
       distributionSkipSaveRef.current = true;
+      setDistributionTargets(appliedTargets);
+      distributionApplyLockRef.current = buildDistributionTargetFingerprint(appliedTargets);
     } catch (error) {
       console.error('Error actualizando reparto:', error);
       showToast(error.message || 'No se pudo actualizar el reparto.', 'error');
@@ -2468,7 +2535,7 @@ const CampaignsView = ({ onBack }) => {
           isOpen={publisherMapState.isOpen}
           onClose={handleClosePublisherMap}
           campaign={personalCampaign}
-          assignments={publisherMapState.assignments}
+          assignments={publisherMapAssignments}
           onStatusChange={handlePublisherStatusChange}
           isProcessing={isBusy}
           participantName={publisherMapState.territoryName}
@@ -3323,7 +3390,7 @@ const CampaignsView = ({ onBack }) => {
         isOpen={publisherMapState.isOpen}
         onClose={handleClosePublisherMap}
         campaign={personalCampaign}
-        assignments={publisherMapState.assignments}
+        assignments={publisherMapAssignments}
         onStatusChange={handlePublisherStatusChange}
         isProcessing={isBusy}
         participantName={publisherMapState.territoryName}

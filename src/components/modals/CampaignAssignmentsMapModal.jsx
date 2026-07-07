@@ -7,12 +7,16 @@ import useLocationTracking from '../../hooks/useLocationTracking';
 import { optimizeRoute } from '../../utils/routeOptimizer';
 import {
   CAMPAIGN_PROGRESS_STATUSES,
-  formatCampaignDate,
-  formatCampaignTypeLabel,
   getCampaignProgressMeta
 } from '../../utils/campaignUtils';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
 import { getDisplayAddress, getFullAddress } from '../../utils/helpers';
+
+const getCampaignTypeIcon = (type) => {
+  const normalized = String(type || '').toLowerCase();
+  if (normalized === 'conmemoracion' || normalized === 'conmemoración') return 'wine';
+  return 'building';
+};
 
 const GUADALAJARA_CENTER = { lat: 20.6597, lng: -103.3496 };
 const BASE_TILE_LAYERS = [
@@ -209,6 +213,14 @@ const CampaignAssignmentsMapModal = ({
   const tileLoadStatsRef = useRef({ loaded: 0, errors: 0 });
   const prevSelectedAssignmentIdRef = useRef(null);
   const mapOpenLayoutAppliedRef = useRef(false);
+  const prevMarkerStructureKeyRef = useRef('');
+  const assignmentsWithCoordsRef = useRef([]);
+  const sortStateRef = useRef({
+    sortOrder: 'default',
+    optimizedRoute: [],
+    isCalculatingRoute: false,
+    userLocation: null
+  });
   const autoSelectedForOpenRef = useRef(false);
   const { showToast } = useToast();
   const [isMapReady, setIsMapReady] = useState(false);
@@ -216,6 +228,7 @@ const CampaignAssignmentsMapModal = ({
   const [showMapSpinner, setShowMapSpinner] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
+  const [statusOverrides, setStatusOverrides] = useState({});
   const [resolvedCoordinatesById, setResolvedCoordinatesById] = useState({});
   const [isResolvingCoordinates, setIsResolvingCoordinates] = useState(false);
   const [sortState, setSortState] = useState({
@@ -231,7 +244,14 @@ const CampaignAssignmentsMapModal = ({
     stopTracking
   } = useLocationTracking();
 
-  const rawAssignmentsWithMeta = useMemo(() => assignments.map((assignment) => {
+  const assignmentsWithResolvedStatus = useMemo(() => (
+    assignments.map((assignment) => ({
+      ...assignment,
+      status: statusOverrides[assignment.id] ?? assignment.status
+    }))
+  ), [assignments, statusOverrides]);
+
+  const rawAssignmentsWithMeta = useMemo(() => assignmentsWithResolvedStatus.map((assignment) => {
     const snapshot = assignment.addressSnapshot || {};
     return {
       ...assignment,
@@ -239,7 +259,7 @@ const CampaignAssignmentsMapModal = ({
       effectiveStatus: getEffectiveAssignmentStatus(assignment),
       coordinates: getSnapshotCoordinates(snapshot)
     };
-  }), [assignments]);
+  }), [assignmentsWithResolvedStatus]);
 
   const assignmentsWithMeta = useMemo(
     () => rawAssignmentsWithMeta.map((assignment) => ({
@@ -253,6 +273,9 @@ const CampaignAssignmentsMapModal = ({
     () => assignmentsWithMeta.filter((assignment) => assignment.coordinates),
     [assignmentsWithMeta]
   );
+
+  assignmentsWithCoordsRef.current = assignmentsWithCoords;
+  sortStateRef.current = sortState;
 
   const routeCandidates = useMemo(
     () => assignmentsWithCoords.filter((assignment) => assignment.effectiveStatus === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS),
@@ -292,6 +315,24 @@ const CampaignAssignmentsMapModal = ({
         routeOrder: orderMap.get(assignment.id) || null
       }));
   }, [assignmentsWithMeta, sortState.optimizedRoute, sortState.sortOrder]);
+
+  const markerStructureSignature = useMemo(() => {
+    const assignmentPart = displayedAssignments
+      .filter((assignment) => assignment.coordinates)
+      .map((assignment) => `${assignment.id}:${assignment.coordinates.lat},${assignment.coordinates.lng}`)
+      .join('|');
+    const routePart = sortState.optimizedRoute.map((item) => item.id).join(',');
+    const userPart = sortState.userLocation
+      ? `${sortState.userLocation.lat},${sortState.userLocation.lng}`
+      : '';
+    return `${sortState.sortOrder}|${assignmentPart}|${routePart}|${userPart}`;
+  }, [displayedAssignments, sortState.optimizedRoute, sortState.sortOrder, sortState.userLocation]);
+
+  const markerAppearanceSignature = useMemo(() => (
+    displayedAssignments.map((assignment) => (
+      `${assignment.id}:${assignment.effectiveStatus}:${assignment.id === selectedAssignmentId ? 1 : 0}`
+    )).join('|')
+  ), [displayedAssignments, selectedAssignmentId]);
 
   const selectedAssignment = useMemo(
     () => displayedAssignments.find((assignment) => assignment.id === selectedAssignmentId) || null,
@@ -444,6 +485,7 @@ const CampaignAssignmentsMapModal = ({
     }
 
     mapOpenLayoutAppliedRef.current = false;
+    prevMarkerStructureKeyRef.current = '';
     setIsMapReady(false);
     setMapError(false);
     setSortState({
@@ -465,6 +507,9 @@ const CampaignAssignmentsMapModal = ({
     const { fitToMarkers = true } = options;
     if (!mapInstanceRef.current) return;
 
+    const coords = assignmentsWithCoordsRef.current;
+    const userLocation = sortStateRef.current.userLocation;
+
     mapInstanceRef.current.invalidateSize();
     tileLayerRef.current?.redraw?.();
 
@@ -473,8 +518,8 @@ const CampaignAssignmentsMapModal = ({
     }
 
     const allBoundsPoints = [
-      ...assignmentsWithCoords.map((assignment) => [assignment.coordinates.lat, assignment.coordinates.lng]),
-      ...(sortState.userLocation ? [[sortState.userLocation.lat, sortState.userLocation.lng]] : [])
+      ...coords.map((assignment) => [assignment.coordinates.lat, assignment.coordinates.lng]),
+      ...(userLocation ? [[userLocation.lat, userLocation.lng]] : [])
     ];
 
     if (allBoundsPoints.length === 0) {
@@ -491,11 +536,11 @@ const CampaignAssignmentsMapModal = ({
       mapOpenLayoutAppliedRef.current = true;
       mapInstanceRef.current.fitBounds(bounds, {
         padding: [34, 34],
-        maxZoom: assignmentsWithCoords.length > 1 ? 16 : 17,
+        maxZoom: coords.length > 1 ? 16 : 17,
         animate: false,
       });
     }
-  }, [assignmentsWithCoords, sortState.userLocation]);
+  }, []);
 
   const handleResetSort = useCallback(() => {
     setSortState((previous) => ({
@@ -676,7 +721,45 @@ const CampaignAssignmentsMapModal = ({
 
     setResolvedCoordinatesById({});
     setIsResolvingCoordinates(false);
+    setStatusOverrides({});
   }, [isOpen]);
+
+  useEffect(() => {
+    setStatusOverrides((previous) => {
+      if (Object.keys(previous).length === 0) return previous;
+
+      const next = { ...previous };
+      let changed = false;
+
+      assignments.forEach((assignment) => {
+        if (next[assignment.id] !== undefined && assignment.status === next[assignment.id]) {
+          delete next[assignment.id];
+          changed = true;
+        }
+      });
+
+      return changed ? next : previous;
+    });
+  }, [assignments]);
+
+  const handleAssignmentStatusChange = useCallback(async (assignmentId, status) => {
+    setStatusOverrides((previous) => ({
+      ...previous,
+      [assignmentId]: status
+    }));
+
+    try {
+      await onStatusChange(assignmentId, status);
+    } catch (error) {
+      setStatusOverrides((previous) => {
+        if (previous[assignmentId] === undefined) return previous;
+        const next = { ...previous };
+        delete next[assignmentId];
+        return next;
+      });
+      throw error;
+    }
+  }, [onStatusChange]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -698,6 +781,12 @@ const CampaignAssignmentsMapModal = ({
 
   useEffect(() => {
     if (!isOpen || !isMapReady || !mapInstanceRef.current || typeof window.L === 'undefined') return;
+
+    const rebuildKey = `${mapInstanceEpoch}|${markerStructureSignature}`;
+    if (prevMarkerStructureKeyRef.current === rebuildKey) {
+      return;
+    }
+    prevMarkerStructureKeyRef.current = rebuildKey;
 
     const L = window.L;
     clearMapArtifacts();
@@ -787,12 +876,11 @@ const CampaignAssignmentsMapModal = ({
     refreshMapLayout({ fitToMarkers: true });
 
     prevSelectedAssignmentIdRef.current = activeSelectionId;
-  }, [assignmentMap, clearMapArtifacts, displayedAssignments, isMapReady, isOpen, mapInstanceEpoch, refreshMapLayout, sortState.optimizedRoute, sortState.sortOrder, sortState.userLocation]);
+  }, [markerStructureSignature, clearMapArtifacts, isMapReady, isOpen, mapInstanceEpoch, refreshMapLayout]);
 
   useEffect(() => {
     if (!isOpen || !isMapReady || typeof window.L === 'undefined') return;
 
-    const prevSelected = prevSelectedAssignmentIdRef.current;
     const L = window.L;
     let visibleIndex = 0;
 
@@ -806,20 +894,13 @@ const CampaignAssignmentsMapModal = ({
       const displayNumber = getAssignmentMarkerLabel(assignment, visibleIndex, sortState.sortOrder);
       const color = getMarkerColor(assignment);
       const isSelected = assignment.id === selectedAssignmentId;
-      const wasSelected = assignment.id === prevSelected;
 
-      if (wasSelected !== isSelected) {
-        marker.setIcon(createCampaignMarkerIcon(L, { displayNumber, color, isSelected }));
-        marker.setZIndexOffset(isSelected ? 1000 : 0);
-      } else if (isSelected) {
-        marker.setZIndexOffset(1000);
-      } else {
-        marker.setZIndexOffset(0);
-      }
+      marker.setIcon(createCampaignMarkerIcon(L, { displayNumber, color, isSelected }));
+      marker.setZIndexOffset(isSelected ? 1000 : 0);
     });
 
     prevSelectedAssignmentIdRef.current = selectedAssignmentId;
-  }, [displayedAssignments, isMapReady, isOpen, selectedAssignmentId, sortState.sortOrder]);
+  }, [markerAppearanceSignature, isMapReady, isOpen, sortState.sortOrder]);
 
   useEffect(() => {
     if (!isOpen || !isMapReady) return undefined;
@@ -870,20 +951,11 @@ const CampaignAssignmentsMapModal = ({
             >
               <Icon name="arrowLeft" size={22} className="text-red-600" />
             </button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-                  <Icon name="map" size={18} />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="truncate text-xl font-bold text-slate-900">{campaign?.name || 'Mapa de invitaciones'}</h2>
-                  <p className="truncate text-sm text-slate-600">
-                    {participantName ? `Direcciones de ${participantName} · ` : ''}
-                    {assignments.length} direcciones asignadas
-                    {campaign ? ` • ${formatCampaignTypeLabel(campaign.type)} • ${formatCampaignDate(campaign.eventDate)}` : ''}
-                  </p>
-                </div>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
+                <Icon name={getCampaignTypeIcon(campaign?.type)} size={18} />
               </div>
+              <h2 className="truncate text-xl font-bold text-slate-900">{campaign?.name || 'Mapa de invitaciones'}</h2>
             </div>
           </div>
           <button
@@ -1005,11 +1077,17 @@ const CampaignAssignmentsMapModal = ({
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => onStatusChange(selectedAssignment.id, CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS)}
-              disabled={isProcessing || selectedAssignment.effectiveStatus === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS}
-              className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-all disabled:opacity-60 ${
+              onClick={() => handleAssignmentStatusChange(
+                selectedAssignment.id,
+                CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
+              )}
+              disabled={isProcessing}
+              aria-pressed={selectedAssignment.effectiveStatus === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS}
+              className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-all ${
+                isProcessing ? 'disabled:cursor-not-allowed disabled:opacity-60' : ''
+              } ${
                 selectedAssignment.effectiveStatus === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
-                  ? 'border-amber-600 bg-amber-500 text-white'
+                  ? 'border-amber-600 bg-amber-500 text-white shadow-sm'
                   : 'border-slate-200 bg-white text-slate-700 hover:border-amber-400'
               }`}
             >
@@ -1017,11 +1095,17 @@ const CampaignAssignmentsMapModal = ({
             </button>
             <button
               type="button"
-              onClick={() => onStatusChange(selectedAssignment.id, CAMPAIGN_PROGRESS_STATUSES.COMPLETED)}
-              disabled={isProcessing || selectedAssignment.effectiveStatus === CAMPAIGN_PROGRESS_STATUSES.COMPLETED}
-              className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-all disabled:opacity-60 ${
+              onClick={() => handleAssignmentStatusChange(
+                selectedAssignment.id,
+                CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+              )}
+              disabled={isProcessing}
+              aria-pressed={selectedAssignment.effectiveStatus === CAMPAIGN_PROGRESS_STATUSES.COMPLETED}
+              className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-all ${
+                isProcessing ? 'disabled:cursor-not-allowed disabled:opacity-60' : ''
+              } ${
                 selectedAssignment.effectiveStatus === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
-                  ? 'border-emerald-700 bg-emerald-600 text-white'
+                  ? 'border-emerald-700 bg-emerald-600 text-white shadow-sm'
                   : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-400'
               }`}
             >

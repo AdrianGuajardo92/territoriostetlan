@@ -35,14 +35,12 @@ const getCompletedTimestamp = (territory) =>
 const getAssignedTimestamp = (territory) =>
   toTimestamp(territory.assignedDate);
 
-const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
+const TerritoriesView = ({ onSelectTerritory, onOpenMenu, menuBadgeCount = 0 }) => {
   const {
     territories,
     addresses,
     currentUser,
     isLoading,
-    userNotificationsCount,
-    pendingProposalsCount,
     handleAssignTerritory,
     handleReturnTerritory,
     handleCompleteTerritory
@@ -402,16 +400,9 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             <svg className="w-5 h-5" fill="none" stroke="#FFFFFF" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
-            {((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
-              (currentUser?.role !== 'admin' && userNotificationsCount > 0) ||
-              updateAvailable) && (
-              <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium shadow-sm">
-                {updateAvailable && !((currentUser?.role === 'admin' && pendingProposalsCount > 0) ||
-                  (currentUser?.role !== 'admin' && userNotificationsCount > 0))
-                  ? '!'
-                  : currentUser?.role === 'admin'
-                    ? pendingProposalsCount
-                    : userNotificationsCount}
+            {(menuBadgeCount > 0 || updateAvailable) && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-semibold bg-red-500 text-white rounded-full flex items-center justify-center shadow-sm">
+                {menuBadgeCount > 0 ? menuBadgeCount : '!'}
               </span>
             )}
           </button>
