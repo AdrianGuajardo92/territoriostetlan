@@ -157,6 +157,8 @@ export const LazyMapModal = ({ isOpen, ...props }) => {
 };
 
 // Lazy GeneralMapModal - PESADO y no crítico para la carga inicial
+const CAMPAIGN_MAP_LAZY_TRANSITION_MS = 280;
+
 export const preloadCampaignAssignmentsMapModal = () => import('./CampaignAssignmentsMapModal');
 
 export const LazyCampaignAssignmentsMapModal = React.memo(({ isOpen, ...props }) => {
@@ -164,12 +166,31 @@ export const LazyCampaignAssignmentsMapModal = React.memo(({ isOpen, ...props })
     () => import('./CampaignAssignmentsMapModal'),
     [isOpen]
   );
+  const [shouldRender, setShouldRender] = React.useState(isOpen);
+  const isExiting = !isOpen && shouldRender;
 
-  if (!isOpen) return null;
+  React.useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      return undefined;
+    }
+
+    if (!shouldRender) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setShouldRender(false);
+    }, CAMPAIGN_MAP_LAZY_TRANSITION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isOpen, shouldRender]);
+
+  if (!isOpen && !Component && !shouldRender) return null;
 
   if (error) {
+    if (!isOpen && !shouldRender) return null;
+
     return (
-      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black bg-opacity-50">
+      <div className={`fixed inset-0 z-[110] flex items-center justify-center bg-black bg-opacity-50 ${isExiting ? 'campaign-map-panel-exit' : 'campaign-map-panel-enter'}`}>
         <div className="bg-white rounded-lg p-6 max-w-md">
           <p className="text-red-600">Error al cargar mapa de invitaciones</p>
           <button
@@ -184,8 +205,10 @@ export const LazyCampaignAssignmentsMapModal = React.memo(({ isOpen, ...props })
   }
 
   if (isLoading || !Component) {
+    if (!isOpen && !shouldRender) return null;
+
     return (
-      <div className="fixed inset-0 z-[110] flex flex-col bg-white">
+      <div className={`fixed inset-0 z-[110] flex flex-col bg-white ${isExiting ? 'campaign-map-panel-exit' : 'campaign-map-panel-enter'}`}>
         <div className="border-b border-slate-200 bg-slate-50 px-3 py-3 sm:px-4">
           <div className="flex h-12 items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-indigo-100" />

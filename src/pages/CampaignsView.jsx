@@ -534,6 +534,9 @@ const PublisherAssignmentCard = memo(({
 
   const showProcessingLabel = isProcessing && !isExiting && !isExitLocked;
   const buttonDisabled = isProcessing || isExiting || isExitLocked;
+  const desktopActionButtonTheme = isCompleted
+    ? 'sm:bg-green-600 sm:hover:bg-green-700 sm:text-white'
+    : 'sm:bg-slate-700 sm:hover:bg-slate-800 sm:text-white';
 
   return (
     <div
@@ -600,21 +603,26 @@ const PublisherAssignmentCard = memo(({
             type="button"
             onClick={() => onStatusChange(assignment.id, nextStatus)}
             disabled={buttonDisabled}
+            aria-label={actionLabel}
+            title={actionLabel}
             className={`
-              px-4 py-2 rounded-xl font-semibold text-sm shrink-0
-              flex items-center gap-2
-              ${config.primaryButton}
+              h-12 w-12 sm:h-auto sm:w-auto sm:px-4 sm:py-2 rounded-xl font-semibold text-sm shrink-0
+              flex items-center justify-center gap-2
+              bg-green-700 hover:bg-green-800 text-white ${desktopActionButtonTheme}
               disabled:opacity-50 disabled:cursor-not-allowed
               transition-all transform hover:scale-105 active:scale-95
-              shadow-lg hover:shadow-xl
             `}
           >
             {showProcessingLabel ? (
-              'Procesando...'
+              <>
+                <Icon name="loader" size={20} className="animate-spin sm:hidden" />
+                <span className="sr-only sm:not-sr-only">Procesando...</span>
+              </>
             ) : (
               <>
-                <Icon name={isCompleted ? 'mailCheck' : 'mail'} size={16} />
-                {actionLabel}
+                <Icon name="checkCircle" size={20} className="sm:hidden" />
+                <Icon name={isCompleted ? 'mailCheck' : 'mail'} size={16} className="hidden sm:block" />
+                <span className="sr-only sm:not-sr-only">{actionLabel}</span>
               </>
             )}
           </button>
@@ -2561,11 +2569,6 @@ const CampaignsView = ({ onBack }) => {
               <p className="truncate text-xs text-white/70">{adminHeaderSubtitle}</p>
             </div>
           </div>
-          {hasActiveCampaign ? (
-            <span className="inline-flex shrink-0 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 sm:rounded-2xl sm:px-4 sm:py-2 sm:text-sm">
-              Campaña activa
-            </span>
-          ) : null}
         </div>
       </div>
 

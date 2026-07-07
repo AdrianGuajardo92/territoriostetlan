@@ -33,6 +33,11 @@ import {
   LazyUpdatesModal
 } from './components/modals/LazyModals';
 import { CAMPAIGN_PROGRESS_STATUSES } from './utils/campaignUtils';
+import {
+  clearNavigationState,
+  readNavigationState,
+  saveNavigationState
+} from './utils/navigationPersistence';
 
 // Herramientas de inspección (solo desarrollo, eliminadas en producción por tree-shaking)
 import DevClickToSource from './components/DevClickToSource.jsx';
@@ -60,13 +65,20 @@ function AppContent() {
     myPendingCampaignAssignmentsCount
   } = useCampaigns();
   const { showToast } = useToast();
+  const restoredNavigationState = useMemo(() => readNavigationState(), []);
+  const restoredAdminNavigation = restoredNavigationState?.appView === 'modal' && restoredNavigationState.modalId === 'admin'
+    ? restoredNavigationState.admin
+    : null;
   const hasMarkedTerritoriesPaintRef = useRef(false);
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeModal, setActiveModal] = useState(null);
-  const [showCampaigns, setShowCampaigns] = useState(false);
-  const [showMyProposals, setShowMyProposals] = useState(false);
-  const [showMyStudiesAndRevisits, setShowMyStudiesAndRevisits] = useState(false);
+  const [activeModal, setActiveModal] = useState(() => (
+    restoredNavigationState?.appView === 'modal' ? restoredNavigationState.modalId : null
+  ));
+  const [showCampaigns, setShowCampaigns] = useState(() => restoredNavigationState?.appView === 'campaigns');
+  const [showMyProposals, setShowMyProposals] = useState(() => restoredNavigationState?.appView === 'proposals');
+  const [showMyStudiesAndRevisits, setShowMyStudiesAndRevisits] = useState(() => restoredNavigationState?.appView === 'studiesAndRevisits');
+  const [adminInitialNavigation, setAdminInitialNavigation] = useState(restoredAdminNavigation);
   const [primaryViewsReady, setPrimaryViewsReady] = useState(false);
   
   // OPTIMIZACIÃ“N: Font loading state para optimizar FOUT âš¡
@@ -158,6 +170,19 @@ function AppContent() {
   // Restaurar territorio desde sessionStorage si la app se recargÃ³
   useEffect(() => {
     if (currentUser && territories.length > 0 && !selectedTerritory) {
+      if (restoredNavigationState?.appView === 'territory') {
+        const territory = territories.find(t => t.id === restoredNavigationState.territoryId);
+        if (territory) {
+          setSelectedTerritory({
+            ...territory,
+            highlightedAddressId: restoredNavigationState.highlightedAddressId || null
+          });
+        } else {
+          clearNavigationState();
+        }
+        return;
+      }
+
       const lastTerritoryId = sessionStorage.getItem('lastTerritoryId');
       const navigationTimestamp = sessionStorage.getItem('navigationTimestamp');
       
@@ -168,6 +193,11 @@ function AppContent() {
           const territory = territories.find(t => t.id === lastTerritoryId);
           if (territory) {
             setSelectedTerritory(territory);
+            saveNavigationState({
+              appView: 'territory',
+              territoryId: territory.id,
+              highlightedAddressId: null
+            });
             // Limpiar sessionStorage despuÃ©s de restaurar
             sessionStorage.removeItem('lastTerritoryId');
             sessionStorage.removeItem('navigationTimestamp');
@@ -179,7 +209,16 @@ function AppContent() {
         }
       }
     }
-  }, [currentUser, territories, selectedTerritory]);
+  }, [currentUser, territories, selectedTerritory, restoredNavigationState]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    if (activeModal === 'admin' && currentUser.role !== 'admin') {
+      setActiveModal(null);
+      setAdminInitialNavigation(null);
+      clearNavigationState();
+    }
+  }, [activeModal, currentUser]);
 
   // Botón físico "atrás" del celular: coordinado por BackStackProvider.
   // Cada overlay se registra a sí mismo en orden LIFO. El back siempre cierra
@@ -279,6 +318,26 @@ function AppContent() {
     return true;
   });
 
+  const resetToTerritories = () => {
+    setSelectedTerritory(null);
+    setActiveModal(null);
+    setAdminInitialNavigation(null);
+    setShowCampaigns(false);
+    setShowMyProposals(false);
+    setShowMyStudiesAndRevisits(false);
+    clearNavigationState();
+  };
+
+  const openExclusiveView = (appView) => {
+    setSelectedTerritory(null);
+    setActiveModal(null);
+    setAdminInitialNavigation(null);
+    setShowCampaigns(appView === 'campaigns');
+    setShowMyProposals(appView === 'proposals');
+    setShowMyStudiesAndRevisits(appView === 'studiesAndRevisits');
+    saveNavigationState({ appView });
+  };
+
   const handleOpenModal = (modalId) => {
     // CERRAR EL MENÃš cuando se abre cualquier modal
     if (isMenuOpen) {
@@ -300,46 +359,84 @@ function AppContent() {
       handleOpenMyStudiesAndRevisits();
       return;
     }
-    
+
+    setSelectedTerritory(null);
+    setShowCampaigns(false);
+    setShowMyProposals(false);
+    setShowMyStudiesAndRevisits(false);
+
+    if (modalId === 'admin') {
+      const nextAdminNavigation = { view: 'actions', childModal: null };
+      setAdminInitialNavigation(nextAdminNavigation);
+      saveNavigationState({
+        appView: 'modal',
+        modalId,
+        admin: nextAdminNavigation
+      });
+    } else {
+      setAdminInitialNavigation(null);
+      saveNavigationState({ appView: 'modal', modalId });
+    }
+
     setActiveModal(modalId);
   };
 
   const handleCloseModal = () => {
     setActiveModal(null);
+    setAdminInitialNavigation(null);
+    clearNavigationState();
   };
 
   // El historial del browser lo coordina BackStackProvider vía useBackHandler.
   // Los handlers solo actualizan el estado local.
   const handleSelectTerritory = (territory, addressIdToHighlight = null) => {
     setSelectedTerritory({ ...territory, highlightedAddressId: addressIdToHighlight });
+    saveNavigationState({
+      appView: 'territory',
+      territoryId: territory.id,
+      highlightedAddressId: addressIdToHighlight || null
+    });
   };
 
   const handleBackFromTerritory = () => {
-    setSelectedTerritory(null);
+    resetToTerritories();
   };
 
   const handleOpenMyProposals = () => {
-    setShowMyProposals(true);
+    openExclusiveView('proposals');
   };
 
   const handleBackFromMyProposals = () => {
-    setShowMyProposals(false);
+    resetToTerritories();
   };
 
   const handleOpenCampaigns = () => {
-    setShowCampaigns(true);
+    openExclusiveView('campaigns');
   };
 
   const handleBackFromCampaigns = () => {
-    setShowCampaigns(false);
+    resetToTerritories();
   };
 
   const handleOpenMyStudiesAndRevisits = () => {
-    setShowMyStudiesAndRevisits(true);
+    openExclusiveView('studiesAndRevisits');
   };
 
   const handleBackFromMyStudiesAndRevisits = () => {
-    setShowMyStudiesAndRevisits(false);
+    resetToTerritories();
+  };
+
+  const handleAdminNavigationChange = (adminNavigation) => {
+    saveNavigationState({
+      appView: 'modal',
+      modalId: 'admin',
+      admin: adminNavigation
+    });
+  };
+
+  const handleLogout = () => {
+    clearNavigationState();
+    logout();
   };
 
   const handleOpenMenu = () => {
@@ -489,7 +586,7 @@ function AppContent() {
         menuItems={filteredMenuItems}
         activeItem={activeModal}
         onOpenModal={handleOpenModal}
-        handleLogout={logout}
+        handleLogout={handleLogout}
       />
 
       {/* CORRECCIÃ“N: Modales sin Suspense - Ya optimizados âš¡ */}
@@ -507,6 +604,9 @@ function AppContent() {
           isOpen
           onClose={handleCloseModal}
           modalId="admin-modal"
+          initialView={adminInitialNavigation?.view}
+          initialChildModal={adminInitialNavigation?.childModal}
+          onNavigationChange={handleAdminNavigationChange}
         />
       )}
       {activeModal === 'password' && (
@@ -538,4 +638,3 @@ function App() {
 }
 
 export default App; 
-

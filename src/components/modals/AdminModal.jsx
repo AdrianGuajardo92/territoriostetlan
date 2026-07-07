@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import ActionTypeBadge, { getActionType } from '../common/ActionTypeBadge';
@@ -26,11 +26,25 @@ import {
   saveQuickProposalDraft
 } from '../../utils/quickProposalDrafts';
 
+const ADMIN_VIEW_IDS = new Set(['actions', 'backup', 'no_access', 'proposals', 'users']);
+const ADMIN_CHILD_MODAL_IDS = new Set([
+  'admin-list',
+  'archived-addresses',
+  'export-addresses',
+  'pioneer-list',
+  'publisher-list',
+  'stats',
+  'territory-management',
+  'user-management'
+]);
+
 const AdminModal = (props = {}) => {
   const {
     isOpen = false,
     onClose = () => {},
     initialView = 'actions',
+    initialChildModal = null,
+    onNavigationChange = () => {},
     modalId = 'admin-modal'
   } = props;
   const {
@@ -47,14 +61,16 @@ const AdminModal = (props = {}) => {
   } = useApp();
   
   const pendingProposalsCount = proposals.filter(p => p.status === 'pending').length;
+  const normalizedInitialView = ADMIN_VIEW_IDS.has(initialView) ? initialView : 'actions';
+  const normalizedInitialChildModal = ADMIN_CHILD_MODAL_IDS.has(initialChildModal) ? initialChildModal : null;
   
   const { showToast } = useToast();
-  const [view, setView] = useState('actions');
-  const [showArchivedAddresses, setShowArchivedAddresses] = useState(false);
+  const [view, setView] = useState(normalizedInitialView);
+  const [showArchivedAddresses, setShowArchivedAddresses] = useState(normalizedInitialChildModal === 'archived-addresses');
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [showStatsModal, setShowStatsModal] = useState(false); // Estado para las estadísticas completas
-  const [showUserManagement, setShowUserManagement] = useState(false); // Estado para el modal de gestión de usuarios
+  const [showStatsModal, setShowStatsModal] = useState(normalizedInitialChildModal === 'stats'); // Estado para las estadísticas completas
+  const [showUserManagement, setShowUserManagement] = useState(normalizedInitialChildModal === 'user-management'); // Estado para el modal de gestión de usuarios
   const [proposalFilter, setProposalFilter] = useState('pending'); // Filtro para propuestas: all, pending, approved, rejected
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // Estado para confirmación de eliminación
   const [quickProposalTerritory, setQuickProposalTerritory] = useState(() => hydrateQuickProposalDrafts().territories);
@@ -62,6 +78,11 @@ const AdminModal = (props = {}) => {
   const [openTerritoryDropdown, setOpenTerritoryDropdown] = useState(null); // proposalId | null
   const territoryDropdownRef = useRef(null);
   const [copiedProposalId, setCopiedProposalId] = useState(null);
+  const navigateToAdminView = useCallback((nextView) => {
+    const normalizedNextView = ADMIN_VIEW_IDS.has(nextView) ? nextView : 'actions';
+    setView(normalizedNextView);
+    onNavigationChange({ view: normalizedNextView, childModal: null });
+  }, [onNavigationChange]);
 
   // El ConfirmDialog inline para borrar propuestas usa <Modal>, pero lo
   // creamos con `isOpen={true}` condicional → su id del back stack debe ser
@@ -69,7 +90,7 @@ const AdminModal = (props = {}) => {
   useBackHandler({ isOpen: !!showDeleteConfirm, onClose: () => setShowDeleteConfirm(null), id: 'admin-delete-proposal-confirm' });
   useBackHandler({
     isOpen: isOpen && view !== 'actions' && view !== 'no_access',
-    onClose: () => setView('actions'),
+    onClose: () => navigateToAdminView('actions'),
     id: `${modalId}-subview`
   });
 
@@ -234,18 +255,42 @@ const AdminModal = (props = {}) => {
   };
   
   // Estados para modales de lista de usuarios
-  const [showAdminListModal, setShowAdminListModal] = useState(false);
-  const [showPublisherListModal, setShowPublisherListModal] = useState(false);
-  const [showPioneerListModal, setShowPioneerListModal] = useState(false);
+  const [showAdminListModal, setShowAdminListModal] = useState(normalizedInitialChildModal === 'admin-list');
+  const [showPublisherListModal, setShowPublisherListModal] = useState(normalizedInitialChildModal === 'publisher-list');
+  const [showPioneerListModal, setShowPioneerListModal] = useState(normalizedInitialChildModal === 'pioneer-list');
   
   // Estado para el modal de exportación de direcciones
-  const [showExportAddressesModal, setShowExportAddressesModal] = useState(false);
+  const [showExportAddressesModal, setShowExportAddressesModal] = useState(normalizedInitialChildModal === 'export-addresses');
 
   const DRIVE_BACKUP_FOLDER_URL = 'https://drive.google.com/drive/folders/1uMpc1_nqXHyJLL2cler63hcxhFZJO8Fj';
   const [isUploadingDriveBackup, setIsUploadingDriveBackup] = useState(false);
 
   // Estado para el modal de gestión de territorios
-  const [showTerritoryManagementModal, setShowTerritoryManagementModal] = useState(false);
+  const [showTerritoryManagementModal, setShowTerritoryManagementModal] = useState(normalizedInitialChildModal === 'territory-management');
+
+  const openAdminChildModal = (childModal) => {
+    setShowArchivedAddresses(childModal === 'archived-addresses');
+    setShowStatsModal(childModal === 'stats');
+    setShowUserManagement(childModal === 'user-management');
+    setShowAdminListModal(childModal === 'admin-list');
+    setShowPublisherListModal(childModal === 'publisher-list');
+    setShowPioneerListModal(childModal === 'pioneer-list');
+    setShowExportAddressesModal(childModal === 'export-addresses');
+    setShowTerritoryManagementModal(childModal === 'territory-management');
+    onNavigationChange({ view, childModal });
+  };
+
+  const closeAdminChildModal = (childModal) => {
+    if (childModal === 'archived-addresses') setShowArchivedAddresses(false);
+    if (childModal === 'stats') setShowStatsModal(false);
+    if (childModal === 'user-management') setShowUserManagement(false);
+    if (childModal === 'admin-list') setShowAdminListModal(false);
+    if (childModal === 'publisher-list') setShowPublisherListModal(false);
+    if (childModal === 'pioneer-list') setShowPioneerListModal(false);
+    if (childModal === 'export-addresses') setShowExportAddressesModal(false);
+    if (childModal === 'territory-management') setShowTerritoryManagementModal(false);
+    onNavigationChange({ view, childModal: null });
+  };
 
   // Función helper para formatear valores en propuestas
   const formatValue = (value) => {
@@ -329,12 +374,9 @@ const AdminModal = (props = {}) => {
   };
 
   useEffect(() => {
-    if (isOpen) {
-      setView(currentUser?.role === 'admin' ? initialView : 'no_access');
-      // Resetear el estado de ArchivedAddresses cuando se abre AdminModal
-      setShowArchivedAddresses(false);
-    }
-  }, [currentUser, initialView, isOpen]);
+    if (!isOpen) return;
+    setView(currentUser?.role === 'admin' ? normalizedInitialView : 'no_access');
+  }, [currentUser?.role, isOpen, normalizedInitialView]);
 
   // Funciones de backup
   const handleBackupAddressesAndTerritories = async () => {
@@ -353,7 +395,7 @@ const AdminModal = (props = {}) => {
 
   // Función para mostrar el modal de selección de formato de exportación
   const handleBackupAddressesOnly = () => {
-    setShowExportAddressesModal(true);
+    openAdminChildModal('export-addresses');
   };
 
   // Función para exportar direcciones completas
@@ -496,7 +538,7 @@ const AdminModal = (props = {}) => {
       icon: 'fas fa-clipboard-check',
       badge: pendingProposalsCount,
       color: 'orange',
-      action: () => setView('proposals')
+      action: () => navigateToAdminView('proposals')
     },
     {
       id: 'users',
@@ -504,7 +546,7 @@ const AdminModal = (props = {}) => {
       description: 'Administrar publicadores',
       icon: 'fas fa-users-cog',
       color: 'blue',
-      action: () => setView('users')
+      action: () => navigateToAdminView('users')
     },
     {
       id: 'territories',
@@ -512,7 +554,7 @@ const AdminModal = (props = {}) => {
       description: 'Liberar y administrar territorios',
       icon: 'fas fa-map-marked-alt',
       color: 'indigo',
-      action: () => setShowTerritoryManagementModal(true)
+      action: () => openAdminChildModal('territory-management')
     },
     {
       id: 'backup',
@@ -520,7 +562,7 @@ const AdminModal = (props = {}) => {
       description: 'Crear backups del sistema',
       icon: 'fas fa-download',
       color: 'green',
-      action: () => setView('backup')
+      action: () => navigateToAdminView('backup')
     },
     {
       id: 'archived',
@@ -528,9 +570,7 @@ const AdminModal = (props = {}) => {
       description: 'Ver historial de direcciones eliminadas',
       icon: 'fas fa-archive',
       color: 'gray',
-      action: () => {
-        setShowArchivedAddresses(!showArchivedAddresses);
-      }
+      action: () => openAdminChildModal('archived-addresses')
     },
     {
       id: 'stats',
@@ -538,7 +578,7 @@ const AdminModal = (props = {}) => {
       description: 'Análisis detallado con filtros y exportación',
       icon: 'fas fa-chart-line',
       color: 'purple',
-      action: () => setShowStatsModal(true)
+      action: () => openAdminChildModal('stats')
     }
   ];
   
@@ -1359,7 +1399,7 @@ const AdminModal = (props = {}) => {
               {/* Acordeón Administradores */}
               <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl shadow-lg border-2 border-purple-200 overflow-hidden">
                 <button
-                  onClick={() => setShowAdminListModal(true)}
+                  onClick={() => openAdminChildModal('admin-list')}
                   className="w-full p-6 text-left hover:bg-purple-100/50 transition-colors"
                 >
                   <div className="flex items-center justify-between">
@@ -1386,7 +1426,7 @@ const AdminModal = (props = {}) => {
               {/* Acordeón Publicadores */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-lg border-2 border-blue-200 overflow-hidden">
                 <button
-                  onClick={() => setShowPublisherListModal(true)}
+                  onClick={() => openAdminChildModal('publisher-list')}
                   className="w-full p-6 text-left hover:bg-blue-100/50 transition-colors"
                 >
                   <div className="flex items-center justify-between">
@@ -1413,7 +1453,7 @@ const AdminModal = (props = {}) => {
               {/* Acordeón Precursores */}
               <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-2xl shadow-lg border-2 border-slate-200 overflow-hidden">
                 <button
-                  onClick={() => setShowPioneerListModal(true)}
+                  onClick={() => openAdminChildModal('pioneer-list')}
                   className="w-full p-6 text-left hover:bg-slate-50 transition-colors"
                 >
                   <div className="flex items-center justify-between">
@@ -1439,7 +1479,7 @@ const AdminModal = (props = {}) => {
               {/* Gestión completa (CRUD) */}
               <div className="bg-gradient-to-br from-emerald-50 to-teal-100 rounded-2xl shadow-lg border-2 border-emerald-200 overflow-hidden">
                 <button
-                  onClick={() => setShowUserManagement(true)}
+                  onClick={() => openAdminChildModal('user-management')}
                   className="w-full p-6 text-left hover:bg-emerald-100/50 transition-colors"
                 >
                   <div className="flex items-center justify-between">
@@ -1649,7 +1689,7 @@ const AdminModal = (props = {}) => {
               <button
                 onClick={() => {
                   if (view !== 'actions' && view !== 'no_access') {
-                    setView('actions');
+                    navigateToAdminView('actions');
                   } else {
                     onClose();
                   }
@@ -1719,7 +1759,7 @@ const AdminModal = (props = {}) => {
             {showStatsModal && (
         <LazyStatsModal
           isOpen={showStatsModal}
-          onClose={() => setShowStatsModal(false)}
+          onClose={() => closeAdminChildModal('stats')}
           modalId="admin-stats-modal"
         />
       )}
@@ -1730,7 +1770,7 @@ const AdminModal = (props = {}) => {
       {showUserManagement && (
         <UserManagementModal
           isOpen={showUserManagement}
-          onClose={() => setShowUserManagement(false)}
+          onClose={() => closeAdminChildModal('user-management')}
           modalId="admin-user-management-modal"
         />
       )}
@@ -1795,13 +1835,13 @@ const AdminModal = (props = {}) => {
 
       {/* Modal de Direcciones Archivadas */}
       {showArchivedAddresses && (
-        <ArchivedAddressesPortal onClose={() => setShowArchivedAddresses(false)} />
+        <ArchivedAddressesPortal onClose={() => closeAdminChildModal('archived-addresses')} />
       )}
 
       {/* Modal de Lista de Administradores */}
       <UserListModal
         isOpen={showAdminListModal}
-        onClose={() => setShowAdminListModal(false)}
+        onClose={() => closeAdminChildModal('admin-list')}
         userType="admin"
         modalId="admin-user-list-admins"
       />
@@ -1809,7 +1849,7 @@ const AdminModal = (props = {}) => {
       {/* Modal de Lista de Publicadores */}
       <UserListModal
         isOpen={showPublisherListModal}
-        onClose={() => setShowPublisherListModal(false)}
+        onClose={() => closeAdminChildModal('publisher-list')}
         userType="publisher"
         modalId="admin-user-list-publishers"
       />
@@ -1817,7 +1857,7 @@ const AdminModal = (props = {}) => {
       {/* Modal de Lista de Precursores */}
       <UserListModal
         isOpen={showPioneerListModal}
-        onClose={() => setShowPioneerListModal(false)}
+        onClose={() => closeAdminChildModal('pioneer-list')}
         userType="pioneer"
         modalId="admin-user-list-pioneers"
       />
@@ -1825,7 +1865,7 @@ const AdminModal = (props = {}) => {
       {/* Modal de Exportación de Direcciones */}
       <ExportAddressesModal
         isOpen={showExportAddressesModal}
-        onClose={() => setShowExportAddressesModal(false)}
+        onClose={() => closeAdminChildModal('export-addresses')}
         onExportComplete={handleExportAddressesComplete}
         onExportSimplified={handleExportAddressesSimplified}
         modalId="admin-export-addresses"
@@ -1834,7 +1874,7 @@ const AdminModal = (props = {}) => {
       {/* Modal de Gestión de Territorios */}
       <TerritoryManagementModal
         isOpen={showTerritoryManagementModal}
-        onClose={() => setShowTerritoryManagementModal(false)}
+        onClose={() => closeAdminChildModal('territory-management')}
         modalId="admin-territory-management"
       />
     </>

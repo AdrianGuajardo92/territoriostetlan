@@ -129,6 +129,7 @@ const SELECTED_MARKER_ACCENT = '#2563eb';
 const MARKER_SIZE = 36;
 const MARKER_PIN_TAIL = 10;
 const MARKER_SHADOW = '0 8px 20px rgba(15, 23, 42, 0.28)';
+const MAP_PANEL_TRANSITION_MS = 280;
 
 const getAssignmentMarkerLabel = (assignment, visibleIndex, sortOrder) => (
   sortOrder === 'optimized' && assignment.routeOrder
@@ -215,6 +216,7 @@ const CampaignAssignmentsMapModal = ({
   const mapOpenLayoutAppliedRef = useRef(false);
   const prevMarkerStructureKeyRef = useRef('');
   const assignmentsWithCoordsRef = useRef([]);
+  const [shouldRender, setShouldRender] = useState(isOpen);
   const sortStateRef = useRef({
     sortOrder: 'default',
     optimizedRoute: [],
@@ -243,6 +245,22 @@ const CampaignAssignmentsMapModal = ({
     startTracking,
     stopTracking
   } = useLocationTracking();
+  const isExiting = !isOpen && shouldRender;
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      return undefined;
+    }
+
+    if (!shouldRender) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setShouldRender(false);
+    }, MAP_PANEL_TRANSITION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isOpen, shouldRender]);
 
   const assignmentsWithResolvedStatus = useMemo(() => (
     assignments.map((assignment) => ({
@@ -358,13 +376,15 @@ const CampaignAssignmentsMapModal = ({
   }, [isMapReady, isOpen]);
 
   useLayoutEffect(() => {
-    if (!isOpen) {
+    if (!shouldRender) {
       setSelectedAssignmentId(null);
       prevSelectedAssignmentIdRef.current = null;
       autoSelectedForOpenRef.current = false;
       mapOpenLayoutAppliedRef.current = false;
       return;
     }
+
+    if (!isOpen) return;
 
     if (displayedAssignments.length === 0) return;
 
@@ -377,7 +397,7 @@ const CampaignAssignmentsMapModal = ({
     autoSelectedForOpenRef.current = true;
     setSelectedAssignmentId(firstId);
     prevSelectedAssignmentIdRef.current = firstId;
-  }, [displayedAssignments, isOpen, selectedAssignmentId]);
+  }, [displayedAssignments, isOpen, selectedAssignmentId, shouldRender]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -498,10 +518,10 @@ const CampaignAssignmentsMapModal = ({
   }, [clearMapArtifacts]);
 
   useEffect(() => {
-    if (isOpen) return undefined;
+    if (shouldRender) return undefined;
     destroyMapInstance();
     return undefined;
-  }, [destroyMapInstance, isOpen]);
+  }, [destroyMapInstance, shouldRender]);
 
   const refreshMapLayout = useCallback((options = {}) => {
     const { fitToMarkers = true } = options;
@@ -717,12 +737,12 @@ const CampaignAssignmentsMapModal = ({
   }, [assignmentsWithCoords, isOpen]);
 
   useEffect(() => {
-    if (isOpen) return;
+    if (shouldRender) return;
 
     setResolvedCoordinatesById({});
     setIsResolvingCoordinates(false);
     setStatusOverrides({});
-  }, [isOpen]);
+  }, [shouldRender]);
 
   useEffect(() => {
     setStatusOverrides((previous) => {
@@ -762,7 +782,7 @@ const CampaignAssignmentsMapModal = ({
   }, [onStatusChange]);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!shouldRender) return undefined;
 
     const scrollY = window.scrollY;
     document.body.style.position = 'fixed';
@@ -777,7 +797,7 @@ const CampaignAssignmentsMapModal = ({
       document.body.style.overflow = '';
       window.scrollTo(0, scrollY);
     };
-  }, [isOpen]);
+  }, [shouldRender]);
 
   useEffect(() => {
     if (!isOpen || !isMapReady || !mapInstanceRef.current || typeof window.L === 'undefined') return;
@@ -928,10 +948,10 @@ const CampaignAssignmentsMapModal = ({
     };
   }, [isMapReady, isOpen, refreshMapLayout]);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[110] flex flex-col bg-white">
+    <div className={`fixed inset-0 z-[110] flex flex-col bg-white ${isExiting ? 'campaign-map-panel-exit' : 'campaign-map-panel-enter'}`}>
       <style>
         {`
           @keyframes campaign-user-pulse {
