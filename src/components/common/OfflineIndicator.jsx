@@ -4,10 +4,17 @@
 import React, { useState } from 'react';
 import Icon from './Icon';
 import { useApp } from '../../context/AppContext';
+import { useBackHandler } from '../../hooks/useBackHandler';
 
 const OfflineIndicator = () => {
   const { offlineSync } = useApp();
   const [showDetails, setShowDetails] = useState(false);
+
+  useBackHandler({
+    isOpen: showDetails && !!offlineSync?.isInitialized,
+    onClose: () => setShowDetails(false),
+    id: 'offline-indicator-details'
+  });
 
   // Si no está inicializado, no mostrar nada
   if (!offlineSync?.isInitialized) return null;
@@ -220,4 +227,4 @@ const OfflineIndicator = () => {
   );
 };
 
-export default OfflineIndicator; 
+export default OfflineIndicator;

@@ -39,6 +39,11 @@ const UserManagementModal = ({
 
   useBackHandler({ isOpen: showDeleteConfirm, onClose: () => setShowDeleteConfirm(false), id: `${modalId}-delete-confirm` });
   useBackHandler({ isOpen: showPasswordReset, onClose: () => setShowPasswordReset(false), id: `${modalId}-password-reset` });
+  useBackHandler({
+    isOpen: isOpen && activeView !== 'list',
+    onClose: () => setActiveView('list'),
+    id: `${modalId}-form-view`
+  });
 
   // Estados del formulario
   const [formData, setFormData] = useState({

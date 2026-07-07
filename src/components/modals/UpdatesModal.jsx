@@ -3,7 +3,7 @@ import Modal from '../common/Modal';
 import { useToast } from '../../hooks/useToast';
 import { backupSession, restoreSession } from '../../utils/sessionManager';
 
-const UpdatesModal = ({ isOpen, onClose }) => {
+const UpdatesModal = ({ isOpen, onClose, modalId = 'updates-modal' }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { showToast } = useToast();
 
@@ -84,6 +84,7 @@ const UpdatesModal = ({ isOpen, onClose }) => {
       onClose={onClose}
       title="Actualizaciones"
       size="md"
+      modalId={modalId}
     >
       <div className="p-6">
         <p className="text-gray-600">Verificación de actualizaciones en desarrollo...</p>
@@ -110,4 +111,4 @@ const UpdatesModal = ({ isOpen, onClose }) => {
   );
 };
 
-export default UpdatesModal; 
+export default UpdatesModal;

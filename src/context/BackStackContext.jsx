@@ -19,16 +19,42 @@ const BackStackContext = createContext(null);
 export function BackStackProvider({ children }) {
   // Stack de entries { id, onClose }. Top = último abierto = primero en cerrarse.
   const stackRef = useRef([]);
+  const pendingRegistrationsRef = useRef([]);
 
   // true mientras el Provider está ejecutando un onClose disparado por popstate.
   // Si durante ese onClose algún hook intenta hacer history.back() adicional
   // (migración incompleta), se ignora.
   const isHandlingBackRef = useRef(false);
 
-  // true cuando el hook disparó history.back() desde un cierre programático
-  // (X, Escape, onSuccess). El listener de popstate consume el flag y no
-  // vuelve a llamar onClose.
-  const isProgrammaticCloseRef = useRef(false);
+  // Cuenta los history.back() disparados por cierres programáticos
+  // (X, Escape, onSuccess). Puede haber más de uno antes de que el navegador
+  // entregue sus popstate; por eso no puede ser un booleano.
+  const programmaticBackCountRef = useRef(0);
+
+  const pushEntry = useCallback(({ id, onClose }) => {
+    const existing = stackRef.current.findIndex((e) => e.id === id);
+    if (existing !== -1) {
+      stackRef.current[existing].onClose = onClose;
+      return;
+    }
+
+    try {
+      window.history.pushState(
+        { backstack: true, id },
+        '',
+        window.location.href
+      );
+      stackRef.current.push({ id, onClose });
+    } catch (err) {
+      console.warn('[BackStack] pushState falló', err);
+    }
+  }, []);
+
+  const flushPendingRegistrations = useCallback(() => {
+    if (programmaticBackCountRef.current > 0) return;
+    const pending = pendingRegistrationsRef.current.splice(0);
+    pending.forEach(pushEntry);
+  }, [pushEntry]);
 
   /**
    * Registra una entry y añade una marca al history.
@@ -47,18 +73,21 @@ export function BackStackProvider({ children }) {
       return;
     }
 
-    stackRef.current.push({ id, onClose });
-
-    try {
-      window.history.pushState(
-        { backstack: true, id },
-        '',
-        window.location.href
-      );
-    } catch (err) {
-      console.warn('[BackStack] pushState falló', err);
+    const pending = pendingRegistrationsRef.current.findIndex((e) => e.id === id);
+    if (pending !== -1) {
+      pendingRegistrationsRef.current[pending].onClose = onClose;
+      return;
     }
-  }, []);
+
+    if (programmaticBackCountRef.current > 0) {
+      pendingRegistrationsRef.current.push({ id, onClose });
+      window.setTimeout(flushPendingRegistrations, 0);
+      window.setTimeout(flushPendingRegistrations, 180);
+      return;
+    }
+
+    pushEntry({ id, onClose });
+  }, [flushPendingRegistrations, pushEntry]);
 
   /**
    * Des-registra por id. Retorna true si había entry; false si ya no estaba
@@ -66,7 +95,12 @@ export function BackStackProvider({ children }) {
    */
   const unregisterIfPresent = useCallback((id) => {
     const idx = stackRef.current.findIndex((e) => e.id === id);
-    if (idx === -1) return false;
+    if (idx === -1) {
+      const pendingIdx = pendingRegistrationsRef.current.findIndex((e) => e.id === id);
+      if (pendingIdx === -1) return false;
+      pendingRegistrationsRef.current.splice(pendingIdx, 1);
+      return false;
+    }
     stackRef.current.splice(idx, 1);
     return true;
   }, []);
@@ -76,14 +110,15 @@ export function BackStackProvider({ children }) {
    * verá el flag y no ejecutará onClose (ya fue ejecutado o va a serlo).
    */
   const programmaticBack = useCallback(() => {
-    isProgrammaticCloseRef.current = true;
+    programmaticBackCountRef.current += 1;
     try {
       window.history.back();
     } catch (err) {
       console.warn('[BackStack] history.back falló', err);
-      isProgrammaticCloseRef.current = false;
+      programmaticBackCountRef.current = Math.max(0, programmaticBackCountRef.current - 1);
+      flushPendingRegistrations();
     }
-  }, []);
+  }, [flushPendingRegistrations]);
 
   const peek = useCallback(() => {
     return stackRef.current[stackRef.current.length - 1] || null;
@@ -98,8 +133,9 @@ export function BackStackProvider({ children }) {
     const handlePopState = (event) => {
       // Caso 1: cierre programático en curso. El back() lo disparó el hook
       // para sincronizar el stack del browser. Solo consumimos el flag.
-      if (isProgrammaticCloseRef.current) {
-        isProgrammaticCloseRef.current = false;
+      if (programmaticBackCountRef.current > 0) {
+        programmaticBackCountRef.current -= 1;
+        flushPendingRegistrations();
         return;
       }
 
@@ -128,7 +164,7 @@ export function BackStackProvider({ children }) {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [flushPendingRegistrations]);
 
   // Exponemos funciones estables — nunca cambian de referencia.
   const value = useRef({

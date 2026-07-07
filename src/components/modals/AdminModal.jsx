@@ -30,7 +30,8 @@ const AdminModal = (props = {}) => {
   const {
     isOpen = false,
     onClose = () => {},
-    initialView = 'actions'
+    initialView = 'actions',
+    modalId = 'admin-modal'
   } = props;
   const {
     currentUser,
@@ -66,6 +67,11 @@ const AdminModal = (props = {}) => {
   // creamos con `isOpen={true}` condicional → su id del back stack debe ser
   // estable. Registramos aquí con un id dedicado.
   useBackHandler({ isOpen: !!showDeleteConfirm, onClose: () => setShowDeleteConfirm(null), id: 'admin-delete-proposal-confirm' });
+  useBackHandler({
+    isOpen: isOpen && view !== 'actions' && view !== 'no_access',
+    onClose: () => setView('actions'),
+    id: `${modalId}-subview`
+  });
 
   const handleCopyAddress = async (proposalId, address) => {
     if (!address) return;
@@ -1622,6 +1628,7 @@ const AdminModal = (props = {}) => {
         onClose={onClose}
         title=""
         size="full"
+        modalId={modalId}
       >
         <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-gray-50">
           {/* Header elegante con temática consistente */}
@@ -1670,7 +1677,12 @@ const AdminModal = (props = {}) => {
       
       {/* Modal para rechazar propuesta */}
       {selectedProposal && (
-        <Modal isOpen={true} onClose={() => setSelectedProposal(null)} size="sm">
+        <Modal
+          isOpen={true}
+          onClose={() => setSelectedProposal(null)}
+          size="sm"
+          modalId="admin-reject-proposal-modal"
+        >
           <div className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Razón del Rechazo</h3>
             <textarea
