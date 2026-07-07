@@ -157,7 +157,9 @@ export const LazyMapModal = ({ isOpen, ...props }) => {
 };
 
 // Lazy GeneralMapModal - PESADO y no crítico para la carga inicial
-export const LazyCampaignAssignmentsMapModal = ({ isOpen, ...props }) => {
+export const preloadCampaignAssignmentsMapModal = () => import('./CampaignAssignmentsMapModal');
+
+export const LazyCampaignAssignmentsMapModal = React.memo(({ isOpen, ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(
     () => import('./CampaignAssignmentsMapModal'),
     [isOpen]
@@ -183,16 +185,24 @@ export const LazyCampaignAssignmentsMapModal = ({ isOpen, ...props }) => {
 
   if (isLoading || !Component) {
     return (
-      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black bg-opacity-50">
-        <div className="bg-white rounded-lg p-6">
-          <LazyFallback message="Cargando mapa de invitaciones..." />
+      <div className="fixed inset-0 z-[110] flex flex-col bg-white">
+        <div className="border-b border-slate-200 bg-slate-50 px-3 py-3 sm:px-4">
+          <div className="flex h-12 items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-indigo-100" />
+            <div className="h-5 w-48 animate-pulse rounded bg-slate-200" />
+          </div>
+        </div>
+        <div className="relative flex-1 bg-slate-100">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <LazyFallback message="Cargando mapa de invitaciones..." />
+          </div>
         </div>
       </div>
     );
   }
 
   return <Component isOpen={isOpen} {...props} />;
-};
+});
 
 export const LazyGeneralMapModal = ({ isOpen, ...props }) => {
   const { Component, isLoading, error } = useLazyComponent(

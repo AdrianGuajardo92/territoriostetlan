@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Icon from '../common/Icon';
 import { useToast } from '../../hooks/useToast';
@@ -121,6 +121,71 @@ const getMarkerColor = (assignment) => (
     : '#f59e0b'
 );
 
+const SELECTED_MARKER_ACCENT = '#2563eb';
+const MARKER_SIZE = 36;
+const MARKER_PIN_TAIL = 10;
+const MARKER_SHADOW = '0 8px 20px rgba(15, 23, 42, 0.28)';
+
+const getAssignmentMarkerLabel = (assignment, visibleIndex, sortOrder) => (
+  sortOrder === 'optimized' && assignment.routeOrder
+    ? assignment.routeOrder
+    : visibleIndex
+);
+
+const buildMarkerCircleInlineStyle = (color, isSelected) => [
+  `background-color: ${color}`,
+  'color: white',
+  `width: ${MARKER_SIZE}px`,
+  `height: ${MARKER_SIZE}px`,
+  'border-radius: 9999px',
+  'display: flex',
+  'align-items: center',
+  'justify-content: center',
+  'font-weight: 700',
+  'font-size: 15px',
+  `border: ${isSelected ? 4 : 3}px solid ${isSelected ? SELECTED_MARKER_ACCENT : 'white'}`,
+  `box-shadow: ${MARKER_SHADOW}`,
+].join('; ');
+
+const buildCampaignMarkerIconHtml = (displayNumber, color, isSelected) => {
+  const pinTail = isSelected
+    ? `<div style="
+        width: 0;
+        height: 0;
+        margin-top: -2px;
+        border-left: 7px solid transparent;
+        border-right: 7px solid transparent;
+        border-top: ${MARKER_PIN_TAIL}px solid ${color};
+      "></div>`
+    : `<div style="
+        width: 0;
+        height: 0;
+        margin-top: -2px;
+        border-left: 7px solid transparent;
+        border-right: 7px solid transparent;
+        border-top: ${MARKER_PIN_TAIL}px solid transparent;
+      "></div>`;
+
+  return `
+    <div style="display:flex;flex-direction:column;align-items:center;width:${MARKER_SIZE}px;">
+      <div style="${buildMarkerCircleInlineStyle(color, isSelected)}">${displayNumber}</div>
+      ${pinTail}
+    </div>
+  `;
+};
+
+const createCampaignMarkerIcon = (L, { displayNumber, color, isSelected }) => {
+  const height = MARKER_SIZE + MARKER_PIN_TAIL;
+  const anchorY = height;
+
+  return L.divIcon({
+    html: buildCampaignMarkerIconHtml(displayNumber, color, isSelected),
+    iconSize: [MARKER_SIZE, height],
+    iconAnchor: [MARKER_SIZE / 2, anchorY],
+    className: `campaign-map-marker${isSelected ? ' campaign-map-marker--selected' : ''}`,
+  });
+};
+
 const CampaignAssignmentsMapModal = ({
   isOpen,
   onClose,
@@ -142,8 +207,13 @@ const CampaignAssignmentsMapModal = ({
   const tileLayerRef = useRef(null);
   const tileLayerIndexRef = useRef(0);
   const tileLoadStatsRef = useRef({ loaded: 0, errors: 0 });
+  const prevSelectedAssignmentIdRef = useRef(null);
+  const mapOpenLayoutAppliedRef = useRef(false);
+  const autoSelectedForOpenRef = useRef(false);
   const { showToast } = useToast();
   const [isMapReady, setIsMapReady] = useState(false);
+  const [mapInstanceEpoch, setMapInstanceEpoch] = useState(0);
+  const [showMapSpinner, setShowMapSpinner] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
   const [resolvedCoordinatesById, setResolvedCoordinatesById] = useState({});
@@ -234,15 +304,38 @@ const CampaignAssignmentsMapModal = ({
   );
 
   useEffect(() => {
-    if (!isOpen) return;
-
-    if (!selectedAssignmentId && displayedAssignments.length > 0) {
-      setSelectedAssignmentId(displayedAssignments[0].id);
+    if (!isOpen || isMapReady) {
+      setShowMapSpinner(false);
+      return undefined;
     }
 
-    if (selectedAssignmentId && !displayedAssignments.some((assignment) => assignment.id === selectedAssignmentId)) {
-      setSelectedAssignmentId(displayedAssignments[0]?.id || null);
+    const timer = window.setTimeout(() => {
+      setShowMapSpinner(true);
+    }, 180);
+
+    return () => window.clearTimeout(timer);
+  }, [isMapReady, isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setSelectedAssignmentId(null);
+      prevSelectedAssignmentIdRef.current = null;
+      autoSelectedForOpenRef.current = false;
+      mapOpenLayoutAppliedRef.current = false;
+      return;
     }
+
+    if (displayedAssignments.length === 0) return;
+
+    const selectedStillVisible = selectedAssignmentId
+      && displayedAssignments.some((item) => item.id === selectedAssignmentId);
+
+    if (selectedStillVisible) return;
+
+    const firstId = displayedAssignments[0].id;
+    autoSelectedForOpenRef.current = true;
+    setSelectedAssignmentId(firstId);
+    prevSelectedAssignmentIdRef.current = firstId;
   }, [displayedAssignments, isOpen, selectedAssignmentId]);
 
   useEffect(() => {
@@ -337,11 +430,47 @@ const CampaignAssignmentsMapModal = ({
     }
   }, []);
 
-  const refreshMapLayout = useCallback(() => {
+  const destroyMapInstance = useCallback(() => {
+    clearMapArtifacts();
+
+    if (tileLayerRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeLayer(tileLayerRef.current);
+      tileLayerRef.current = null;
+    }
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+
+    mapOpenLayoutAppliedRef.current = false;
+    setIsMapReady(false);
+    setMapError(false);
+    setSortState({
+      sortOrder: 'default',
+      optimizedRoute: [],
+      isCalculatingRoute: false,
+      userLocation: null
+    });
+    setMapInstanceEpoch((epoch) => epoch + 1);
+  }, [clearMapArtifacts]);
+
+  useEffect(() => {
+    if (isOpen) return undefined;
+    destroyMapInstance();
+    return undefined;
+  }, [destroyMapInstance, isOpen]);
+
+  const refreshMapLayout = useCallback((options = {}) => {
+    const { fitToMarkers = true } = options;
     if (!mapInstanceRef.current) return;
 
     mapInstanceRef.current.invalidateSize();
     tileLayerRef.current?.redraw?.();
+
+    if (!fitToMarkers || mapOpenLayoutAppliedRef.current) {
+      return;
+    }
 
     const allBoundsPoints = [
       ...assignmentsWithCoords.map((assignment) => [assignment.coordinates.lat, assignment.coordinates.lng]),
@@ -359,9 +488,11 @@ const CampaignAssignmentsMapModal = ({
 
     const bounds = window.L.latLngBounds(allBoundsPoints);
     if (bounds.isValid()) {
+      mapOpenLayoutAppliedRef.current = true;
       mapInstanceRef.current.fitBounds(bounds, {
         padding: [34, 34],
-        maxZoom: assignmentsWithCoords.length > 1 ? 16 : 17
+        maxZoom: assignmentsWithCoords.length > 1 ? 16 : 17,
+        animate: false,
       });
     }
   }, [assignmentsWithCoords, sortState.userLocation]);
@@ -433,13 +564,20 @@ const CampaignAssignmentsMapModal = ({
   useEffect(() => {
     if (!isOpen) return undefined;
 
+    let disposed = false;
+
     const initializeMap = () => {
+      if (disposed) return;
+
       if (!mapRef.current || !window.L) {
         setMapError(true);
         return;
       }
 
       if (mapInstanceRef.current) {
+        if (!isMapReady) {
+          setIsMapReady(true);
+        }
         return;
       }
 
@@ -456,6 +594,11 @@ const CampaignAssignmentsMapModal = ({
         dragging: true
       }).setView([center.lat, center.lng], assignmentsWithCoords.length > 1 ? 14 : 12);
 
+      if (disposed) {
+        map.remove();
+        return;
+      }
+
       const mountTileLayer = (layerIndex = 0) => {
         tileLayerIndexRef.current = layerIndex;
         tileLoadStatsRef.current = { loaded: 0, errors: 0 };
@@ -465,7 +608,6 @@ const CampaignAssignmentsMapModal = ({
 
         tileLayer.on('tileload', () => {
           tileLoadStatsRef.current.loaded += 1;
-          setMapError(false);
         });
 
         tileLayer.on('tileerror', () => {
@@ -505,38 +647,29 @@ const CampaignAssignmentsMapModal = ({
             window.loadLeafletCSS(),
             window.loadLeafletJS()
           ]);
-
-          await new Promise((resolve) => setTimeout(resolve, 200));
         }
 
+        await new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(resolve);
+          });
+        });
+
+        if (disposed) return;
         initializeMap();
       } catch (error) {
-        setMapError(true);
+        if (!disposed) {
+          setMapError(true);
+        }
       }
     };
 
     loadMap();
 
     return () => {
-      clearMapArtifacts();
-      if (tileLayerRef.current && mapInstanceRef.current) {
-        mapInstanceRef.current.removeLayer(tileLayerRef.current);
-        tileLayerRef.current = null;
-      }
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-      setIsMapReady(false);
-      setMapError(false);
-      setSortState({
-        sortOrder: 'default',
-        optimizedRoute: [],
-        isCalculatingRoute: false,
-        userLocation: null
-      });
+      disposed = true;
     };
-  }, [clearMapArtifacts, isOpen]);
+  }, [assignmentsWithCoords, isOpen]);
 
   useEffect(() => {
     if (isOpen) return;
@@ -572,39 +705,19 @@ const CampaignAssignmentsMapModal = ({
     const markersGroup = L.featureGroup();
     let visibleIndex = 0;
 
+    const activeSelectionId = prevSelectedAssignmentIdRef.current ?? selectedAssignmentId;
+
     displayedAssignments.forEach((assignment) => {
       if (!assignment.coordinates) return;
 
       visibleIndex += 1;
-      const displayNumber = sortState.sortOrder === 'optimized' && assignment.routeOrder
-        ? assignment.routeOrder
-        : visibleIndex;
+      const displayNumber = getAssignmentMarkerLabel(assignment, visibleIndex, sortState.sortOrder);
       const color = getMarkerColor(assignment);
+      const isSelected = assignment.id === activeSelectionId;
 
       const marker = L.marker([assignment.coordinates.lat, assignment.coordinates.lng], {
-        icon: L.divIcon({
-          html: `
-            <div style="
-              background-color: ${color};
-              color: white;
-              width: 36px;
-              height: 36px;
-              border-radius: 9999px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 700;
-              font-size: 15px;
-              border: 3px solid white;
-              box-shadow: 0 8px 20px rgba(15, 23, 42, 0.28);
-            ">
-              ${displayNumber}
-            </div>
-          `,
-          iconSize: [36, 36],
-          iconAnchor: [18, 18],
-          className: 'campaign-map-marker'
-        })
+        icon: createCampaignMarkerIcon(L, { displayNumber, color, isSelected }),
+        zIndexOffset: isSelected ? 1000 : 0,
       });
 
       marker.on('click', () => {
@@ -671,14 +784,42 @@ const CampaignAssignmentsMapModal = ({
       }
     }
 
-    refreshMapLayout();
+    refreshMapLayout({ fitToMarkers: true });
 
-    [80, 220, 500].forEach((delay) => {
-      window.setTimeout(() => {
-        refreshMapLayout();
-      }, delay);
+    prevSelectedAssignmentIdRef.current = activeSelectionId;
+  }, [assignmentMap, clearMapArtifacts, displayedAssignments, isMapReady, isOpen, mapInstanceEpoch, refreshMapLayout, sortState.optimizedRoute, sortState.sortOrder, sortState.userLocation]);
+
+  useEffect(() => {
+    if (!isOpen || !isMapReady || typeof window.L === 'undefined') return;
+
+    const prevSelected = prevSelectedAssignmentIdRef.current;
+    const L = window.L;
+    let visibleIndex = 0;
+
+    displayedAssignments.forEach((assignment) => {
+      if (!assignment.coordinates) return;
+
+      const marker = markersRef.current[assignment.id];
+      if (!marker) return;
+
+      visibleIndex += 1;
+      const displayNumber = getAssignmentMarkerLabel(assignment, visibleIndex, sortState.sortOrder);
+      const color = getMarkerColor(assignment);
+      const isSelected = assignment.id === selectedAssignmentId;
+      const wasSelected = assignment.id === prevSelected;
+
+      if (wasSelected !== isSelected) {
+        marker.setIcon(createCampaignMarkerIcon(L, { displayNumber, color, isSelected }));
+        marker.setZIndexOffset(isSelected ? 1000 : 0);
+      } else if (isSelected) {
+        marker.setZIndexOffset(1000);
+      } else {
+        marker.setZIndexOffset(0);
+      }
     });
-  }, [assignmentMap, clearMapArtifacts, displayedAssignments, isMapReady, isOpen, refreshMapLayout, sortState.optimizedRoute, sortState.sortOrder, sortState.userLocation]);
+
+    prevSelectedAssignmentIdRef.current = selectedAssignmentId;
+  }, [displayedAssignments, isMapReady, isOpen, selectedAssignmentId, sortState.sortOrder]);
 
   useEffect(() => {
     if (!isOpen || !isMapReady) return undefined;
@@ -775,7 +916,7 @@ const CampaignAssignmentsMapModal = ({
       </div>
 
       <div className="relative flex-1 bg-slate-100">
-        {!isMapReady && (
+        {!isMapReady && showMapSpinner && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90">
             <div className="rounded-3xl bg-white px-8 py-7 shadow-lg">
               <div className="flex items-center gap-4">
@@ -925,4 +1066,20 @@ const CampaignAssignmentsMapModal = ({
   );
 };
 
-export default CampaignAssignmentsMapModal;
+const campaignAssignmentsSignature = (items = []) => (
+  items.map((assignment) => (
+    `${assignment.id}:${assignment.status}:${assignment.snapshot?.latitude ?? ''}:${assignment.snapshot?.longitude ?? ''}`
+  )).join('|')
+);
+
+export default memo(CampaignAssignmentsMapModal, (prevProps, nextProps) => {
+  if (prevProps.isOpen !== nextProps.isOpen) return false;
+  if (!nextProps.isOpen) return true;
+  if (prevProps.participantName !== nextProps.participantName) return false;
+  if (prevProps.isProcessing !== nextProps.isProcessing) return false;
+  if (prevProps.campaign?.id !== nextProps.campaign?.id) return false;
+  if (campaignAssignmentsSignature(prevProps.assignments) !== campaignAssignmentsSignature(nextProps.assignments)) {
+    return false;
+  }
+  return true;
+});
