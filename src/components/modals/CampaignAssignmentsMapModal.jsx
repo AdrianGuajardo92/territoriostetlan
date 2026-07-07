@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import Icon from '../common/Icon';
 import { useToast } from '../../hooks/useToast';
 import { useBackHandler } from '../../hooks/useBackHandler';
@@ -127,7 +128,8 @@ const CampaignAssignmentsMapModal = ({
   assignments = [],
   onStatusChange,
   isProcessing = false,
-  modalId = 'campaign-assignments-map-modal'
+  modalId = 'campaign-assignments-map-modal',
+  participantName = ''
 }) => {
   // Este modal no usa <Modal>; se registra solo.
   useBackHandler({ isOpen, onClose, id: modalId });
@@ -706,8 +708,8 @@ const CampaignAssignmentsMapModal = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[80] bg-white flex flex-col">
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[110] flex flex-col bg-white">
       <style>
         {`
           @keyframes campaign-user-pulse {
@@ -735,6 +737,7 @@ const CampaignAssignmentsMapModal = ({
                 <div className="min-w-0">
                   <h2 className="truncate text-xl font-bold text-slate-900">{campaign?.name || 'Mapa de invitaciones'}</h2>
                   <p className="truncate text-sm text-slate-600">
+                    {participantName ? `Direcciones de ${participantName} · ` : ''}
                     {assignments.length} direcciones asignadas
                     {campaign ? ` • ${formatCampaignTypeLabel(campaign.type)} • ${formatCampaignDate(campaign.eventDate)}` : ''}
                   </p>
@@ -917,7 +920,8 @@ const CampaignAssignmentsMapModal = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

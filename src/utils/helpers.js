@@ -161,6 +161,21 @@ export const getDisplayAddress = (address, fallback = 'Dirección sin dato') => 
   return displayAddress || fallback;
 };
 
+/** Separa calle y número de una dirección ya normalizada (p. ej. "C. X #4418"). */
+export const splitDisplayAddress = (displayAddress = '') => {
+  const text = String(displayAddress || '').trim();
+  if (!text) return { street: '', number: '' };
+
+  const markedMatch = text.match(/^(.+?)\s+#([0-9]+[a-z]?(?:[-/][a-z0-9]+)?)(.*)$/i);
+  if (markedMatch) {
+    const [, street, num, suffix = ''] = markedMatch;
+    const number = `#${num}${suffix.trim() ? ` ${suffix.trim()}` : ''}`;
+    return { street: street.trim(), number };
+  }
+
+  return { street: text, number: '' };
+};
+
 /** Texto corto de la dirección afectada según el tipo de propuesta. */
 export const getProposalAddressDisplay = (proposal, currentAddress, fallback = 'Sin dirección') => {
   if (!proposal) return fallback;
@@ -197,4 +212,86 @@ export const smartSearch = (searchTerm, targetText) => {
   const cleanTargetText = removeAccents(targetText);
   
   return cleanTargetText.includes(cleanSearchTerm);
+};
+
+const MALE_FIRST_NAMES_ENDING_IN_A = new Set([
+  'joshua',
+  'nikola',
+  'mustafa',
+  'abdulla',
+  'garcia'
+]);
+
+const FEMALE_FIRST_NAMES_NOT_ENDING_IN_A = new Set([
+  'ruth',
+  'mercedes',
+  'beatriz',
+  'ines',
+  'raquel',
+  'elisabet',
+  'elizabeth',
+  'liz',
+  'mary',
+  'margaret',
+  'susy',
+  'susi',
+  'sol',
+  // Congregación: nombres femeninos que no terminan en -a
+  'alison',
+  'april',
+  'gritzel',
+  'grizel',
+  'leilany',
+  'marisol',
+  'montserrat',
+  'nahomy',
+]);
+
+/** Sufijos típicos de nombres femeninos en español (p. ej. Leilany, Nahomy). */
+const FEMININE_NAME_SUFFIXES = ['any', 'iny', 'omy', 'ely'];
+
+/**
+ * Infiere género a partir del primer nombre (heurística simple en español).
+ * Devuelve 'Hombre', 'Mujer' o null si no se puede determinar.
+ */
+export const inferGenderFromName = (name = '') => {
+  const firstName = normalizeText(name).split(/\s+/).filter(Boolean)[0];
+  if (!firstName) return null;
+
+  if (FEMALE_FIRST_NAMES_NOT_ENDING_IN_A.has(firstName)) {
+    return 'Mujer';
+  }
+
+  if (firstName.endsWith('a') && !MALE_FIRST_NAMES_ENDING_IN_A.has(firstName)) {
+    return 'Mujer';
+  }
+
+  if (FEMININE_NAME_SUFFIXES.some((suffix) => firstName.endsWith(suffix))) {
+    return 'Mujer';
+  }
+
+  if (firstName.endsWith('o') || firstName.endsWith('os') || firstName.endsWith('el')) {
+    return 'Hombre';
+  }
+
+  return 'Hombre';
+};
+
+/**
+ * Género de un usuario/publicador: campo explícito si existe, si no inferencia por nombre.
+ */
+export const getUserGender = (userOrName) => {
+  const explicitGender = typeof userOrName === 'object'
+    ? userOrName?.gender
+    : null;
+
+  if (explicitGender && explicitGender !== 'Desconocido') {
+    return explicitGender;
+  }
+
+  const name = typeof userOrName === 'string'
+    ? userOrName
+    : userOrName?.name || userOrName?.userNameSnapshot;
+
+  return inferGenderFromName(name);
 };

@@ -41,6 +41,14 @@ export const ArchiveConfirmDialog = ({
     onConfirm(reason.trim());
   };
 
+  const handleReasonKeyDown = (event) => {
+    if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey)) return;
+    event.preventDefault();
+    if (!isProcessing && reason.trim()) {
+      handleConfirm();
+    }
+  };
+
   return (
     <DialogShell isOpen={isOpen} onClose={onClose} backHandlerId={backHandlerId}>
       <div className="text-center">
@@ -66,6 +74,7 @@ export const ArchiveConfirmDialog = ({
         <textarea
           value={reason}
           onChange={(event) => setReason(event.target.value)}
+          onKeyDown={handleReasonKeyDown}
           className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-slate-500 focus:outline-none"
           rows={3}
           placeholder="Ej: Falleció, Ya no vive aquí, Se mudó..."

@@ -6,6 +6,8 @@ import { useToast } from '../../hooks/useToast';
 import { LazyS13ReportModal } from './LazyModals';
 import { getAssignedNames } from '../../utils/territoryHelpers';
 
+const isActiveAddress = (address) => !address?.deleted && !address?.isArchived;
+
 const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
   const { territories, addresses, users, territoryHistory = [], publishers, currentUser } = useApp();
   const { showToast } = useToast();
@@ -15,6 +17,9 @@ const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
 
   const stats = useMemo(() => {
     if (!territories || !addresses) return null;
+
+    const activeAddresses = addresses.filter(isActiveAddress);
+    const archivedCount = addresses.length - activeAddresses.length;
 
     const now = new Date();
     const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -28,9 +33,9 @@ const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
       availableTerritories: territories.filter(t => t.status === 'Disponible').length,
       inUseTerritories: territories.filter(t => t.status === 'En uso').length,
       completedTerritories: territories.filter(t => t.status === 'Completado' || t.status === 'Terminado').length,
-      totalAddresses: addresses.length,
-      visitedAddresses: addresses.filter(a => a.isVisited).length,
-      pendingAddresses: addresses.filter(a => !a.isVisited).length
+      totalAddresses: activeAddresses.length,
+      visitedAddresses: activeAddresses.filter(a => a.isVisited).length,
+      pendingAddresses: activeAddresses.filter(a => !a.isVisited).length
     };
 
     // Progreso y tasas
@@ -59,7 +64,7 @@ const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
     });
 
     // Direcciones agregadas este mes
-    const addressesAddedThisMonth = addresses.filter(a => {
+    const addressesAddedThisMonth = activeAddresses.filter(a => {
       if (a.createdAt) {
         const createdDate = a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
         return createdDate >= startOfMonth;
@@ -162,10 +167,11 @@ const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
     };
 
     const addressStats = {
-      total: addresses.length,
-      visited: addresses.filter(a => a.isVisited).length,
-      unvisited: addresses.filter(a => !a.isVisited).length,
-      averagePerTerritory: territories.length > 0 ? (addresses.length / territories.length).toFixed(1) : 0
+      total: activeAddresses.length,
+      archived: archivedCount,
+      visited: activeAddresses.filter(a => a.isVisited).length,
+      unvisited: activeAddresses.filter(a => !a.isVisited).length,
+      averagePerTerritory: territories.length > 0 ? (activeAddresses.length / territories.length).toFixed(1) : 0
     };
 
     // 🔄 PASO 19: Análisis detallado de asignaciones
@@ -226,7 +232,7 @@ const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
       // 🔄 PASO 19: Métricas de eficiencia
       efficiency: {
         territoryUtilization: territories.length > 0 ? ((territoryStats.inUse / territories.length) * 100).toFixed(1) : 0,
-        addressProgress: addresses.length > 0 ? ((addressStats.visited / addresses.length) * 100).toFixed(1) : 0,
+        addressProgress: addressStats.total > 0 ? ((addressStats.visited / addressStats.total) * 100).toFixed(1) : 0,
         teamCollaboration: publisherTeamStats.total > 0 ? ((publisherTeamStats.inTeams / publisherTeamStats.total) * 100).toFixed(1) : 0
       }
     };
@@ -250,7 +256,8 @@ const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
         [''],
         ['RESUMEN GENERAL'],
         ['Total de Territorios', stats.territories.total],
-        ['Total de Direcciones', stats.addresses.total],
+        ['Total de Direcciones (activas)', stats.addresses.total],
+        ['Direcciones Archivadas', stats.addresses.archived],
         ['Porcentaje de Cobertura', `${stats.completionRate}%`],
         ['Días Promedio por Territorio', stats.averageCompletionDays || 'N/A'],
         [''],
@@ -300,8 +307,9 @@ const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
       ];
 
       territories.forEach(territory => {
-        // IMPORTANTE: Excluir direcciones archivadas (deleted: true)
-        const territoryAddresses = addresses.filter(a => a.territoryId === territory.id && !a.deleted);
+        const territoryAddresses = addresses.filter(
+          a => a.territoryId === territory.id && isActiveAddress(a)
+        );
         const visitedCount = territoryAddresses.filter(a => a.isVisited).length;
         const percentage = territoryAddresses.length > 0
           ? ((visitedCount / territoryAddresses.length) * 100).toFixed(1)
@@ -678,8 +686,16 @@ const StatsModal = ({ isOpen, onClose, modalId = 'stats-modal' }) => {
                   <StatCard
                     title="Total de Direcciones"
                     value={stats.addresses.total}
+                    subtitle="Sin archivadas"
                     icon="home"
                     color="green"
+                  />
+                  <StatCard
+                    title="Direcciones Archivadas"
+                    value={stats.addresses.archived}
+                    subtitle="No cuentan en el total"
+                    icon="archive"
+                    color="gray"
                   />
                   <StatCard
                     title="Porcentaje de Cobertura"

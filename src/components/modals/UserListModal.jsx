@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useBackHandler } from '../../hooks/useBackHandler';
+import { useToast } from '../../hooks/useToast';
 import Icon from '../common/Icon';
+import { filterPioneerUsers, isPioneerUser } from '../../config/congregationPioneers';
+import { copiarAlPortapapeles } from '../../utils/clipboard';
 
 const UserListModal = ({
   isOpen,
   onClose,
-  userType = 'all', // 'admin', 'publisher', 'all'
+  userType = 'all', // 'admin', 'publisher', 'pioneer', 'all'
   modalId
 }) => {
   // Este modal no usa <Modal>; registramos directamente. El modalId se deriva
@@ -14,14 +17,65 @@ const UserListModal = ({
   useBackHandler({ isOpen, onClose, id: modalId || `user-list-${userType}-modal` });
 
   const { users, currentUser } = useApp();
+  const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  const [pioneersCopied, setPioneersCopied] = useState(false);
+  const copyFeedbackTimeoutRef = useRef(null);
 
   // Resetear búsqueda al cerrar
   useEffect(() => {
     if (!isOpen) {
       setSearchTerm('');
+      setPioneersCopied(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackTimeoutRef.current) {
+        clearTimeout(copyFeedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const getAllPioneersSorted = () =>
+    filterPioneerUsers(users)
+      .slice()
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es'));
+
+  const handleCopyPioneersList = async () => {
+    const allPioneers = getAllPioneersSorted();
+
+    if (allPioneers.length === 0) {
+      showToast('No hay precursores para copiar', 'error');
+      return;
+    }
+
+    const text = allPioneers
+      .map((user, index) => `${index + 1}. ${user.name || 'Sin nombre'}`)
+      .join('\n');
+
+    try {
+      const copied = await copiarAlPortapapeles(text);
+      setPioneersCopied(true);
+      showToast(
+        copied
+          ? `Lista de ${allPioneers.length} precursores copiada`
+          : 'Revisa el texto en el diálogo para copiar manualmente',
+        copied ? 'success' : 'info'
+      );
+
+      if (copyFeedbackTimeoutRef.current) {
+        clearTimeout(copyFeedbackTimeoutRef.current);
+      }
+      copyFeedbackTimeoutRef.current = setTimeout(() => {
+        setPioneersCopied(false);
+      }, 2200);
+    } catch (error) {
+      console.error('Error copiando lista de precursores:', error);
+      showToast('No se pudo copiar la lista de precursores', 'error');
+    }
+  };
 
   // Filtrar usuarios según el tipo
   const getFilteredUsers = () => {
@@ -30,8 +84,8 @@ const UserListModal = ({
     // Filtrar por tipo de usuario
     if (userType === 'admin') {
       filteredUsers = filteredUsers.filter(u => u.role === 'admin');
-    } else if (userType === 'publisher') {
-      filteredUsers = filteredUsers.filter(u => u.role !== 'admin');
+    } else if (userType === 'pioneer') {
+      filteredUsers = filterPioneerUsers(filteredUsers);
     }
     
     // Filtrar por búsqueda
@@ -47,69 +101,85 @@ const UserListModal = ({
   };
 
   const filteredUsers = getFilteredUsers();
-  const totalUsers = userType === 'admin' 
+  const totalUsers = userType === 'admin'
     ? users.filter(u => u.role === 'admin').length
-    : userType === 'publisher'
-    ? users.filter(u => u.role !== 'admin').length
+    : userType === 'pioneer'
+    ? filterPioneerUsers(users).length
     : users.length;
 
   // Título del modal según el tipo
   const getModalTitle = () => {
     if (userType === 'admin') return 'Administradores';
     if (userType === 'publisher') return 'Publicadores';
+    if (userType === 'pioneer') return 'Precursores regulares';
     return 'Todos los Usuarios';
   };
 
-  // Color del tema según el tipo
-  const getThemeColors = () => {
-    if (userType === 'admin') {
-      return {
-        header: 'from-purple-600 to-violet-700',
-        icon: 'from-purple-500 to-violet-600',
-        badge: 'from-purple-600 to-violet-600',
-        cardBg: 'from-purple-50 to-violet-100',
-        borderColor: 'border-purple-200'
-      };
+  const getModalSubtitle = () => {
+    if (userType === 'pioneer') {
+      return 'Lista informativa de precursores regulares';
     }
-    return {
-      header: 'from-blue-600 to-indigo-700',
-      icon: 'from-blue-500 to-indigo-600',
-      badge: 'from-blue-500 to-indigo-600',
-      cardBg: 'from-blue-50 to-indigo-100',
-      borderColor: 'border-blue-200'
-    };
+    if (userType === 'publisher') {
+      return 'Todos los publicadores de la congregación';
+    }
+    return null;
   };
 
-  const theme = getThemeColors();
+  const getHeaderGradient = () => {
+    if (userType === 'admin') return 'from-purple-600 to-violet-700';
+    if (userType === 'pioneer') return 'from-slate-600 to-gray-700';
+    return 'from-blue-600 to-indigo-700';
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-white z-[9999]" style={{ zIndex: 9999 }}>
       {/* Header fijo */}
-      <div className={`bg-gradient-to-r ${theme.header} text-white shadow-lg`}>
+      <div className={`bg-gradient-to-r ${getHeaderGradient()} text-white shadow-lg`}>
         <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className={`w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm`}>
                 <Icon 
-                  name={userType === 'admin' ? 'shield' : 'users'} 
+                  name={userType === 'admin' ? 'shield' : userType === 'pioneer' ? 'star' : 'users'} 
                   className="text-2xl text-white" 
                 />
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold">{getModalTitle()}</h1>
                 <p className="text-white/80 text-sm">
-                  {totalUsers} {totalUsers === 1 ? 'usuario' : 'usuarios'} en total
+                  {getModalSubtitle() ? (
+                    <>{getModalSubtitle()} · {totalUsers} {totalUsers === 1 ? 'usuario' : 'usuarios'}</>
+                  ) : (
+                    <>{totalUsers} {totalUsers === 1 ? 'usuario' : 'usuarios'} en total</>
+                  )}
                 </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2.5 rounded-xl transition-all hover:scale-105 bg-white/20 hover:bg-white/30 backdrop-blur-sm"
-            >
-              <i className="fas fa-arrow-left text-white text-lg"></i>
-            </button>
+            <div className="flex items-center gap-2">
+              {userType === 'pioneer' && (
+                <button
+                  type="button"
+                  onClick={handleCopyPioneersList}
+                  aria-label="Copiar lista de precursores"
+                  className="min-h-[44px] min-w-[44px] p-2.5 rounded-xl transition-all hover:scale-105 bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center"
+                >
+                  <Icon
+                    name={pioneersCopied ? 'checkCircle' : 'copy'}
+                    className="text-white text-lg"
+                  />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Volver"
+                className="min-h-[44px] min-w-[44px] p-2.5 rounded-xl transition-all hover:scale-105 bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center"
+              >
+                <i className="fas fa-arrow-left text-white text-lg"></i>
+              </button>
+            </div>
           </div>
           
           {/* Barra de búsqueda en el header */}
@@ -186,86 +256,42 @@ const UserListModal = ({
               {filteredUsers.map(user => {
                 const isCurrentUser = user.id === currentUser?.id;
                 const isAdmin = user.role === 'admin';
-                
-                // Estilos específicos para cada rol cuando se muestra la vista "all"
-                const cardStyles = userType === 'all' 
-                  ? (isAdmin 
-                    ? {
-                        cardBg: 'from-purple-50 to-violet-100',
-                        borderColor: 'border-purple-300',
-                        iconBg: 'from-purple-500 to-violet-600',
-                        badge: 'from-purple-600 to-violet-600',
-                        shadowColor: 'shadow-purple-200',
-                        ringColor: 'ring-purple-400'
-                      }
-                    : {
-                        cardBg: 'from-blue-50 to-indigo-100',
-                        borderColor: 'border-blue-200',
-                        iconBg: 'from-blue-500 to-indigo-600',
-                        badge: 'from-blue-500 to-indigo-600',
-                        shadowColor: 'shadow-blue-100',
-                        ringColor: 'ring-blue-400'
-                      })
-                  : {
-                      cardBg: theme.cardBg,
-                      borderColor: theme.borderColor,
-                      iconBg: theme.icon,
-                      badge: theme.badge,
-                      shadowColor: '',
-                      ringColor: ''
-                    };
-                
+                const isPioneer = isPioneerUser(user);
+                const showRoleBadges = userType === 'publisher';
+
                 return (
-                  <div 
-                    key={user.id} 
-                    className={`
-                      bg-gradient-to-br ${cardStyles.cardBg} 
-                      rounded-2xl shadow-md hover:shadow-xl 
-                      transition-all duration-300 p-5 
-                      border-2 ${cardStyles.borderColor} 
-                      relative overflow-hidden
-                      ${userType === 'all' && isAdmin ? 'ring-2 ring-purple-300 ring-opacity-50' : ''}
-                      ${userType === 'all' ? (isAdmin ? 'hover:scale-105' : 'hover:scale-[1.02]') : 'hover:scale-[1.02]'}
-                    `}
+                  <div
+                    key={user.id}
+                    className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow p-5 border border-slate-200"
                   >
-                    {/* Badge de rol con estrella para admin */}
-                    <div className="absolute top-2 right-2">
-                      <span className={`inline-flex items-center gap-1 bg-gradient-to-r ${cardStyles.badge} text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg`}>
-                        {isAdmin && <Icon name="star" className="text-xs" />}
-                        {isAdmin ? 'ADMIN' : 'PUBLICADOR'}
-                      </span>
-                    </div>
-                    
-                    {/* Avatar/Icono con efectos mejorados */}
                     <div className="flex justify-center mb-4">
-                      <div className={`
-                        w-16 h-16 bg-gradient-to-r ${cardStyles.iconBg} 
-                        rounded-full flex items-center justify-center shadow-lg
-                        ${userType === 'all' && isAdmin ? 'animate-pulse' : ''}
-                      `}>
-                        <Icon 
-                          name={isAdmin ? 'shield' : 'user'} 
-                          className="text-white text-2xl" 
-                        />
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                        <Icon name="user" className="text-slate-600 text-2xl" />
                       </div>
                     </div>
-                    
-                    {/* Información del usuario */}
+
                     <div className="text-center">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      <h3 className="text-lg font-semibold text-gray-900">
                         {user.name}
                       </h3>
-                      <p className="text-sm text-gray-600 font-medium mb-3">
-                        @{user.accessCode}
-                      </p>
-                      
-                      {/* Indicador si es el usuario actual */}
-                      {isCurrentUser && (
-                        <div className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
-                          <Icon name="user" className="text-xs" />
-                          <span>Tú</span>
-                        </div>
-                      )}
+
+                      <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+                        {isCurrentUser && (
+                          <span className="inline-flex items-center bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-medium">
+                            Tú
+                          </span>
+                        )}
+                        {showRoleBadges && isAdmin && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-800 text-white">
+                            Administrador
+                          </span>
+                        )}
+                        {showRoleBadges && isPioneer && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                            Precursor
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

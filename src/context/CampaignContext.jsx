@@ -10,6 +10,7 @@
 import {
   addDoc,
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -26,12 +27,17 @@ import { useApp } from './AppContext';
 import {
   CAMPAIGN_PROGRESS_STATUSES,
   CAMPAIGN_STATUSES,
+  buildRedistributionNeeds,
   buildTerritoryMap,
   calculateCampaignTargets,
+  countPreservedAssignmentsByUser,
   distributeAddressesAcrossParticipants,
   getCampaignCandidateAddresses,
+  getPendingUnlockedCampaignAssignments,
+  getPreservedCampaignAssignments,
   normalizeParticipantConfig,
-  sortCampaigns
+  sortCampaigns,
+  validateDistributionTargets
 } from '../utils/campaignUtils';
 
 const CampaignContext = createContext();
@@ -418,6 +424,123 @@ export const CampaignProvider = ({ children }) => {
     showToast('Participantes guardados', 'success');
   }, [campaignParticipants, isAdmin, logCampaignActivity, resolveCampaign, showToast, usersById]);
 
+  const handleRedistributeCampaignAssignments = useCallback(async (campaignId, participantTargets = {}, options = {}) => {
+    if (!isAdmin) {
+      throw new Error('Solo los administradores pueden reorganizar asignaciones.');
+    }
+
+    const campaign = await resolveCampaign(campaignId, options);
+    if (!campaign) {
+      throw new Error('No se encontro la campaña seleccionada.');
+    }
+
+    const candidateAddresses = getCampaignCandidateAddresses({
+      campaign,
+      addresses,
+      territoryMap
+    });
+
+    if (candidateAddresses.length === 0) {
+      throw new Error('La campaña no tiene direcciones disponibles para asignar.');
+    }
+
+    const campaignSpecificParticipants = (await resolveCampaignItems(
+      'campaignParticipants',
+      campaignId,
+      campaignParticipants,
+      options
+    ))
+      .map(normalizeParticipantConfig)
+      .filter((participant) => participant.isEnabled);
+
+    if (campaignSpecificParticipants.length === 0) {
+      throw new Error('Debes agregar al menos una persona antes de reorganizar el reparto.');
+    }
+
+    const existingAssignments = await resolveCampaignItems(
+      'campaignAssignments',
+      campaignId,
+      campaignAssignments,
+      options
+    );
+    const preservedAssignments = getPreservedCampaignAssignments(existingAssignments);
+    const pendingUnlockedAssignments = getPendingUnlockedCampaignAssignments(existingAssignments);
+    const preservedCountsByUser = countPreservedAssignmentsByUser(existingAssignments);
+
+    validateDistributionTargets({
+      participantTargets,
+      totalAddresses: candidateAddresses.length,
+      preservedCountsByUser
+    });
+
+    const redistributionNeeds = buildRedistributionNeeds({
+      participantTargets,
+      preservedCountsByUser
+    });
+
+    if (redistributionNeeds.reduce((sum, entry) => sum + entry.assignedCount, 0) !== pendingUnlockedAssignments.length) {
+      throw new Error('El reparto manual no coincide con las direcciones pendientes disponibles.');
+    }
+
+    const pendingAddressIds = new Set(pendingUnlockedAssignments.map((assignment) => assignment.addressId));
+    const addressesToRedistribute = candidateAddresses.filter((address) => pendingAddressIds.has(address.id));
+
+    const generatedAssignments = distributeAddressesAcrossParticipants({
+      addresses: addressesToRedistribute,
+      participants: campaignSpecificParticipants,
+      targets: redistributionNeeds,
+      territoryMap
+    });
+
+    const batch = writeBatch(db);
+
+    pendingUnlockedAssignments.forEach((assignment) => {
+      batch.delete(doc(db, 'campaignAssignments', assignment.id));
+    });
+
+    generatedAssignments.forEach((assignment, index) => {
+      const assignmentRef = doc(collection(db, 'campaignAssignments'));
+      batch.set(assignmentRef, {
+        campaignId,
+        ...assignment,
+        sortOrder: preservedAssignments.length + index,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        startedAt: null,
+        completedAt: null,
+        completedByUserId: null,
+        completedByUserName: null,
+        lastMovedAt: null
+      });
+    });
+
+    batch.update(doc(db, 'campaigns', campaignId), {
+      addressCountSnapshot: candidateAddresses.length,
+      distributionTargetsDraft: deleteField(),
+      distributionTargetsDraftMeta: deleteField(),
+      updatedAt: serverTimestamp()
+    });
+
+    await batch.commit();
+    await logCampaignActivity(campaignId, null, 'campaign_assignments_redistributed', {
+      redistributedCount: generatedAssignments.length,
+      preservedCount: preservedAssignments.length,
+      addressCount: candidateAddresses.length
+    });
+
+    showToast('Reparto actualizado correctamente', 'success');
+  }, [
+    addresses,
+    campaignAssignments,
+    campaignParticipants,
+    isAdmin,
+    logCampaignActivity,
+    resolveCampaign,
+    resolveCampaignItems,
+    showToast,
+    territoryMap
+  ]);
+
   const handleGenerateCampaignAssignments = useCallback(async (campaignId, options = {}) => {
     if (!isAdmin) {
       throw new Error('Solo los administradores pueden generar asignaciones.');
@@ -516,6 +639,8 @@ export const CampaignProvider = ({ children }) => {
 
     batch.update(doc(db, 'campaigns', campaignId), {
       addressCountSnapshot: candidateAddresses.length,
+      distributionTargetsDraft: deleteField(),
+      distributionTargetsDraftMeta: deleteField(),
       updatedAt: serverTimestamp()
     });
 
@@ -801,6 +926,32 @@ export const CampaignProvider = ({ children }) => {
     });
   }, [campaignAssignments, isAdmin, logCampaignActivity]);
 
+  const handleSaveDistributionTargetsDraft = useCallback(async (campaignId, targets = {}, meta = {}) => {
+    if (!isAdmin) {
+      throw new Error('Solo los administradores pueden guardar borradores de reparto.');
+    }
+
+    const campaign = await resolveCampaign(campaignId);
+    if (!campaign) {
+      throw new Error('No se encontro la campaña seleccionada.');
+    }
+
+    const normalizedTargets = Object.entries(targets).reduce((accumulator, [userId, count]) => {
+      const parsed = Math.max(0, Number.parseInt(String(count), 10) || 0);
+      accumulator[userId] = parsed;
+      return accumulator;
+    }, {});
+
+    await updateDoc(doc(db, 'campaigns', campaignId), {
+      distributionTargetsDraft: normalizedTargets,
+      distributionTargetsDraftMeta: {
+        addressCount: Number(meta.addressCount) || 0,
+        updatedAt: meta.updatedAt || new Date().toISOString()
+      },
+      updatedAt: serverTimestamp()
+    });
+  }, [isAdmin, resolveCampaign]);
+
   const value = {
     campaigns: campaignsSorted,
     campaignParticipants,
@@ -817,6 +968,8 @@ export const CampaignProvider = ({ children }) => {
     handleUpdateCampaign,
     handleSaveCampaignStructure,
     handleGenerateCampaignAssignments,
+    handleRedistributeCampaignAssignments,
+    handleSaveDistributionTargetsDraft,
     handleActivateCampaign,
     handleCompleteCampaign,
     handleArchiveCampaign,

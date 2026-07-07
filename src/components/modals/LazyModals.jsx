@@ -167,7 +167,7 @@ export const LazyCampaignAssignmentsMapModal = ({ isOpen, ...props }) => {
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black bg-opacity-50">
         <div className="bg-white rounded-lg p-6 max-w-md">
           <p className="text-red-600">Error al cargar mapa de invitaciones</p>
           <button
@@ -183,7 +183,7 @@ export const LazyCampaignAssignmentsMapModal = ({ isOpen, ...props }) => {
 
   if (isLoading || !Component) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black bg-opacity-50">
         <div className="bg-white rounded-lg p-6">
           <LazyFallback message="Cargando mapa de invitaciones..." />
         </div>

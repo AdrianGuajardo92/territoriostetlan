@@ -124,6 +124,30 @@ export const getEligibleCampaignAddresses = (
   return filtered;
 };
 
+export const getCampaignAddressDrift = (assignments = [], eligibleAddresses = []) => {
+  const assignedIds = new Set(
+    assignments.map((assignment) => assignment.addressId).filter(Boolean)
+  );
+  const eligibleIds = new Set(
+    eligibleAddresses.map((address) => address.id).filter(Boolean)
+  );
+
+  const newAddresses = eligibleAddresses.filter((address) => !assignedIds.has(address.id));
+  const staleAssignments = assignments.filter(
+    (assignment) => assignment.addressId && !eligibleIds.has(assignment.addressId)
+  );
+
+  return {
+    liveCount: eligibleAddresses.length,
+    assignedCount: assignments.length,
+    newCount: newAddresses.length,
+    staleCount: staleAssignments.length,
+    newAddresses,
+    hasNewAddresses: newAddresses.length > 0,
+    hasStaleAssignments: staleAssignments.length > 0
+  };
+};
+
 export const getCampaignCandidateAddresses = ({ campaign, addresses = [], territoryMap = {} }) => {
   if (!campaign) return [];
 
@@ -230,6 +254,8 @@ export const distributeAddressesAcrossParticipants = ({
 }) => {
   if (addresses.length === 0) return [];
 
+  const orderedAddresses = sortCampaignSourceAddresses(addresses, territoryMap);
+
   const orderedParticipants = [...participants]
     .map(normalizeParticipantConfig)
     .filter((participant) => participant.isEnabled)
@@ -244,49 +270,39 @@ export const distributeAddressesAcrossParticipants = ({
     targets.map((target) => [target.userId, target.assignedCount])
   );
 
-  let participantIndex = 0;
-  let guard = 0;
+  const assignments = [];
+  let addressIndex = 0;
 
-  return addresses.map((address) => {
-    while (
-      orderedParticipants.length > 0 &&
-      (remainingByUserId.get(orderedParticipants[participantIndex]?.userId) || 0) <= 0
-    ) {
-      participantIndex = (participantIndex + 1) % orderedParticipants.length;
-      guard += 1;
+  for (const participant of orderedParticipants) {
+    const count = remainingByUserId.get(participant.userId) || 0;
 
-      if (guard > orderedParticipants.length * 4) {
-        throw new Error('No se pudo completar la distribucion de direcciones.');
+    for (let i = 0; i < count; i += 1) {
+      if (addressIndex >= orderedAddresses.length) {
+        throw new Error('No hay suficientes direcciones para completar la distribucion.');
       }
+
+      const address = orderedAddresses[addressIndex];
+      addressIndex += 1;
+
+      assignments.push({
+        addressId: address.id,
+        territoryId: address.territoryId,
+        addressSnapshot: buildCampaignAddressSnapshot(address, territoryMap),
+        assignedUserId: participant.userId,
+        assignedUserName: participant.userNameSnapshot,
+        groupId: null,
+        groupLabelSnapshot: null,
+        status: CAMPAIGN_PROGRESS_STATUSES.PENDING,
+        manualLocked: false
+      });
     }
+  }
 
-    const participant = orderedParticipants[participantIndex];
-    if (!participant) {
-      throw new Error('No hay personas disponibles para asignar direcciones.');
-    }
+  if (addressIndex !== orderedAddresses.length) {
+    throw new Error('No se pudo completar la distribucion de direcciones.');
+  }
 
-    const remaining = remainingByUserId.get(participant.userId) || 0;
-    if (remaining <= 0) {
-      throw new Error('No hay capacidad restante para asignar direcciones.');
-    }
-
-    remainingByUserId.set(participant.userId, remaining - 1);
-
-    participantIndex = (participantIndex + 1) % orderedParticipants.length;
-    guard = 0;
-
-    return {
-      addressId: address.id,
-      territoryId: address.territoryId,
-      addressSnapshot: buildCampaignAddressSnapshot(address, territoryMap),
-      assignedUserId: participant.userId,
-      assignedUserName: participant.userNameSnapshot,
-      groupId: null,
-      groupLabelSnapshot: null,
-      status: CAMPAIGN_PROGRESS_STATUSES.PENDING,
-      manualLocked: false
-    };
-  });
+  return assignments;
 };
 
 export const groupAssignmentsByTerritory = (assignments = []) => {
@@ -336,6 +352,145 @@ export const getCampaignProgressMeta = (status) => {
   };
 };
 
+export const getPreservedCampaignAssignments = (assignments = []) => (
+  assignments.filter((assignment) => (
+    assignment.manualLocked || assignment.status !== CAMPAIGN_PROGRESS_STATUSES.PENDING
+  ))
+);
+
+export const getPendingUnlockedCampaignAssignments = (assignments = []) => (
+  assignments.filter((assignment) => (
+    !assignment.manualLocked && assignment.status === CAMPAIGN_PROGRESS_STATUSES.PENDING
+  ))
+);
+
+export const countPreservedAssignmentsByUser = (assignments = []) => (
+  getPreservedCampaignAssignments(assignments).reduce((accumulator, assignment) => {
+    accumulator[assignment.assignedUserId] = (accumulator[assignment.assignedUserId] || 0) + 1;
+    return accumulator;
+  }, {})
+);
+
+export const buildDistributionTargetsFromAssignments = (
+  assignments = [],
+  participants = []
+) => {
+  const targets = {};
+  const enabledParticipants = participants.filter((participant) => participant.isEnabled !== false);
+
+  enabledParticipants.forEach((participant) => {
+    targets[participant.userId] = 0;
+  });
+
+  assignments.forEach((assignment) => {
+    targets[assignment.assignedUserId] = (targets[assignment.assignedUserId] || 0) + 1;
+  });
+
+  return targets;
+};
+
+const sanitizeDistributionTargets = (
+  rawTargets = {},
+  participants = [],
+  preservedCountsByUser = {},
+  totalAddresses = Number.POSITIVE_INFINITY
+) => {
+  const enabledParticipants = participants.filter((participant) => participant.isEnabled !== false);
+  const sanitized = {};
+
+  enabledParticipants.forEach((participant) => {
+    const minTarget = preservedCountsByUser[participant.userId] || 0;
+    const parsed = Math.max(0, Number.parseInt(String(rawTargets[participant.userId] ?? 0), 10) || 0);
+    sanitized[participant.userId] = Math.max(minTarget, Math.min(totalAddresses, parsed));
+  });
+
+  return sanitized;
+};
+
+const isDraftCompatible = (draftMeta, addressCount) => {
+  if (!draftMeta || draftMeta.addressCount == null) return false;
+  return Number(draftMeta.addressCount) === Number(addressCount);
+};
+
+export const resolveDistributionTargets = ({
+  firestoreDraft = null,
+  firestoreDraftMeta = null,
+  localDraft = null,
+  assignments = [],
+  participants = [],
+  preservedCountsByUser = {},
+  addressCount = 0
+}) => {
+  const fallback = buildDistributionTargetsFromAssignments(assignments, participants);
+
+  if (firestoreDraft
+    && typeof firestoreDraft === 'object'
+    && isDraftCompatible(firestoreDraftMeta, addressCount)) {
+    return sanitizeDistributionTargets(
+      firestoreDraft,
+      participants,
+      preservedCountsByUser,
+      addressCount
+    );
+  }
+
+  if (localDraft?.targets
+    && isDraftCompatible(localDraft, addressCount)) {
+    return sanitizeDistributionTargets(
+      localDraft.targets,
+      participants,
+      preservedCountsByUser,
+      addressCount
+    );
+  }
+
+  return fallback;
+};
+
+export const validateDistributionTargets = ({
+  participantTargets = {},
+  totalAddresses = 0,
+  preservedCountsByUser = {}
+}) => {
+  const configuredTotal = Object.values(participantTargets).reduce(
+    (sum, count) => sum + (Number(count) || 0),
+    0
+  );
+
+  if (configuredTotal !== totalAddresses) {
+    const difference = totalAddresses - configuredTotal;
+    if (difference > 0) {
+      throw new Error(`Faltan ${difference} dirección${difference === 1 ? '' : 'es'} por repartir (${configuredTotal}/${totalAddresses}).`);
+    }
+
+    throw new Error(`Sobran ${Math.abs(difference)} dirección${Math.abs(difference) === 1 ? '' : 'es'} (${configuredTotal}/${totalAddresses}).`);
+  }
+
+  Object.entries(participantTargets).forEach(([userId, targetCount]) => {
+    const preservedCount = preservedCountsByUser[userId] || 0;
+    const normalizedTarget = Number(targetCount) || 0;
+
+    if (normalizedTarget < preservedCount) {
+      throw new Error('No puedes reducir por debajo de las asignaciones completadas, en progreso o bloqueadas.');
+    }
+  });
+
+  return configuredTotal;
+};
+
+export const buildRedistributionNeeds = ({
+  participantTargets = {},
+  preservedCountsByUser = {}
+}) => Object.entries(participantTargets).map(([userId, targetCount]) => {
+  const preservedCount = preservedCountsByUser[userId] || 0;
+  const normalizedTarget = Math.max(0, Number(targetCount) || 0);
+
+  return {
+    userId,
+    assignedCount: Math.max(0, normalizedTarget - preservedCount)
+  };
+}).filter((entry) => entry.assignedCount > 0);
+
 export const getCampaignStatusMeta = (status) => {
   if (status === CAMPAIGN_STATUSES.ACTIVE) {
     return {
@@ -362,4 +517,85 @@ export const getCampaignStatusMeta = (status) => {
     label: 'Pendiente de activar',
     badgeClass: 'bg-amber-100 text-amber-700 border-amber-200'
   };
+};
+
+const formatDistributionAddressCount = (count) => (
+  count === 1 ? '1 dirección' : `${count} direcciones`
+);
+
+const formatDistributionParticipantEntry = (index, name, count) => (
+  `${index}.- ${name}\n*${formatDistributionAddressCount(count)}*`
+);
+
+const sortDistributionParticipantsByName = (a, b) => (
+  a.userNameSnapshot.localeCompare(b.userNameSnapshot, 'es')
+);
+
+const getDistributionTargetCount = (participant, distributionTargets = {}) => (
+  Number(distributionTargets[participant.userId]) || 0
+);
+
+export const formatCampaignDistributionWhatsAppText = ({
+  participants = [],
+  distributionTargets = {},
+  isPioneer = () => false
+} = {}) => {
+  if (participants.length === 0) {
+    return '';
+  }
+
+  const withoutAddresses = participants
+    .filter((participant) => getDistributionTargetCount(participant, distributionTargets) === 0)
+    .slice()
+    .sort(sortDistributionParticipantsByName);
+
+  const withAddresses = participants
+    .filter((participant) => getDistributionTargetCount(participant, distributionTargets) > 0)
+    .slice()
+    .sort(sortDistributionParticipantsByName);
+
+  const sections = [];
+
+  if (withoutAddresses.length > 0) {
+    const sinDireccionesList = withoutAddresses
+      .map((participant, index) => formatDistributionParticipantEntry(
+        index + 1,
+        participant.userNameSnapshot,
+        0
+      ))
+      .join('\n\n');
+    sections.push(`*Hermanos o hermanas sin direcciones*\n\n${sinDireccionesList}`);
+  }
+
+  if (withAddresses.length > 0) {
+    const mainList = withAddresses
+      .map((participant, index) => {
+        const count = getDistributionTargetCount(participant, distributionTargets);
+        return formatDistributionParticipantEntry(
+          index + 1,
+          participant.userNameSnapshot,
+          count
+        );
+      })
+      .join('\n\n');
+    sections.push(`*Lista general*\n\n${mainList}`);
+  }
+
+  const pioneersWithAddresses = withAddresses.filter(isPioneer);
+
+  if (pioneersWithAddresses.length > 0) {
+    const pioneerList = pioneersWithAddresses
+      .map((participant, index) => {
+        const count = getDistributionTargetCount(participant, distributionTargets);
+        return formatDistributionParticipantEntry(
+          index + 1,
+          participant.userNameSnapshot,
+          count
+        );
+      })
+      .join('\n\n');
+    sections.push(`*Precursores*\n\n${pioneerList}`);
+  }
+
+  return sections.join('\n\n');
 };

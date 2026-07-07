@@ -9,6 +9,8 @@ import { useBackHandler } from '../hooks/useBackHandler';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useSwipeNavigation } from '../hooks/useTouchGestures';
 import { usePremiumFeedback } from '../hooks/usePremiumFeedback';
+import { useIsDesktop } from '../hooks/useMediaQuery';
+import { getDisplayAddress, getFullAddress, smartSearch } from '../utils/helpers';
 import {
   LazyGeneralMapModal as GeneralMapModal,
   LazyAssignTerritoryModal as AssignTerritoryModal,
@@ -36,6 +38,7 @@ const getAssignedTimestamp = (territory) =>
 const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const {
     territories,
+    addresses,
     currentUser,
     isLoading,
     userNotificationsCount,
@@ -44,7 +47,9 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     handleReturnTerritory,
     handleCompleteTerritory
   } = useApp();
+  const isDesktop = useIsDesktop();
   const [filterStatus, setFilterStatus] = useState('all');
+  const [addressSearchTerm, setAddressSearchTerm] = useState('');
   const [isGeneralMapOpen, setIsGeneralMapOpen] = useState(false);
   const [isQuickProposalOpen, setIsQuickProposalOpen] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -101,6 +106,31 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
     });
   }, [territories, filterStatus]);
 
+  const isSearchingAddresses = Boolean(addressSearchTerm.trim());
+
+  const addressSearchResults = useMemo(() => {
+    if (!isSearchingAddresses) return [];
+
+    return addresses.filter((address) => {
+      const matchesAddress = smartSearch(
+        addressSearchTerm,
+        `${getDisplayAddress(address, '')} ${getFullAddress(address, '')}`
+      );
+      const matchesNotes = address.notes && smartSearch(addressSearchTerm, address.notes);
+      const matchesReference = address.referencia && smartSearch(addressSearchTerm, address.referencia);
+
+      return matchesAddress || matchesNotes || matchesReference;
+    }).map((address) => {
+      const territory = territories.find((item) => item.id === address.territoryId);
+
+      return {
+        ...address,
+        territory,
+        territoryName: territory ? territory.name : `Territorio ${address.territoryId}`
+      };
+    });
+  }, [addressSearchTerm, addresses, isSearchingAddresses, territories]);
+
   const stats = useMemo(() => ({
     total: territories.length,
     available: territories.filter((territory) => territory.status === 'Disponible').length,
@@ -150,6 +180,15 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
   const handleClearFilters = useCallback(() => {
     setFilterStatus('all');
   }, []);
+
+  const handleClearAddressSearch = useCallback(() => {
+    setAddressSearchTerm('');
+  }, []);
+
+  const handleNavigateToSearchResult = useCallback((address) => {
+    if (!address.territory) return;
+    onSelectTerritory(address.territory, address.id);
+  }, [onSelectTerritory]);
 
   const createTerritorySelectHandler = useCallback((territory) => {
     return () => onSelectTerritory(territory);
@@ -289,8 +328,8 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
       style={{ backgroundColor: '#F5F5F5' }}
     >
       <header className="shadow-md sticky top-0 z-30">
-        <div className="px-4 pt-2 pb-2 flex justify-between items-center" style={{ backgroundColor: '#2C3E50' }}>
-          <div className="flex items-center space-x-3">
+        <div className="px-4 pt-2 pb-2 flex justify-between items-center gap-3" style={{ backgroundColor: '#2C3E50' }}>
+          <div className="flex items-center space-x-3 flex-shrink-0">
             <h1 className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>
               Territorios
             </h1>
@@ -318,9 +357,35 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
             </button>
           </div>
 
+          {isDesktop && (
+            <div className="flex-1 max-w-lg mx-1 relative min-w-0">
+              <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/60">
+                <Icon name="search" size={16} />
+              </div>
+              <input
+                type="search"
+                value={addressSearchTerm}
+                onChange={(event) => setAddressSearchTerm(event.target.value)}
+                placeholder="Buscar calle, número o nota..."
+                aria-label="Buscar direcciones"
+                className="w-full rounded-xl border border-white/20 bg-white/95 py-2 pl-9 pr-9 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm focus:border-white focus:outline-none focus:ring-2 focus:ring-white/40"
+              />
+              {addressSearchTerm && (
+                <button
+                  type="button"
+                  onClick={handleClearAddressSearch}
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100"
+                >
+                  <Icon name="x" size={14} />
+                </button>
+              )}
+            </div>
+          )}
+
           <button
             onClick={onOpenMenu}
-            className="relative p-3 rounded-xl shadow-md transition-all duration-200"
+            className="relative flex-shrink-0 p-3 rounded-xl shadow-md transition-all duration-200"
             style={{
               backgroundColor: '#34495e',
               minWidth: '40px',
@@ -371,16 +436,68 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu }) => {
 
       <main className="px-4 sm:px-6 lg:px-8 mt-3">
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
             {[...Array(10)].map((_, index) => <SkeletonCard key={index} />)}
           </div>
+        ) : isSearchingAddresses ? (
+          addressSearchResults.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-slate-600">
+                {addressSearchResults.length} dirección{addressSearchResults.length !== 1 ? 'es' : ''} encontrada{addressSearchResults.length !== 1 ? 's' : ''}
+              </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {addressSearchResults.map((address) => (
+                  <button
+                    key={address.id}
+                    type="button"
+                    onClick={() => handleNavigateToSearchResult(address)}
+                    disabled={!address.territory}
+                    className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-blue-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                        <Icon name="mapPin" size={18} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-base font-semibold text-slate-900">
+                          {getDisplayAddress(address)}
+                        </p>
+                        <p className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                          <Icon name="map" size={12} className="mr-1.5" />
+                          {address.territoryName}
+                        </p>
+                        {address.notes && (
+                          <p className="mt-2 line-clamp-2 text-sm text-slate-500 italic">
+                            {address.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <Icon name="searchX" size={48} className="mx-auto mb-4 text-gray-300" />
+              <p className="text-gray-500 font-medium text-lg">
+                No se encontraron direcciones para &quot;{addressSearchTerm}&quot;
+              </p>
+              <button
+                onClick={handleClearAddressSearch}
+                className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                Limpiar búsqueda
+              </button>
+            </div>
+          )
         ) : filteredAndSortedTerritories.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 territory-list">
+          <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 territory-list">
             {filteredAndSortedTerritories.map((territory) => (
               <div
                 key={territory.id}
                 data-territory-id={territory.id}
-                className="territory-card"
+                className="territory-card h-full"
               >
                 <TerritoryCard
                   territory={territory}

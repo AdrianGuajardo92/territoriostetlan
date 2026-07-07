@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import { useBackHandler } from '../../hooks/useBackHandler';
+import { useIsDesktop } from '../../hooks/useMediaQuery';
 import Icon from '../common/Icon';
 import { ArchiveConfirmDialog, ArchiveProposalDialog } from '../addresses/AddressArchiveDialogs';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
@@ -30,6 +31,7 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
     const [showQuickAction, setShowQuickAction] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const { showToast } = useToast();
+    const isDesktop = useIsDesktop();
     const markersRef = useRef({});
     const selectedMarkerRef = useRef(null);
 
@@ -352,6 +354,18 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
             }
         );
     }, [showToast]);
+
+    const handleZoomIn = useCallback(() => {
+        const map = mapInstanceRef.current;
+        if (!map || !isMapReady) return;
+        map.setZoom(map.getZoom() + 1, { animate: false });
+    }, [isMapReady]);
+
+    const handleZoomOut = useCallback(() => {
+        const map = mapInstanceRef.current;
+        if (!map || !isMapReady) return;
+        map.setZoom(map.getZoom() - 1, { animate: false });
+    }, [isMapReady]);
 
     // Función para actualizar el marcador de ubicación del usuario
     const updateUserLocationMarker = useCallback(() => {
@@ -719,6 +733,27 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
             }
         };
 
+        const tryInitializeMap = (attempt = 0) => {
+            if (!mapRef.current) {
+                if (attempt < 40) {
+                    requestAnimationFrame(() => tryInitializeMap(attempt + 1));
+                } else {
+                    setMapError(true);
+                }
+                return;
+            }
+            if (mapRef.current.offsetHeight === 0 && attempt < 40) {
+                requestAnimationFrame(() => tryInitializeMap(attempt + 1));
+                return;
+            }
+            initializeMap();
+            if (mapInstanceRef.current) {
+                requestAnimationFrame(() => {
+                    mapInstanceRef.current?.invalidateSize();
+                });
+            }
+        };
+
         const checkLeaflet = async () => {
             try {
                 if (typeof L === 'undefined' || !window.leafletJSLoaded) {
@@ -736,7 +771,7 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
                 }
 
                 if (typeof L !== 'undefined' && L.map && typeof L.map === 'function') {
-                    initializeMap();
+                    tryInitializeMap();
                 } else {
                     console.error('Leaflet no se cargó correctamente');
                     setMapError(true);
@@ -765,6 +800,25 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
         };
     }, [isOpen]);
 
+    // Redimensionar mapa al cambiar ventana o recuperar foco (desktop)
+    useEffect(() => {
+        if (!isOpen || !isMapReady) return;
+
+        const handleResize = () => {
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.invalidateSize();
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('focus', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('focus', handleResize);
+        };
+    }, [isOpen, isMapReady]);
+
     // Actualizar marcadores cuando cambian los filtros
     useEffect(() => {
         if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
@@ -785,13 +839,13 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
         updateUserLocationMarker();
     }, [isOpen, isMapReady, userLocation, updateUserLocationMarker]);
 
-    // Obtener ubicación automáticamente al abrir el mapa
+    // Obtener ubicación automáticamente al abrir el mapa (solo móvil; en desktop el GPS suele fallar/timeout)
     useEffect(() => {
         if (!isOpen || !isMapReady || !mapInstanceRef.current) return;
-
-        // Llamar a getUserLocation solo una vez cuando el mapa esté listo
+        const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+        if (!isCoarsePointer) return;
         getUserLocation();
-    }, [isMapReady, getUserLocation]); // Solo cuando el mapa esté listo
+    }, [isOpen, isMapReady, getUserLocation]);
 
     // Control del scroll del body
     useEffect(() => {
@@ -815,7 +869,7 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[70] bg-white flex flex-col relative">
+        <div className="fixed inset-0 z-[70] bg-white flex flex-col min-h-0 h-dvh">
             {/* Estilos CSS para animaciones */}
             <style>{`
                 @keyframes pulse-marker {
@@ -919,7 +973,7 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
             </div>
 
             {/* Mapa */}
-            <div className="flex-1 relative bg-gray-100" style={{ touchAction: 'none', overflow: 'hidden' }}>
+            <div className="flex-1 min-h-0 relative bg-gray-100" style={{ touchAction: 'none', overflow: 'hidden' }}>
                 {mapError ? (
                     <div className="absolute inset-0 flex items-center justify-center text-center p-4">
                         <div>
@@ -1059,8 +1113,40 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
                             </div>
                         </div>
 
-                        {/* Botón flotante de ubicación (bottom-right) */}
-                        <div className="absolute bottom-4 right-4 z-20">
+                        {/* Controles flotantes (bottom-right) */}
+                        <div className="absolute bottom-4 right-4 z-20 flex flex-col items-center gap-2">
+                            {isDesktop && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={handleZoomIn}
+                                        disabled={!isMapReady}
+                                        className="w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-200 flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Acercar mapa"
+                                        aria-label="Acercar mapa"
+                                    >
+                                        <Icon
+                                            name="plus"
+                                            size={24}
+                                            className="text-gray-600 group-hover:text-blue-600 transition-colors"
+                                        />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleZoomOut}
+                                        disabled={!isMapReady}
+                                        className="w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-200 flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Alejar mapa"
+                                        aria-label="Alejar mapa"
+                                    >
+                                        <Icon
+                                            name="minus"
+                                            size={24}
+                                            className="text-gray-600 group-hover:text-blue-600 transition-colors"
+                                        />
+                                    </button>
+                                </>
+                            )}
                             <button
                                 onClick={getUserLocation}
                                 disabled={isLocating}
@@ -1068,6 +1154,7 @@ const GeneralMapModal = ({ isOpen, onClose, modalId = 'general-map-modal' }) => 
                                     isLocating ? 'opacity-50 cursor-not-allowed' : ''
                                 } ${userLocation ? 'bg-blue-50 border-blue-300' : ''}`}
                                 title="Mi ubicación"
+                                aria-label="Mi ubicación"
                             >
                                 {isLocating ? (
                                     <div className="animate-spin w-6 h-6 border-3 border-blue-600 border-t-transparent rounded-full"></div>

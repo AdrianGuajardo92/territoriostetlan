@@ -3,7 +3,10 @@ import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
 import Icon from '../common/Icon';
 import { normalizeAssignedTo, getAssignedNames, isUserAssigned, formatTeamNames } from '../../utils/territoryHelpers';
-import { getDisplayAddress, getFullAddress } from '../../utils/helpers';
+import { getDisplayAddress, splitDisplayAddress } from '../../utils/helpers';
+import { getAddressNavigationUrls } from '../../utils/addressNavigationUrls';
+import { getTerritoryAddressTheme } from '../../utils/addressCardThemes';
+import AddressNavigationButtons from '../common/AddressNavigationButtons';
 
 const AddressCard = memo(({ 
     address, 
@@ -21,7 +24,9 @@ const AddressCard = memo(({
     showActions = true,
     customBadge = null,
     hideStatusBadge = false,
-    showFullAddress = false
+    showFullAddress = false,
+    enableContextMenu = false,
+    onContextMenuRequest = null
 }) => {
     const { 
         handleToggleAddressStatus, 
@@ -34,52 +39,29 @@ const AddressCard = memo(({
     const [isProcessing, setIsProcessing] = useState(false);
     const [isNavigatingLocal, setIsNavigatingLocal] = useState(false);
     const displayAddress = getDisplayAddress(address);
+    const { street: addressStreet, number: addressNumber } = splitDisplayAddress(displayAddress);
 
-    // Configuración de colores según el estado (visitado/no visitado)
-    const statusConfig = {
-        visited: {
-            // Gradientes principales  
-            bgGradient: 'from-rose-50 to-pink-50',
-            headerGradient: 'from-rose-500 via-pink-500 to-red-500',
-            borderColor: 'border-rose-300',
-            accentColor: '#f43f5e', // rose-500
-            // Botones y elementos
-            primaryButton: 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200',
-            secondaryButton: 'bg-rose-100 text-rose-700 hover:bg-rose-200 border-rose-200',
-            // Iconos y badges
-            iconColor: 'text-rose-600',
-            iconBg: 'bg-rose-100',
-            badgeBg: 'bg-rose-100 text-rose-700 border-rose-200',
-            // Textos
-            titleColor: 'text-rose-800',
-            subtitleColor: 'text-rose-600',
-            // Efectos
-            hoverBorder: 'hover:border-rose-400',
-            hoverShadow: 'hover:shadow-rose-200/30',
-            // Navegación
-            navButtons: 'bg-rose-50 border-rose-200',
-            navActive: 'bg-rose-600 text-white hover:bg-rose-700'
-        },
-        notVisited: {
-            bgGradient: 'from-emerald-50 to-green-50',
-            headerGradient: 'from-emerald-500 via-green-500 to-teal-500',
-            borderColor: 'border-emerald-300',
-            accentColor: '#10b981', // emerald-500
-            primaryButton: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200',
-            secondaryButton: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200',
-            iconColor: 'text-emerald-600',
-            iconBg: 'bg-emerald-100',
-            badgeBg: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-            titleColor: 'text-emerald-800',
-            subtitleColor: 'text-emerald-600',
-            hoverBorder: 'hover:border-emerald-400',
-            hoverShadow: 'hover:shadow-emerald-200/30',
-            navButtons: 'bg-emerald-50 border-emerald-200',
-            navActive: 'bg-emerald-600 text-white hover:bg-emerald-700'
-        }
-    };
+    const config = getTerritoryAddressTheme(address.isVisited);
+    const titleColorStrong = config.titleColor.replace('-800', '-950');
 
-    const config = statusConfig[address.isVisited ? 'visited' : 'notVisited'];
+    const renderAddressTitle = (className) => (
+        <h3
+            className={`${className} break-words`}
+            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+        >
+            {addressNumber ? (
+                <>
+                    <span className="md:hidden">
+                        <span className={`block ${config.titleColor}`}>{addressStreet}</span>
+                        <span className={`block ${titleColorStrong}`}>{addressNumber}</span>
+                    </span>
+                    <span className={`hidden md:inline ${config.titleColor}`}>{displayAddress}</span>
+                </>
+            ) : (
+                <span className={config.titleColor}>{displayAddress}</span>
+            )}
+        </h3>
+    );
     
     // 🔄 PASO 12: Obtener información del territorio y equipo PRIMERO
     const territory = contextTerritories.find(t => t.id === address.territoryId);
@@ -105,59 +87,13 @@ const AddressCard = memo(({
     // Highlight elegante sin parpadeo - CONTRASTE AZUL SUTIL
     const navigatingClass = (isNavigating || isNavigatingLocal) ? 'ring-4 ring-blue-500 ring-opacity-50 bg-blue-50/50 scale-[1.02] shadow-2xl' : '';
 
-    // Funciones de navegación inteligente
-    const getNavigationUrl = (mode) => {
-        let lat, lng;
-        
-        // Prioridad 1: Coordenadas latitude/longitude
-        if (address.latitude && address.longitude) {
-            lat = address.latitude;
-            lng = address.longitude;
-        }
-        // Prioridad 2: Array coords
-        else if (address.coords && Array.isArray(address.coords) && address.coords.length >= 2) {
-            [lat, lng] = address.coords;
-        }
-        // Prioridad 3: Intentar extraer coordenadas del mapUrl
-        else if (address.mapUrl && address.mapUrl.trim() !== '') {
-            const mapUrlMatch = address.mapUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-            if (mapUrlMatch) {
-                lat = parseFloat(mapUrlMatch[1]);
-                lng = parseFloat(mapUrlMatch[2]);
-            }
-        }
-        
-        // Si tenemos coordenadas, usar navegación con modo específico (sin auto-inicio)
-        if (lat && lng) {
-            switch (mode) {
-                case 'driving':
-                    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-                case 'walking':
-                    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
-                case 'transit':
-                    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=transit`;
-                default:
-                    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-            }
-        }
-        
-        // Fallback: Usar dirección de texto con modo específico (sin auto-inicio)
-        const encodedAddress = encodeURIComponent(getFullAddress(address, displayAddress));
-        switch (mode) {
-            case 'driving':
-                return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=driving`;
-            case 'walking':
-                return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=walking`;
-            case 'transit':
-                return `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}&travelmode=transit`;
-            default:
-                return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-        }
+    const handleContextMenu = (event) => {
+        if (!enableContextMenu || !onContextMenuRequest) return;
+        event.preventDefault();
+        onContextMenuRequest(address, event);
     };
 
-    const drivingUrl = getNavigationUrl('driving');
-    const walkingUrl = getNavigationUrl('walking');
-    const transitUrl = getNavigationUrl('transit');
+    const navigationUrls = getAddressNavigationUrls(address);
 
     // Componente para mostrar la distancia
     const DistanceTag = ({ distance }) => {
@@ -173,34 +109,10 @@ const AddressCard = memo(({
         );
     };
 
-    // Componente de botones de navegación (usando FontAwesome)
-    const NavigationButtons = ({ a_styles, div_styles, button_styles }) => (
-        <div className={`flex items-center rounded-xl p-1 ${a_styles}`}>
-            <button
-                onClick={(e) => handleNavClick(e, drivingUrl)}
-                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105`} 
-                title="Navegar en coche"
-            >
-                <i className="fas fa-car text-lg"></i>
-            </button>
-            <div className={`w-px h-4 mx-1 ${div_styles}`}></div>
-            <button
-                onClick={(e) => handleNavClick(e, walkingUrl)}
-                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105`} 
-                title="Navegar a pie"
-            >
-                <i className="fas fa-person-walking text-lg"></i>
-            </button>
-            <div className={`w-px h-4 mx-1 ${div_styles}`}></div>
-            <button
-                onClick={(e) => handleNavClick(e, transitUrl)}
-                className={`px-3 py-2 rounded-lg ${button_styles} transition-all transform hover:scale-105`} 
-                title="Navegar en transporte público"
-            >
-                <i className="fas fa-bus text-lg"></i>
-            </button>
-        </div>
-    );
+    const handleNavigationOpen = () => {
+        setIsNavigatingLocal(true);
+        setTimeout(() => setIsNavigatingLocal(false), 3000);
+    };
 
     // Manejadores
     const handleToggleStatus = async () => {
@@ -241,25 +153,6 @@ const AddressCard = memo(({
         if (onUnmark) onUnmark(address.id);
     };
 
-    const handleNavClick = (e, url) => {
-        // Prevenir comportamiento por defecto si existe
-        if (e) e.preventDefault();
-        
-        // Guardar el estado actual en sessionStorage antes de navegar
-        // Esto permitirá restaurar la ubicación si la app se recarga
-        if (window.sessionStorage) {
-            sessionStorage.setItem('lastTerritoryId', address.territoryId);
-            sessionStorage.setItem('navigationTimestamp', Date.now().toString());
-        }
-        
-        // Abrir en nueva ventana/pestaña
-        window.open(url, '_blank', 'noopener,noreferrer');
-        
-        // Solo activar el estado local de navegación para feedback visual
-        setIsNavigatingLocal(true);
-        setTimeout(() => setIsNavigatingLocal(false), 3000);
-    };
-
     // 🔄 PASO 12: Variables ya declaradas arriba - eliminadas para evitar duplicación
     
     // VISTA DE LISTA COMPACTA
@@ -267,6 +160,7 @@ const AddressCard = memo(({
         return (
             <div 
                 id={`address-card-${address.id}`}
+                onContextMenu={handleContextMenu}
                 className={`
                     group relative
                     bg-gradient-to-r ${config.bgGradient}
@@ -294,9 +188,7 @@ const AddressCard = memo(({
                             {/* Dirección */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-start space-x-2">
-                                    <h3 className={`font-bold text-base break-words ${config.titleColor}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                                        {displayAddress}
-                                    </h3>
+                                    {renderAddressTitle(`font-bold text-base`)}
                                     <DistanceTag distance={address.distance} />
                                 </div>
                                 
@@ -319,10 +211,13 @@ const AddressCard = memo(({
                         </div>
 
                         {/* Botones de navegación compactos */}
-                        <NavigationButtons 
-                            a_styles={`${config.navButtons} border shadow-sm backdrop-blur-sm`}
-                            div_styles="bg-gray-300"
-                            button_styles={`${config.navActive} shadow-sm`}
+                        <AddressNavigationButtons
+                            urls={navigationUrls}
+                            containerClassName={`${config.navButtons} border shadow-sm backdrop-blur-sm`}
+                            dividerClassName="bg-gray-300"
+                            buttonClassName={`${config.navActive} shadow-sm`}
+                            territoryId={address.territoryId}
+                            onNavigate={handleNavigationOpen}
                         />
 
                         {/* Botón de estado - solo mostrar si showActions es true y no es navigation-only */}
@@ -371,6 +266,7 @@ const AddressCard = memo(({
     return (
         <div 
             id={`address-card-${address.id}`}
+            onContextMenu={handleContextMenu}
             className={`
                 group relative cursor-default
                 bg-gradient-to-br ${config.bgGradient}
@@ -394,9 +290,7 @@ const AddressCard = memo(({
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className={`text-lg font-bold break-words ${config.titleColor}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                                {displayAddress}
-                            </h3>
+                            {renderAddressTitle('text-lg font-bold')}
                             {(address.distance != null && address.distance !== Infinity) && (
                                 <div className="mt-1">
                                     <DistanceTag distance={address.distance} />
@@ -459,10 +353,13 @@ const AddressCard = memo(({
 
                         {/* Navegación y acciones */}
                         <div className={`flex items-center ${showActions && viewMode !== 'navigation-only' ? 'justify-between' : 'justify-center'}`}>
-                            <NavigationButtons 
-                                a_styles="bg-red-50 border-red-200 border shadow-sm"
-                                div_styles="bg-red-300"
-                                button_styles="bg-red-600 text-white hover:bg-red-700 shadow-sm"
+                            <AddressNavigationButtons
+                                urls={navigationUrls}
+                                containerClassName={config.visitedNavButtons}
+                                dividerClassName={config.visitedNavDivider}
+                                buttonClassName={config.visitedNavActive}
+                                territoryId={address.territoryId}
+                                onNavigate={handleNavigationOpen}
                             />
                             
                             {showActions && viewMode !== 'navigation-only' && (
@@ -534,10 +431,13 @@ const AddressCard = memo(({
 
                         {/* Navegación y acciones */}
                         <div className={`flex items-center ${showActions && viewMode !== 'navigation-only' ? 'justify-between' : 'justify-center'}`}>
-                            <NavigationButtons 
-                                a_styles="bg-emerald-50 border-emerald-200 border shadow-sm"
-                                div_styles="bg-emerald-300"
-                                button_styles="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
+                            <AddressNavigationButtons
+                                urls={navigationUrls}
+                                containerClassName={config.visitedNavButtons}
+                                dividerClassName={config.visitedNavDivider}
+                                buttonClassName={config.visitedNavActive}
+                                territoryId={address.territoryId}
+                                onNavigate={handleNavigationOpen}
                             />
                             
                             {showActions && viewMode !== 'navigation-only' && (

@@ -3,20 +3,20 @@ import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../hooks/useToast';
+import S13OfficialTable from '../reports/S13OfficialTable';
 import {
   generateS13Data,
   exportS13ToExcel,
   exportS13ToPDF,
-  getAvailableServiceYears,
-  getServiceYearRange,
-  getSemesterRange,
-  getCustomRange,
+  exportS13ToHTMLFile,
+  getRollingMonthsRange,
+  getDateRangeFromInputs,
+  formatPeriodLabel,
   groupByMonthOrdered,
   generateSimpleSummary,
   exportSimpleSummaryToExcel,
   exportSimpleSummaryToPDF,
-  formatDateShort,
-  MONTH_NAMES
+  formatDateShort
 } from '../../utils/s13Export';
 
 /**
@@ -33,11 +33,18 @@ const formatDate = (date) => {
  * Opciones de período disponibles
  */
 const PERIOD_OPTIONS = [
-  { value: 'full', label: 'Año completo', description: 'Sep - Ago' },
-  { value: 'semester1', label: 'Semestre 1', description: 'Sep - Feb' },
-  { value: 'semester2', label: 'Semestre 2', description: 'Mar - Ago' },
-  { value: 'custom', label: 'Personalizado', description: 'Rango personalizado' }
+  { value: 'months3', label: '3 meses', months: 3 },
+  { value: 'months6', label: '6 meses', months: 6 },
+  { value: 'months12', label: '12 meses', months: 12 },
+  { value: 'custom', label: 'Personalizado', months: null }
 ];
+
+const toInputDateValue = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 /**
  * Tabs disponibles para la vista
@@ -46,59 +53,48 @@ const VIEW_TABS = [
   { id: 'summary', label: 'Resumen', icon: 'fas fa-chart-pie' },
   { id: 'detail', label: 'Detalle', icon: 'fas fa-list' },
   { id: 'byMonth', label: 'Por Mes', icon: 'fas fa-calendar-alt' },
-  { id: 's13', label: 'Formato S-13', icon: 'fas fa-file-alt' }
+  { id: 's13', label: 'Vista previa S-13', icon: 'fas fa-file-alt' }
 ];
 
 const S13ReportModal = ({ isOpen, onClose, modalId = 's13-report-modal' }) => {
   const { territories, territoryHistory = [] } = useApp();
   const { showToast } = useToast();
 
-  // Estados
-  const availableYears = useMemo(() => getAvailableServiceYears(), []);
-  const [selectedServiceYear, setSelectedServiceYear] = useState(availableYears[0]?.value || new Date().getFullYear());
-  const [selectedPeriod, setSelectedPeriod] = useState('full');
-  const [activeTab, setActiveTab] = useState('summary');
+  const today = useMemo(() => new Date(), []);
+  const defaultRange = useMemo(() => getRollingMonthsRange(12, today), [today]);
 
-  // Estados para rango personalizado
-  const currentDate = new Date();
-  const [customStartMonth, setCustomStartMonth] = useState(8); // Septiembre
-  const [customStartYear, setCustomStartYear] = useState(currentDate.getMonth() >= 8 ? currentDate.getFullYear() : currentDate.getFullYear() - 1);
-  const [customEndMonth, setCustomEndMonth] = useState(currentDate.getMonth());
-  const [customEndYear, setCustomEndYear] = useState(currentDate.getFullYear());
+  const [selectedPeriod, setSelectedPeriod] = useState('months12');
+  const [activeTab, setActiveTab] = useState('summary');
+  const [customStartDate, setCustomStartDate] = useState(toInputDateValue(defaultRange.start));
+  const [customEndDate, setCustomEndDate] = useState(toInputDateValue(defaultRange.end));
+  const [rangeError, setRangeError] = useState(null);
 
   // Estados para meses expandidos en vista "Por Mes"
   const [expandedMonths, setExpandedMonths] = useState({});
 
   // Calcular rango de fechas basado en selección
   const dateRange = useMemo(() => {
-    if (selectedPeriod === 'full') {
-      return getServiceYearRange(selectedServiceYear);
-    } else if (selectedPeriod === 'semester1') {
-      return getSemesterRange(selectedServiceYear, 1);
-    } else if (selectedPeriod === 'semester2') {
-      return getSemesterRange(selectedServiceYear, 2);
-    } else {
-      // Rango personalizado
-      return getCustomRange(customStartMonth, customStartYear, customEndMonth, customEndYear);
+    try {
+      if (selectedPeriod === 'custom') {
+        return getDateRangeFromInputs(customStartDate, customEndDate);
+      }
+      const option = PERIOD_OPTIONS.find((entry) => entry.value === selectedPeriod);
+      return getRollingMonthsRange(option?.months || 12, today);
+    } catch (error) {
+      return null;
     }
-  }, [selectedServiceYear, selectedPeriod, customStartMonth, customStartYear, customEndMonth, customEndYear]);
+  }, [selectedPeriod, customStartDate, customEndDate, today]);
 
   // Generar datos del reporte
   const reportData = useMemo(() => {
-    if (!territories || !territoryHistory) {
-      return { detailList: [], summaryByTerritory: [], byMonth: {}, stats: {} };
+    if (!territories || !territoryHistory || !dateRange) {
+      return { detailList: [], summaryByTerritory: [], s13Rows: [], byMonth: {}, stats: {}, period: null };
     }
     return generateS13Data(territoryHistory, territories, dateRange.start, dateRange.end);
   }, [territories, territoryHistory, dateRange]);
 
-  // Label del período para exportación
-  const periodLabel = useMemo(() => {
-    if (selectedPeriod === 'custom') {
-      return `${MONTH_NAMES[customStartMonth]} ${customStartYear} - ${MONTH_NAMES[customEndMonth]} ${customEndYear}`;
-    }
-    const option = PERIOD_OPTIONS.find(p => p.value === selectedPeriod);
-    return `${option?.label} (${option?.description})`;
-  }, [selectedPeriod, customStartMonth, customStartYear, customEndMonth, customEndYear]);
+  const periodLabel = reportData.period?.label
+    || (dateRange ? formatPeriodLabel(dateRange.start, dateRange.end) : 'Período no válido');
 
   // Datos agrupados por mes para la vista "Por Mes"
   const monthlyData = useMemo(() => {
@@ -107,11 +103,26 @@ const S13ReportModal = ({ isOpen, onClose, modalId = 's13-report-modal' }) => {
 
   // Resumen simple para la vista principal
   const simpleSummary = useMemo(() => {
-    if (!territories || !territoryHistory) {
+    if (!territories || !territoryHistory || !dateRange) {
       return { summary: [], stats: {} };
     }
     return generateSimpleSummary(territoryHistory, territories, dateRange.start, dateRange.end);
   }, [territories, territoryHistory, dateRange]);
+
+  const validateCustomRange = () => {
+    if (selectedPeriod !== 'custom') {
+      setRangeError(null);
+      return true;
+    }
+    try {
+      getDateRangeFromInputs(customStartDate, customEndDate);
+      setRangeError(null);
+      return true;
+    } catch (error) {
+      setRangeError(error.message);
+      return false;
+    }
+  };
 
   // Toggle para expandir/colapsar un mes
   const toggleMonth = (monthKey) => {
@@ -132,12 +143,16 @@ const S13ReportModal = ({ isOpen, onClose, modalId = 's13-report-modal' }) => {
 
   // Handlers de exportación para vista actual
   const handleExportExcel = () => {
+    if (!validateCustomRange() || !dateRange) {
+      showToast(rangeError || 'Selecciona un período válido.', 'error');
+      return;
+    }
     try {
       if (activeTab === 'summary') {
         const fileName = exportSimpleSummaryToExcel(simpleSummary, periodLabel);
         showToast(`Resumen exportado: ${fileName}`, 'success');
       } else {
-        const fileName = exportS13ToExcel(reportData, selectedServiceYear, periodLabel);
+        const fileName = exportS13ToExcel(reportData, periodLabel);
         showToast(`Archivo Excel generado: ${fileName}`, 'success');
       }
     } catch (error) {
@@ -147,17 +162,35 @@ const S13ReportModal = ({ isOpen, onClose, modalId = 's13-report-modal' }) => {
   };
 
   const handleExportPDF = () => {
+    if (!validateCustomRange() || !dateRange) {
+      showToast(rangeError || 'Selecciona un período válido.', 'error');
+      return;
+    }
     try {
       if (activeTab === 'summary') {
         exportSimpleSummaryToPDF(simpleSummary, periodLabel);
         showToast('Generando PDF del resumen...', 'success');
       } else {
-        exportS13ToPDF(reportData, selectedServiceYear, periodLabel);
+        exportS13ToPDF(reportData, periodLabel);
         showToast('Generando PDF para impresión...', 'success');
       }
     } catch (error) {
       console.error('Error exportando a PDF:', error);
       showToast('Error al generar PDF', 'error');
+    }
+  };
+
+  const handleExportHTML = () => {
+    if (!validateCustomRange() || !dateRange) {
+      showToast(rangeError || 'Selecciona un período válido.', 'error');
+      return;
+    }
+    try {
+      const fileName = exportS13ToHTMLFile(reportData, periodLabel);
+      showToast(`HTML generado: ${fileName}`, 'success');
+    } catch (error) {
+      console.error('Error exportando a HTML:', error);
+      showToast('Error al generar archivo HTML', 'error');
     }
   };
 
@@ -186,31 +219,18 @@ const S13ReportModal = ({ isOpen, onClose, modalId = 's13-report-modal' }) => {
           </div>
 
           {/* Selectores de período */}
-          <div className="flex flex-wrap items-center gap-3 mb-3">
-            {/* Selector de año de servicio */}
+          <div className="mb-3 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-white/70 text-sm">Año:</span>
-              <select
-                value={selectedServiceYear}
-                onChange={(e) => setSelectedServiceYear(parseInt(e.target.value))}
-                className="px-3 py-2 bg-white/10 text-white border border-white/20 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/30"
-              >
-                {availableYears.map(year => (
-                  <option key={year.value} value={year.value} className="text-gray-800">
-                    {year.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Selector de período */}
-            <div className="flex items-center gap-2">
-              <span className="text-white/70 text-sm">Período:</span>
-              <div className="flex rounded-lg overflow-hidden border border-white/20">
-                {PERIOD_OPTIONS.map(option => (
+              <span className="text-sm text-white/70">Período:</span>
+              <div className="flex overflow-hidden rounded-lg border border-white/20">
+                {PERIOD_OPTIONS.map((option) => (
                   <button
                     key={option.value}
-                    onClick={() => setSelectedPeriod(option.value)}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPeriod(option.value);
+                      setRangeError(null);
+                    }}
                     className={`px-3 py-2 text-sm font-medium transition-all ${
                       selectedPeriod === option.value
                         ? 'bg-white text-gray-800'
@@ -222,55 +242,44 @@ const S13ReportModal = ({ isOpen, onClose, modalId = 's13-report-modal' }) => {
                 ))}
               </div>
             </div>
+            {dateRange ? (
+              <span className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white/90">
+                {periodLabel}
+              </span>
+            ) : null}
           </div>
 
-          {/* Selectores de rango personalizado */}
-          {selectedPeriod === 'custom' && (
-            <div className="flex flex-wrap items-center gap-3 mb-3 p-3 bg-white/5 rounded-lg border border-white/10">
+          {selectedPeriod === 'custom' ? (
+            <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
               <div className="flex items-center gap-2">
-                <span className="text-white/70 text-sm">Desde:</span>
-                <select
-                  value={customStartMonth}
-                  onChange={(e) => setCustomStartMonth(parseInt(e.target.value))}
-                  className="px-2 py-1.5 bg-white/10 text-white border border-white/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
-                >
-                  {MONTH_NAMES.map((month, index) => (
-                    <option key={index} value={index} className="text-gray-800">{month}</option>
-                  ))}
-                </select>
-                <select
-                  value={customStartYear}
-                  onChange={(e) => setCustomStartYear(parseInt(e.target.value))}
-                  className="px-2 py-1.5 bg-white/10 text-white border border-white/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
-                >
-                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
-                    <option key={year} value={year} className="text-gray-800">{year}</option>
-                  ))}
-                </select>
+                <span className="text-sm text-white/70">Desde:</span>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(event) => {
+                    setCustomStartDate(event.target.value);
+                    setRangeError(null);
+                  }}
+                  className="rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/30"
+                />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-white/70 text-sm">Hasta:</span>
-                <select
-                  value={customEndMonth}
-                  onChange={(e) => setCustomEndMonth(parseInt(e.target.value))}
-                  className="px-2 py-1.5 bg-white/10 text-white border border-white/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
-                >
-                  {MONTH_NAMES.map((month, index) => (
-                    <option key={index} value={index} className="text-gray-800">{month}</option>
-                  ))}
-                </select>
-                <select
-                  value={customEndYear}
-                  onChange={(e) => setCustomEndYear(parseInt(e.target.value))}
-                  className="px-2 py-1.5 bg-white/10 text-white border border-white/20 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
-                >
-                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
-                    <option key={year} value={year} className="text-gray-800">{year}</option>
-                  ))}
-                </select>
+                <span className="text-sm text-white/70">Hasta:</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(event) => {
+                    setCustomEndDate(event.target.value);
+                    setRangeError(null);
+                  }}
+                  className="rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/30"
+                />
               </div>
+              {rangeError ? (
+                <span className="text-sm text-red-200">{rangeError}</span>
+              ) : null}
             </div>
-          )}
+          ) : null}
 
           {/* Estadísticas y botones de exportación */}
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -296,16 +305,28 @@ const S13ReportModal = ({ isOpen, onClose, modalId = 's13-report-modal' }) => {
 
             {/* Botones de exportación */}
             <div className="flex items-center gap-2">
+              {activeTab !== 'summary' ? (
+                <button
+                  type="button"
+                  onClick={handleExportHTML}
+                  className="flex items-center gap-2 rounded-xl bg-sky-500/90 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105 hover:bg-sky-600"
+                >
+                  <i className="fas fa-code"></i>
+                  <span>HTML</span>
+                </button>
+              ) : null}
               <button
+                type="button"
                 onClick={handleExportPDF}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500/90 text-white rounded-xl hover:bg-red-600 transition-all transform hover:scale-105 shadow-lg text-sm font-medium"
+                className="flex items-center gap-2 rounded-xl bg-red-500/90 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105 hover:bg-red-600"
               >
                 <i className="fas fa-file-pdf"></i>
                 <span>PDF</span>
               </button>
               <button
+                type="button"
                 onClick={handleExportExcel}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500/90 text-white rounded-xl hover:bg-green-600 transition-all transform hover:scale-105 shadow-lg text-sm font-medium"
+                className="flex items-center gap-2 rounded-xl bg-green-500/90 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105 hover:bg-green-600"
               >
                 <i className="fas fa-file-excel"></i>
                 <span>Excel</span>
@@ -661,95 +682,13 @@ const S13ReportModal = ({ isOpen, onClose, modalId = 's13-report-modal' }) => {
             </div>
           )}
 
-          {/* Vista Formato S-13 Oficial */}
           {activeTab === 's13' && (
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th rowSpan={2} className="border border-gray-300 px-3 py-2 text-center font-semibold text-gray-700 sticky left-0 bg-gray-100 z-10" style={{ minWidth: '80px' }}>
-                        Núm.<br />de terr.
-                      </th>
-                      <th rowSpan={2} className="border border-gray-300 px-3 py-2 text-center font-semibold text-gray-700" style={{ minWidth: '90px' }}>
-                        Última fecha<br />completado*
-                      </th>
-                      <th colSpan={3} className="border border-gray-300 px-2 py-1 text-center font-semibold text-gray-700 bg-blue-50">
-                        Asignado a
-                      </th>
-                      <th colSpan={3} className="border border-gray-300 px-2 py-1 text-center font-semibold text-gray-700 bg-green-50">
-                        Asignado a
-                      </th>
-                      <th colSpan={3} className="border border-gray-300 px-2 py-1 text-center font-semibold text-gray-700 bg-yellow-50">
-                        Asignado a
-                      </th>
-                      <th colSpan={3} className="border border-gray-300 px-2 py-1 text-center font-semibold text-gray-700 bg-purple-50">
-                        Asignado a
-                      </th>
-                    </tr>
-                    <tr className="bg-gray-50 text-xs">
-                      {[1, 2, 3, 4].map((num) => (
-                        <React.Fragment key={num}>
-                          <th className={`border border-gray-300 px-2 py-1 text-center font-medium text-gray-600 ${num === 1 ? 'bg-blue-50' : num === 2 ? 'bg-green-50' : num === 3 ? 'bg-yellow-50' : 'bg-purple-50'}`} style={{ minWidth: '100px' }}>
-                            Nombre
-                          </th>
-                          <th className={`border border-gray-300 px-2 py-1 text-center font-medium text-gray-600 ${num === 1 ? 'bg-blue-50' : num === 2 ? 'bg-green-50' : num === 3 ? 'bg-yellow-50' : 'bg-purple-50'}`} style={{ minWidth: '75px' }}>
-                            Asignado
-                          </th>
-                          <th className={`border border-gray-300 px-2 py-1 text-center font-medium text-gray-600 ${num === 1 ? 'bg-blue-50' : num === 2 ? 'bg-green-50' : num === 3 ? 'bg-yellow-50' : 'bg-purple-50'}`} style={{ minWidth: '75px' }}>
-                            Completado
-                          </th>
-                        </React.Fragment>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.summaryByTerritory.length === 0 ? (
-                      <tr>
-                        <td colSpan={14} className="border border-gray-300 px-4 py-12 text-center text-gray-500">
-                          <i className="fas fa-inbox text-4xl mb-3 block text-gray-300"></i>
-                          <p className="font-medium">No hay datos para este período</p>
-                          <p className="text-sm mt-1">{periodLabel}</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      reportData.summaryByTerritory.map((row, index) => (
-                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="border border-gray-300 px-3 py-2 text-center font-semibold text-gray-800 sticky left-0 bg-inherit z-10">
-                            {row.territoryNumber}
-                          </td>
-                          <td className="border border-gray-300 px-3 py-2 text-center text-gray-600 text-xs">
-                            {formatDate(row.lastCompletedBefore)}
-                          </td>
-                          {[0, 1, 2, 3].map((colIndex) => {
-                            const assignment = row.assignments[colIndex];
-                            return (
-                              <React.Fragment key={colIndex}>
-                                <td className={`border border-gray-300 px-2 py-2 text-left text-xs ${assignment?.assignedTo ? 'text-gray-800' : 'text-gray-300'}`}>
-                                  {assignment?.assignedTo || '-'}
-                                </td>
-                                <td className={`border border-gray-300 px-2 py-2 text-center text-xs ${assignment?.assignedDate ? 'text-gray-600' : 'text-gray-300'}`}>
-                                  {formatDate(assignment?.assignedDate)}
-                                </td>
-                                <td className={`border border-gray-300 px-2 py-2 text-center text-xs ${assignment?.completedDate ? 'text-green-600 font-medium' : 'text-gray-300'}`}>
-                                  {formatDate(assignment?.completedDate)}
-                                </td>
-                              </React.Fragment>
-                            );
-                          })}
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <S13OfficialTable
+              rows={reportData.s13Rows}
+              periodLabel={periodLabel}
+              serviceYearLabel={reportData.period?.serviceYearLabel}
+            />
           )}
-
-          {/* Nota al pie */}
-          <p className="mt-3 text-xs text-gray-500 italic">
-            *Cuando comience una nueva página, anote en esta columna la última fecha en que los territorios se completaron.
-          </p>
         </div>
       </div>
     </Modal>

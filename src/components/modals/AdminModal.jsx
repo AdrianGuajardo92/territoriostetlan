@@ -13,12 +13,18 @@ import TerritoryManagementModal from './TerritoryManagementModal';
 import ArchivedAddressesPortal from '../admin/ArchivedAddressesPortal';
 import QuickProposalReviewMap from '../admin/QuickProposalReviewMap';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
+import { filterPioneerUsers } from '../../config/congregationPioneers';
 import { formatRelativeTime, getDisplayAddress, getProposalAddressDisplay } from '../../utils/helpers';
 import {
   buildAddressesTerritoriesBackupPayload,
   getAddressesTerritoriesBackupFileName,
   downloadBackupJson,
 } from '../../utils/backupUtils';
+import {
+  hydrateQuickProposalDrafts,
+  removeQuickProposalDraft,
+  saveQuickProposalDraft
+} from '../../utils/quickProposalDrafts';
 
 const AdminModal = (props = {}) => {
   const {
@@ -50,8 +56,8 @@ const AdminModal = (props = {}) => {
   const [showUserManagement, setShowUserManagement] = useState(false); // Estado para el modal de gestión de usuarios
   const [proposalFilter, setProposalFilter] = useState('pending'); // Filtro para propuestas: all, pending, approved, rejected
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // Estado para confirmación de eliminación
-  const [quickProposalTerritory, setQuickProposalTerritory] = useState({}); // Mapa proposalId -> territoryId seleccionado
-  const [quickProposalLocation, setQuickProposalLocation] = useState({}); // Mapa proposalId -> { mapUrl, coordsText, latitude, longitude }
+  const [quickProposalTerritory, setQuickProposalTerritory] = useState(() => hydrateQuickProposalDrafts().territories);
+  const [quickProposalLocation, setQuickProposalLocation] = useState(() => hydrateQuickProposalDrafts().locations);
   const [openTerritoryDropdown, setOpenTerritoryDropdown] = useState(null); // proposalId | null
   const territoryDropdownRef = useRef(null);
   const [copiedProposalId, setCopiedProposalId] = useState(null);
@@ -90,6 +96,44 @@ const AdminModal = (props = {}) => {
   }, [openTerritoryDropdown]);
 
   const getQuickLocation = (proposalId) => quickProposalLocation[proposalId] || { mapUrl: '', coordsText: '', latitude: null, longitude: null };
+
+  const persistQuickProposalDraft = (proposalId, location, territoryId) => {
+    const loc = location ?? getQuickLocation(proposalId);
+    const resolvedTerritoryId = territoryId !== undefined
+      ? territoryId
+      : quickProposalTerritory[proposalId] || null;
+
+    saveQuickProposalDraft(proposalId, {
+      mapUrl: loc.mapUrl || '',
+      coordsText: loc.coordsText || '',
+      latitude: loc.latitude ?? null,
+      longitude: loc.longitude ?? null,
+      territoryId: resolvedTerritoryId || null
+    });
+  };
+
+  const handleQuickTerritorySelect = (proposalId, territoryId) => {
+    setQuickProposalTerritory((prev) => ({
+      ...prev,
+      [proposalId]: territoryId
+    }));
+    persistQuickProposalDraft(proposalId, getQuickLocation(proposalId), territoryId);
+    setOpenTerritoryDropdown(null);
+  };
+
+  const clearQuickProposalDraft = (proposalId) => {
+    removeQuickProposalDraft(proposalId);
+    setQuickProposalTerritory((prev) => {
+      const next = { ...prev };
+      delete next[proposalId];
+      return next;
+    });
+    setQuickProposalLocation((prev) => {
+      const next = { ...prev };
+      delete next[proposalId];
+      return next;
+    });
+  };
 
   const formatCoordsText = (lat, lng) => {
     if (lat === null || lng === null || Number.isNaN(lat) || Number.isNaN(lng)) return '';
@@ -138,53 +182,55 @@ const AdminModal = (props = {}) => {
 
   const handleQuickCoordsTextChange = (proposalId, text) => {
     const parsed = parseCoordsText(text);
-    setQuickProposalLocation(prev => ({
+    const nextLocation = {
+      ...getQuickLocation(proposalId),
+      coordsText: text,
+      latitude: parsed ? parsed.lat : null,
+      longitude: parsed ? parsed.lng : null
+    };
+    setQuickProposalLocation((prev) => ({
       ...prev,
-      [proposalId]: {
-        ...getQuickLocation(proposalId),
-        coordsText: text,
-        latitude: parsed ? parsed.lat : null,
-        longitude: parsed ? parsed.lng : null
-      }
+      [proposalId]: nextLocation
     }));
+    persistQuickProposalDraft(proposalId, nextLocation);
   };
 
   const handleQuickMapUrlChange = (proposalId, url) => {
     const coords = extractCoordinatesFromUrl(url);
-    setQuickProposalLocation(prev => ({
+    const nextLocation = {
+      ...getQuickLocation(proposalId),
+      mapUrl: url,
+      ...(coords ? {
+        latitude: coords.lat,
+        longitude: coords.lng,
+        coordsText: formatCoordsText(coords.lat, coords.lng)
+      } : {})
+    };
+    setQuickProposalLocation((prev) => ({
       ...prev,
-      [proposalId]: {
-        ...getQuickLocation(proposalId),
-        mapUrl: url,
-        ...(coords ? {
-          latitude: coords.lat,
-          longitude: coords.lng,
-          coordsText: formatCoordsText(coords.lat, coords.lng)
-        } : {})
-      }
+      [proposalId]: nextLocation
     }));
+    persistQuickProposalDraft(proposalId, nextLocation);
   };
 
   const handleQuickMapClick = (proposalId, lat, lng) => {
-    setQuickProposalLocation(prev => ({
+    const nextLocation = {
+      ...getQuickLocation(proposalId),
+      latitude: lat,
+      longitude: lng,
+      coordsText: formatCoordsText(lat, lng)
+    };
+    setQuickProposalLocation((prev) => ({
       ...prev,
-      [proposalId]: {
-        ...getQuickLocation(proposalId),
-        latitude: lat,
-        longitude: lng,
-        coordsText: formatCoordsText(lat, lng)
-      }
+      [proposalId]: nextLocation
     }));
+    persistQuickProposalDraft(proposalId, nextLocation);
   };
   
-  // Estados para acordeón de usuarios (ahora usaremos modales)
-  const [expandedAdmins, setExpandedAdmins] = useState(false);
-  const [expandedPublishers, setExpandedPublishers] = useState(false);
-  
-  // Estados para los nuevos modales de lista de usuarios
+  // Estados para modales de lista de usuarios
   const [showAdminListModal, setShowAdminListModal] = useState(false);
   const [showPublisherListModal, setShowPublisherListModal] = useState(false);
-  const [showAllUsersModal, setShowAllUsersModal] = useState(false);
+  const [showPioneerListModal, setShowPioneerListModal] = useState(false);
   
   // Estado para el modal de exportación de direcciones
   const [showExportAddressesModal, setShowExportAddressesModal] = useState(false);
@@ -513,16 +559,7 @@ const AdminModal = (props = {}) => {
       await handleApproveProposal(proposal.id, { assignedTerritoryId, extraAddressData });
 
       if (needsTerritory) {
-        setQuickProposalTerritory(prev => {
-          const next = { ...prev };
-          delete next[proposal.id];
-          return next;
-        });
-        setQuickProposalLocation(prev => {
-          const next = { ...prev };
-          delete next[proposal.id];
-          return next;
-        });
+        clearQuickProposalDraft(proposal.id);
       }
     } catch (error) {
       // Error toasts se muestran en handleApproveProposal
@@ -537,6 +574,7 @@ const AdminModal = (props = {}) => {
     
     try {
       await handleRejectProposal(selectedProposal.id, rejectReason);
+      clearQuickProposalDraft(selectedProposal.id);
       // Notificación eliminada - ya se muestra en handleRejectProposal
       setSelectedProposal(null);
       setRejectReason('');
@@ -549,6 +587,7 @@ const AdminModal = (props = {}) => {
   const handleDeleteSingle = async (proposalId) => {
     try {
       await handleDeleteProposal(proposalId);
+      clearQuickProposalDraft(proposalId);
       setShowDeleteConfirm(null);
     } catch (error) {
       console.error('Error deleting proposal:', error);
@@ -1071,6 +1110,7 @@ const AdminModal = (props = {}) => {
                                     latitude={loc.latitude}
                                     longitude={loc.longitude}
                                     onLocationChange={(lat, lng) => handleQuickMapClick(proposal.id, lat, lng)}
+                                    onTerritorySelect={(territoryId) => handleQuickTerritorySelect(proposal.id, territoryId)}
                                     addresses={addresses}
                                     territories={territories}
                                     highlightedTerritoryId={selectedTid || null}
@@ -1111,13 +1151,7 @@ const AdminModal = (props = {}) => {
                                                   <button
                                                     key={t.id}
                                                     type="button"
-                                                    onClick={() => {
-                                                      setQuickProposalTerritory(prev => ({
-                                                        ...prev,
-                                                        [proposal.id]: t.id
-                                                      }));
-                                                      setOpenTerritoryDropdown(null);
-                                                    }}
+                                                    onClick={() => handleQuickTerritorySelect(proposal.id, t.id)}
                                                     className={`aspect-square rounded-lg font-bold text-sm transition-all min-h-[44px] flex items-center justify-center ${
                                                       isSelected
                                                         ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-300'
@@ -1308,26 +1342,13 @@ const AdminModal = (props = {}) => {
       case 'users':
         return (
           <div className="space-y-6">
-            {/* Header de la sección - Simplificado sin icono decorativo */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''} en el sistema
-                </p>
-              </div>
-              
-              {/* Botón para abrir gestión completa */}
-              <button
-                onClick={() => setShowUserManagement(true)}
-                className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-110 shadow-lg flex items-center justify-center"
-                title="Gestión Completa de Usuarios"
-              >
-                <i className="fas fa-user-cog text-xl"></i>
-              </button>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800">Gestión de Usuarios</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                {users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''} en el sistema
+              </p>
             </div>
 
-            {/* Vista con acordeones expandibles */}
             <div className="space-y-6">
               {/* Acordeón Administradores */}
               <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-2xl shadow-lg border-2 border-purple-200 overflow-hidden">
@@ -1369,12 +1390,12 @@ const AdminModal = (props = {}) => {
                       </div>
                       <div>
                         <h4 className="text-xl font-bold text-blue-800">Publicadores</h4>
-                        <p className="text-blue-600 text-sm">Usuarios estándar del sistema</p>
+                        <p className="text-blue-600 text-sm">Todos los publicadores de la congregación</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
-                        {users.filter(u => u.role !== 'admin').length}
+                        {users.length}
                       </span>
                       <i className="fas fa-arrow-right text-blue-600"></i>
                     </div>
@@ -1383,74 +1404,55 @@ const AdminModal = (props = {}) => {
                 
               </div>
 
-              {/* Card Total - Ahora clickeable */}
-              <button
-                onClick={() => setShowAllUsersModal(true)}
-                className="w-full text-left bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg p-6 border-2 border-green-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <i className="fas fa-users-cog text-white text-xl"></i>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
-                      {users.length}
-                    </span>
-                    <i className="fas fa-arrow-right text-green-600"></i>
-                  </div>
-                </div>
-                <h4 className="text-xl font-bold text-green-800 mb-2">Total Usuarios</h4>
-                <p className="text-green-600 text-sm">Registrados en el sistema • Click para ver todos</p>
-              </button>
-            </div>
-
-            {/* Mensaje informativo mejorado */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 rounded-3xl shadow-lg border border-indigo-200/50 backdrop-blur-sm">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-400/10 to-transparent rounded-full -mr-16 -mt-16"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-400/10 to-transparent rounded-full -ml-12 -mb-12"></div>
-              
-              <div className="relative p-6">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-                    <i className="fas fa-user-cog text-white text-lg"></i>
-                  </div>
-                  <div className="flex-1">
-                    <h5 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                      Gestión Completa de Usuarios
-                    </h5>
-                    <p className="text-gray-700 leading-relaxed">
-                      Para crear, editar, eliminar o resetear la contraseña de un usuario, haz clic en el 
-                      <span className="inline-flex items-center gap-1 mx-2 px-2 py-1 bg-green-100 text-green-700 rounded-lg font-medium">
-                        <i className="fas fa-user-cog text-xs"></i>
-                        ícono
+              {/* Acordeón Precursores */}
+              <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-2xl shadow-lg border-2 border-slate-200 overflow-hidden">
+                <button
+                  onClick={() => setShowPioneerListModal(true)}
+                  className="w-full p-6 text-left hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-slate-700 rounded-xl flex items-center justify-center shadow-lg">
+                        <i className="fas fa-hiking text-white text-xl"></i>
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-slate-800">Precursores</h4>
+                        <p className="text-slate-600 text-sm">Precursores regulares de la congregación</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm font-bold">
+                        {filterPioneerUsers(users).length}
                       </span>
-                      ubicado en la parte superior.
-                    </p>
+                      <i className="fas fa-arrow-right text-slate-600"></i>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-white/70 rounded-xl border border-indigo-200/50 backdrop-blur-sm">
-                    <i className="fas fa-plus-circle text-green-600"></i>
-                    <span className="text-sm font-medium text-gray-700">Crear</span>
+                </button>
+              </div>
+
+              {/* Gestión completa (CRUD) */}
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-100 rounded-2xl shadow-lg border-2 border-emerald-200 overflow-hidden">
+                <button
+                  onClick={() => setShowUserManagement(true)}
+                  className="w-full p-6 text-left hover:bg-emerald-100/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i className="fas fa-user-cog text-white text-xl"></i>
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-emerald-800">Gestión completa</h4>
+                        <p className="text-emerald-600 text-sm">Todos los usuarios del sistema</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <i className="fas fa-arrow-right text-emerald-600"></i>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-white/70 rounded-xl border border-blue-200/50 backdrop-blur-sm">
-                    <i className="fas fa-edit text-blue-600"></i>
-                    <span className="text-sm font-medium text-gray-700">Editar</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-white/70 rounded-xl border border-yellow-200/50 backdrop-blur-sm">
-                    <i className="fas fa-key text-yellow-600"></i>
-                    <span className="text-sm font-medium text-gray-700">Resetear</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-white/70 rounded-xl border border-red-200/50 backdrop-blur-sm">
-                    <i className="fas fa-trash text-red-600"></i>
-                    <span className="text-sm font-medium text-gray-700">Eliminar</span>
-                  </div>
-                </div>
+                </button>
               </div>
             </div>
-
-
           </div>
         );
       
@@ -1800,12 +1802,12 @@ const AdminModal = (props = {}) => {
         modalId="admin-user-list-publishers"
       />
 
-      {/* Modal de Todos los Usuarios */}
+      {/* Modal de Lista de Precursores */}
       <UserListModal
-        isOpen={showAllUsersModal}
-        onClose={() => setShowAllUsersModal(false)}
-        userType="all"
-        modalId="admin-user-list-all"
+        isOpen={showPioneerListModal}
+        onClose={() => setShowPioneerListModal(false)}
+        userType="pioneer"
+        modalId="admin-user-list-pioneers"
       />
 
       {/* Modal de Exportación de Direcciones */}

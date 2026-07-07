@@ -3,6 +3,7 @@ import Modal from '../common/Modal';
 import Icon from '../common/Icon';
 import { ArchiveConfirmDialog, ArchiveProposalDialog } from '../addresses/AddressArchiveDialogs';
 import { useApp } from '../../context/AppContext';
+import { useIsDesktop } from '../../hooks/useMediaQuery';
 
 const AddressFormModal = ({ 
   isOpen, 
@@ -43,6 +44,7 @@ const AddressFormModal = ({
   const [isSubmitLocked, setIsSubmitLocked] = useState(false);
   const submitInFlightRef = useRef(false);
   const isFormBusy = isProcessing || isSubmitLocked;
+  const isDesktop = useIsDesktop();
 
   // Estado para la sección colapsable de ubicación
   const [isLocationExpanded, setIsLocationExpanded] = useState(false);
@@ -97,6 +99,21 @@ const AddressFormModal = ({
     // Siempre contraer la ubicación al abrir/cambiar
     setIsLocationExpanded(false);
   }, [address?.id, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !isDesktop) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Enter' || !(e.metaKey || e.ctrlKey)) return;
+      if (isFormBusy || showDeleteConfirm || showDeleteRequest) return;
+
+      e.preventDefault();
+      document.getElementById('address-form')?.requestSubmit();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isDesktop, isFormBusy, showDeleteConfirm, showDeleteRequest]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

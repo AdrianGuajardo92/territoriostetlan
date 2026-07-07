@@ -19,7 +19,11 @@ const TerritoryDetailHeader = ({
   viewControls,
   onOpenMapModal,
   adminEditMode = false,
-  onToggleAdminMode
+  onToggleAdminMode,
+  isDesktop = false,
+  searchTerm = '',
+  onSearchChange,
+  onClearSearch
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
@@ -421,9 +425,9 @@ const TerritoryDetailHeader = ({
 
       {/* Barra de funciones útiles - solo 3 elementos */}
       <div className="px-4 py-2" style={{ backgroundColor: '#546E7A' }}>
-        <div className="flex items-center justify-between">
+        <div className={`flex items-center ${isDesktop ? 'gap-3' : 'justify-between'}`}>
           {/* Estado del territorio */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 shrink-0">
             <div className={`px-3 py-1 rounded-lg flex items-center space-x-2 ${
               normalizedStatus === 'Disponible' ? 'bg-emerald-500/90' :
               normalizedStatus === 'En uso' ? 'bg-amber-500/90' :
@@ -434,8 +438,6 @@ const TerritoryDetailHeader = ({
                 {normalizedStatus === 'En uso' ? 'Predicando' : normalizedStatus}
               </span>
             </div>
-            
-
 
             {/* Indicador de modo administrador activo */}
             {isAdmin && adminEditMode && (
@@ -448,8 +450,40 @@ const TerritoryDetailHeader = ({
             )}
           </div>
 
+          {/* Búsqueda de direcciones — solo desktop */}
+          {isDesktop && (
+            <div className="flex-1 min-w-0 max-w-xl relative">
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => onSearchChange?.(e.target.value)}
+                className="w-full pl-9 pr-9 py-2 bg-white/90 border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-white/50 transition-all placeholder-gray-500 text-gray-700 text-sm"
+                placeholder="Buscar dirección, nombre o nota..."
+                aria-label="Buscar direcciones en este territorio"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => onClearSearch?.()}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                  title="Limpiar búsqueda"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Solo funciones útiles visibles */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 shrink-0">
             {/* Ruta optimizada - BOTÓN INTELIGENTE TOGGLE */}
             <button 
               onClick={() => {

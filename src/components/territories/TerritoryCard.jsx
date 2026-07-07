@@ -2,6 +2,7 @@ import React, { memo, useMemo, useCallback, useRef, useState } from 'react';
 import Icon from '../common/Icon';
 import { formatRelativeTime } from '../../utils/helpers';
 import { getAssignedNames, formatTeamNames } from '../../utils/territoryHelpers';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 // Variante con abreviación inteligente para tarjetas compactas
 const formatTeamNamesCompact = (names) => {
@@ -48,10 +49,7 @@ const TerritoryCard = memo(({
   const swipeProgress = Math.min(Math.abs(dragOffset) / 96, 1);
   const swipeDirection = dragOffset >= 0 ? 'right' : 'left';
 
-  // 🔄 PASO 15: Memoizar detectores de estado para evitar recálculos
-  const isMobile = useMemo(() => {
-    return window.innerWidth < 640; // sm breakpoint
-  }, []); // Solo calcular una vez, no depender de window resize
+  const isMobile = useMediaQuery('(max-width: 639px)');
 
   // OPTIMIZACIÓN: Memoizar normalización de estado ⚡
   const normalizedStatus = useMemo(() => 
@@ -153,7 +151,7 @@ const TerritoryCard = memo(({
       const names = getAssignedNames(assignedTo);
       isTeam = names.length > 1;
       return {
-        displayName: formatTeamNamesCompact(names),
+        displayName: isMobile ? formatTeamNamesCompact(names) : formatTeamNames(names),
         fullDisplayName: formatTeamNames(names),
         names: names,
         isTeam: isTeam,
@@ -284,7 +282,7 @@ const TerritoryCard = memo(({
       onTouchCancel={resetSwipe}
       data-admin-swipe-card={canUseAdminActions ? 'true' : undefined}
       className={`
-        relative group cursor-pointer
+        relative group cursor-pointer h-full
         rounded-2xl overflow-hidden
         shadow-lg ${config.hoverShadow}
         hover:shadow-2xl hover:scale-[1.01]
@@ -316,7 +314,7 @@ const TerritoryCard = memo(({
         className={`
           relative bg-gradient-to-br ${config.bgGradient}
           border-2 ${config.borderColor} ${config.hoverBorder}
-          rounded-2xl overflow-hidden
+          rounded-2xl overflow-hidden h-full flex flex-col sm:min-h-[9rem]
         `}
         style={{
           transform: `translateX(${dragOffset}px)`,
@@ -324,16 +322,16 @@ const TerritoryCard = memo(({
         }}
       >
         {/* Layout de dos columnas */}
-        <div className="flex">
+        <div className="flex flex-1">
           {/* Columna izquierda - Número del territorio */}
-          <div className={`${config.iconBg} flex items-center justify-center px-4 py-4 min-w-[70px]`}>
+          <div className={`${config.iconBg} flex items-center justify-center px-4 py-4 min-w-[70px] sm:px-3 sm:min-w-[56px] self-stretch`}>
             <span className={`text-3xl font-bold ${config.iconColor}`}>
               {extractTerritoryNumber(territory.name)}
             </span>
           </div>
 
           {/* Columna derecha - Contenido */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col sm:min-w-0 h-full">
             {/* Header con badges */}
             <div className="px-3 py-2 bg-white/40 border-b border-gray-100/50">
               <div className="flex items-center justify-between gap-2">
@@ -362,10 +360,10 @@ const TerritoryCard = memo(({
             </div>
 
             {/* Contenido principal */}
-            <div className="px-3 py-2 space-y-1.5 flex-1">
+            <div className="px-3 py-2 space-y-1.5 flex-1 flex flex-col sm:min-h-[5.5rem]">
               {/* Persona responsable */}
               {responsibleInfo && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between sm:flex-col sm:items-stretch sm:gap-0.5 sm:min-w-0">
                   <div className="flex items-center space-x-1.5 min-w-0">
                     <Icon
                       name="user"
@@ -378,7 +376,7 @@ const TerritoryCard = memo(({
                   </div>
 
                   <span
-                    className={`${config.badgeBg} ${config.badgeText} px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm truncate max-w-[140px]`}
+                    className={`${config.badgeBg} ${config.badgeText} px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm truncate max-w-[140px] sm:truncate-none sm:max-w-none sm:break-words sm:text-left sm:w-full`}
                     title={responsibleInfo.isTeam && isMobile ? responsibleInfo.fullDisplayName : undefined}
                   >
                     {responsibleInfo.displayName}
@@ -388,7 +386,7 @@ const TerritoryCard = memo(({
 
               {/* Fecha relevante */}
               {relevantDate && normalizedStatus !== 'Disponible' && (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between sm:flex-col sm:items-stretch sm:gap-0.5">
                   <div className="flex items-center space-x-1.5">
                     <Icon
                       name="calendar"
@@ -407,7 +405,7 @@ const TerritoryCard = memo(({
 
               {/* Call to action para territorio disponible */}
               {normalizedStatus === 'Disponible' && (
-                <div className="pt-1">
+                <div className="pt-1 flex-1 flex items-center justify-center sm:pt-0">
                   <p className="text-xs text-center text-emerald-600 font-medium">
                     ¡Listo para asignar!
                   </p>

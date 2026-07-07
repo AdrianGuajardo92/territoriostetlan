@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
 import { useApp } from '../context/AppContext';
@@ -13,13 +13,27 @@ import {
   calculateCampaignTargets,
   getEligibleCampaignAddresses,
   groupAssignmentsByTerritory,
-  sortCampaignSourceAddresses
+  getCampaignAddressDrift,
+  sortCampaignSourceAddresses,
+  countPreservedAssignmentsByUser,
+  resolveDistributionTargets,
+  formatCampaignDistributionWhatsAppText
 } from '../utils/campaignUtils';
+import {
+  clearDistributionDraft,
+  loadDistributionDraft,
+  saveDistributionDraft
+} from '../utils/campaignDistributionDrafts';
+import { copiarAlPortapapeles } from '../utils/clipboard';
 import { LazyCampaignAssignmentsMapModal } from '../components/modals/LazyModals';
-import { getDisplayAddress, getFullAddress } from '../utils/helpers';
+import { getDisplayAddress, getFullAddress, getUserGender, splitDisplayAddress } from '../utils/helpers';
+import { getAddressNavigationUrls } from '../utils/addressNavigationUrls';
+import { ADDRESS_CARD_THEMES } from '../utils/addressCardThemes';
+import AddressNavigationButtons from '../components/common/AddressNavigationButtons';
+import { isPioneerName, isPioneerUser } from '../config/congregationPioneers';
+import { useIsDesktop } from '../hooks/useMediaQuery';
 import {
   CampaignHubStepCard,
-  CampaignStatTile,
   CampaignStepper,
   CampaignStepShell
 } from '../components/campaigns/CampaignMobileShell';
@@ -35,11 +49,6 @@ const PUBLISHER_FILTER_OPTIONS = [
   { id: CAMPAIGN_PROGRESS_STATUSES.COMPLETED, label: 'Completadas' }
 ];
 
-const PUBLISHER_STATUS_OPTIONS = [
-  { id: CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS, label: 'En progreso' },
-  { id: CAMPAIGN_PROGRESS_STATUSES.COMPLETED, label: 'Completada' }
-];
-
 const CAMPAIGN_TYPE_OPTIONS = [
   { value: 'asamblea', label: 'Asamblea', icon: 'building' },
   { value: 'conmemoracion', label: 'Conmemoraci\u00f3n', icon: 'wine' }
@@ -52,6 +61,89 @@ const PARTICIPANT_ASSIGNMENT_MODES = [
   { id: '3', label: '3' },
   { id: 'excluded', label: 'Excluido' }
 ];
+
+const SegmentedToggle = ({ value, onChange, options, disabled = false, className = '' }) => {
+  const activeIndex = Math.max(0, options.findIndex((option) => option.id === value));
+  const containerRef = useRef(null);
+  const tabRefs = useRef([]);
+  const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, ready: false });
+
+  const updatePillPosition = useCallback(() => {
+    const container = containerRef.current;
+    const activeTab = tabRefs.current[activeIndex];
+    if (!container || !activeTab) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const tabRect = activeTab.getBoundingClientRect();
+
+    setPillStyle({
+      left: tabRect.left - containerRect.left,
+      width: tabRect.width,
+      ready: true
+    });
+  }, [activeIndex]);
+
+  useLayoutEffect(() => {
+    updatePillPosition();
+  }, [updatePillPosition, options]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+
+    const observer = new ResizeObserver(updatePillPosition);
+    observer.observe(container);
+    tabRefs.current.forEach((tab) => {
+      if (tab) observer.observe(tab);
+    });
+
+    return () => observer.disconnect();
+  }, [updatePillPosition, options.length]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`relative flex rounded-full border border-slate-200 bg-slate-100 p-1 ${className}`}
+      role="tablist"
+      aria-label="Filtro de participantes"
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-1 top-1 rounded-full bg-white shadow-sm ring-1 ring-indigo-100 transition-[left,width,opacity] duration-200 ease-out"
+        style={{
+          left: pillStyle.left,
+          width: pillStyle.width,
+          opacity: pillStyle.ready ? 1 : 0
+        }}
+      />
+      {options.map((option, index) => {
+        const isActive = value === option.id;
+
+        return (
+          <button
+            key={option.id}
+            ref={(element) => {
+              tabRefs.current[index] = element;
+            }}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(option.id)}
+            disabled={disabled}
+            className={`relative z-10 flex min-h-[36px] flex-1 items-center justify-between gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              isActive ? 'text-indigo-700' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <span className="truncate">{option.label}</span>
+            {option.count != null && (
+              <span className="shrink-0 tabular-nums">{option.count}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 const CampaignTypeSelect = ({ value, onChange, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -237,7 +329,12 @@ const SectionCard = ({
   icon = null,
   eyebrow = null,
   tone = 'slate',
-  isCollapsed = false
+  isCollapsed: isCollapsedProp = false,
+  collapsible = false,
+  isExpanded = true,
+  onToggle = null,
+  summaryLabel = null,
+  sectionId = null
 }) => {
   const toneClasses = {
     slate: 'from-slate-50 via-white to-white',
@@ -246,9 +343,33 @@ const SectionCard = ({
     amber: 'from-amber-50 via-white to-white'
   };
 
+  const isCollapsed = collapsible ? !isExpanded : isCollapsedProp;
+
+  const handleHeaderKeyDown = (event) => {
+    if (!collapsible || !onToggle) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onToggle();
+    }
+  };
+
+  const stopTogglePropagation = (event) => {
+    event.stopPropagation();
+  };
+
   return (
     <section className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm">
-      <div className={`bg-gradient-to-r px-5 ${isCollapsed ? 'py-3' : 'py-4'} ${toneClasses[tone] || toneClasses.slate} ${isCollapsed ? '' : 'border-b border-slate-100'}`}>
+      <div
+        className={`bg-gradient-to-r px-5 ${isCollapsed ? 'py-3' : 'py-4'} ${toneClasses[tone] || toneClasses.slate} ${isCollapsed ? '' : 'border-b border-slate-100'}${collapsible ? ' cursor-pointer select-none transition-colors hover:from-slate-100/60' : ''}`}
+        {...(collapsible ? {
+          role: 'button',
+          tabIndex: 0,
+          onClick: onToggle,
+          onKeyDown: handleHeaderKeyDown,
+          'aria-expanded': isExpanded,
+          'aria-controls': sectionId || undefined
+        } : {})}
+      >
         <div className={`flex justify-between gap-3 ${isCollapsed ? 'items-center' : 'items-start'}`}>
           <div className="flex min-w-0 items-start gap-3">
             {icon && (
@@ -262,36 +383,35 @@ const SectionCard = ({
               {!isCollapsed && subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
             </div>
           </div>
-          {rightSlot}
+          {(rightSlot || collapsible || summaryLabel) && (
+            <div className={`flex shrink-0 items-center gap-2 ${isCollapsed ? '' : 'pt-0.5'}`}>
+              {summaryLabel && isCollapsed && (
+                <span className="hidden text-xs font-semibold text-slate-500 lg:inline">
+                  {summaryLabel}
+                </span>
+              )}
+              {rightSlot && (
+                <div onClick={stopTogglePropagation} onKeyDown={stopTogglePropagation}>
+                  {rightSlot}
+                </div>
+              )}
+              {collapsible && (
+                <Icon
+                  name="chevronRight"
+                  size={18}
+                  className={`shrink-0 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
       {children !== null && children !== undefined && children !== false && (
-        <div className="p-5">{children}</div>
+        <div id={sectionId || undefined} className="p-5">{children}</div>
       )}
     </section>
   );
 };
-
-const SectionToggleButton = ({ isExpanded, onClick, summaryLabel }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    aria-expanded={isExpanded}
-    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:text-slate-900"
-  >
-    {summaryLabel && (
-      <span className="hidden text-xs font-semibold text-slate-500 lg:inline">
-        {summaryLabel}
-      </span>
-    )}
-    <span>{isExpanded ? 'Ocultar' : 'Mostrar'}</span>
-    <Icon
-      name="chevronRight"
-      size={16}
-      className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
-    />
-  </button>
-);
 
 const EmptyState = ({ icon = 'mail', title, description, variant = 'card' }) => {
   if (variant === 'centered') {
@@ -321,63 +441,133 @@ const PublisherAssignmentCard = ({
   assignment,
   onStatusChange,
   isProcessing = false,
-  statusOptions = PUBLISHER_STATUS_OPTIONS,
   statusResolver = getPublisherAssignmentStatus
 }) => {
   const displayStatus = statusResolver(assignment);
-  const progressMeta = getCampaignProgressMeta(displayStatus);
+  const isCompleted = displayStatus === CAMPAIGN_PROGRESS_STATUSES.COMPLETED;
+  const config = isCompleted ? ADDRESS_CARD_THEMES.completed : ADDRESS_CARD_THEMES.inProgress;
   const snapshot = assignment.addressSnapshot || {};
-  const mapHref = getPublisherAssignmentMapHref(snapshot);
+  const displayAddress = getDisplayAddress(snapshot);
+  const { street: addressStreet, number: addressNumber } = splitDisplayAddress(displayAddress);
+  const navigationUrls = getAddressNavigationUrls(snapshot);
+  const titleColorStrong = config.titleColor.replace('-800', '-950');
+  const statusLabel = isCompleted ? 'Completada' : 'En progreso';
+  const actionLabel = isCompleted ? 'En progreso' : 'Completada';
+  const nextStatus = isCompleted
+    ? CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
+    : CAMPAIGN_PROGRESS_STATUSES.COMPLETED;
+
+  const renderAddressTitle = (className) => (
+    <h4
+      className={`${className} break-words`}
+      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+    >
+      {addressNumber ? (
+        <>
+          <span className="md:hidden">
+            <span className={`block ${config.titleColor}`}>{addressStreet}</span>
+            <span className={`block ${titleColorStrong}`}>{addressNumber}</span>
+          </span>
+          <span className={`hidden md:inline ${config.titleColor}`}>{displayAddress}</span>
+        </>
+      ) : (
+        <span className={config.titleColor}>{displayAddress}</span>
+      )}
+    </h4>
+  );
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${progressMeta.badgeClass}`}>
-              <span className={`w-2 h-2 rounded-full mr-2 ${progressMeta.dotClass}`}></span>
-              {progressMeta.label}
-            </span>
+    <div
+      id={`campaign-assignment-card-${assignment.id}`}
+      className={`
+        group relative cursor-default
+        bg-gradient-to-br ${config.bgGradient}
+        border-2 ${config.borderColor} ${config.hoverBorder}
+        rounded-2xl overflow-hidden
+        shadow-lg ${config.hoverShadow}
+        hover:shadow-2xl hover:scale-[1.01]
+        transition-all duration-300 ease-out
+      `}
+    >
+      <div className="relative px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-white/40">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <div className={`${config.iconBg} p-3 rounded-xl shadow-sm backdrop-blur-sm border border-white/20 group-hover:shadow-md transition-shadow`}>
+              {isCompleted ? (
+                <Icon name="checkCircle" size={24} className={config.iconColor} />
+              ) : (
+                <i className={`fas fa-house text-xl ${config.iconColor}`} />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              {renderAddressTitle('text-lg font-bold')}
+              <p className={`mt-1 text-sm font-medium ${config.subtitleColor}`}>
+                {snapshot.territoryName || 'Territorio'}
+              </p>
+            </div>
           </div>
-          <h4 className="text-base font-bold text-gray-900">{getDisplayAddress(snapshot)}</h4>
-          <p className="text-sm text-gray-500 mt-1">{snapshot.territoryName || 'Territorio'}</p>
+
+          <div className={`${config.badgeBg} px-3 py-1.5 rounded-full flex items-center space-x-2 shadow-sm border`}>
+            <div
+              className={`w-2 h-2 rounded-full ${isCompleted ? '' : 'animate-pulse'}`}
+              style={{ backgroundColor: config.accentColor }}
+            />
+            <span className="text-sm font-medium">{statusLabel}</span>
+          </div>
         </div>
-        <a
-          href={mapHref || '#'}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`w-11 h-11 rounded-2xl flex items-center justify-center ${mapHref ? 'bg-slate-700 text-white hover:bg-slate-800' : 'bg-gray-100 text-gray-400 pointer-events-none'} transition-colors`}
-        >
-          <Icon name="navigation" size={18} />
-        </a>
       </div>
 
-      {(snapshot.phone || snapshot.notes) && (
-        <div className="space-y-2 text-sm text-gray-700">
-          {snapshot.phone && <p><span className="font-semibold text-gray-500">Telefono:</span> {snapshot.phone}</p>}
-          {snapshot.notes && <p className="text-gray-600 italic">"{snapshot.notes}"</p>}
-        </div>
-      )}
+      <div className="px-4 py-4 space-y-4">
+        {(snapshot.phone || snapshot.notes) && (
+          <div className={`flex items-start p-3 ${config.notesBg} rounded-lg text-sm`}>
+            <i className={`fas fa-info-circle ${config.notesIcon} mr-2 mt-0.5`} />
+            <div className="space-y-1">
+              {snapshot.phone ? (
+                <p className={config.notesText}>
+                  <span className="font-semibold">Teléfono:</span> {snapshot.phone}
+                </p>
+              ) : null}
+              {snapshot.notes ? (
+                <p className={`${config.notesText} italic`}>{snapshot.notes}</p>
+              ) : null}
+            </div>
+          </div>
+        )}
 
-      <div className={`grid gap-2 ${statusOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-        {statusOptions.map((option) => {
-          const isActive = displayStatus === option.id;
-          return (
-            <button
-              key={option.id}
-              onClick={() => onStatusChange(option.id)}
-              disabled={isProcessing || isActive}
-              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all border ${
-                isActive
-                  ? 'bg-slate-800 text-white border-slate-800'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
-              } disabled:opacity-60`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
+        <div className="flex items-center justify-between gap-3">
+          <AddressNavigationButtons
+            urls={navigationUrls}
+            containerClassName={`${config.visitedNavButtons}`}
+            dividerClassName={config.visitedNavDivider}
+            buttonClassName={config.visitedNavActive}
+            territoryId={snapshot.territoryId}
+          />
+
+          <button
+            type="button"
+            onClick={() => onStatusChange(nextStatus)}
+            disabled={isProcessing}
+            className={`
+              px-4 py-2 rounded-xl font-semibold text-sm shrink-0
+              ${config.primaryButton}
+              disabled:opacity-50 disabled:cursor-not-allowed
+              transition-all transform hover:scale-105 active:scale-95
+              shadow-lg hover:shadow-xl
+            `}
+          >
+            {isProcessing ? 'Procesando...' : actionLabel}
+          </button>
+        </div>
       </div>
+
+      <div
+        className="h-1 w-full bg-gradient-to-r opacity-75 group-hover:opacity-100 transition-opacity"
+        style={{
+          backgroundImage: `linear-gradient(to right, ${config.accentColor}, ${config.accentColor}dd)`
+        }}
+      />
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
     </div>
   );
 };
@@ -391,9 +581,8 @@ const PublisherAssignmentsSection = ({
   publisherFilter = CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS,
   onFilterChange = () => {},
   filterOptions = PUBLISHER_FILTER_OPTIONS,
-  statusOptions = PUBLISHER_STATUS_OPTIONS,
   statusResolver = getPublisherAssignmentStatus,
-  onOpenMap = null
+  onOpenTerritoryMap = null
 }) => {
   if (!activeCampaign) {
     return (
@@ -410,7 +599,6 @@ const PublisherAssignmentsSection = ({
 
   const completedCount = assignments.filter((a) => a.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED).length;
   const pendingCount = assignments.length - completedCount;
-  const totalCount = assignments.length;
 
   const filterCounts = {
     [CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS]: pendingCount,
@@ -419,36 +607,7 @@ const PublisherAssignmentsSection = ({
 
   return (
     <div className="space-y-4">
-      <SectionCard
-        title={activeCampaign.name}
-        subtitle={`${formatCampaignTypeLabel(activeCampaign.type)} - ${formatCampaignDate(activeCampaign.eventDate)}`}
-        rightSlot={(
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {onOpenMap && assignments.length > 0 && (
-              <button
-                type="button"
-                onClick={onOpenMap}
-                className="inline-flex items-center rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-100"
-              >
-                <Icon name="map" size={15} className="mr-2" />
-                Ver mapa
-              </button>
-            )}
-          </div>
-        )}
-      >
-        {totalCount > 0 && (
-          <div className="mb-3 flex items-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50 px-3 py-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
-              <Icon name={pendingCount > 0 ? 'mapPin' : 'checkCircle'} size={15} />
-            </div>
-            <p className="min-w-0 text-sm font-semibold text-indigo-900">
-              {pendingCount > 0
-                ? (<>Te faltan <strong>{pendingCount}</strong> {pendingCount === 1 ? 'dirección' : 'direcciones'}</>)
-                : 'Completaste todas tus direcciones'}
-            </p>
-          </div>
-        )}
+      <SectionCard title={activeCampaign.name}>
         <div className="flex flex-wrap gap-2">
           {filterOptions.map((option) => (
             <button
@@ -479,21 +638,440 @@ const PublisherAssignmentsSection = ({
             key={group.territoryId}
             title={group.territoryName}
             subtitle={`${group.assignments.length} direcci\u00f3n${group.assignments.length !== 1 ? 'es' : ''}`}
+            rightSlot={onOpenTerritoryMap && group.assignments.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => onOpenTerritoryMap(group.assignments, group.territoryName)}
+                className="inline-flex items-center rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 transition-colors hover:bg-indigo-100"
+              >
+                <Icon name="map" size={15} className="mr-2" />
+                Ver mapa
+              </button>
+            ) : null}
           >
-            <div className="space-y-3">
+            <div className="space-y-4">
               {group.assignments.map((assignment) => (
                 <PublisherAssignmentCard
                   key={assignment.id}
                   assignment={assignment}
                   onStatusChange={(status) => onStatusChange(assignment.id, status)}
                   isProcessing={isProcessing}
-                  statusOptions={statusOptions}
                   statusResolver={statusResolver}
                 />
               ))}
             </div>
           </SectionCard>
         ))
+      )}
+    </div>
+  );
+};
+
+const sortParticipantAssignments = (assignments = []) => (
+  [...assignments].sort((a, b) => {
+    const territoryA = a.addressSnapshot?.territoryName || '';
+    const territoryB = b.addressSnapshot?.territoryName || '';
+    const territoryDiff = territoryA.localeCompare(territoryB, 'es', { numeric: true });
+    if (territoryDiff !== 0) return territoryDiff;
+    return getDisplayAddress(a.addressSnapshot).localeCompare(
+      getDisplayAddress(b.addressSnapshot),
+      'es',
+      { numeric: true }
+    );
+  })
+);
+
+const ParticipantAssignmentAddressList = ({ assignments = [] }) => {
+  const grouped = useMemo(
+    () => groupAssignmentsByTerritory(assignments),
+    [assignments]
+  );
+
+  if (grouped.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
+      {grouped.map((group) => (
+        <div key={group.territoryId}>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+            {group.territoryName}
+          </p>
+          <ul className="space-y-2">
+            {group.assignments.map((assignment) => {
+              const progressMeta = getCampaignProgressMeta(assignment.status);
+              const snapshot = assignment.addressSnapshot || {};
+              const mapHref = getPublisherAssignmentMapHref(snapshot);
+
+              return (
+                <li
+                  key={assignment.id}
+                  className="flex items-start justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${progressMeta.badgeClass}`}>
+                      {progressMeta.label}
+                    </span>
+                    <p className="mt-1 text-sm font-medium text-gray-900">{getDisplayAddress(snapshot)}</p>
+                  </div>
+                  {mapHref ? (
+                    <a
+                      href={mapHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Abrir en Google Maps"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-700 text-white transition-colors hover:bg-slate-800"
+                    >
+                      <Icon name="navigation" size={14} />
+                    </a>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const CampaignAddressDriftBanner = ({
+  drift,
+  onRegenerate,
+  isBusy = false,
+  isReadOnly = false
+}) => {
+  if (!drift?.hasNewAddresses && !drift?.hasStaleAssignments) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sky-900">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          {drift.hasNewAddresses ? (
+            <p className="text-sm font-semibold">
+              {drift.newCount === 1
+                ? 'Hay 1 dirección nueva desde el último reparto.'
+                : `Hay ${drift.newCount} direcciones nuevas desde el último reparto.`}
+            </p>
+          ) : null}
+          {drift.hasStaleAssignments ? (
+            <p className="text-sm font-semibold">
+              {drift.staleCount === 1
+                ? '1 dirección del reparto ya no está disponible.'
+                : `${drift.staleCount} direcciones del reparto ya no están disponibles.`}
+            </p>
+          ) : null}
+          <p className="text-sm text-sky-800/90">
+            {drift.hasNewAddresses
+              ? `El reparto actual cubre ${drift.assignedCount} de ${drift.liveCount} direcciones elegibles. Se recomienda regenerar el reparto para mantenerlo actualizado.`
+              : 'Regenera el reparto para alinear las asignaciones con las direcciones actuales.'}
+          </p>
+        </div>
+        {!isReadOnly && onRegenerate ? (
+          <button
+            type="button"
+            onClick={onRegenerate}
+            disabled={isBusy}
+            className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isBusy ? (
+              <>
+                <Icon name="loader" size={16} className="animate-spin" />
+                Regenerando...
+              </>
+            ) : (
+              <>
+                <Icon name="shuffle" size={16} />
+                Regenerar reparto
+              </>
+            )}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
+const CopyDistributionButton = ({ onClick, copied, disabled = false, className = '' }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    aria-label="Copiar reparto"
+    title="Copiar reparto para WhatsApp"
+    className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+  >
+    <Icon name={copied ? 'checkCircle' : 'copy'} size={16} />
+  </button>
+);
+
+const CampaignDistributionControl = ({
+  participants = [],
+  distributionTargets = {},
+  totalAddresses = 0,
+  configuredTotal = 0,
+  isBalanced = false,
+  preservedCountsByUser = {},
+  isBusy = false,
+  isReadOnly = false,
+  onAdjustTarget = () => {},
+  onSetTarget = () => {},
+  onApply = () => {},
+  compact = false,
+  assignmentsByUserId = null,
+  onOpenParticipantMap = null,
+  assignmentsGenerated = false,
+  liveAvailableCount = null,
+  requiresRegenerate = false
+}) => {
+  const [expandedParticipantId, setExpandedParticipantId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredParticipants = useMemo(() => {
+    const normalizedSearch = normalizeSearchText(searchQuery);
+    if (!normalizedSearch) return participants;
+
+    return participants.filter((participant) => (
+      normalizeSearchText(participant.userNameSnapshot).includes(normalizedSearch)
+    ));
+  }, [participants, searchQuery]);
+
+  const hasMoreAddressesAvailable = Number.isFinite(liveAvailableCount)
+    && liveAvailableCount > totalAddresses;
+  const balanceTone = isBalanced && !hasMoreAddressesAvailable
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+    : 'border-amber-200 bg-amber-50 text-amber-800';
+
+  return (
+    <div className="space-y-4">
+      <div className={`rounded-2xl border px-4 py-3 ${balanceTone}`}>
+        <div className={`flex gap-4 ${compact ? 'flex-col' : 'flex-col lg:flex-row lg:items-center lg:justify-between'}`}>
+          <div className={`grid gap-3 ${compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:gap-6'}`}>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide opacity-70">Objetivo configurado</p>
+              <p className="mt-0.5 text-lg font-bold tabular-nums">
+                {configuredTotal} / {hasMoreAddressesAvailable ? liveAvailableCount : totalAddresses}
+              </p>
+              {hasMoreAddressesAvailable ? (
+                <p className="mt-1 text-xs font-medium opacity-80">
+                  {totalAddresses} en el reparto actual · {liveAvailableCount} disponibles
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          {!requiresRegenerate && !compact && (
+            <button
+              type="button"
+              onClick={onApply}
+              disabled={isBusy || isReadOnly || !isBalanced || participants.length === 0}
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isBusy ? (
+                <>
+                  <Icon name="loader" size={16} className="animate-spin" />
+                  Actualizando...
+                </>
+              ) : (
+                <>
+                  <Icon name="shuffle" size={16} />
+                  Actualizar reparto
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {!isBalanced && (
+          <p className="mt-2 text-xs font-medium opacity-80">
+            Ajusta las cantidades hasta que el objetivo coincida con el total antes de actualizar el reparto.
+          </p>
+        )}
+        {hasMoreAddressesAvailable && isBalanced && (
+          <p className="mt-2 text-xs font-medium opacity-80">
+            Hay direcciones nuevas fuera del reparto. Regenera el reparto para incluirlas antes de activar la campaña.
+          </p>
+        )}
+      </div>
+
+      {!requiresRegenerate && compact && (
+        <button
+          type="button"
+          onClick={onApply}
+          disabled={isBusy || isReadOnly || !isBalanced || participants.length === 0}
+          className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isBusy ? (
+            <>
+              <Icon name="loader" size={16} className="animate-spin" />
+              Actualizando...
+            </>
+          ) : (
+            <>
+              <Icon name="shuffle" size={16} />
+              Actualizar reparto
+            </>
+          )}
+        </button>
+      )}
+
+      {participants.length > 0 && (
+        <div className="relative">
+          <div className="pointer-events-none absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+            <Icon name="search" size={16} />
+          </div>
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onFocus={(event) => {
+              if (event.target.value.length > 0) {
+                event.target.select();
+              }
+            }}
+            disabled={isBusy}
+            inputMode="search"
+            placeholder="Buscar por nombre o apellido"
+            aria-label="Buscar hermano en el reparto"
+            className="w-full rounded-2xl border border-gray-300 py-3 pl-12 pr-10 text-sm focus:border-slate-500 focus:outline-none disabled:opacity-60"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              disabled={isBusy}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 disabled:opacity-60"
+            >
+              <Icon name="x" size={16} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {searchQuery && filteredParticipants.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+          {`Sin resultados para "${searchQuery}"`}
+        </div>
+      ) : (
+      <div className={`space-y-3 ${compact ? '' : 'lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 xl:grid-cols-2'}`}>
+        {filteredParticipants.map((participant) => {
+          const targetValue = Number(distributionTargets[participant.userId]) || 0;
+          const minTarget = preservedCountsByUser[participant.userId] || 0;
+          const currentDelta = targetValue - (participant.total || 0);
+          const deltaLabel = currentDelta === 0
+            ? null
+            : currentDelta > 0
+              ? `+${currentDelta}`
+              : `${currentDelta}`;
+
+          return (
+            <div
+              key={participant.userId}
+              className={`rounded-2xl border border-gray-200 bg-white p-4 ${compact ? '' : 'lg:h-full'}`}
+            >
+              <div className={`flex gap-3 ${compact ? 'flex-col' : 'flex-col sm:flex-row sm:items-start sm:justify-between'}`}>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-gray-900">{participant.userNameSnapshot}</p>
+                    {deltaLabel && (
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
+                        currentDelta > 0 ? 'bg-sky-100 text-sky-700' : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {deltaLabel} al aplicar
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                      Pendientes: {participant.pending}
+                    </span>
+                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700">
+                      En progreso: {participant.inProgress}
+                    </span>
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700">
+                      Completadas: {participant.completed}
+                    </span>
+                  </div>
+                  {minTarget > 0 && (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Mínimo {minTarget} por asignaciones completadas, en progreso o bloqueadas.
+                    </p>
+                  )}
+                </div>
+
+                <div className={`flex items-center gap-2 ${compact ? 'justify-between' : 'shrink-0 sm:justify-end'}`}>
+                  <button
+                    type="button"
+                    onClick={() => onAdjustTarget(participant.userId, -1)}
+                    disabled={isBusy || isReadOnly || targetValue <= minTarget}
+                    aria-label={`Reducir objetivo de ${participant.userNameSnapshot}`}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Icon name="minus" size={16} />
+                  </button>
+                  <input
+                    type="number"
+                    min={minTarget}
+                    max={totalAddresses}
+                    inputMode="numeric"
+                    value={targetValue}
+                    onChange={(event) => onSetTarget(participant.userId, event.target.value)}
+                    disabled={isBusy || isReadOnly}
+                    aria-label={`Objetivo de direcciones para ${participant.userNameSnapshot}`}
+                    className="h-11 w-16 rounded-xl border border-gray-300 px-2 text-center text-base font-bold tabular-nums focus:border-slate-500 focus:outline-none disabled:opacity-60"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onAdjustTarget(participant.userId, 1)}
+                    disabled={isBusy || isReadOnly || targetValue >= totalAddresses}
+                    aria-label={`Aumentar objetivo de ${participant.userNameSnapshot}`}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Icon name="plus" size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {assignmentsGenerated && participant.total > 0 && assignmentsByUserId && onOpenParticipantMap ? (
+                <div className="mt-3 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedParticipantId((prev) => (
+                      prev === participant.userId ? null : participant.userId
+                    ))}
+                    className="flex w-full min-h-[40px] items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-100"
+                  >
+                    <span>Ver direcciones ({participant.total})</span>
+                    <Icon
+                      name="chevronDown"
+                      size={16}
+                      className={`shrink-0 transition-transform ${expandedParticipantId === participant.userId ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {expandedParticipantId === participant.userId ? (
+                    <ParticipantAssignmentAddressList
+                      assignments={assignmentsByUserId.get(participant.userId) || []}
+                    />
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => onOpenParticipantMap(participant.userId, participant.userNameSnapshot)}
+                    className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    <Icon name="map" size={16} />
+                    Ver mapa
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
       )}
     </div>
   );
@@ -520,6 +1098,8 @@ const CampaignsView = ({ onBack }) => {
     handleUpdateCampaign,
     handleSaveCampaignStructure,
     handleGenerateCampaignAssignments,
+    handleRedistributeCampaignAssignments,
+    handleSaveDistributionTargetsDraft,
     handleActivateCampaign,
     handleCompleteCampaign,
     handleArchiveCampaign,
@@ -543,8 +1123,19 @@ const CampaignsView = ({ onBack }) => {
   const [campaignForm, setCampaignForm] = useState(DEFAULT_CAMPAIGN_FORM);
   const [participantsDraft, setParticipantsDraft] = useState([]);
   const [participantSearch, setParticipantSearch] = useState('');
+  const [participantGenderFilter, setParticipantGenderFilter] = useState(null);
+  const isDesktop = useIsDesktop();
   const [publisherFilter, setPublisherFilter] = useState(CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS);
-  const [isCampaignMapOpen, setIsCampaignMapOpen] = useState(false);
+  const [publisherMapState, setPublisherMapState] = useState({
+    isOpen: false,
+    assignments: [],
+    territoryName: ''
+  });
+  const [participantMapState, setParticipantMapState] = useState({
+    isOpen: false,
+    userId: null,
+    userName: ''
+  });
   const [adminViewMode, setAdminViewMode] = useState('admin');
   const [isBusy, setIsBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -563,8 +1154,17 @@ const CampaignsView = ({ onBack }) => {
   const [adminScreen, setAdminScreen] = useState('hub');
   const [isTrackingExpanded, setIsTrackingExpanded] = useState(false);
   const [isAssignmentsExpanded, setIsAssignmentsExpanded] = useState(false);
+  const [step3DistributionFilter, setStep3DistributionFilter] = useState('all');
+  const [distributionTargets, setDistributionTargets] = useState({});
+  const distributionHydratedCampaignRef = useRef(null);
+  const distributionSkipSaveRef = useRef(true);
+  const distributionSaveTimeoutRef = useRef(null);
+  const distributionTargetsRef = useRef({});
   const hasAutoSelectedAdminViewRef = useRef(false);
+  const prevSelectedCampaignIdRef = useRef(null);
   const campaignDateInputRef = useRef(null);
+  const distributionCopyTimeoutRef = useRef(null);
+  const [distributionCopyFeedback, setDistributionCopyFeedback] = useState(false);
 
   const openCampaignDatePicker = () => {
     const input = campaignDateInputRef.current;
@@ -632,7 +1232,15 @@ const CampaignsView = ({ onBack }) => {
     const availableUsers = [...users]
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
-    setParticipantSearch('');
+    const campaignId = selectedCampaign?.id ?? null;
+    const isCampaignChange = prevSelectedCampaignIdRef.current !== campaignId;
+    prevSelectedCampaignIdRef.current = campaignId;
+
+    if (isCampaignChange) {
+      setParticipantSearch('');
+      setParticipantGenderFilter(null);
+      setStep3DistributionFilter('all');
+    }
 
     if (!selectedCampaign) {
       setCampaignForm({ ...DEFAULT_CAMPAIGN_FORM });
@@ -695,14 +1303,40 @@ const CampaignsView = ({ onBack }) => {
     [users]
   );
 
+  const usersById = useMemo(
+    () => users.reduce((accumulator, user) => {
+      accumulator[user.id] = user;
+      return accumulator;
+    }, {}),
+    [users]
+  );
+
+  const getParticipantGender = (participant) => getUserGender(
+    usersById[participant.userId] || participant.userNameSnapshot
+  );
+
+  const participantGenderCounts = useMemo(() => participantsDraft.reduce((accumulator, participant) => {
+    const gender = getParticipantGender(participant);
+    if (gender === 'Hombre') accumulator.male += 1;
+    if (gender === 'Mujer') accumulator.female += 1;
+    return accumulator;
+  }, { male: 0, female: 0 }), [participantsDraft, usersById]);
+
   const filteredParticipantsDraft = useMemo(() => {
     const normalizedSearch = normalizeSearchText(participantSearch);
-    if (!normalizedSearch) return participantsDraft;
 
-    return participantsDraft.filter((participant) => (
-      normalizeSearchText(participant.userNameSnapshot).includes(normalizedSearch)
-    ));
-  }, [participantSearch, participantsDraft]);
+    return participantsDraft.filter((participant) => {
+      if (normalizedSearch && !normalizeSearchText(participant.userNameSnapshot).includes(normalizedSearch)) {
+        return false;
+      }
+
+      if (participantGenderFilter && getParticipantGender(participant) !== participantGenderFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [participantGenderFilter, participantSearch, participantsDraft, usersById]);
 
   const participantTargetsPreview = useMemo(() => {
     const totalAddresses = allTerritoryAddresses.length;
@@ -745,6 +1379,216 @@ const CampaignsView = ({ onBack }) => {
       };
     });
   }, [isAdmin, participantsDraft, selectedCampaignAssignments]);
+
+  const preservedCountsByUser = useMemo(
+    () => countPreservedAssignmentsByUser(selectedCampaignAssignments),
+    [selectedCampaignAssignments]
+  );
+
+  const assignmentsByUserId = useMemo(() => {
+    const map = new Map();
+
+    selectedCampaignAssignments.forEach((assignment) => {
+      const userId = assignment.assignedUserId;
+      if (!userId) return;
+
+      if (!map.has(userId)) {
+        map.set(userId, []);
+      }
+
+      map.get(userId).push(assignment);
+    });
+
+    map.forEach((assignments, userId) => {
+      map.set(userId, sortParticipantAssignments(assignments));
+    });
+
+    return map;
+  }, [selectedCampaignAssignments]);
+
+  const participantMapAssignments = useMemo(() => {
+    if (!participantMapState.userId) return [];
+    return assignmentsByUserId.get(participantMapState.userId) || [];
+  }, [assignmentsByUserId, participantMapState.userId]);
+
+  const handleOpenPublisherTerritoryMap = useCallback((assignments, territoryName) => {
+    setPublisherMapState({ isOpen: true, assignments, territoryName });
+  }, []);
+
+  const handleClosePublisherMap = useCallback(() => {
+    setPublisherMapState({ isOpen: false, assignments: [], territoryName: '' });
+  }, []);
+
+  const handleOpenParticipantMap = useCallback((userId, userName) => {
+    setParticipantMapState({ isOpen: true, userId, userName });
+  }, []);
+
+  const handleCloseParticipantMap = useCallback(() => {
+    setParticipantMapState({ isOpen: false, userId: null, userName: '' });
+  }, []);
+
+  const step3EnabledDistributionParticipants = useMemo(() => (
+    selectedCampaignParticipants
+      .filter((participant) => participant.isEnabled !== false)
+      .map((participant) => {
+        const summary = participantSummary.find((entry) => entry.userId === participant.userId);
+        return {
+          userId: participant.userId,
+          userNameSnapshot: participant.userNameSnapshot,
+          total: summary?.total || 0,
+          pending: summary?.pending || 0,
+          inProgress: summary?.inProgress || 0,
+          completed: summary?.completed || 0
+        };
+      })
+      .sort((a, b) => a.userNameSnapshot.localeCompare(b.userNameSnapshot, 'es'))
+  ), [participantSummary, selectedCampaignParticipants]);
+
+  const distributionControlParticipants = useMemo(
+    () => step3EnabledDistributionParticipants.filter((participant) => participant.total > 0),
+    [step3EnabledDistributionParticipants]
+  );
+
+  const step3UnassignedParticipants = useMemo(
+    () => step3EnabledDistributionParticipants.filter(
+      (participant) => (Number(distributionTargets[participant.userId]) || 0) === 0
+    ),
+    [step3EnabledDistributionParticipants, distributionTargets]
+  );
+
+  const step3UnassignedCount = step3UnassignedParticipants.length;
+
+  const isDistributionParticipantPioneer = (participant) => (
+    isPioneerUser(usersById[participant.userId]) || isPioneerName(participant.userNameSnapshot)
+  );
+
+  const step3PioneerDistributionCount = useMemo(
+    () => distributionControlParticipants.filter(isDistributionParticipantPioneer).length,
+    [distributionControlParticipants, usersById]
+  );
+
+  const step3DistributionFilterOptions = useMemo(() => {
+    const options = [
+      { id: 'all', label: 'Todos', count: distributionControlParticipants.length },
+      { id: 'pioneers', label: 'Precursores', count: step3PioneerDistributionCount }
+    ];
+
+    if (step3UnassignedCount > 0) {
+      options.push({ id: 'unassigned', label: 'Sin reparto', count: step3UnassignedCount });
+    }
+
+    return options;
+  }, [distributionControlParticipants.length, step3PioneerDistributionCount, step3UnassignedCount]);
+
+  const step3FilteredDistributionParticipants = useMemo(() => {
+    if (step3DistributionFilter === 'pioneers') {
+      return distributionControlParticipants.filter(isDistributionParticipantPioneer);
+    }
+    if (step3DistributionFilter === 'unassigned') {
+      return step3UnassignedParticipants;
+    }
+    return distributionControlParticipants;
+  }, [
+    distributionControlParticipants,
+    step3UnassignedParticipants,
+    step3DistributionFilter,
+    usersById
+  ]);
+
+  useEffect(() => {
+    if (step3DistributionFilter === 'unassigned' && step3UnassignedCount === 0) {
+      setStep3DistributionFilter('all');
+    }
+  }, [step3DistributionFilter, step3UnassignedCount]);
+
+  const step3DistributionHeaderCount = useMemo(() => {
+    if (step3DistributionFilter === 'unassigned') {
+      return step3UnassignedCount;
+    }
+
+    if (step3DistributionFilter === 'pioneers') {
+      return step3FilteredDistributionParticipants.length;
+    }
+
+    return distributionControlParticipants.length;
+  }, [
+    step3DistributionFilter,
+    step3UnassignedCount,
+    step3FilteredDistributionParticipants.length,
+    distributionControlParticipants.length
+  ]);
+
+  const isDistributionParticipantPioneerCallback = useCallback(
+    (participant) => (
+      isPioneerUser(usersById[participant.userId]) || isPioneerName(participant.userNameSnapshot)
+    ),
+    [usersById]
+  );
+
+  const handleCopyDistributionList = useCallback(async () => {
+    const text = formatCampaignDistributionWhatsAppText({
+      participants: step3EnabledDistributionParticipants,
+      distributionTargets,
+      isPioneer: isDistributionParticipantPioneerCallback
+    });
+
+    if (!text) {
+      showToast('No hay reparto para copiar', 'error');
+      return;
+    }
+
+    try {
+      const copied = await copiarAlPortapapeles(text);
+      setDistributionCopyFeedback(true);
+      showToast(
+        copied
+          ? 'Reparto copiado para WhatsApp'
+          : 'Revisa el texto en el diálogo para copiar manualmente',
+        copied ? 'success' : 'info'
+      );
+
+      if (distributionCopyTimeoutRef.current) {
+        clearTimeout(distributionCopyTimeoutRef.current);
+      }
+      distributionCopyTimeoutRef.current = setTimeout(() => {
+        setDistributionCopyFeedback(false);
+      }, 2200);
+    } catch (error) {
+      console.error('Error copiando reparto:', error);
+      showToast('No se pudo copiar el reparto', 'error');
+    }
+  }, [
+    distributionTargets,
+    isDistributionParticipantPioneerCallback,
+    showToast,
+    step3EnabledDistributionParticipants
+  ]);
+
+  useEffect(() => () => {
+    if (distributionCopyTimeoutRef.current) {
+      clearTimeout(distributionCopyTimeoutRef.current);
+    }
+  }, []);
+
+  const totalDistributionAddresses = selectedCampaignAssignments.length > 0
+    ? selectedCampaignAssignments.length
+    : allTerritoryAddresses.length;
+
+  const campaignAddressDrift = useMemo(
+    () => getCampaignAddressDrift(selectedCampaignAssignments, allTerritoryAddresses),
+    [selectedCampaignAssignments, allTerritoryAddresses]
+  );
+
+  const campaignRequiresRegenerate = campaignAddressDrift.hasNewAddresses
+    || campaignAddressDrift.hasStaleAssignments;
+
+  const distributionConfiguredTotal = useMemo(
+    () => Object.values(distributionTargets).reduce((sum, count) => sum + (Number(count) || 0), 0),
+    [distributionTargets]
+  );
+
+  const distributionBalanceDiff = totalDistributionAddresses - distributionConfiguredTotal;
+  const distributionIsBalanced = distributionBalanceDiff === 0;
 
   const personalCampaign = useMemo(() => {
     if (activeCampaign) return activeCampaign;
@@ -836,7 +1680,9 @@ const CampaignsView = ({ onBack }) => {
   const step2Summary = `${enabledParticipantsCount} activos · ${allTerritoryAddresses.length} direcciones`;
   const step2Subtitle = `${enabledParticipantsCount} activos · ${allTerritoryAddresses.length} direcciones a repartir`;
   const step3Summary = assignmentsGenerated
-    ? `${selectedCampaignAssignments.length} repartidas · ${completedAssignmentsCount} completadas`
+    ? campaignAddressDrift.hasNewAddresses
+      ? `${selectedCampaignAssignments.length} repartidas · +${campaignAddressDrift.newCount} nueva${campaignAddressDrift.newCount === 1 ? '' : 's'}`
+      : `${selectedCampaignAssignments.length} repartidas · ${completedAssignmentsCount} completadas`
     : participantsReady
       ? 'Listo para generar reparto'
       : 'Configura participantes primero';
@@ -865,8 +1711,141 @@ const CampaignsView = ({ onBack }) => {
   }, [selectedCampaign]);
 
   useEffect(() => {
+    distributionTargetsRef.current = distributionTargets;
+  }, [distributionTargets]);
+
+  useEffect(() => {
+    if (!selectedCampaign?.id) {
+      setDistributionTargets({});
+      distributionHydratedCampaignRef.current = null;
+      return;
+    }
+
+    if (!assignmentsGenerated) {
+      setDistributionTargets({});
+      distributionHydratedCampaignRef.current = null;
+      return;
+    }
+
+    const hydrationKey = `${selectedCampaign.id}:${totalDistributionAddresses}:${selectedCampaignAssignments.length}`;
+
+    if (distributionHydratedCampaignRef.current === hydrationKey) {
+      return;
+    }
+
+    const localDraft = loadDistributionDraft(selectedCampaign.id);
+    const resolved = resolveDistributionTargets({
+      firestoreDraft: selectedCampaign.distributionTargetsDraft,
+      firestoreDraftMeta: selectedCampaign.distributionTargetsDraftMeta,
+      localDraft,
+      assignments: selectedCampaignAssignments,
+      participants: selectedCampaignParticipants,
+      preservedCountsByUser,
+      addressCount: totalDistributionAddresses
+    });
+
+    distributionSkipSaveRef.current = true;
+    setDistributionTargets(resolved);
+    distributionHydratedCampaignRef.current = hydrationKey;
+  }, [
+    assignmentsGenerated,
+    preservedCountsByUser,
+    selectedCampaign?.distributionTargetsDraft,
+    selectedCampaign?.distributionTargetsDraftMeta,
+    selectedCampaign?.id,
+    selectedCampaignAssignments,
+    selectedCampaignParticipants,
+    totalDistributionAddresses
+  ]);
+
+  useEffect(() => {
+    if (distributionSkipSaveRef.current) {
+      distributionSkipSaveRef.current = false;
+      return undefined;
+    }
+
+    if (!selectedCampaign?.id || isReadOnlyCampaign || !assignmentsGenerated) {
+      return undefined;
+    }
+
+    if (!distributionHydratedCampaignRef.current) {
+      return undefined;
+    }
+
+    const campaignId = selectedCampaign.id;
+    const meta = {
+      addressCount: totalDistributionAddresses,
+      updatedAt: new Date().toISOString()
+    };
+
+    saveDistributionDraft(campaignId, distributionTargets, meta);
+
+    if (distributionSaveTimeoutRef.current) {
+      clearTimeout(distributionSaveTimeoutRef.current);
+    }
+
+    distributionSaveTimeoutRef.current = setTimeout(() => {
+      handleSaveDistributionTargetsDraft(campaignId, distributionTargets, meta).catch((error) => {
+        console.error('Error guardando borrador de reparto:', error);
+      });
+    }, 500);
+
+    return () => {
+      if (distributionSaveTimeoutRef.current) {
+        clearTimeout(distributionSaveTimeoutRef.current);
+      }
+    };
+  }, [
+    assignmentsGenerated,
+    distributionTargets,
+    handleSaveDistributionTargetsDraft,
+    isReadOnlyCampaign,
+    selectedCampaign?.id,
+    totalDistributionAddresses
+  ]);
+
+  useEffect(() => {
+    const flushDistributionDraft = () => {
+      if (!selectedCampaign?.id || isReadOnlyCampaign || !assignmentsGenerated) return;
+      if (distributionSkipSaveRef.current) return;
+
+      const campaignId = selectedCampaign.id;
+      const targets = distributionTargetsRef.current;
+      const meta = {
+        addressCount: totalDistributionAddresses,
+        updatedAt: new Date().toISOString()
+      };
+
+      saveDistributionDraft(campaignId, targets, meta);
+      handleSaveDistributionTargetsDraft(campaignId, targets, meta).catch((error) => {
+        console.error('Error guardando borrador de reparto al salir:', error);
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushDistributionDraft();
+      }
+    };
+
+    window.addEventListener('pagehide', flushDistributionDraft);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pagehide', flushDistributionDraft);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [
+    assignmentsGenerated,
+    handleSaveDistributionTargetsDraft,
+    isReadOnlyCampaign,
+    selectedCampaign?.id,
+    totalDistributionAddresses
+  ]);
+
+  useEffect(() => {
     setPublisherFilter(CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS);
-    setIsCampaignMapOpen(false);
+    setPublisherMapState({ isOpen: false, assignments: [], territoryName: '' });
   }, [personalCampaign?.id]);
 
   const updateParticipantDraft = (userId, key, value) => {
@@ -938,6 +1917,19 @@ const CampaignsView = ({ onBack }) => {
     }
   };
 
+  const handleSaveAndGoToStep2 = async () => {
+    setIsBusy(true);
+    try {
+      await persistAdminDraft();
+      setAdminScreen('step2');
+    } catch (error) {
+      console.error('Error guardando campaña:', error);
+      showToast(error.message || 'No se pudo guardar la campaña.', 'error');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   const executeAdminAction = async (action) => {
     setIsBusy(true);
     try {
@@ -948,6 +1940,9 @@ const CampaignsView = ({ onBack }) => {
       if (action === 'generate') {
         const campaignId = await persistAdminDraft();
         await handleGenerateCampaignAssignments(campaignId, { preferLatest: true });
+        clearDistributionDraft(campaignId);
+        distributionHydratedCampaignRef.current = null;
+        distributionSkipSaveRef.current = true;
       }
 
       if (action === 'activate') {
@@ -1025,6 +2020,50 @@ const CampaignsView = ({ onBack }) => {
     } catch (error) {
       console.error('Error reseteando asignaci\u00f3n:', error);
       showToast(error.message || 'No se pudo resetear la asignaci\u00f3n.', 'error');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const adjustDistributionTarget = (userId, delta) => {
+    setDistributionTargets((previous) => {
+      const current = Number(previous[userId]) || 0;
+      const minTarget = preservedCountsByUser[userId] || 0;
+      const next = Math.max(minTarget, Math.min(totalDistributionAddresses, current + delta));
+
+      return {
+        ...previous,
+        [userId]: next
+      };
+    });
+  };
+
+  const setDistributionTarget = (userId, value) => {
+    const parsed = Math.max(0, Number.parseInt(String(value), 10) || 0);
+    const minTarget = preservedCountsByUser[userId] || 0;
+
+    setDistributionTargets((previous) => ({
+      ...previous,
+      [userId]: Math.max(minTarget, Math.min(totalDistributionAddresses, parsed))
+    }));
+  };
+
+  const handleApplyDistribution = async () => {
+    if (!selectedCampaign?.id || !distributionIsBalanced) return;
+
+    setIsBusy(true);
+    try {
+      await handleRedistributeCampaignAssignments(
+        selectedCampaign.id,
+        distributionTargets,
+        { preferLatest: true }
+      );
+      clearDistributionDraft(selectedCampaign.id);
+      distributionHydratedCampaignRef.current = null;
+      distributionSkipSaveRef.current = true;
+    } catch (error) {
+      console.error('Error actualizando reparto:', error);
+      showToast(error.message || 'No se pudo actualizar el reparto.', 'error');
     } finally {
       setIsBusy(false);
     }
@@ -1176,19 +2215,19 @@ const CampaignsView = ({ onBack }) => {
             publisherFilter={publisherFilter}
             onFilterChange={setPublisherFilter}
             filterOptions={PUBLISHER_FILTER_OPTIONS}
-            statusOptions={PUBLISHER_STATUS_OPTIONS}
             statusResolver={getPublisherAssignmentStatus}
-            onOpenMap={() => setIsCampaignMapOpen(true)}
+            onOpenTerritoryMap={handleOpenPublisherTerritoryMap}
           />
         </div>
 
         <LazyCampaignAssignmentsMapModal
-          isOpen={isCampaignMapOpen}
-          onClose={() => setIsCampaignMapOpen(false)}
+          isOpen={publisherMapState.isOpen}
+          onClose={handleClosePublisherMap}
           campaign={personalCampaign}
-          assignments={personalAssignments}
+          assignments={publisherMapState.assignments}
           onStatusChange={handlePublisherStatusChange}
           isProcessing={isBusy}
+          participantName={publisherMapState.territoryName}
         />
       </div>
     );
@@ -1271,9 +2310,8 @@ const CampaignsView = ({ onBack }) => {
               publisherFilter={publisherFilter}
               onFilterChange={setPublisherFilter}
               filterOptions={PUBLISHER_FILTER_OPTIONS}
-              statusOptions={PUBLISHER_STATUS_OPTIONS}
               statusResolver={getPublisherAssignmentStatus}
-              onOpenMap={() => setIsCampaignMapOpen(true)}
+              onOpenTerritoryMap={handleOpenPublisherTerritoryMap}
             />
           </div>
         ) : (
@@ -1357,44 +2395,58 @@ const CampaignsView = ({ onBack }) => {
         {selectedCampaign && assignmentsGenerated && (
           <SectionCard
             title="Seguimiento del reparto"
-            subtitle={'Vista r\u00e1pida del avance individual por participante'}
+            subtitle={'Ajusta cuántas direcciones debe tener cada participante y actualiza el reparto'}
             icon="activity"
             eyebrow="Control"
             tone="emerald"
-            isCollapsed={!isTrackingExpanded}
+            collapsible
+            isExpanded={isTrackingExpanded}
+            onToggle={() => setIsTrackingExpanded((prev) => !prev)}
+            sectionId="campaign-tracking-section"
+            summaryLabel={distributionIsBalanced
+              ? `${distributionConfiguredTotal}/${totalDistributionAddresses} cuadra`
+              : `${distributionConfiguredTotal}/${totalDistributionAddresses}`}
             rightSlot={(
-              <SectionToggleButton
-                isExpanded={isTrackingExpanded}
-                onClick={() => setIsTrackingExpanded((prev) => !prev)}
-                summaryLabel={`${participantSummary.length} participante${participantSummary.length !== 1 ? 's' : ''}`}
+              <CopyDistributionButton
+                onClick={handleCopyDistributionList}
+                copied={distributionCopyFeedback}
+                disabled={isBusy || step3EnabledDistributionParticipants.length === 0}
               />
             )}
           >
             {isTrackingExpanded ? (
-              <div className="space-y-3">
-                {participantSummary.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
-                    {'A\u00fan no hay participantes configurados en esta campa\u00f1a.'}
-                  </div>
-                ) : participantSummary.map((participant) => (
-                  <div key={participant.userId} className="rounded-2xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-gray-900">{participant.userNameSnapshot}</p>
-                      </div>
-                      <div className="text-right text-sm">
-                        <p className="font-bold text-slate-800">{participant.total}</p>
-                        <p className="text-xs text-gray-500">direcciones</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">Pendientes: {participant.pending}</span>
-                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700">En progreso: {participant.inProgress}</span>
-                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700">Completadas: {participant.completed}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              distributionControlParticipants.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+                  {'A\u00fan no hay participantes con direcciones en esta campa\u00f1a.'}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <CampaignAddressDriftBanner
+                    drift={campaignAddressDrift}
+                    onRegenerate={() => executeAdminAction('generate')}
+                    isBusy={isBusy}
+                    isReadOnly={isReadOnlyCampaign}
+                  />
+                  <CampaignDistributionControl
+                    participants={distributionControlParticipants}
+                    distributionTargets={distributionTargets}
+                    totalAddresses={totalDistributionAddresses}
+                    configuredTotal={distributionConfiguredTotal}
+                    isBalanced={distributionIsBalanced}
+                    preservedCountsByUser={preservedCountsByUser}
+                    isBusy={isBusy}
+                    isReadOnly={isReadOnlyCampaign}
+                    onAdjustTarget={adjustDistributionTarget}
+                    onSetTarget={setDistributionTarget}
+                    onApply={handleApplyDistribution}
+                    assignmentsByUserId={assignmentsByUserId}
+                    onOpenParticipantMap={handleOpenParticipantMap}
+                    assignmentsGenerated={assignmentsGenerated}
+                    liveAvailableCount={campaignAddressDrift.liveCount}
+                    requiresRegenerate={campaignRequiresRegenerate}
+                  />
+                </div>
+              )
             ) : null}
           </SectionCard>
         )}
@@ -1403,14 +2455,11 @@ const CampaignsView = ({ onBack }) => {
           <SectionCard
             title="Direcciones asignadas"
             subtitle={'Mueve, bloquea o resetea cada direcci\u00f3n de la campa\u00f1a sin tocar territorios ni revisitas'}
-            isCollapsed={!isAssignmentsExpanded}
-            rightSlot={(
-              <SectionToggleButton
-                isExpanded={isAssignmentsExpanded}
-                onClick={() => setIsAssignmentsExpanded((prev) => !prev)}
-                summaryLabel={`${selectedCampaignAssignments.length} ${selectedCampaignAssignments.length === 1 ? 'direcci\u00f3n' : 'direcciones'}`}
-              />
-            )}
+            collapsible
+            isExpanded={isAssignmentsExpanded}
+            onToggle={() => setIsAssignmentsExpanded((prev) => !prev)}
+            sectionId="campaign-assignments-section"
+            summaryLabel={`${selectedCampaignAssignments.length} ${selectedCampaignAssignments.length === 1 ? 'direcci\u00f3n' : 'direcciones'}`}
           >
             {isAssignmentsExpanded ? (
               <>
@@ -1519,7 +2568,7 @@ const CampaignsView = ({ onBack }) => {
         footer={(
           <button
             type="button"
-            onClick={handleSaveAndReturnToHub}
+            onClick={handleSaveAndGoToStep2}
             disabled={isBusy || isReadOnlyCampaign}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-800 px-6 py-3.5 text-base font-bold text-white shadow-sm transition-colors hover:bg-slate-900 disabled:opacity-60"
           >
@@ -1530,8 +2579,8 @@ const CampaignsView = ({ onBack }) => {
               </>
             ) : (
               <>
-                <Icon name="save" size={18} />
-                Guardar y volver
+                <Icon name="chevronRight" size={18} />
+                Siguiente paso
               </>
             )}
           </button>
@@ -1685,6 +2734,11 @@ const CampaignsView = ({ onBack }) => {
             <input
               value={participantSearch}
               onChange={(event) => setParticipantSearch(event.target.value)}
+              onFocus={(event) => {
+                if (event.target.value.length > 0) {
+                  event.target.select();
+                }
+              }}
               disabled={isBusy}
               inputMode="search"
               placeholder="Buscar por nombre o apellido"
@@ -1704,7 +2758,7 @@ const CampaignsView = ({ onBack }) => {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-800">
             <Icon name="users" size={14} />
             {enabledParticipantsCount} activos
@@ -1717,6 +2771,35 @@ const CampaignsView = ({ onBack }) => {
             <Icon name="user" size={14} />
             {participantsDraft.length} hermanos
           </span>
+          {isDesktop && (
+            <>
+              <span className="hidden lg:inline h-5 w-px bg-slate-200" aria-hidden="true" />
+              {[
+                { id: 'Hombre', label: 'Varones', count: participantGenderCounts.male },
+                { id: 'Mujer', label: 'Mujeres', count: participantGenderCounts.female }
+              ].map((option) => {
+                const isActive = participantGenderFilter === option.id;
+
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setParticipantGenderFilter((previous) => (
+                      previous === option.id ? null : option.id
+                    ))}
+                    disabled={isBusy}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold transition-all disabled:opacity-60 ${
+                      isActive
+                        ? 'border-slate-800 bg-slate-800 text-white'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'
+                    }`}
+                  >
+                    {option.label} ({option.count})
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
 
         {participantTargetsPreview.error && (
@@ -1728,7 +2811,9 @@ const CampaignsView = ({ onBack }) => {
         <div className="space-y-2">
           {filteredParticipantsDraft.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
-              No hay hermanos que coincidan con la búsqueda.
+              {participantGenderFilter
+                ? `No hay hermanos que coincidan con el filtro${participantSearch ? ' ni la búsqueda' : ''}.`
+                : 'No hay hermanos que coincidan con la búsqueda.'}
             </div>
           ) : (
             filteredParticipantsDraft.map((participant) => {
@@ -1834,24 +2919,6 @@ const CampaignsView = ({ onBack }) => {
         onBack={() => setAdminScreen('hub')}
         footer={!campaignIsActive ? renderStep3PrimaryCta() : null}
       >
-        <div className="grid grid-cols-3 gap-2">
-          <CampaignStatTile
-            icon="mapPin"
-            label="Direcciones"
-            value={selectedCampaignAssignments.length}
-          />
-          <CampaignStatTile
-            icon="clock"
-            label="Pendientes"
-            value={pendingAssignmentsCount}
-          />
-          <CampaignStatTile
-            icon="checkCircle"
-            label="Completadas"
-            value={completedAssignmentsCount}
-          />
-        </div>
-
         <div className="flex flex-wrap gap-2">
           {!campaignIsActive && assignmentsGenerated && (
             <button
@@ -1895,22 +2962,138 @@ const CampaignsView = ({ onBack }) => {
           )}
         </div>
 
-        {!assignmentsGenerated && (
-          <p className="text-sm text-slate-500">
-            Cuando generes la asignación, podrás ver el seguimiento y el detalle de direcciones en el hub.
-          </p>
-        )}
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <p className="text-sm font-semibold text-slate-700">Detalle del reparto</p>
+              {assignmentsGenerated && (
+                <CopyDistributionButton
+                  onClick={handleCopyDistributionList}
+                  copied={distributionCopyFeedback}
+                  disabled={isBusy || step3EnabledDistributionParticipants.length === 0}
+                />
+              )}
+              {assignmentsGenerated && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-700">
+                  <Icon name="users" size={14} />
+                  {step3DistributionHeaderCount}
+                </span>
+              )}
+              {assignmentsGenerated && step3UnassignedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setStep3DistributionFilter((prev) => (
+                    prev === 'unassigned' ? 'all' : 'unassigned'
+                  ))}
+                  disabled={isBusy}
+                  aria-label="Ver participantes con objetivo en 0 direcciones"
+                  aria-pressed={step3DistributionFilter === 'unassigned'}
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold transition-colors disabled:opacity-60 ${
+                    step3DistributionFilter === 'unassigned'
+                      ? 'bg-red-100 text-red-800 ring-2 ring-red-300'
+                      : 'bg-red-50 text-red-700 hover:bg-red-100'
+                  }`}
+                >
+                  <Icon name="users" size={14} />
+                  {step3UnassignedCount}
+                </button>
+              )}
+              {assignmentsGenerated && campaignAddressDrift.hasNewAddresses && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-bold text-sky-700"
+                  aria-label={`${campaignAddressDrift.newCount} direcciones nuevas`}
+                >
+                  <Icon name="plus" size={14} />
+                  {campaignAddressDrift.newCount}
+                </span>
+              )}
+            </div>
+            {assignmentsGenerated && (
+              <SegmentedToggle
+                value={step3DistributionFilter}
+                onChange={setStep3DistributionFilter}
+                options={step3DistributionFilterOptions}
+                disabled={isBusy}
+                className="w-full min-w-[220px] sm:w-auto sm:min-w-[240px]"
+              />
+            )}
+          </div>
+
+          {!assignmentsGenerated ? (
+            <div className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                <Icon name="shuffle" size={20} />
+              </div>
+              <p className="text-sm font-semibold text-slate-700">Aún no hay reparto generado</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Genera el reparto para ver quién recibe cada dirección.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {campaignAddressDrift.hasNewAddresses || campaignAddressDrift.hasStaleAssignments ? (
+                <CampaignAddressDriftBanner
+                  drift={campaignAddressDrift}
+                  onRegenerate={() => executeAdminAction('generate')}
+                  isBusy={isBusy}
+                  isReadOnly={isReadOnlyCampaign}
+                />
+              ) : null}
+              {step3FilteredDistributionParticipants.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
+                  {step3DistributionFilter === 'pioneers'
+                    ? 'Ningún precursor tiene direcciones asignadas en esta campaña.'
+                    : step3DistributionFilter === 'unassigned'
+                      ? 'Ningún participante tiene el objetivo en 0 direcciones.'
+                      : 'Aún no hay participantes con direcciones en esta campaña.'}
+                </div>
+              ) : (
+                <CampaignDistributionControl
+                  participants={step3FilteredDistributionParticipants}
+                  distributionTargets={distributionTargets}
+                  totalAddresses={totalDistributionAddresses}
+                  configuredTotal={distributionConfiguredTotal}
+                  isBalanced={distributionIsBalanced}
+                  preservedCountsByUser={preservedCountsByUser}
+                  isBusy={isBusy}
+                  isReadOnly={isReadOnlyCampaign}
+                  onAdjustTarget={adjustDistributionTarget}
+                  onSetTarget={setDistributionTarget}
+                  onApply={handleApplyDistribution}
+                  assignmentsByUserId={assignmentsByUserId}
+                  onOpenParticipantMap={handleOpenParticipantMap}
+                  assignmentsGenerated={assignmentsGenerated}
+                  liveAvailableCount={campaignAddressDrift.liveCount}
+                  requiresRegenerate={campaignRequiresRegenerate}
+                  compact
+                />
+              )}
+            </div>
+          )}
+        </div>
       </CampaignStepShell>
 
       </div>
 
       <LazyCampaignAssignmentsMapModal
-        isOpen={isCampaignMapOpen}
-        onClose={() => setIsCampaignMapOpen(false)}
+        isOpen={publisherMapState.isOpen}
+        onClose={handleClosePublisherMap}
         campaign={personalCampaign}
-        assignments={personalAssignments}
+        assignments={publisherMapState.assignments}
         onStatusChange={handlePublisherStatusChange}
         isProcessing={isBusy}
+        participantName={publisherMapState.territoryName}
+      />
+
+      <LazyCampaignAssignmentsMapModal
+        isOpen={participantMapState.isOpen}
+        onClose={handleCloseParticipantMap}
+        campaign={selectedCampaign}
+        assignments={participantMapAssignments}
+        onStatusChange={handlePublisherStatusChange}
+        isProcessing={isBusy || isReadOnlyCampaign}
+        modalId="campaign-step3-participant-map"
+        participantName={participantMapState.userName}
       />
 
       <ConfirmDialog

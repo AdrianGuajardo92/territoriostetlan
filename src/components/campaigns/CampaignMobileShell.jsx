@@ -68,16 +68,6 @@ export const CampaignStepShell = ({
   );
 };
 
-export const CampaignStatTile = ({ icon, label, value }) => (
-  <div className="flex flex-col items-center rounded-2xl border border-slate-200 bg-slate-50 px-2 py-3 text-center">
-    <div className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-xl bg-white ring-1 ring-slate-200/80">
-      <Icon name={icon} size={15} className="text-slate-500" />
-    </div>
-    <span className="text-lg font-bold leading-none text-slate-900">{value}</span>
-    <span className="mt-1 text-[11px] font-medium text-slate-500">{label}</span>
-  </div>
-);
-
 export const CampaignHubStepCard = ({
   stepNumber,
   title,

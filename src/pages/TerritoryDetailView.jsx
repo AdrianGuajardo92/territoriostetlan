@@ -2,9 +2,13 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useApp } from '../context/AppContext';
 import { useToast } from '../hooks/useToast';
 import { useBackHandler } from '../hooks/useBackHandler';
+import { useIsDesktop } from '../hooks/useMediaQuery';
 import useLocationTracking from '../hooks/useLocationTracking';
 import TerritoryDetailHeader from '../components/territories/TerritoryDetailHeader';
 import AddressCard from '../components/addresses/AddressCard';
+import { ArchiveConfirmDialog } from '../components/addresses/AddressArchiveDialogs';
+import ContextMenu from '../components/common/ContextMenu';
+import AssignRevisitaModal from '../components/modals/AssignRevisitaModal';
 // Import directo (sin lazy) para eliminar parpadeo - componente crítico usado frecuentemente
 import AddressFormModal from '../components/modals/AddressFormModal';
 import { LazyAssignTerritoryModal as AssignTerritoryModal } from '../components/modals/LazyModals';
@@ -12,6 +16,7 @@ import { LazyMapModal as MapModal } from '../components/modals/LazyModals';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
 import { optimizeRoute, getCurrentLocation, calculateRouteStats } from '../utils/routeOptimizer';
+import { getDisplayAddress, getFullAddress, smartSearch } from '../utils/helpers';
 import { getAssignedNames, isUserAssigned, formatTeamNames } from '../utils/territoryHelpers';
 
 const DUPLICATE_ADDRESS_ERROR_CODE = 'duplicate-address';
@@ -106,12 +111,16 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   const [editingAddress, setEditingAddress] = useState(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [revisitaModalAddress, setRevisitaModalAddress] = useState(null);
+  const [archiveConfirmAddress, setArchiveConfirmAddress] = useState(null);
   const [sortState, setSortState] = useState({
     sortOrder: 'alpha',
     optimizedRoute: null,
     userLocation: null, // ✅ INCLUIR UBICACIÓN DEL USUARIO EN ESTADO INICIAL
     isCalculatingRoute: false
   });
+  const [addressSearchTerm, setAddressSearchTerm] = useState('');
 
   // Hook de seguimiento de ubicación en tiempo real
   const {
@@ -136,6 +145,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
       isCalculatingRoute: false
     }));
   }, []);
+
+  useEffect(() => {
+    setAddressSearchTerm('');
+  }, [territory.id]);
 
   // ✅ TRACKING: Iniciar/detener seguimiento según ruta optimizada y modal abierto
   useEffect(() => {
@@ -257,7 +270,12 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     const idsHash = territoryAddrs.map(a => a.id).sort().join(',');
     const visitedHash = territoryAddrs.map(a => `${a.id}:${a.isVisited ? '1' : '0'}`).sort().join(',');
     const addressHash = territoryAddrs.map(a => `${a.id}:${a.address}`).sort().join(',');
-    return `${territoryAddrs.length}|${idsHash}|${visitedHash}|${addressHash}`;
+    const revisitaEstudioHash = territoryAddrs
+      .map(a => `${a.id}:r${a.isRevisita ? '1' : '0'}:${a.revisitaBy || ''}:e${a.isEstudio ? '1' : '0'}:${a.estudioBy || ''}`)
+      .sort()
+      .join(',');
+    const notesHash = territoryAddrs.map(a => `${a.id}:${a.notes || ''}`).sort().join(',');
+    return `${territoryAddrs.length}|${idsHash}|${visitedHash}|${addressHash}|${revisitaEstudioHash}|${notesHash}`;
   }, [addresses, territory.id]);
 
   // Sincronizar direcciones pendientes en territorios ya completados (p. ej. completados manualmente)
@@ -328,6 +346,23 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     sortState.optimizedRoute
   ]);
 
+  const displayedAddresses = useMemo(() => {
+    const term = addressSearchTerm.trim();
+    if (!term) return territoryAddresses;
+
+    return territoryAddresses.filter((address) => {
+      const matchesAddress = smartSearch(
+        term,
+        `${getDisplayAddress(address, '')} ${getFullAddress(address, '')}`
+      );
+      const matchesNotes = address.notes && smartSearch(term, address.notes);
+      const matchesReference = address.referencia && smartSearch(term, address.referencia);
+      const matchesName = address.name && smartSearch(term, address.name);
+      const matchesPhone = address.phone && smartSearch(term, address.phone);
+      return matchesAddress || matchesNotes || matchesReference || matchesName || matchesPhone;
+    });
+  }, [territoryAddresses, addressSearchTerm]);
+
   // Estadísticas - OPTIMIZADO Y SEGURO
   const stats = useMemo(() => {
     const allAddresses = addresses.filter(a => a.territoryId === territory.id);
@@ -346,6 +381,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
   // 🔄 PASO 11: Verificar si el territorio está asignado al usuario (incluyendo equipos)
   const isAssignedToMe = territory.status === 'En uso' && isUserAssigned(territory.assignedTo, currentUser?.name);
   const isAdmin = currentUser.role === 'admin';
+  const isDesktop = useIsDesktop();
   
   // 🔄 PASO 11: Información del equipo asignado
   const assignedTeamInfo = useMemo(() => {
@@ -531,6 +567,115 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     }
   };
 
+  const handleAddressContextMenu = useCallback((address, event) => {
+    setContextMenu({
+      address,
+      x: event.clientX,
+      y: event.clientY
+    });
+  }, []);
+
+  const handleAssignRevisita = useCallback(async (publisherName) => {
+    if (!revisitaModalAddress) return;
+
+    setIsProcessing(true);
+    try {
+      await handleUpdateAddress(revisitaModalAddress.id, {
+        isRevisita: true,
+        revisitaBy: publisherName,
+        isEstudio: false,
+        estudioBy: '',
+        lastUpdated: new Date()
+      }, { showSuccessToast: false });
+      showToast(`Revisita asignada a ${publisherName}`, 'success');
+      setRevisitaModalAddress(null);
+    } catch (error) {
+      showToast('Error al asignar revisita', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [revisitaModalAddress, handleUpdateAddress, showToast]);
+
+  const handleRemoveRevisita = useCallback(async (address) => {
+    setIsProcessing(true);
+    try {
+      await handleUpdateAddress(address.id, {
+        isRevisita: false,
+        revisitaBy: '',
+        lastUpdated: new Date()
+      }, { showSuccessToast: false });
+      showToast('Revisita removida', 'success');
+    } catch (error) {
+      showToast('Error al quitar revisita', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [handleUpdateAddress, showToast]);
+
+  const handleArchiveFromContextMenu = useCallback(async (deleteReason) => {
+    if (!archiveConfirmAddress) return;
+
+    setIsProcessing(true);
+    try {
+      await handleDeleteAddress(archiveConfirmAddress.id, {
+        showSuccessToast: false,
+        deletedReason: deleteReason || 'Archivado por administrador'
+      });
+      showToast('Dirección archivada correctamente.', 'success');
+      setArchiveConfirmAddress(null);
+    } catch (error) {
+      showToast('Error al procesar la solicitud.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [archiveConfirmAddress, handleDeleteAddress, showToast]);
+
+  const contextMenuItems = useMemo(() => {
+    const address = contextMenu?.address;
+    if (!address) return [];
+
+    const items = [
+      {
+        type: 'info',
+        label: address.isRevisita && address.revisitaBy
+          ? `Revisita: ${address.revisitaBy}`
+          : 'Sin revisita asignada',
+        disabled: true
+      },
+      { type: 'separator' },
+      {
+        type: 'action',
+        label: 'Revisita',
+        icon: 'bookmark',
+        opensOverlay: true,
+        onClick: () => setRevisitaModalAddress(address)
+      }
+    ];
+
+    if (address.isRevisita) {
+      items.push({
+        type: 'action',
+        label: 'Quitar revisita',
+        icon: 'bookmark',
+        onClick: () => handleRemoveRevisita(address)
+      });
+    }
+
+    items.push(
+      { type: 'separator' },
+      {
+        type: 'action',
+        label: 'Eliminar dirección',
+        icon: 'trash',
+        destructive: true,
+        opensOverlay: true,
+        onClick: () => setArchiveConfirmAddress(address)
+      }
+    );
+
+    return items;
+  }, [contextMenu?.address, handleRemoveRevisita]);
+
   const handleOptimizedRoute = useCallback(async () => {
     if (!navigator.geolocation) {
       showToast('Geolocalización no disponible en este dispositivo', 'error');
@@ -677,6 +822,10 @@ const TerritoryDetailView = ({ territory, onBack }) => {
         onOpenMapModal={handleOpenMapModal}
         adminEditMode={adminEditMode}
         onToggleAdminMode={handleToggleAdminMode}
+        isDesktop={isDesktop}
+        searchTerm={addressSearchTerm}
+        onSearchChange={setAddressSearchTerm}
+        onClearSearch={() => setAddressSearchTerm('')}
       />
 
       {/* Lista de direcciones */}
@@ -694,12 +843,25 @@ const TerritoryDetailView = ({ territory, onBack }) => {
               Agregar primera dirección
             </button>
           </div>
+        ) : displayedAddresses.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
+            <Icon name="search" size={48} className="mx-auto mb-4 text-gray-300" />
+            <p className="text-gray-500 font-medium text-lg mb-4">
+              No se encontraron direcciones para &laquo;{addressSearchTerm.trim()}&raquo;
+            </p>
+            <button
+              onClick={() => setAddressSearchTerm('')}
+              className="px-6 py-3 bg-slate-600 text-white rounded-xl font-semibold shadow-lg hover:bg-slate-700 transition-all"
+            >
+              Limpiar búsqueda
+            </button>
+          </div>
         ) : (
           <div className={`
             ${viewMode === 'grid-full' ? 'grid grid-cols-1 gap-4' : ''}
             ${viewMode === 'list' ? 'space-y-2' : ''}
           `}>
-            {territoryAddresses.map((address) => (
+            {displayedAddresses.map((address) => (
               <AddressCard
                 key={address.id}
                 address={address}
@@ -711,6 +873,8 @@ const TerritoryDetailView = ({ territory, onBack }) => {
                 isNavigating={navigatingAddressId === address.id && isNavigatingHighlightActive}
                 onUpdate={handleUpdateAddressSilent}
                 showToast={showToast}
+                enableContextMenu={isAdmin && isDesktop}
+                onContextMenuRequest={handleAddressContextMenu}
               />
             ))}
           </div>
@@ -797,6 +961,38 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           type="success"
           modalId="confirm-complete-territory"
         />
+      )}
+
+      <ContextMenu
+        isOpen={!!contextMenu}
+        x={contextMenu?.x ?? 0}
+        y={contextMenu?.y ?? 0}
+        onClose={() => setContextMenu(null)}
+        menuId="address-context-menu"
+        items={contextMenuItems}
+      />
+
+      <AssignRevisitaModal
+        isOpen={!!revisitaModalAddress}
+        onClose={() => setRevisitaModalAddress(null)}
+        onConfirm={handleAssignRevisita}
+        addressLabel={revisitaModalAddress ? getDisplayAddress(revisitaModalAddress) : ''}
+        currentRevisitaBy={revisitaModalAddress?.revisitaBy || ''}
+        isProcessing={isProcessing}
+        modalId="assign-revisita-modal"
+      />
+
+      {archiveConfirmAddress && (
+        <div className="fixed inset-0 z-[10001]">
+          <ArchiveConfirmDialog
+            isOpen
+            onClose={() => setArchiveConfirmAddress(null)}
+            onConfirm={handleArchiveFromContextMenu}
+            isProcessing={isProcessing}
+            backHandlerId="territory-address-archive-confirm"
+            addressLabel={getDisplayAddress(archiveConfirmAddress)}
+          />
+        </div>
       )}
     </div>
   );

@@ -24,7 +24,7 @@ import { useBackStack } from '../context/BackStackContext';
  * Opt-out: si `id` es null/undefined/'', el hook no hace nada. Útil para
  * componentes que heredan un Modal pero no quieren registrarse (raro).
  */
-export function useBackHandler({ isOpen, onClose, id }) {
+export function useBackHandler({ isOpen, onClose, id, suppressHistorySyncRef }) {
   const backStack = useBackStack();
 
   // Guardamos la última versión de onClose en un ref para que el efecto de
@@ -36,6 +36,14 @@ export function useBackHandler({ isOpen, onClose, id }) {
 
   // Recuerda si este hook registró la entry (para manejar el cleanup).
   const wasRegisteredRef = useRef(false);
+
+  const shouldSyncHistory = () => {
+    if (suppressHistorySyncRef?.current) {
+      suppressHistorySyncRef.current = false;
+      return false;
+    }
+    return true;
+  };
 
   useEffect(() => {
     // Opt-out
@@ -58,7 +66,7 @@ export function useBackHandler({ isOpen, onClose, id }) {
       const stillInStack = backStack.unregisterIfPresent(id);
       wasRegisteredRef.current = false;
 
-      if (stillInStack) {
+      if (stillInStack && shouldSyncHistory()) {
         // El popstate NO lo popeó → cierre programático (X/Escape/onSuccess).
         // Sincronizamos el browser history con un back programático.
         backStack.programmaticBack();
@@ -74,7 +82,7 @@ export function useBackHandler({ isOpen, onClose, id }) {
       if (wasRegisteredRef.current) {
         const stillInStack = backStack.unregisterIfPresent(id);
         wasRegisteredRef.current = false;
-        if (stillInStack) {
+        if (stillInStack && shouldSyncHistory()) {
           backStack.programmaticBack();
         }
       }

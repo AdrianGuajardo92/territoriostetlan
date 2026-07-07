@@ -22,6 +22,7 @@ const QuickProposalReviewMap = ({
   latitude,
   longitude,
   onLocationChange,
+  onTerritorySelect = null,
   addresses = [],
   territories = [],
   highlightedTerritoryId = null
@@ -145,6 +146,7 @@ const QuickProposalReviewMap = ({
           box-shadow:0 2px 5px rgba(0,0,0,0.4);
           opacity:${opacity};
           font-family:system-ui,-apple-system,sans-serif;
+          cursor:pointer;
         ">${c.number}</div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2]
@@ -154,10 +156,14 @@ const QuickProposalReviewMap = ({
         direction: 'top',
         offset: [0, -size / 2]
       });
+      marker.on('click', (event) => {
+        L.DomEvent.stopPropagation(event);
+        if (onTerritorySelect) onTerritorySelect(c.territoryId);
+      });
       marker.addTo(map);
       territoryLabelsRef.current.push(marker);
     });
-  }, [mapReady, territoryCentroids, highlightedTerritoryId]);
+  }, [mapReady, territoryCentroids, highlightedTerritoryId, onTerritorySelect]);
 
   // Pin arrastrable de la propuesta
   useEffect(() => {
@@ -235,6 +241,12 @@ const QuickProposalReviewMap = ({
         <div className="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-sm rounded px-2 py-1.5 text-xs text-gray-600 shadow-sm pointer-events-none">
           <i className="fas fa-hand-pointer mr-1 text-orange-500"></i>
           Toca en el mapa o escribe coordenadas para ubicar la propuesta
+        </div>
+      )}
+      {leafletReady && latitude !== null && onTerritorySelect && (
+        <div className="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-sm rounded px-2 py-1.5 text-xs text-gray-600 shadow-sm pointer-events-none">
+          <i className="fas fa-bullseye mr-1 text-orange-500"></i>
+          Toca un número en el mapa para asignar territorio
         </div>
       )}
     </div>

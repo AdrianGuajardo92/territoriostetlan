@@ -4,6 +4,7 @@ import { useToast } from '../../hooks/useToast';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import Icon from '../common/Icon';
 import ConfirmDialog from '../common/ConfirmDialog';
+import { isPioneerUser } from '../../config/congregationPioneers';
 
 const UserManagementModal = ({
   isOpen,
@@ -86,16 +87,11 @@ const UserManagementModal = ({
     });
   };
 
-  // Separar usuarios por rol y aplicar filtro de búsqueda
-  const allAdminUsers = users.filter(u => u.role === 'admin');
-  const allPublisherUsers = users.filter(u => u.role !== 'admin');
-  
-  const adminUsers = filterUsers(allAdminUsers);
-  const publisherUsers = filterUsers(allPublisherUsers);
-  
-  // Calcular totales para mostrar resultados de búsqueda
-  const totalFiltered = adminUsers.length + publisherUsers.length;
-  const totalUsers = allAdminUsers.length + allPublisherUsers.length;
+  // Lista única ordenada por nombre, con filtro de búsqueda
+  const sortedUsers = [...users].sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '', 'es')
+  );
+  const filteredUsers = filterUsers(sortedUsers);
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -249,92 +245,83 @@ const UserManagementModal = ({
     }
   };
 
-  const renderUserCard = (user, isAdmin = false) => {
+  const renderUserCard = (user) => {
+    const isAdmin = user.role === 'admin';
+    const isPioneer = isPioneerUser(user);
     const isCurrentUser = user.id === currentUser?.id;
     const hasPassword = Boolean(user.password);
     const credentialsCopied = copiedCredentialsUserId === user.id;
 
     return (
-      <div key={user.id} className="bg-white rounded-xl shadow-sm p-4 border border-gray-200 hover:shadow-md transition-all duration-200">
-        {/* Header de la tarjeta */}
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Icon name="user" className="text-gray-600 text-lg" />
+      <div key={user.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-shadow">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Icon name="user" className="text-slate-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="text-base font-semibold text-gray-900 truncate">
-                {user.name}
-              </h4>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-base font-semibold text-slate-900 truncate">{user.name}</h4>
               {isCurrentUser && (
-                <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap">
-                  Tú
+                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-medium">Tú</span>
+              )}
+              {isAdmin && (
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-800 text-white">
+                  Administrador
+                </span>
+              )}
+              {isPioneer && (
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                  Precursor
+                </span>
+              )}
+              {!isAdmin && (
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                  Publicador
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 flex items-center mb-2">
-              <Icon name="user" className="mr-1 text-xs" />
-              <span className="truncate">{user.accessCode}</span>
-            </p>
-            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-              isAdmin ? 'bg-slate-800 text-white' : 'bg-blue-100 text-blue-700'
-            }`}>
-              {isAdmin ? 'Admin' : 'Publicador'}
-            </span>
+            <p className="text-sm text-slate-500 font-mono mt-1 truncate">{user.accessCode}</p>
+            {hasPassword && (
+              <p className="text-xs text-slate-400 font-mono mt-0.5 truncate">{user.password}</p>
+            )}
           </div>
         </div>
 
-        <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
-          <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 sm:items-center">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase text-blue-700">Usuario</p>
-              <p className="mt-1 font-mono text-sm text-gray-900 break-all">{user.accessCode || 'Sin usuario'}</p>
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase text-blue-700">Contraseña</p>
-              <p className={`mt-1 font-mono text-sm break-all ${hasPassword ? 'text-gray-900' : 'text-gray-400'}`}>
-                {hasPassword ? user.password : 'Sin contraseña registrada'}
-              </p>
-            </div>
-            <button
-              onClick={() => handleCopyCredentials(user)}
-              disabled={!hasPassword}
-              className={`w-full sm:w-auto min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                credentialsCopied
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed'
-              }`}
-              title="Copiar usuario y contraseña"
-              aria-label={`Copiar credenciales de ${user.name || user.accessCode}`}
-            >
-              <Icon name={credentialsCopied ? 'checkCircle' : 'copy'} className="w-4 h-4" />
-              <span>{credentialsCopied ? 'Copiado' : 'Copiar credenciales'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Botones de acción - Estilo Outline/Ghost */}
-        <div className="flex gap-2 border-t border-gray-100 pt-3 mt-3">
+        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100">
+          <button
+            onClick={() => handleCopyCredentials(user)}
+            disabled={!hasPassword}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              credentialsCopied
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed'
+            }`}
+            title="Copiar credenciales"
+          >
+            <Icon name={credentialsCopied ? 'checkCircle' : 'copy'} className="w-3.5 h-3.5" />
+            <span>{credentialsCopied ? 'Copiado' : 'Copiar'}</span>
+          </button>
           <button
             onClick={() => handleEdit(user)}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
           >
-            <Icon name="edit" className="w-4 h-4" />
+            <Icon name="edit" className="w-3.5 h-3.5" />
             <span>Editar</span>
           </button>
           <button
             onClick={() => handlePasswordResetClick(user)}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 border border-amber-300 bg-white text-amber-700 hover:bg-amber-50 rounded-lg transition-colors text-sm font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
           >
-            <Icon name="key" className="w-4 h-4" />
+            <Icon name="key" className="w-3.5 h-3.5" />
             <span>Reset</span>
           </button>
           {!isCurrentUser && (
             <button
               onClick={() => handleDeleteClick(user)}
-              className="flex items-center justify-center py-2 px-3 border border-red-300 bg-white text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
             >
-              <Icon name="trash" className="w-4 h-4" />
+              <Icon name="trash" className="w-3.5 h-3.5" />
+              <span>Eliminar</span>
             </button>
           )}
         </div>
@@ -344,169 +331,71 @@ const UserManagementModal = ({
 
   const renderListView = () => (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-            <Icon name="users-cog" className="text-gray-600 text-lg sm:text-xl" />
-          </div>
-          <div>
-            <h3 className="text-xl sm:text-2xl font-semibold text-gray-800">Gestión de Usuarios</h3>
-            <p className="text-gray-500 text-sm">
-              {users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''} en el sistema
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setActiveView('create')}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium w-full sm:w-auto"
-        >
-          <Icon name="userPlus" className="text-lg" />
-          <span>Nuevo Usuario</span>
-        </button>
-      </div>
-
-      {/* Barra de búsqueda */}
-      <div className="relative">
-        <div className="relative">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="relative flex-1">
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="🔍 Buscar por nombre o usuario..."
-            className="w-full px-4 py-3 pl-12 pr-12 bg-white border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-gray-700 placeholder-gray-400"
+            placeholder="Buscar por nombre o usuario..."
+            className="w-full px-4 py-2.5 pl-10 pr-10 bg-white border border-slate-200 rounded-xl focus:border-slate-400 focus:ring-1 focus:ring-slate-200 transition-all text-slate-700 placeholder-slate-400 text-sm"
           />
-          <Icon 
-            name="search" 
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"
-          />
+          <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <Icon name="x" className="text-gray-500 text-lg" />
+              <Icon name="x" className="text-slate-500" />
             </button>
           )}
         </div>
-        
-        {/* Indicador de resultados de búsqueda */}
-        {searchTerm && (
-          <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-700 font-medium">
-              {totalFiltered === 0 ? (
-                <>No se encontraron usuarios que coincidan con "<span className="font-bold">{searchTerm}</span>"</>
-              ) : (
-                <>
-                  Mostrando <span className="font-bold">{totalFiltered}</span> de {totalUsers} usuarios
-                  {totalFiltered !== totalUsers && <> que coinciden con "<span className="font-bold">{searchTerm}</span>"</>}
-                </>
-              )}
-            </p>
-          </div>
-        )}
+        <button
+          onClick={() => setActiveView('create')}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium text-sm whitespace-nowrap"
+        >
+          <Icon name="userPlus" />
+          <span>Nuevo usuario</span>
+        </button>
       </div>
 
-      {/* Mensaje cuando no hay resultados de búsqueda */}
-      {searchTerm && totalFiltered === 0 && (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-            <Icon name="search" className="text-2xl text-gray-400" />
-          </div>
-          <h4 className="text-lg font-semibold text-gray-800 mb-2">Sin resultados</h4>
-          <p className="text-gray-500 text-center">
-            No se encontraron usuarios que coincidan con "<span className="font-medium">{searchTerm}</span>"
+      {searchTerm && filteredUsers.length === 0 ? (
+        <div className="text-center py-10">
+          <p className="text-slate-500 text-sm">
+            Sin resultados para &ldquo;{searchTerm}&rdquo;
           </p>
           <button
             onClick={() => setSearchTerm('')}
-            className="mt-4 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="mt-3 px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition-colors"
           >
             Limpiar búsqueda
           </button>
         </div>
-      )}
-
-      {/* Sección de Administradores */}
-      {(totalFiltered > 0 || !searchTerm) && adminUsers.length > 0 && (
-        <div>
-          <div className="flex items-center mb-4">
-            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
-              <Icon name="shield" className="text-gray-600 text-sm" />
-            </div>
-            <h4 className="text-lg font-semibold text-gray-800">Administradores</h4>
-            <span className="ml-2 bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">
-              {adminUsers.length}
-            </span>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-3 mb-8">
-            {adminUsers.map(user => renderUserCard(user, true))}
-          </div>
+      ) : filteredUsers.length === 0 ? (
+        <p className="text-slate-400 text-sm py-4 text-center">No hay usuarios registrados.</p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {filteredUsers.map((user) => renderUserCard(user))}
         </div>
-      )}
-
-      {/* Sección de Publicadores */}
-      {(totalFiltered > 0 || !searchTerm) && (
-        <div>
-        <div className="flex items-center mb-4">
-          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
-            <Icon name="users" className="text-gray-600 text-sm" />
-          </div>
-          <h4 className="text-lg font-semibold text-gray-800">Publicadores</h4>
-          <span className="ml-2 bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium">
-            {publisherUsers.length}
-          </span>
-        </div>
-        
-        {publisherUsers.length === 0 ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center max-w-md">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Icon name="user" className="text-2xl text-gray-400" />
-              </div>
-              <h4 className="text-lg font-semibold text-gray-800 mb-2">No hay publicadores</h4>
-              <p className="text-gray-500">Aún no se han registrado publicadores en el sistema.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {publisherUsers.map(user => renderUserCard(user, false))}
-          </div>
-        )}
-      </div>
       )}
     </div>
   );
 
   const renderFormView = () => (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => setActiveView('list')}
-          className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
+          className="w-9 h-9 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center transition-colors"
         >
-          <Icon name="arrowLeft" className="text-gray-600 text-sm sm:text-base" />
+          <Icon name="arrowLeft" className="text-slate-600" />
         </button>
-        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-          <Icon name={activeView === 'create' ? 'plus' : 'edit'} className="text-gray-600 text-lg sm:text-xl" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-lg sm:text-2xl font-semibold text-gray-800 truncate">
-            {activeView === 'create' ? 'Crear Nuevo Usuario' : 'Editar Usuario'}
-          </h3>
-          <p className="text-gray-500 text-sm truncate">
-            {activeView === 'create'
-              ? 'Completa los datos para crear un nuevo usuario'
-              : `Editando: ${selectedUser?.name}`
-            }
-          </p>
-        </div>
+        <h3 className="text-lg font-semibold text-slate-800">
+          {activeView === 'create' ? 'Nuevo usuario' : `Editar: ${selectedUser?.name}`}
+        </h3>
       </div>
 
-      {/* Formulario - Optimizado para móvil */}
-      <form onSubmit={handleFormSubmit} className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <form onSubmit={handleFormSubmit} className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:gap-6">
           {/* Nombre */}
           <div>
@@ -573,19 +462,18 @@ const UserManagementModal = ({
           </div>
         </div>
 
-        {/* Botones */}
-        <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-4 sm:pt-6 border-t border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-4 border-t border-slate-200">
           <button
             type="button"
             onClick={() => setActiveView('list')}
-            className="px-4 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium order-2 sm:order-1"
+            className="px-4 py-2.5 border border-slate-200 bg-white text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium order-2 sm:order-1"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={isProcessing}
-            className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
+            className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
           >
             {isProcessing ? (
               <>
@@ -608,25 +496,33 @@ const UserManagementModal = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-        <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden" style={{ position: 'relative', zIndex: 10000 }}>
-          {/* Header del modal - Optimizado para móvil */}
-          <div className="bg-blue-600 text-white p-4 sm:p-6 flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Icon name="users-cog" className="text-xl sm:text-2xl" />
-              <h2 className="text-lg sm:text-2xl font-bold">Gestión de Usuarios</h2>
+      <div className="fixed inset-0 bg-white z-[9999] flex flex-col" style={{ zIndex: 9999 }}>
+        {/* Header fijo */}
+        <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white shadow-lg flex-shrink-0">
+          <div className="px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <Icon name="users-cog" className="text-2xl text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold">Gestión completa</h1>
+                <p className="text-white/80 text-sm">
+                  {users.length} usuario{users.length !== 1 ? 's' : ''}
+                </p>
+              </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2.5 rounded-xl transition-all hover:scale-105"
-              style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
+              className="p-2.5 rounded-xl transition-all hover:scale-105 bg-white/20 hover:bg-white/30 backdrop-blur-sm"
             >
               <i className="fas fa-arrow-left text-white text-lg"></i>
             </button>
           </div>
+        </div>
 
-          {/* Contenido - Optimizado para móvil */}
-          <div className="p-4 sm:p-6 max-h-[calc(90vh-100px)] overflow-y-auto">
+        {/* Contenido scrolleable */}
+        <div className="flex-1 overflow-y-auto bg-slate-50 min-h-0">
+          <div className="px-4 sm:px-6 py-6">
             {activeView === 'list' ? renderListView() : renderFormView()}
           </div>
         </div>
