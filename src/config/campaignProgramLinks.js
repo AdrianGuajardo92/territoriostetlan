@@ -1,5 +1,5 @@
 export const REGIONAL_ASSEMBLY_2026_PROGRAM_URL =
-  'https://www.jw.org/mfs/biblioteca/programas/programa-asamblea-regional-2026/';
+  'https://www.jw.org/mfs/testigos-de-jehov%C3%A1/asambleas-anuales/asamblea-regional-2026-video/';
 
 export const getRegionalAssembly2026ProgramUrl = (campaign) => {
   if (!campaign || campaign.type !== 'asamblea') return null;
