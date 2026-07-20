@@ -371,6 +371,45 @@ export const countPreservedAssignmentsByUser = (assignments = []) => (
   }, {})
 );
 
+export const selectCampaignAssignmentsForReassignment = ({
+  assignments = [],
+  campaignId,
+  sourceUserId,
+  mode = 'single',
+  assignmentId = null,
+  expectedStatus = null
+}) => {
+  const campaignAssignments = assignments.filter(
+    (assignment) => assignment.campaignId === campaignId
+  );
+
+  if (mode === 'all_pending') {
+    return campaignAssignments.filter((assignment) => (
+      assignment.assignedUserId === sourceUserId
+      && assignment.status === CAMPAIGN_PROGRESS_STATUSES.PENDING
+    ));
+  }
+
+  const assignment = campaignAssignments.find((item) => item.id === assignmentId);
+  if (!assignment) {
+    throw new Error('La dirección seleccionada ya no está disponible en esta campaña.');
+  }
+  if (assignment.assignedUserId !== sourceUserId) {
+    throw new Error('La dirección ya fue reasignada a otra persona.');
+  }
+  if (expectedStatus && assignment.status !== expectedStatus) {
+    throw new Error('El estado de la dirección cambió. Cierra y vuelve a abrir la reasignación.');
+  }
+  if (assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED) {
+    throw new Error('Las direcciones completadas no se pueden reasignar.');
+  }
+  if (![CAMPAIGN_PROGRESS_STATUSES.PENDING, CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS].includes(assignment.status)) {
+    throw new Error('El estado actual de la dirección no permite reasignarla.');
+  }
+
+  return [assignment];
+};
+
 export const buildDistributionTargetsFromAssignments = (
   assignments = [],
   participants = []

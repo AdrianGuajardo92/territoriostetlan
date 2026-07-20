@@ -37,6 +37,7 @@ import {
   getPreservedCampaignAssignments,
   normalizeParticipantConfig,
   prepareDistributionTargetsForApply,
+  selectCampaignAssignmentsForReassignment,
   sortCampaigns,
   validateDistributionTargets,
   validateRedistributionAddressPool,
@@ -903,45 +904,126 @@ export const CampaignProvider = ({ children }) => {
     showToast('Asignacion reseteada', 'success');
   }, [campaignAssignments, isAdmin, logCampaignActivity, showToast]);
 
-  const handleMoveCampaignAssignment = useCallback(async (assignmentId, nextUserId) => {
+  const handleReassignCampaignAssignments = useCallback(async ({
+    campaignId,
+    sourceUserId,
+    targetUserId,
+    mode = 'single',
+    assignmentId = null,
+    expectedStatus = null
+  }) => {
     if (!isAdmin) {
-      throw new Error('Solo los administradores pueden mover asignaciones.');
+      throw new Error('Solo los administradores pueden reasignar direcciones.');
+    }
+    if (!campaignId || !sourceUserId || !targetUserId) {
+      throw new Error('Faltan datos para completar la reasignación.');
+    }
+    if (sourceUserId === targetUserId) {
+      throw new Error('Selecciona una persona diferente.');
     }
 
-    const assignment = campaignAssignments.find((item) => item.id === assignmentId);
-    if (!assignment) {
-      throw new Error('No se encontro la asignacion seleccionada.');
+    const [latestCampaign, latestAssignments, latestParticipants] = await Promise.all([
+      resolveCampaign(campaignId, { preferLatest: true }),
+      resolveCampaignItems('campaignAssignments', campaignId, campaignAssignments, { preferLatest: true }),
+      resolveCampaignItems('campaignParticipants', campaignId, campaignParticipants, { preferLatest: true })
+    ]);
+    if (!latestCampaign) {
+      throw new Error('La campaña seleccionada ya no está disponible.');
+    }
+    if ([CAMPAIGN_STATUSES.COMPLETED, CAMPAIGN_STATUSES.ARCHIVED].includes(latestCampaign.status)) {
+      throw new Error('No se pueden reasignar direcciones de una campaña cerrada.');
     }
 
-    if (assignment.status !== CAMPAIGN_PROGRESS_STATUSES.PENDING) {
-      throw new Error('Resetea la asignacion a pendiente antes de moverla.');
-    }
-
-    const targetParticipant = campaignParticipants.find((participant) => (
-      participant.campaignId === assignment.campaignId && participant.userId === nextUserId
+    const targetParticipant = latestParticipants.find((participant) => (
+      participant.userId === targetUserId && participant.isEnabled !== false
     ));
-
     if (!targetParticipant) {
-      throw new Error('Selecciona una persona valida dentro de la campaña.');
+      throw new Error('La persona seleccionada ya no participa en esta campaña.');
     }
 
-    await updateDoc(doc(db, 'campaignAssignments', assignmentId), {
-      assignedUserId: targetParticipant.userId,
-      assignedUserName: targetParticipant.userNameSnapshot,
-      groupId: null,
-      groupLabelSnapshot: null,
-      manualLocked: true,
-      lastMovedAt: serverTimestamp(),
+    const assignmentsToMove = selectCampaignAssignmentsForReassignment({
+      assignments: latestAssignments,
+      campaignId,
+      sourceUserId,
+      mode,
+      assignmentId,
+      expectedStatus
+    });
+    if (assignmentsToMove.length === 0) {
+      throw new Error('Esta persona ya no tiene direcciones pendientes para reasignar.');
+    }
+    if (assignmentsToMove.length + 1 > FIRESTORE_BATCH_LIMIT) {
+      throw new Error('Hay demasiadas direcciones para moverlas en una sola operación.');
+    }
+
+    const batch = writeBatch(db);
+    let resetCount = 0;
+
+    assignmentsToMove.forEach((assignment) => {
+      const wasInProgress = assignment.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS;
+      if (wasInProgress) resetCount += 1;
+
+      const updates = {
+        assignedUserId: targetParticipant.userId,
+        assignedUserName: targetParticipant.userNameSnapshot,
+        groupId: null,
+        groupLabelSnapshot: null,
+        manualLocked: true,
+        lastMovedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      if (wasInProgress) {
+        updates.status = CAMPAIGN_PROGRESS_STATUSES.PENDING;
+        updates.startedAt = null;
+        updates.completedAt = null;
+        updates.completedByUserId = null;
+        updates.completedByUserName = null;
+      }
+
+      batch.update(doc(db, 'campaignAssignments', assignment.id), updates);
+    });
+
+    batch.update(doc(db, 'campaigns', campaignId), {
+      distributionTargetsDraft: deleteField(),
+      distributionTargetsDraftMeta: deleteField(),
       updatedAt: serverTimestamp()
     });
 
-    await logCampaignActivity(assignment.campaignId, assignmentId, 'assignment_moved', {
-      fromUserId: assignment.assignedUserId,
-      toUserId: targetParticipant.userId
-    });
+    await batch.commit();
 
-    showToast('Asignacion movida y bloqueada', 'success');
-  }, [campaignAssignments, campaignParticipants, isAdmin, logCampaignActivity, showToast]);
+    await Promise.all(assignmentsToMove.map((assignment) => (
+      logCampaignActivity(campaignId, assignment.id, 'assignment_moved', {
+        fromUserId: sourceUserId,
+        toUserId: targetParticipant.userId,
+        resetFromInProgress: assignment.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS,
+        transferMode: mode
+      })
+    )));
+
+    const movedCount = assignmentsToMove.length;
+    showToast(
+      movedCount === 1
+        ? `Dirección reasignada a ${targetParticipant.userNameSnapshot}`
+        : `${movedCount} direcciones reasignadas a ${targetParticipant.userNameSnapshot}`,
+      'success'
+    );
+
+    return {
+      movedCount,
+      resetCount,
+      targetUserId: targetParticipant.userId,
+      assignmentIds: assignmentsToMove.map((assignment) => assignment.id)
+    };
+  }, [
+    campaignAssignments,
+    campaignParticipants,
+    isAdmin,
+    logCampaignActivity,
+    resolveCampaign,
+    resolveCampaignItems,
+    showToast
+  ]);
 
   const handleToggleCampaignAssignmentLock = useCallback(async (assignmentId) => {
     if (!isAdmin) {
@@ -1013,7 +1095,7 @@ export const CampaignProvider = ({ children }) => {
     handleDeleteCampaign,
     handleUpdateCampaignAssignmentStatus,
     handleResetCampaignAssignment,
-    handleMoveCampaignAssignment,
+    handleReassignCampaignAssignments,
     handleToggleCampaignAssignmentLock
   };
 

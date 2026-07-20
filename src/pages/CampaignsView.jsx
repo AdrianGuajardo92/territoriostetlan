@@ -1,6 +1,7 @@
 ﻿import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Icon from '../components/common/Icon';
+import Modal from '../components/common/Modal';
 import { useApp } from '../context/AppContext';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { useCampaigns } from '../context/CampaignContext';
@@ -17,6 +18,7 @@ import {
   getCampaignAddressDrift,
   sortCampaignSourceAddresses,
   countPreservedAssignmentsByUser,
+  buildDistributionTargetsFromAssignments,
   resolveDistributionTargets,
   buildDistributionAssignmentFingerprint,
   buildDistributionTargetFingerprint,
@@ -967,7 +969,13 @@ const sortParticipantAssignments = (assignments = []) => (
   })
 );
 
-const ParticipantAssignmentAddressList = ({ assignments = [] }) => {
+const ParticipantAssignmentAddressList = ({
+  assignments = [],
+  isBusy = false,
+  isReadOnly = false,
+  onRequestReassignment = null,
+  onCompleteAssignment = null
+}) => {
   const grouped = useMemo(
     () => groupAssignmentsByTerritory(assignments),
     [assignments]
@@ -989,29 +997,69 @@ const ParticipantAssignmentAddressList = ({ assignments = [] }) => {
               const progressMeta = getCampaignProgressMeta(assignment.status);
               const snapshot = assignment.addressSnapshot || {};
               const mapHref = getPublisherAssignmentMapHref(snapshot);
+              const canManage = !isReadOnly && assignment.status !== CAMPAIGN_PROGRESS_STATUSES.COMPLETED;
 
               return (
                 <li
                   key={assignment.id}
-                  className="flex items-start justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2"
+                  className={`rounded-2xl border px-3 py-3 lg:px-4 ${
+                    assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+                      ? 'border-emerald-100 bg-emerald-50/50'
+                      : 'border-slate-200 bg-slate-50'
+                  }`}
                 >
-                  <div className="min-w-0 flex-1">
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${progressMeta.badgeClass}`}>
-                      {progressMeta.label}
-                    </span>
-                    <p className="mt-1 text-sm font-medium text-gray-900">{getDisplayAddress(snapshot)}</p>
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${progressMeta.badgeClass}`}>
+                          {progressMeta.label}
+                        </span>
+                        {assignment.completedByUserName ? (
+                          <span className="text-xs text-emerald-700">
+                            Completada por {assignment.completedByUserName}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-sm font-semibold text-gray-900 lg:text-base">{getDisplayAddress(snapshot)}</p>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:shrink-0 lg:items-center">
+                      {canManage && onCompleteAssignment ? (
+                        <button
+                          type="button"
+                          onClick={() => onCompleteAssignment(assignment)}
+                          disabled={isBusy}
+                          className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Icon name="checkCircle" size={16} />
+                          Marcar completada
+                        </button>
+                      ) : null}
+                      {canManage && onRequestReassignment ? (
+                        <button
+                          type="button"
+                          onClick={() => onRequestReassignment(assignment)}
+                          disabled={isBusy}
+                          className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Icon name="users" size={15} />
+                          Cambiar responsable
+                        </button>
+                      ) : null}
+                      {mapHref ? (
+                        <a
+                          href={mapHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Abrir en Google Maps"
+                          className="flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 sm:col-span-2 lg:col-span-1"
+                        >
+                          <Icon name="navigation" size={14} />
+                          Mapa
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
-                  {mapHref ? (
-                    <a
-                      href={mapHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Abrir en Google Maps"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-700 text-white transition-colors hover:bg-slate-800"
-                    >
-                      <Icon name="navigation" size={14} />
-                    </a>
-                  ) : null}
                 </li>
               );
             })}
@@ -1019,6 +1067,158 @@ const ParticipantAssignmentAddressList = ({ assignments = [] }) => {
         </div>
       ))}
     </div>
+  );
+};
+
+const CampaignReassignmentModal = ({
+  request,
+  participants = [],
+  isProcessing = false,
+  onClose,
+  onConfirm
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [targetUserId, setTargetUserId] = useState('');
+  const lastRequestRef = useRef(request);
+  if (request) {
+    lastRequestRef.current = request;
+  }
+  const activeRequest = request || lastRequestRef.current;
+  const isOpen = Boolean(request);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSearchQuery('');
+    setTargetUserId('');
+  }, [isOpen, activeRequest?.assignmentId, activeRequest?.sourceUserId, activeRequest?.mode]);
+
+  const availableParticipants = useMemo(() => {
+    const normalizedSearch = normalizeSearchText(searchQuery);
+    return participants.filter((participant) => (
+      participant.userId !== activeRequest?.sourceUserId
+      && (!normalizedSearch || normalizeSearchText(participant.userNameSnapshot).includes(normalizedSearch))
+    ));
+  }, [participants, activeRequest?.sourceUserId, searchQuery]);
+
+  const selectedParticipant = participants.find((participant) => participant.userId === targetUserId);
+  const isBulk = activeRequest?.mode === 'all_pending';
+  const count = Number(activeRequest?.count) || 0;
+
+  const handleConfirm = async () => {
+    if (!targetUserId) return;
+    await onConfirm(targetUserId);
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={isProcessing ? () => {} : onClose}
+      title={isBulk ? 'Reasignar direcciones pendientes' : 'Cambiar responsable'}
+      size="md"
+      modalId="campaign-reassignment-modal"
+      closeOnBackdrop={!isProcessing}
+      closeOnEscape={!isProcessing}
+    >
+      <div className="flex max-h-[calc(85vh-73px)] flex-col">
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Responsable actual</p>
+            <p className="mt-1 font-semibold text-slate-900">{activeRequest?.sourceUserName || 'Participante'}</p>
+            <p className="mt-2 text-sm text-slate-600">
+              {isBulk
+                ? `${count} ${count === 1 ? 'dirección pendiente' : 'direcciones pendientes'} se transferirán.`
+                : getDisplayAddress(activeRequest?.assignment?.addressSnapshot, 'Dirección')}
+            </p>
+          </div>
+
+          {activeRequest?.assignment?.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              Esta dirección está en progreso. Al reasignarla volverá a pendiente y se borrará su fecha de inicio.
+            </div>
+          ) : null}
+
+          <div>
+            <label htmlFor="campaign-reassignment-search" className="mb-2 block text-sm font-semibold text-slate-800">
+              Selecciona quién la recibirá
+            </label>
+            <div className="relative">
+              <Icon name="search" size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                id="campaign-reassignment-search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                disabled={isProcessing}
+                placeholder="Buscar por nombre o apellido"
+                className="w-full rounded-2xl border border-slate-300 py-3 pl-11 pr-4 text-sm focus:border-indigo-500 focus:outline-none disabled:opacity-60"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {availableParticipants.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">
+                No hay participantes activos que coincidan con la búsqueda.
+              </div>
+            ) : availableParticipants.map((participant) => {
+              const isSelected = targetUserId === participant.userId;
+              return (
+                <button
+                  key={participant.userId}
+                  type="button"
+                  onClick={() => setTargetUserId(participant.userId)}
+                  disabled={isProcessing}
+                  aria-pressed={isSelected}
+                  className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors disabled:opacity-60 ${
+                    isSelected
+                      ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-900">{participant.userNameSnapshot}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {participant.total || 0} asignadas · {participant.pending || 0} pendientes
+                    </p>
+                  </div>
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                    isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    <Icon name={isSelected ? 'check' : 'user'} size={15} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 bg-white px-5 py-4">
+          {selectedParticipant ? (
+            <p className="mb-3 text-center text-sm text-slate-600">
+              Se asignará{isBulk && count !== 1 ? 'n' : ''} a <strong>{selectedParticipant.userNameSnapshot}</strong>.
+            </p>
+          ) : null}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isProcessing}
+              className="min-h-[44px] flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={isProcessing || !targetUserId}
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isProcessing ? <Icon name="loader" size={16} className="animate-spin" /> : <Icon name="users" size={16} />}
+              {isProcessing ? 'Reasignando...' : 'Confirmar cambio'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 };
 
@@ -1109,6 +1309,9 @@ const CampaignDistributionControl = ({
   compact = false,
   assignmentsByUserId = null,
   onOpenParticipantMap = null,
+  onRequestReassignment = null,
+  onRequestBulkReassignment = null,
+  onCompleteAssignment = null,
   assignmentsGenerated = false,
   liveAvailableCount = null,
   requiresRegenerate = false
@@ -1258,7 +1461,7 @@ const CampaignDistributionControl = ({
               key={participant.userId}
               className={`rounded-2xl border border-gray-200 bg-white p-4 ${compact ? '' : 'lg:h-full'}`}
             >
-              <div className={`flex gap-3 ${compact ? 'flex-col' : 'flex-col sm:flex-row sm:items-start sm:justify-between'}`}>
+              <div className={`flex gap-3 ${compact ? 'flex-col lg:flex-row lg:items-start lg:justify-between' : 'flex-col sm:flex-row sm:items-start sm:justify-between'}`}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-gray-900">{participant.userNameSnapshot}</p>
@@ -1288,7 +1491,7 @@ const CampaignDistributionControl = ({
                   )}
                 </div>
 
-                <div className={`flex items-center gap-2 ${compact ? 'justify-between' : 'shrink-0 sm:justify-end'}`}>
+                <div className={`flex items-center gap-2 ${compact ? 'justify-between lg:shrink-0 lg:justify-end' : 'shrink-0 sm:justify-end'}`}>
                   <button
                     type="button"
                     onClick={() => onAdjustTarget(participant.userId, -1)}
@@ -1341,17 +1544,35 @@ const CampaignDistributionControl = ({
                   {expandedParticipantId === participant.userId ? (
                     <ParticipantAssignmentAddressList
                       assignments={assignmentsByUserId.get(participant.userId) || []}
+                      isBusy={isBusy}
+                      isReadOnly={isReadOnly}
+                      onRequestReassignment={onRequestReassignment}
+                      onCompleteAssignment={onCompleteAssignment}
                     />
                   ) : null}
 
-                  <button
-                    type="button"
-                    onClick={() => onOpenParticipantMap(participant.userId, participant.userNameSnapshot)}
-                    className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50"
-                  >
-                    <Icon name="map" size={16} />
-                    Ver mapa
-                  </button>
+                  <div className="flex flex-col gap-2 lg:flex-row">
+                    {!isReadOnly && participant.pending > 0 && onRequestBulkReassignment ? (
+                      <button
+                        type="button"
+                        onClick={() => onRequestBulkReassignment(participant)}
+                        disabled={isBusy}
+                        className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Icon name="users" size={16} />
+                        Reasignar pendientes ({participant.pending})
+                      </button>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenParticipantMap(participant.userId, participant.userNameSnapshot)}
+                      className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50"
+                    >
+                      <Icon name="map" size={16} />
+                      Ver mapa
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -1392,7 +1613,7 @@ const CampaignsView = ({ onBack }) => {
     handleDeleteCampaign,
     handleUpdateCampaignAssignmentStatus,
     handleResetCampaignAssignment,
-    handleMoveCampaignAssignment,
+    handleReassignCampaignAssignments,
     handleToggleCampaignAssignmentLock
   } = useCampaigns();
 
@@ -1424,6 +1645,7 @@ const CampaignsView = ({ onBack }) => {
   });
   const [adminViewMode, setAdminViewMode] = useState('admin');
   const [isBusy, setIsBusy] = useState(false);
+  const [reassignmentRequest, setReassignmentRequest] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
   const [campaignPendingDelete, setCampaignPendingDelete] = useState(null);
 
@@ -1876,6 +2098,10 @@ const CampaignsView = ({ onBack }) => {
     () => buildDistributionAssignmentFingerprint(selectedCampaignAssignments),
     [selectedCampaignAssignments]
   );
+  const persistedDistributionDraftFingerprint = useMemo(
+    () => buildDistributionTargetFingerprint(selectedCampaign?.distributionTargetsDraft || {}),
+    [selectedCampaign?.distributionTargetsDraft]
+  );
 
   const campaignAddressDrift = useMemo(
     () => getCampaignAddressDrift(selectedCampaignAssignments, allTerritoryAddresses),
@@ -2037,7 +2263,8 @@ const CampaignsView = ({ onBack }) => {
       selectedCampaign.id,
       totalDistributionAddresses,
       selectedCampaignAssignments.length,
-      distributionAssignmentFingerprint
+      distributionAssignmentFingerprint,
+      persistedDistributionDraftFingerprint
     ].join(':');
 
     if (distributionHydratedCampaignRef.current === hydrationKey) {
@@ -2061,6 +2288,7 @@ const CampaignsView = ({ onBack }) => {
   }, [
     assignmentsGenerated,
     distributionAssignmentFingerprint,
+    persistedDistributionDraftFingerprint,
     preservedCountsByUser,
     selectedCampaign?.distributionTargetsDraft,
     selectedCampaign?.distributionTargetsDraftMeta,
@@ -2303,15 +2531,103 @@ const CampaignsView = ({ onBack }) => {
     }
   };
 
-  const handleMoveAssignment = async (assignment, nextUserId) => {
-    if (assignment.assignedUserId === nextUserId) return;
+  const handleAdminCompleteAssignment = async (assignment) => {
+    if (!assignment || assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED) return;
 
     setIsBusy(true);
     try {
-      await handleMoveCampaignAssignment(assignment.id, nextUserId);
+      await handleUpdateCampaignAssignmentStatus(
+        assignment.id,
+        CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+      );
+      showToast('Dirección marcada como completada.', 'success');
     } catch (error) {
-      console.error('Error moviendo asignaci\u00f3n:', error);
-      showToast(error.message || 'No se pudo mover la asignaci\u00f3n.', 'error');
+      const message = error?.code === 'resource-exhausted'
+        ? 'Firebase alcanzó el límite de uso. Espera unos minutos e intenta de nuevo.'
+        : (error?.message || 'No se pudo completar la dirección.');
+      console.error('Error completando dirección desde administración:', error);
+      showToast(message, 'error');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleOpenAssignmentReassignment = useCallback((assignment) => {
+    if (!assignment || assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED) return;
+
+    const sourceParticipant = selectedCampaignParticipants.find(
+      (participant) => participant.userId === assignment.assignedUserId
+    );
+    setReassignmentRequest({
+      mode: 'single',
+      campaignId: assignment.campaignId,
+      assignmentId: assignment.id,
+      assignment,
+      expectedStatus: assignment.status,
+      count: 1,
+      sourceUserId: assignment.assignedUserId,
+      sourceUserName: sourceParticipant?.userNameSnapshot || assignment.assignedUserName || 'Participante'
+    });
+  }, [selectedCampaignParticipants]);
+
+  const handleOpenBulkReassignment = useCallback((participant) => {
+    if (!participant || !selectedCampaign?.id) return;
+    const pendingCount = (assignmentsByUserId.get(participant.userId) || []).filter(
+      (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.PENDING
+    ).length;
+    if (pendingCount === 0) {
+      showToast('Esta persona ya no tiene direcciones pendientes.', 'info');
+      return;
+    }
+
+    setReassignmentRequest({
+      mode: 'all_pending',
+      campaignId: selectedCampaign.id,
+      count: pendingCount,
+      sourceUserId: participant.userId,
+      sourceUserName: participant.userNameSnapshot
+    });
+  }, [assignmentsByUserId, selectedCampaign?.id, showToast]);
+
+  const handleConfirmReassignment = async (targetUserId) => {
+    if (!reassignmentRequest) return;
+
+    setIsBusy(true);
+    try {
+      const result = await handleReassignCampaignAssignments({
+        campaignId: reassignmentRequest.campaignId,
+        sourceUserId: reassignmentRequest.sourceUserId,
+        targetUserId,
+        mode: reassignmentRequest.mode,
+        assignmentId: reassignmentRequest.assignmentId || null,
+        expectedStatus: reassignmentRequest.expectedStatus || null
+      });
+
+      const movedIds = new Set(result.assignmentIds);
+      const nextAssignments = selectedCampaignAssignments.map((assignment) => (
+        movedIds.has(assignment.id)
+          ? {
+            ...assignment,
+            assignedUserId: result.targetUserId,
+            status: assignment.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
+              ? CAMPAIGN_PROGRESS_STATUSES.PENDING
+              : assignment.status,
+            manualLocked: true
+          }
+          : assignment
+      ));
+
+      clearDistributionDraft(reassignmentRequest.campaignId);
+      distributionHydratedCampaignRef.current = null;
+      distributionSkipSaveRef.current = true;
+      setDistributionTargets(buildDistributionTargetsFromAssignments(
+        nextAssignments,
+        selectedCampaignParticipants
+      ));
+      setReassignmentRequest(null);
+    } catch (error) {
+      console.error('Error reasignando direcciones:', error);
+      showToast(error.message || 'No se pudieron reasignar las direcciones.', 'error');
     } finally {
       setIsBusy(false);
     }
@@ -2755,6 +3071,9 @@ const CampaignsView = ({ onBack }) => {
                     onApply={handleApplyDistribution}
                     assignmentsByUserId={assignmentsByUserId}
                     onOpenParticipantMap={handleOpenParticipantMap}
+                    onRequestReassignment={handleOpenAssignmentReassignment}
+                    onRequestBulkReassignment={handleOpenBulkReassignment}
+                    onCompleteAssignment={handleAdminCompleteAssignment}
                     assignmentsGenerated={assignmentsGenerated}
                     liveAvailableCount={campaignAddressDrift.liveCount}
                     requiresRegenerate={campaignRequiresRegenerate}
@@ -2815,16 +3134,31 @@ const CampaignsView = ({ onBack }) => {
                               )}
                             </div>
                             <div className="flex flex-col gap-2 md:flex-row lg:items-start">
-                              <select
-                                value={assignment.assignedUserId}
-                                onChange={(event) => handleMoveAssignment(assignment, event.target.value)}
-                                disabled={isBusy || assignment.status !== CAMPAIGN_PROGRESS_STATUSES.PENDING}
-                                className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-                              >
-                                {selectedCampaignParticipants.map((participant) => (
-                                  <option key={participant.userId} value={participant.userId}>{participant.userNameSnapshot}</option>
-                                ))}
-                              </select>
+                              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                                {assignment.assignedUserName || selectedCampaignParticipants.find(
+                                  (participant) => participant.userId === assignment.assignedUserId
+                                )?.userNameSnapshot || 'Participante'}
+                              </div>
+                              {assignment.status !== CAMPAIGN_PROGRESS_STATUSES.COMPLETED ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAdminCompleteAssignment(assignment)}
+                                    disabled={isBusy || isReadOnlyCampaign}
+                                    className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                  >
+                                    Marcar completada
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenAssignmentReassignment(assignment)}
+                                    disabled={isBusy || isReadOnlyCampaign}
+                                    className="rounded-xl bg-indigo-100 px-3 py-2 text-sm font-semibold text-indigo-700 disabled:opacity-50"
+                                  >
+                                    Cambiar responsable
+                                  </button>
+                                </>
+                              ) : null}
                               <button
                                 onClick={() => handleToggleLock(assignment.id)}
                                 disabled={isBusy}
@@ -3376,6 +3710,9 @@ const CampaignsView = ({ onBack }) => {
                   onApply={handleApplyDistribution}
                   assignmentsByUserId={assignmentsByUserId}
                   onOpenParticipantMap={handleOpenParticipantMap}
+                  onRequestReassignment={handleOpenAssignmentReassignment}
+                  onRequestBulkReassignment={handleOpenBulkReassignment}
+                  onCompleteAssignment={handleAdminCompleteAssignment}
                   assignmentsGenerated={assignmentsGenerated}
                   liveAvailableCount={campaignAddressDrift.liveCount}
                   requiresRegenerate={campaignRequiresRegenerate}
@@ -3388,6 +3725,14 @@ const CampaignsView = ({ onBack }) => {
       </CampaignStepShell>
 
       </div>
+
+      <CampaignReassignmentModal
+        request={reassignmentRequest}
+        participants={step3EnabledDistributionParticipants}
+        isProcessing={isBusy}
+        onClose={() => setReassignmentRequest(null)}
+        onConfirm={handleConfirmReassignment}
+      />
 
       <LazyCampaignAssignmentsMapModal
         isOpen={publisherMapState.isOpen}

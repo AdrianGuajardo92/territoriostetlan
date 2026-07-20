@@ -4,6 +4,7 @@ import {
   buildDistributionTargetFingerprint,
   buildRedistributionNeeds,
   distributeAddressesAcrossParticipants,
+  selectCampaignAssignmentsForReassignment,
   validateRedistributionAddressPool
 } from './campaignUtils.js';
 
@@ -108,5 +109,61 @@ describe('validateRedistributionAddressPool', () => {
       [{ addressId: 'a1' }, { addressId: 'missing' }],
       [{ id: 'a1' }]
     )).toThrow(/huérfanas/i);
+  });
+});
+
+describe('selectCampaignAssignmentsForReassignment', () => {
+  const assignments = [
+    { id: 'pending-1', campaignId: 'campaign-1', assignedUserId: 'ana', status: 'pending' },
+    { id: 'progress-1', campaignId: 'campaign-1', assignedUserId: 'ana', status: 'in_progress' },
+    { id: 'completed-1', campaignId: 'campaign-1', assignedUserId: 'ana', status: 'completed' },
+    { id: 'pending-2', campaignId: 'campaign-1', assignedUserId: 'luis', status: 'pending' },
+    { id: 'other-campaign', campaignId: 'campaign-2', assignedUserId: 'ana', status: 'pending' }
+  ];
+
+  it('selecciona solamente todas las pendientes del responsable y campaña indicados', () => {
+    expect(selectCampaignAssignmentsForReassignment({
+      assignments,
+      campaignId: 'campaign-1',
+      sourceUserId: 'ana',
+      mode: 'all_pending'
+    }).map((assignment) => assignment.id)).toEqual(['pending-1']);
+  });
+
+  it('permite seleccionar individualmente una dirección en progreso', () => {
+    expect(selectCampaignAssignmentsForReassignment({
+      assignments,
+      campaignId: 'campaign-1',
+      sourceUserId: 'ana',
+      assignmentId: 'progress-1'
+    })).toHaveLength(1);
+  });
+
+  it('impide reasignar una dirección completada', () => {
+    expect(() => selectCampaignAssignmentsForReassignment({
+      assignments,
+      campaignId: 'campaign-1',
+      sourceUserId: 'ana',
+      assignmentId: 'completed-1'
+    })).toThrow(/completadas/i);
+  });
+
+  it('detecta cuando la dirección ya cambió de responsable', () => {
+    expect(() => selectCampaignAssignmentsForReassignment({
+      assignments,
+      campaignId: 'campaign-1',
+      sourceUserId: 'ana',
+      assignmentId: 'pending-2'
+    })).toThrow(/otra persona/i);
+  });
+
+  it('obliga a reabrir cuando el estado cambió mientras se confirmaba', () => {
+    expect(() => selectCampaignAssignmentsForReassignment({
+      assignments,
+      campaignId: 'campaign-1',
+      sourceUserId: 'ana',
+      assignmentId: 'progress-1',
+      expectedStatus: 'pending'
+    })).toThrow(/estado.*cambió/i);
   });
 });
