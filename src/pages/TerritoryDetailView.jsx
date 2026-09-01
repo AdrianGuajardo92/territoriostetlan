@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../hooks/useToast';
-import { useBackHandler } from '../hooks/useBackHandler';
 import { useIsDesktop } from '../hooks/useMediaQuery';
 import useLocationTracking from '../hooks/useLocationTracking';
 import TerritoryDetailHeader from '../components/territories/TerritoryDetailHeader';
@@ -229,9 +228,6 @@ const TerritoryDetailView = ({ territory, onBack }) => {
     setNavigatingAddressId
   };
 
-  // ConfirmDialog no usa <Modal>, así que registramos aquí en el padre.
-  useBackHandler({ isOpen: showConfirmReturn, onClose: () => setShowConfirmReturn(false), id: 'territory-confirm-return' });
-  useBackHandler({ isOpen: showConfirmComplete, onClose: () => setShowConfirmComplete(false), id: 'territory-confirm-complete' });
 
   // Visibilitychange: al volver a la pestaña mientras hay una dirección en
   // navegación GPS, re-activar el highlight por 20s.
@@ -945,7 +941,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           confirmText="Sí, devolver"
           cancelText="Cancelar"
           type="warning"
-          modalId="confirm-return-territory"
+          dialogId="territory-confirm-return"
         />
       )}
 
@@ -959,7 +955,7 @@ const TerritoryDetailView = ({ territory, onBack }) => {
           confirmText="Sí, completar"
           cancelText="Cancelar"
           type="success"
-          modalId="confirm-complete-territory"
+          dialogId="territory-confirm-complete"
         />
       )}
 

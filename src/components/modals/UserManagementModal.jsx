@@ -37,7 +37,6 @@ const UserManagementModal = ({
   const [copiedCredentialsUserId, setCopiedCredentialsUserId] = useState(null);
   const copyFeedbackTimeoutRef = useRef(null);
 
-  useBackHandler({ isOpen: showDeleteConfirm, onClose: () => setShowDeleteConfirm(false), id: `${modalId}-delete-confirm` });
   useBackHandler({ isOpen: showPasswordReset, onClose: () => setShowPasswordReset(false), id: `${modalId}-password-reset` });
   useBackHandler({
     isOpen: isOpen && activeView !== 'list',
@@ -544,6 +543,7 @@ const UserManagementModal = ({
         cancelText="Cancelar"
         type="danger"
         isProcessing={isProcessing}
+        dialogId={`${modalId}-delete-confirm`}
       />
 
       {/* Modal para resetear contraseña */}

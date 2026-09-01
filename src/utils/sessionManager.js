@@ -1,5 +1,7 @@
 export const SESSION_STORAGE_KEY = 'appSession';
 export const LEGACY_SESSION_KEY = 'currentUser';
+export const REMEMBER_USER_KEY = 'rememberedUser';
+export const REMEMBER_ME_KEY = 'rememberMe';
 export const SESSION_IDLE_TIMEOUT_MS = 12 * 60 * 60 * 1000;
 export const SESSION_ABSOLUTE_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -12,15 +14,20 @@ export const sanitizeSessionUser = (user) => {
   return safeUser;
 };
 
-const createSessionEnvelope = (user, existingEnvelope = null) => {
+const createSessionEnvelope = (user, existingEnvelope = null, options = {}) => {
   const now = Date.now();
   const loginAt = existingEnvelope?.loginAt || now;
+  const persistUntilLogout = options.persistUntilLogout
+    ?? existingEnvelope?.persistUntilLogout === true;
 
   return {
     user: sanitizeSessionUser(user),
     loginAt,
     lastActivityAt: now,
-    expiresAt: existingEnvelope?.expiresAt || (loginAt + SESSION_ABSOLUTE_TIMEOUT_MS),
+    expiresAt: persistUntilLogout
+      ? null
+      : (existingEnvelope?.expiresAt || (loginAt + SESSION_ABSOLUTE_TIMEOUT_MS)),
+    persistUntilLogout,
     version: SESSION_VERSION
   };
 };
@@ -49,7 +56,8 @@ export const parseSession = (raw) => {
 
 export const isSessionExpired = (session, now = Date.now()) => {
   if (!session?.user?.id) return true;
-  if (now > session.expiresAt) return true;
+  if (session.persistUntilLogout) return false;
+  if (session.expiresAt && now > session.expiresAt) return true;
   if (now - session.lastActivityAt > SESSION_IDLE_TIMEOUT_MS) return true;
   return false;
 };
@@ -57,14 +65,44 @@ export const isSessionExpired = (session, now = Date.now()) => {
 const writeSessionEnvelope = (envelope) => {
   if (!envelope?.user?.id) return;
 
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(envelope));
+  const raw = JSON.stringify(envelope);
+
+  if (envelope.persistUntilLogout) {
+    localStorage.setItem(SESSION_STORAGE_KEY, raw);
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  } else {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, raw);
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  }
+
   sessionStorage.removeItem(LEGACY_SESSION_KEY);
+};
+
+const readRawSession = () => (
+  localStorage.getItem(SESSION_STORAGE_KEY)
+  || sessionStorage.getItem(SESSION_STORAGE_KEY)
+  || sessionStorage.getItem(LEGACY_SESSION_KEY)
+);
+
+const hydrateEnvelope = (envelope, { fromPersistentStorage = false } = {}) => {
+  if (!envelope) return null;
+
+  if (envelope.persistUntilLogout == null && fromPersistentStorage) {
+    envelope.persistUntilLogout = true;
+  }
+
+  return envelope;
 };
 
 const readStoredEnvelope = () => {
   const localRaw = localStorage.getItem(SESSION_STORAGE_KEY);
   if (localRaw) {
-    return parseSession(localRaw);
+    return hydrateEnvelope(parseSession(localRaw), { fromPersistentStorage: true });
+  }
+
+  const tabRaw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  if (tabRaw) {
+    return hydrateEnvelope(parseSession(tabRaw));
   }
 
   const legacyRaw = sessionStorage.getItem(LEGACY_SESSION_KEY);
@@ -85,9 +123,18 @@ export const readSession = ({ includeExpired = false } = {}) => {
   return envelope;
 };
 
-export const saveSession = (user) => {
-  const envelope = createSessionEnvelope(user);
+export const saveSession = (user, { persistUntilLogout = false } = {}) => {
+  const envelope = createSessionEnvelope(user, null, { persistUntilLogout });
   writeSessionEnvelope(envelope);
+
+  if (persistUntilLogout && user?.accessCode) {
+    localStorage.setItem(REMEMBER_USER_KEY, user.accessCode);
+    localStorage.setItem(REMEMBER_ME_KEY, 'true');
+  } else {
+    localStorage.removeItem(REMEMBER_USER_KEY);
+    localStorage.removeItem(REMEMBER_ME_KEY);
+  }
+
   return envelope;
 };
 
@@ -109,7 +156,13 @@ export const touchSession = () => {
 
 export const clearSession = () => {
   localStorage.removeItem(SESSION_STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_STORAGE_KEY);
   sessionStorage.removeItem(LEGACY_SESSION_KEY);
+};
+
+export const getRememberedAccessCode = () => {
+  if (localStorage.getItem(REMEMBER_ME_KEY) !== 'true') return '';
+  return localStorage.getItem(REMEMBER_USER_KEY) || '';
 };
 
 export const getSessionUser = () => readSession()?.user || null;
@@ -117,7 +170,7 @@ export const getSessionUser = () => readSession()?.user || null;
 export const backupSession = () => {
   const session = readSession();
   if (!session) return null;
-  return localStorage.getItem(SESSION_STORAGE_KEY);
+  return readRawSession();
 };
 
 export const restoreSession = (backupRaw) => {
@@ -127,6 +180,12 @@ export const restoreSession = (backupRaw) => {
   if (!envelope || isSessionExpired(envelope)) return false;
 
   writeSessionEnvelope(envelope);
+
+  if (envelope.persistUntilLogout && envelope.user?.accessCode) {
+    localStorage.setItem(REMEMBER_USER_KEY, envelope.user.accessCode);
+    localStorage.setItem(REMEMBER_ME_KEY, 'true');
+  }
+
   return true;
 };
 

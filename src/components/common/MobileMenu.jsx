@@ -101,6 +101,7 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
           <nav className="flex-1 px-3 pb-3 space-y-2 overflow-auto">
             {filteredItems.map((item, index) => {
               const isHovered = hoveredItem === index;
+              const isEmphasized = Boolean(item.emphasize);
 
               return (
                 <button
@@ -120,20 +121,26 @@ const MobileMenu = ({ isOpen, onClose, menuItems, activeItem, onOpenModal, handl
                       onOpenModal(modalId);
                     }
                   }}
-                  className={`w-full p-4 rounded-2xl text-left transition-all duration-200 bg-white shadow-sm ${
-                    isHovered ? 'shadow-md scale-[1.02]' : 'hover:shadow'
-                  }`}
+                  className={`w-full p-4 rounded-2xl text-left transition-all duration-200 shadow-sm ${
+                    isEmphasized
+                      ? 'border border-indigo-200 bg-indigo-50'
+                      : 'bg-white'
+                  } ${isHovered ? 'shadow-md scale-[1.02]' : 'hover:shadow'}`}
                 >
                   <div className="flex items-center gap-4">
                     {/* Icono con fondo cuadrado redondeado */}
                     <div className="relative">
                       <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                        isHovered ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500'
+                        isHovered
+                          ? 'bg-slate-700 text-white'
+                          : isEmphasized
+                            ? 'bg-indigo-100 text-indigo-700'
+                            : 'bg-slate-100 text-slate-500'
                       }`}>
                         <Icon
                           name={item.icon}
                           size={20}
-                          className={isHovered ? 'text-white' : 'text-slate-500'}
+                          className={isHovered ? 'text-white' : (isEmphasized ? 'text-indigo-700' : 'text-slate-500')}
                         />
                       </div>
                       {/* Badge */}

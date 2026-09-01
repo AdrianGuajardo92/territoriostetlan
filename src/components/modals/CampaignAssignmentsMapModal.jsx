@@ -15,6 +15,7 @@ import { getDisplayAddress, getFullAddress } from '../../utils/helpers';
 const getCampaignTypeIcon = (type) => {
   const normalized = String(type || '').toLowerCase();
   if (normalized === 'conmemoracion' || normalized === 'conmemoración') return 'wine';
+  if (normalized === 'especial') return 'bookmark';
   return 'building';
 };
 
@@ -829,6 +830,19 @@ const CampaignAssignmentsMapModal = ({
         zIndexOffset: isSelected ? 1000 : 0,
       });
 
+      const tooltipParts = [
+        assignment.assignedUserName,
+        assignment.snapshot?.territoryName,
+        getDisplayAddress(assignment.snapshot, '')
+      ].filter(Boolean);
+
+      if (tooltipParts.length > 0) {
+        marker.bindTooltip(tooltipParts.join(' · '), {
+          direction: 'top',
+          offset: [0, -10]
+        });
+      }
+
       marker.on('click', () => {
         setSelectedAssignmentId(assignment.id);
       });
@@ -975,7 +989,12 @@ const CampaignAssignmentsMapModal = ({
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
                 <Icon name={getCampaignTypeIcon(campaign?.type)} size={18} />
               </div>
-              <h2 className="truncate text-xl font-bold text-slate-900">{campaign?.name || 'Mapa de invitaciones'}</h2>
+              <div className="min-w-0">
+                <h2 className="truncate text-xl font-bold text-slate-900">{campaign?.name || 'Mapa de invitaciones'}</h2>
+                {participantName ? (
+                  <p className="truncate text-sm font-semibold text-slate-500">{participantName}</p>
+                ) : null}
+              </div>
             </div>
           </div>
           <button
@@ -1089,6 +1108,11 @@ const CampaignAssignmentsMapModal = ({
               </span>
             </div>
             <h3 className="truncate text-base font-bold text-slate-900">{getDisplayAddress(selectedAssignment.snapshot)}</h3>
+            {selectedAssignment.assignedUserName ? (
+              <p className="mt-1 truncate text-sm font-semibold text-indigo-700">
+                {selectedAssignment.assignedUserName}
+              </p>
+            ) : null}
             {selectedAssignment.snapshot.notes && (
               <p className="mt-2 text-sm text-slate-600">{selectedAssignment.snapshot.notes}</p>
             )}
@@ -1172,7 +1196,7 @@ const CampaignAssignmentsMapModal = ({
 
 const campaignAssignmentsSignature = (items = []) => (
   items.map((assignment) => (
-    `${assignment.id}:${assignment.status}:${assignment.snapshot?.latitude ?? ''}:${assignment.snapshot?.longitude ?? ''}`
+    `${assignment.id}:${assignment.status}:${assignment.assignedUserId || ''}:${assignment.snapshot?.latitude ?? ''}:${assignment.snapshot?.longitude ?? ''}`
   )).join('|')
 );
 

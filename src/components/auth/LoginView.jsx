@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { getRememberedAccessCode } from '../../utils/sessionManager';
 import Icon from '../common/Icon';
 
 const LoginView = () => {
@@ -12,15 +13,14 @@ const LoginView = () => {
   const accessCodeRef = useRef(null);
   const passwordRef = useRef(null);
 
-  // Cargar usuario guardado al iniciar
+  // Prefill del usuario solo si se cerró sesión con «Recordar usuario».
+  // La sesión persistida se restaura en AppContext y no vuelve a pedir contraseña.
   useEffect(() => {
-    const savedUser = localStorage.getItem('rememberedUser');
-    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+    const savedUser = getRememberedAccessCode();
 
-    if (savedRememberMe && savedUser) {
+    if (savedUser) {
       setFormData(prev => ({ ...prev, accessCode: savedUser }));
       setRememberMe(true);
-      // Enfocar el campo de contraseña si ya hay usuario
       setTimeout(() => passwordRef.current?.focus(), 100);
     }
   }, []);
@@ -35,18 +35,9 @@ const LoginView = () => {
     setIsLoading(true);
     setError('');
 
-    const result = await login(formData.accessCode, formData.password);
+    const result = await login(formData.accessCode, formData.password, { rememberMe });
 
-    if (result.success) {
-      // Guardar o eliminar usuario solo si el login fue exitoso
-      if (rememberMe) {
-        localStorage.setItem('rememberedUser', formData.accessCode);
-        localStorage.setItem('rememberMe', 'true');
-      } else {
-        localStorage.removeItem('rememberedUser');
-        localStorage.removeItem('rememberMe');
-      }
-    } else {
+    if (!result.success) {
       setError(result.error || 'Error al iniciar sesión');
       setIsLoading(false);
       if (result.error === 'Código de acceso incorrecto') {
@@ -198,7 +189,7 @@ const LoginView = () => {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>© 2025 Estación Tetlán Señas</p>
+          <p>© 2026 Estación Tetlán Señas</p>
         </div>
       </div>
 

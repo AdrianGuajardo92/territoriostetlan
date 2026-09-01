@@ -341,7 +341,7 @@ export const AppProvider = ({ children }) => {
   };
   
   // 🔐 AUTH FUNCTIONS - SISTEMA PERSONALIZADO CON CÓDIGOS DE ACCESO
-  const login = async (accessCode, password) => {
+  const login = async (accessCode, password, { rememberMe = false } = {}) => {
     try {
   
       
@@ -376,7 +376,7 @@ export const AppProvider = ({ children }) => {
 
       
       
-      saveSession(user);
+      saveSession(user, { persistUntilLogout: rememberMe });
       
       clearAllSubscriptions();
       resetLoadedData();

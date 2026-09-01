@@ -16,6 +16,7 @@ import {
   getDocs,
   onSnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -25,8 +26,17 @@ import { db } from '../config/firebase';
 import { useToast } from '../hooks/useToast';
 import { useApp } from './AppContext';
 import {
+  CAMPAIGN_FINAL_SUMMARY_VERSION,
   CAMPAIGN_PROGRESS_STATUSES,
+  CAMPAIGN_REASSIGNMENT_UNDO_FIELDS,
+  CAMPAIGN_REASSIGNMENT_UNDO_WINDOW_MS,
   CAMPAIGN_STATUSES,
+  assertCampaignAssignmentsWritable,
+  hasCampaignPeriodEnded,
+  normalizeCampaignDateRange,
+  buildCampaignFinalizeUpdate,
+  buildCampaignFinalSummary,
+  buildCampaignReassignmentUndoEntry,
   buildRedistributionNeeds,
   buildTerritoryMap,
   calculateCampaignTargets,
@@ -35,10 +45,12 @@ import {
   getCampaignCandidateAddresses,
   getPendingUnlockedCampaignAssignments,
   getPreservedCampaignAssignments,
+  isCampaignReassignmentUndoTokenExpired,
   normalizeParticipantConfig,
   prepareDistributionTargetsForApply,
   selectCampaignAssignmentsForReassignment,
   sortCampaigns,
+  validateCampaignReassignmentUndoCandidate,
   validateDistributionTargets,
   validateRedistributionAddressPool,
   verifyDistributionCounts
@@ -57,6 +69,19 @@ const mapSnapshotDocs = (snapshot) => snapshot.docs.map((itemDoc) => ({
 }));
 
 const FIRESTORE_BATCH_LIMIT = 500;
+const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+
+const buildCampaignReassignmentUndoUpdates = (undoEntry) => {
+  const updates = CAMPAIGN_REASSIGNMENT_UNDO_FIELDS.reduce((result, field) => {
+    result[field] = hasOwn(undoEntry.previous, field)
+      ? undoEntry.previous[field]
+      : deleteField();
+    return result;
+  }, {});
+
+  updates.updatedAt = serverTimestamp();
+  return updates;
+};
 
 const commitDeletesInBatches = async (docRefs = []) => {
   for (let index = 0; index < docRefs.length; index += FIRESTORE_BATCH_LIMIT) {
@@ -88,6 +113,7 @@ export const CampaignProvider = ({ children }) => {
   const [campaignsLoading, setCampaignsLoading] = useState(true);
 
   const unsubscribesRef = useRef([]);
+  const autoFinalizedIdsRef = useRef(new Set());
 
   const isAdmin = currentUser?.role === 'admin';
   const allTerritoryIds = useMemo(
@@ -281,15 +307,20 @@ export const CampaignProvider = ({ children }) => {
       });
   }, [activeCampaign, campaignParticipants]);
 
-  const normalizeCampaignPayload = useCallback((payload = {}) => ({
-    name: String(payload.name || '').trim(),
-    type: String(payload.type || 'asamblea').trim().toLowerCase(),
-    eventDate: payload.eventDate || '',
-    status: payload.status || CAMPAIGN_STATUSES.DRAFT,
-    sourceTerritoryIds: Array.from(new Set(allTerritoryIds)),
-    excludedAddressIds: Array.from(new Set(Array.isArray(payload.excludedAddressIds) ? payload.excludedAddressIds : [])),
-    addressCountSnapshot: Number(payload.addressCountSnapshot) || 0
-  }), [allTerritoryIds]);
+  const normalizeCampaignPayload = useCallback((payload = {}) => {
+    const dateRange = normalizeCampaignDateRange(payload.eventDate, payload.eventEndDate);
+
+    return {
+      name: String(payload.name || '').trim(),
+      type: String(payload.type || 'asamblea').trim().toLowerCase(),
+      eventDate: dateRange.eventDate,
+      eventEndDate: dateRange.eventEndDate,
+      status: payload.status || CAMPAIGN_STATUSES.DRAFT,
+      sourceTerritoryIds: Array.from(new Set(allTerritoryIds)),
+      excludedAddressIds: Array.from(new Set(Array.isArray(payload.excludedAddressIds) ? payload.excludedAddressIds : [])),
+      addressCountSnapshot: Number(payload.addressCountSnapshot) || 0
+    };
+  }, [allTerritoryIds]);
 
   const handleCreateCampaign = useCallback(async (payload) => {
     if (!isAdmin) {
@@ -328,10 +359,8 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Solo los administradores pueden actualizar campañas.');
     }
 
-    const campaign = await resolveCampaign(campaignId);
-    if (!campaign) {
-      throw new Error('No se encontro la campaña seleccionada.');
-    }
+    const campaign = await resolveCampaign(campaignId, { preferLatest: true });
+    assertCampaignAssignmentsWritable(campaign);
 
     const normalizedUpdates = normalizeCampaignPayload({
       ...campaign,
@@ -363,10 +392,8 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Solo los administradores pueden editar participantes.');
     }
 
-    const campaign = await resolveCampaign(campaignId);
-    if (!campaign) {
-      throw new Error('No se encontro la campaña seleccionada.');
-    }
+    const campaign = await resolveCampaign(campaignId, { preferLatest: true });
+    assertCampaignAssignmentsWritable(campaign);
 
     const rawParticipants = Array.isArray(structure?.participants) ? structure.participants : [];
 
@@ -450,9 +477,7 @@ export const CampaignProvider = ({ children }) => {
     }
 
     const campaign = await resolveCampaign(campaignId, options);
-    if (!campaign) {
-      throw new Error('No se encontro la campaña seleccionada.');
-    }
+    assertCampaignAssignmentsWritable(campaign);
 
     const candidateAddresses = getCampaignCandidateAddresses({
       campaign,
@@ -585,9 +610,7 @@ export const CampaignProvider = ({ children }) => {
     }
 
     const campaign = await resolveCampaign(campaignId, options);
-    if (!campaign) {
-      throw new Error('No se encontro la campaña seleccionada.');
-    }
+    assertCampaignAssignmentsWritable(campaign);
 
     const candidateAddresses = getCampaignCandidateAddresses({
       campaign,
@@ -707,10 +730,8 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Solo los administradores pueden activar campañas.');
     }
 
-    const campaign = await resolveCampaign(campaignId, options);
-    if (!campaign) {
-      throw new Error('No se encontro la campaña seleccionada.');
-    }
+    const campaign = await resolveCampaign(campaignId, { ...options, preferLatest: true });
+    assertCampaignAssignmentsWritable(campaign);
 
     const anotherActiveCampaign = campaigns.find(
       (item) => item.status === CAMPAIGN_STATUSES.ACTIVE && item.id !== campaignId
@@ -769,29 +790,169 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Solo los administradores pueden completar campañas.');
     }
 
+    const campaign = await resolveCampaign(campaignId, { preferLatest: true });
+    if (!campaign) {
+      throw new Error('No se encontró la campaña seleccionada.');
+    }
+    if (campaign.status !== CAMPAIGN_STATUSES.ACTIVE) {
+      throw new Error('Solo se puede finalizar una campaña activa.');
+    }
+
+    const [participantsForCampaign, assignmentsForCampaign] = await Promise.all([
+      resolveCampaignItems(
+        'campaignParticipants',
+        campaignId,
+        campaignParticipants,
+        { preferLatest: true }
+      ),
+      resolveCampaignItems(
+        'campaignAssignments',
+        campaignId,
+        campaignAssignments,
+        { preferLatest: true }
+      )
+    ]);
+
+    const finalSummary = buildCampaignFinalSummary({
+      campaign,
+      participants: participantsForCampaign,
+      assignments: assignmentsForCampaign
+    });
+
     await updateDoc(doc(db, 'campaigns', campaignId), {
       status: CAMPAIGN_STATUSES.COMPLETED,
       completedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+      finalSummary,
+      finalSummaryVersion: CAMPAIGN_FINAL_SUMMARY_VERSION
     });
 
-    await logCampaignActivity(campaignId, null, 'campaign_completed');
+    await logCampaignActivity(campaignId, null, 'campaign_completed', {
+      total: finalSummary.total,
+      completed: finalSummary.completed,
+      pending: finalSummary.pending,
+      inProgress: finalSummary.inProgress,
+      progressPercent: finalSummary.progressPercent
+    });
     showToast('Campaña completada', 'success');
-  }, [isAdmin, logCampaignActivity, showToast]);
+  }, [
+    campaignAssignments,
+    campaignParticipants,
+    isAdmin,
+    logCampaignActivity,
+    resolveCampaign,
+    resolveCampaignItems,
+    showToast
+  ]);
 
   const handleArchiveCampaign = useCallback(async (campaignId) => {
     if (!isAdmin) {
       throw new Error('Solo los administradores pueden archivar campañas.');
     }
 
+    const campaign = await resolveCampaign(campaignId, { preferLatest: true });
+    const finalizeUpdate = buildCampaignFinalizeUpdate({
+      campaign,
+      participants: [],
+      assignments: []
+    });
+
+    if (finalizeUpdate.mode !== 'archive') {
+      throw new Error('Solo se pueden archivar campañas ya finalizadas.');
+    }
+
     await updateDoc(doc(db, 'campaigns', campaignId), {
-      status: CAMPAIGN_STATUSES.ARCHIVED,
+      ...finalizeUpdate.fields,
       updatedAt: serverTimestamp()
     });
 
     await logCampaignActivity(campaignId, null, 'campaign_archived');
     showToast('Campaña archivada', 'success');
-  }, [isAdmin, logCampaignActivity, showToast]);
+  }, [isAdmin, logCampaignActivity, resolveCampaign, showToast]);
+
+  const handleFinalizeAndArchiveCampaign = useCallback(async (campaignId) => {
+    if (!isAdmin) {
+      throw new Error('Solo los administradores pueden finalizar campañas.');
+    }
+
+    const campaign = await resolveCampaign(campaignId, { preferLatest: true });
+    if (!campaign) {
+      throw new Error('No se encontró la campaña seleccionada.');
+    }
+    if (campaign.status === CAMPAIGN_STATUSES.COMPLETED) {
+      await handleArchiveCampaign(campaignId);
+      return;
+    }
+
+    const [participantsForCampaign, assignmentsForCampaign] = await Promise.all([
+      resolveCampaignItems(
+        'campaignParticipants',
+        campaignId,
+        campaignParticipants,
+        { preferLatest: true }
+      ),
+      resolveCampaignItems(
+        'campaignAssignments',
+        campaignId,
+        campaignAssignments,
+        { preferLatest: true }
+      )
+    ]);
+
+    const finalizeUpdate = buildCampaignFinalizeUpdate({
+      campaign,
+      participants: participantsForCampaign,
+      assignments: assignmentsForCampaign
+    });
+
+    await updateDoc(doc(db, 'campaigns', campaignId), {
+      ...finalizeUpdate.fields,
+      completedAt: campaign.completedAt || serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    if (finalizeUpdate.mode === 'finalize' && finalizeUpdate.finalSummary) {
+      await logCampaignActivity(campaignId, null, 'campaign_completed', {
+        total: finalizeUpdate.finalSummary.total,
+        completed: finalizeUpdate.finalSummary.completed,
+        pending: finalizeUpdate.finalSummary.pending,
+        inProgress: finalizeUpdate.finalSummary.inProgress,
+        progressPercent: finalizeUpdate.finalSummary.progressPercent
+      });
+    }
+
+    await logCampaignActivity(campaignId, null, 'campaign_archived');
+    showToast('Campaña finalizada y archivada', 'success');
+  }, [
+    campaignAssignments,
+    campaignParticipants,
+    handleArchiveCampaign,
+    isAdmin,
+    logCampaignActivity,
+    resolveCampaign,
+    resolveCampaignItems,
+    showToast
+  ]);
+
+  useEffect(() => {
+    if (!isAdmin || campaignsLoading) return undefined;
+
+    const expiredActive = campaigns.find((campaign) => (
+      campaign.status === CAMPAIGN_STATUSES.ACTIVE
+      && hasCampaignPeriodEnded(campaign)
+      && !autoFinalizedIdsRef.current.has(campaign.id)
+    ));
+
+    if (!expiredActive) return undefined;
+
+    autoFinalizedIdsRef.current.add(expiredActive.id);
+    handleFinalizeAndArchiveCampaign(expiredActive.id).catch((error) => {
+      autoFinalizedIdsRef.current.delete(expiredActive.id);
+      console.error('No se pudo cerrar la campaña al vencer su fecha:', error);
+    });
+
+    return undefined;
+  }, [campaigns, campaignsLoading, handleFinalizeAndArchiveCampaign, isAdmin]);
 
   const handleDeleteCampaign = useCallback(async (campaignId) => {
     if (!isAdmin) {
@@ -801,6 +962,11 @@ export const CampaignProvider = ({ children }) => {
     const campaign = await resolveCampaign(campaignId, { preferLatest: true });
     if (!campaign) {
       throw new Error('No se encontró la campaña seleccionada.');
+    }
+    if (campaign.status !== CAMPAIGN_STATUSES.DRAFT) {
+      throw new Error(
+        'Solo se pueden eliminar campañas en borrador. Las activas, completadas o archivadas se conservan en el historial.'
+      );
     }
 
     const [
@@ -848,6 +1014,9 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Estado de campaña no valido.');
     }
 
+    const campaign = await resolveCampaign(assignment.campaignId, { preferLatest: true });
+    assertCampaignAssignmentsWritable(campaign);
+
     const updates = {
       status: nextStatus,
       updatedAt: serverTimestamp()
@@ -879,7 +1048,7 @@ export const CampaignProvider = ({ children }) => {
       from: assignment.status,
       to: nextStatus
     }).catch(() => {});
-  }, [campaignAssignments, currentUser, isAdmin, logCampaignActivity]);
+  }, [campaignAssignments, currentUser, isAdmin, logCampaignActivity, resolveCampaign]);
 
   const handleResetCampaignAssignment = useCallback(async (assignmentId) => {
     if (!isAdmin) {
@@ -890,6 +1059,9 @@ export const CampaignProvider = ({ children }) => {
     if (!assignment) {
       throw new Error('No se encontro la asignacion seleccionada.');
     }
+
+    const campaign = await resolveCampaign(assignment.campaignId, { preferLatest: true });
+    assertCampaignAssignmentsWritable(campaign);
 
     await updateDoc(doc(db, 'campaignAssignments', assignmentId), {
       status: CAMPAIGN_PROGRESS_STATUSES.PENDING,
@@ -902,7 +1074,7 @@ export const CampaignProvider = ({ children }) => {
 
     await logCampaignActivity(assignment.campaignId, assignmentId, 'assignment_reset');
     showToast('Asignacion reseteada', 'success');
-  }, [campaignAssignments, isAdmin, logCampaignActivity, showToast]);
+  }, [campaignAssignments, isAdmin, logCampaignActivity, resolveCampaign, showToast]);
 
   const handleReassignCampaignAssignments = useCallback(async ({
     campaignId,
@@ -930,9 +1102,7 @@ export const CampaignProvider = ({ children }) => {
     if (!latestCampaign) {
       throw new Error('La campaña seleccionada ya no está disponible.');
     }
-    if ([CAMPAIGN_STATUSES.COMPLETED, CAMPAIGN_STATUSES.ARCHIVED].includes(latestCampaign.status)) {
-      throw new Error('No se pueden reasignar direcciones de una campaña cerrada.');
-    }
+    assertCampaignAssignmentsWritable(latestCampaign);
 
     const targetParticipant = latestParticipants.find((participant) => (
       participant.userId === targetUserId && participant.isEnabled !== false
@@ -956,6 +1126,8 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('Hay demasiadas direcciones para moverlas en una sola operación.');
     }
 
+    const operationId = doc(collection(db, 'campaignActivity')).id;
+    const undoEntries = assignmentsToMove.map(buildCampaignReassignmentUndoEntry);
     const batch = writeBatch(db);
     let resetCount = 0;
 
@@ -969,6 +1141,7 @@ export const CampaignProvider = ({ children }) => {
         groupId: null,
         groupLabelSnapshot: null,
         manualLocked: true,
+        lastMoveOperationId: operationId,
         lastMovedAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -996,24 +1169,32 @@ export const CampaignProvider = ({ children }) => {
       logCampaignActivity(campaignId, assignment.id, 'assignment_moved', {
         fromUserId: sourceUserId,
         toUserId: targetParticipant.userId,
+        operationId,
         resetFromInProgress: assignment.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS,
         transferMode: mode
       })
     )));
 
     const movedCount = assignmentsToMove.length;
-    showToast(
-      movedCount === 1
-        ? `Dirección reasignada a ${targetParticipant.userNameSnapshot}`
-        : `${movedCount} direcciones reasignadas a ${targetParticipant.userNameSnapshot}`,
-      'success'
-    );
+    const createdAt = Date.now();
 
     return {
       movedCount,
       resetCount,
       targetUserId: targetParticipant.userId,
-      assignmentIds: assignmentsToMove.map((assignment) => assignment.id)
+      targetUserName: targetParticipant.userNameSnapshot,
+      assignmentIds: assignmentsToMove.map((assignment) => assignment.id),
+      undoToken: {
+        version: 1,
+        operationId,
+        campaignId,
+        sourceUserId,
+        targetUserId: targetParticipant.userId,
+        transferMode: mode,
+        entries: undoEntries,
+        createdAt,
+        expiresAt: createdAt + CAMPAIGN_REASSIGNMENT_UNDO_WINDOW_MS
+      }
     };
   }, [
     campaignAssignments,
@@ -1021,9 +1202,113 @@ export const CampaignProvider = ({ children }) => {
     isAdmin,
     logCampaignActivity,
     resolveCampaign,
-    resolveCampaignItems,
-    showToast
+    resolveCampaignItems
   ]);
+
+  const handleUndoCampaignReassignment = useCallback(async (
+    undoToken,
+    requestedAt = Date.now()
+  ) => {
+    if (!isAdmin) {
+      throw new Error('Solo los administradores pueden deshacer reasignaciones.');
+    }
+    if (
+      undoToken?.version !== 1
+      || !undoToken.operationId
+      || !undoToken.campaignId
+      || !undoToken.targetUserId
+      || !Array.isArray(undoToken.entries)
+      || undoToken.entries.length === 0
+    ) {
+      throw new Error('La información para deshacer ya no es válida.');
+    }
+    if (isCampaignReassignmentUndoTokenExpired(undoToken, requestedAt)) {
+      throw new Error('El tiempo para deshacer esta reasignación terminó.');
+    }
+    if (undoToken.entries.length + 1 > FIRESTORE_BATCH_LIMIT) {
+      throw new Error('Hay demasiadas direcciones para deshacerlas en una sola operación.');
+    }
+
+    const uniqueAssignmentIds = new Set(
+      undoToken.entries.map((entry) => entry.assignmentId)
+    );
+    const hasInvalidEntry = undoToken.entries.some((entry) => (
+      !entry?.assignmentId
+      || entry.campaignId !== undoToken.campaignId
+      || !entry.previous?.assignedUserId
+    ));
+    if (hasInvalidEntry || uniqueAssignmentIds.size !== undoToken.entries.length) {
+      throw new Error('La información para deshacer está incompleta.');
+    }
+
+    const campaignRef = doc(db, 'campaigns', undoToken.campaignId);
+    const assignmentRefs = undoToken.entries.map(
+      (entry) => doc(db, 'campaignAssignments', entry.assignmentId)
+    );
+
+    await runTransaction(db, async (transaction) => {
+      const [campaignSnapshot, ...assignmentSnapshots] = await Promise.all([
+        transaction.get(campaignRef),
+        ...assignmentRefs.map((assignmentRef) => transaction.get(assignmentRef))
+      ]);
+
+      if (!campaignSnapshot.exists()) {
+        throw new Error('La campaña seleccionada ya no está disponible.');
+      }
+
+      const campaign = { id: campaignSnapshot.id, ...campaignSnapshot.data() };
+      assertCampaignAssignmentsWritable(campaign);
+
+      assignmentSnapshots.forEach((assignmentSnapshot, index) => {
+        const assignment = assignmentSnapshot.exists()
+          ? { id: assignmentSnapshot.id, ...assignmentSnapshot.data() }
+          : null;
+
+        validateCampaignReassignmentUndoCandidate({
+          assignment,
+          undoEntry: undoToken.entries[index],
+          operationId: undoToken.operationId,
+          targetUserId: undoToken.targetUserId
+        });
+      });
+
+      assignmentRefs.forEach((assignmentRef, index) => {
+        transaction.update(
+          assignmentRef,
+          buildCampaignReassignmentUndoUpdates(undoToken.entries[index])
+        );
+      });
+
+      transaction.update(campaignRef, {
+        distributionTargetsDraft: deleteField(),
+        distributionTargetsDraftMeta: deleteField(),
+        updatedAt: serverTimestamp()
+      });
+    });
+
+    await Promise.all(undoToken.entries.map((entry) => (
+      logCampaignActivity(
+        undoToken.campaignId,
+        entry.assignmentId,
+        'assignment_move_undone',
+        {
+          operationId: undoToken.operationId,
+          fromUserId: undoToken.targetUserId,
+          toUserId: entry.previous.assignedUserId,
+          transferMode: undoToken.transferMode
+        }
+      )
+    )));
+
+    return {
+      restoredCount: undoToken.entries.length,
+      assignmentIds: undoToken.entries.map((entry) => entry.assignmentId),
+      restoredAssignments: undoToken.entries.map((entry) => ({
+        id: entry.assignmentId,
+        ...entry.previous
+      }))
+    };
+  }, [isAdmin, logCampaignActivity]);
 
   const handleToggleCampaignAssignmentLock = useCallback(async (assignmentId) => {
     if (!isAdmin) {
@@ -1035,6 +1320,9 @@ export const CampaignProvider = ({ children }) => {
       throw new Error('No se encontro la asignacion seleccionada.');
     }
 
+    const campaign = await resolveCampaign(assignment.campaignId, { preferLatest: true });
+    assertCampaignAssignmentsWritable(campaign);
+
     await updateDoc(doc(db, 'campaignAssignments', assignmentId), {
       manualLocked: !assignment.manualLocked,
       updatedAt: serverTimestamp()
@@ -1043,7 +1331,7 @@ export const CampaignProvider = ({ children }) => {
     await logCampaignActivity(assignment.campaignId, assignmentId, 'assignment_lock_toggled', {
       manualLocked: !assignment.manualLocked
     });
-  }, [campaignAssignments, isAdmin, logCampaignActivity]);
+  }, [campaignAssignments, isAdmin, logCampaignActivity, resolveCampaign]);
 
   const handleSaveDistributionTargetsDraft = useCallback(async (campaignId, targets = {}, meta = {}) => {
     if (!isAdmin) {
@@ -1051,9 +1339,7 @@ export const CampaignProvider = ({ children }) => {
     }
 
     const campaign = await resolveCampaign(campaignId);
-    if (!campaign) {
-      throw new Error('No se encontro la campaña seleccionada.');
-    }
+    assertCampaignAssignmentsWritable(campaign);
 
     const normalizedTargets = Object.entries(targets).reduce((accumulator, [userId, count]) => {
       const parsed = Math.max(0, Number.parseInt(String(count), 10) || 0);
@@ -1092,10 +1378,12 @@ export const CampaignProvider = ({ children }) => {
     handleActivateCampaign,
     handleCompleteCampaign,
     handleArchiveCampaign,
+    handleFinalizeAndArchiveCampaign,
     handleDeleteCampaign,
     handleUpdateCampaignAssignmentStatus,
     handleResetCampaignAssignment,
     handleReassignCampaignAssignments,
+    handleUndoCampaignReassignment,
     handleToggleCampaignAssignmentLock
   };
 

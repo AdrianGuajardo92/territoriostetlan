@@ -4,12 +4,17 @@ import Icon from '../components/common/Icon';
 import Modal from '../components/common/Modal';
 import { useApp } from '../context/AppContext';
 import { useBackHandler } from '../hooks/useBackHandler';
+import { useToast } from '../hooks/useToast';
 import { useCampaigns } from '../context/CampaignContext';
 import {
   CAMPAIGN_PROGRESS_STATUSES,
   CAMPAIGN_STATUSES,
   formatCampaignDate,
+  formatCampaignDateRange,
+  formatCampaignSchedule,
   formatCampaignTypeLabel,
+  normalizeCampaignDateRange,
+  toCampaignDateKey,
   getCampaignProgressMeta,
   calculateCampaignTargets,
   getEligibleCampaignAddresses,
@@ -22,7 +27,8 @@ import {
   resolveDistributionTargets,
   buildDistributionAssignmentFingerprint,
   buildDistributionTargetFingerprint,
-  formatCampaignDistributionWhatsAppText
+  formatCampaignDistributionWhatsAppText,
+  resolveCampaignHistorySummary
 } from '../utils/campaignUtils';
 import {
   clearDistributionDraft,
@@ -35,6 +41,7 @@ import { getDisplayAddress, getFullAddress, getUserGender } from '../utils/helpe
 import { getAddressNavigationUrls } from '../utils/addressNavigationUrls';
 import { ADDRESS_CARD_THEMES } from '../utils/addressCardThemes';
 import AddressNavigationButtons from '../components/common/AddressNavigationButtons';
+import { applyDefaultCampaignAssignment, resolveCampaignAssignment } from '../config/campaignAssignmentRules';
 import { isPioneerName, isPioneerUser } from '../config/congregationPioneers';
 import { getRegionalAssembly2026ProgramUrl } from '../config/campaignProgramLinks';
 import { useIsDesktop } from '../hooks/useMediaQuery';
@@ -47,7 +54,8 @@ import {
 const DEFAULT_CAMPAIGN_FORM = {
   name: '',
   type: 'asamblea',
-  eventDate: ''
+  eventDate: '',
+  eventEndDate: ''
 };
 
 const PUBLISHER_FILTER_OPTIONS = [
@@ -64,7 +72,8 @@ const getPublisherFilterLabel = (optionId, count, fallbackLabel) => {
 
 const CAMPAIGN_TYPE_OPTIONS = [
   { value: 'asamblea', label: 'Asamblea', icon: 'building' },
-  { value: 'conmemoracion', label: 'Conmemoraci\u00f3n', icon: 'wine' }
+  { value: 'conmemoracion', label: 'Conmemoraci\u00f3n', icon: 'wine' },
+  { value: 'especial', label: 'Campaña especial', icon: 'bookmark' }
 ];
 
 const getCampaignTypeIcon = (type) => {
@@ -73,7 +82,6 @@ const getCampaignTypeIcon = (type) => {
 };
 
 const PARTICIPANT_ASSIGNMENT_MODES = [
-  { id: 'auto', label: 'Automático' },
   { id: '1', label: '1' },
   { id: '2', label: '2' },
   { id: '3', label: '3' },
@@ -221,6 +229,8 @@ const CampaignTypeSelect = ({ value, onChange, disabled = false }) => {
         <ul
           role="listbox"
           aria-labelledby="campaign-type-label"
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
           className="absolute z-20 mt-1 w-full overflow-hidden rounded-2xl border border-gray-300 bg-white shadow-lg"
         >
           {CAMPAIGN_TYPE_OPTIONS.map((option) => {
@@ -232,7 +242,9 @@ const CampaignTypeSelect = ({ value, onChange, disabled = false }) => {
                   type="button"
                   role="option"
                   aria-selected={isSelected}
-                  onClick={() => {
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     onChange(option.value);
                     setIsOpen(false);
                   }}
@@ -250,6 +262,208 @@ const CampaignTypeSelect = ({ value, onChange, disabled = false }) => {
             );
           })}
         </ul>
+      )}
+    </div>
+  );
+};
+
+const WEEKDAY_LABELS = ['d', 'l', 'm', 'm', 'j', 'v', 's'];
+
+const buildCalendarDays = (visibleMonth) => {
+  const year = visibleMonth.getFullYear();
+  const month = visibleMonth.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days = [];
+
+  for (let index = 0; index < startOffset; index += 1) {
+    const date = new Date(year, month, index - startOffset + 1);
+    days.push({ key: toCampaignDateKey(date), date, inMonth: false });
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(year, month, day);
+    days.push({ key: toCampaignDateKey(date), date, inMonth: true });
+  }
+
+  while (days.length % 7 !== 0) {
+    const last = days[days.length - 1].date;
+    const date = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1);
+    days.push({ key: toCampaignDateKey(date), date, inMonth: false });
+  }
+
+  return days;
+};
+
+const CampaignDateRangePicker = ({
+  startDate,
+  endDate,
+  onChange,
+  disabled = false
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [pendingStart, setPendingStart] = useState('');
+  const [hoveredDay, setHoveredDay] = useState('');
+  const containerRef = useRef(null);
+  const initialMonth = startDate || toCampaignDateKey(new Date());
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const [year, month] = (initialMonth || toCampaignDateKey(new Date())).split('-').map(Number);
+    return new Date(year, month - 1, 1);
+  });
+
+  useBackHandler({
+    isOpen,
+    onClose: () => setIsOpen(false),
+    id: 'campaigns-date-range-picker'
+  });
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPendingStart('');
+      setHoveredDay('');
+    }
+  }, [isOpen]);
+
+  const range = normalizeCampaignDateRange(startDate, endDate);
+  const selectingEnd = Boolean(pendingStart);
+  const previewRange = selectingEnd
+    ? normalizeCampaignDateRange(pendingStart, hoveredDay || pendingStart)
+    : range;
+  const rangeStart = previewRange.eventDate;
+  const rangeEnd = previewRange.eventEndDate;
+  const calendarDays = useMemo(() => buildCalendarDays(visibleMonth), [visibleMonth]);
+  const todayKey = toCampaignDateKey(new Date());
+  const displayLabel = selectingEnd
+    ? (hoveredDay
+      ? formatCampaignDateRange(previewRange.eventDate, previewRange.eventEndDate)
+      : `${formatCampaignDate(pendingStart)} → elige el fin`)
+    : range.eventDate
+      ? formatCampaignDateRange(range.eventDate, range.eventEndDate)
+      : 'Elige inicio y fin';
+
+  const handleSelectDay = (event, dayKey) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (disabled) return;
+
+    if (!pendingStart) {
+      setPendingStart(dayKey);
+      setHoveredDay(dayKey);
+      return;
+    }
+
+    const nextRange = normalizeCampaignDateRange(pendingStart, dayKey);
+    onChange(nextRange);
+    setPendingStart('');
+    setIsOpen(false);
+  };
+
+  const monthLabel = visibleMonth.toLocaleDateString('es-MX', {
+    month: 'long',
+    year: 'numeric'
+  });
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        onClick={() => !disabled && setIsOpen((previous) => !previous)}
+        className="flex w-full items-center gap-3 rounded-2xl border border-gray-300 bg-white py-3 pl-3 pr-4 text-left focus:border-slate-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+          <Icon name="calendar" size={16} />
+        </span>
+        <span className={`min-w-0 truncate ${range.eventDate ? 'text-slate-900' : 'text-slate-400'}`}>
+          {displayLabel}
+        </span>
+      </button>
+
+      {isOpen && (
+        <div
+          role="dialog"
+          aria-label="Calendario de la campaña"
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+          className="absolute z-30 mt-1 w-full rounded-2xl border border-gray-300 bg-white p-3 shadow-lg"
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
+              aria-label="Mes anterior"
+            >
+              <Icon name="chevronLeft" size={18} />
+            </button>
+            <p className="text-sm font-bold capitalize text-slate-800">{monthLabel}</p>
+            <button
+              type="button"
+              onClick={() => setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
+              aria-label="Mes siguiente"
+            >
+              <Icon name="chevronRight" size={18} />
+            </button>
+          </div>
+
+          <p className="mb-2 text-xs text-slate-500">
+            {selectingEnd ? 'Ahora elige el día en que termina.' : 'Primero elige el día en que empieza.'}
+          </p>
+
+          <div className="grid grid-cols-7 gap-y-1 text-center text-[11px] font-semibold uppercase text-slate-400">
+            {WEEKDAY_LABELS.map((label, index) => (
+              <span key={`${label}-${index}`}>{label}</span>
+            ))}
+          </div>
+
+          <div className="mt-1 grid grid-cols-7">
+            {calendarDays.map((day) => {
+              const isStart = day.key === rangeStart;
+              const isEnd = Boolean(rangeEnd) && day.key === rangeEnd;
+              const inRange = Boolean(rangeStart && rangeEnd)
+                && day.key >= rangeStart
+                && day.key <= rangeEnd;
+              const isEdge = isStart || isEnd;
+
+              return (
+                <button
+                  key={day.key}
+                  type="button"
+                  onPointerEnter={() => {
+                    if (pendingStart) setHoveredDay(day.key);
+                  }}
+                  onPointerMove={() => {
+                    if (pendingStart && hoveredDay !== day.key) setHoveredDay(day.key);
+                  }}
+                  onClick={(event) => handleSelectDay(event, day.key)}
+                  className={`relative flex h-10 items-center justify-center text-sm ${
+                    inRange && !isEdge ? 'bg-slate-100' : ''
+                  } ${isStart && rangeEnd && rangeStart !== rangeEnd ? 'rounded-l-full bg-slate-100' : ''} ${
+                    isEnd && rangeStart !== rangeEnd ? 'rounded-r-full bg-slate-100' : ''
+                  }`}
+                >
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                      isEdge
+                        ? 'bg-[#2C3E50] font-bold text-white'
+                        : day.key === todayKey
+                          ? 'font-bold text-sky-700 ring-1 ring-sky-200'
+                          : day.inMonth
+                            ? 'text-slate-800'
+                            : 'text-slate-300'
+                    }`}
+                  >
+                    {day.date.getDate()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -290,10 +504,12 @@ const normalizeSearchText = (value = '') => String(value || '')
   .trim();
 
 const getParticipantAssignmentMode = (participant) => {
-  if (participant.isEnabled === false) return 'excluded';
+  const resolved = resolveCampaignAssignment(participant);
 
-  const weight = Number(participant.capacityWeight) || 1;
-  const rawLimit = participant.hardLimit;
+  if (resolved.isEnabled === false) return 'excluded';
+
+  const weight = Number(resolved.capacityWeight) || 1;
+  const rawLimit = resolved.hardLimit;
 
   if (rawLimit === '' || rawLimit === null || rawLimit === undefined) {
     return weight === 1 ? 'auto' : 'advanced';
@@ -1298,7 +1514,6 @@ const CampaignDistributionControl = ({
   participants = [],
   distributionTargets = {},
   totalAddresses = 0,
-  configuredTotal = 0,
   isBalanced = false,
   preservedCountsByUser = {},
   isBusy = false,
@@ -1313,7 +1528,6 @@ const CampaignDistributionControl = ({
   onRequestBulkReassignment = null,
   onCompleteAssignment = null,
   assignmentsGenerated = false,
-  liveAvailableCount = null,
   requiresRegenerate = false
 }) => {
   const [expandedParticipantId, setExpandedParticipantId] = useState(null);
@@ -1328,70 +1542,16 @@ const CampaignDistributionControl = ({
     ));
   }, [participants, searchQuery]);
 
-  const hasMoreAddressesAvailable = Number.isFinite(liveAvailableCount)
-    && liveAvailableCount > totalAddresses;
-  const balanceTone = isBalanced && !hasMoreAddressesAvailable
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-    : 'border-amber-200 bg-amber-50 text-amber-800';
-
   return (
     <div className="space-y-4">
-      <div className={`rounded-2xl border px-4 py-3 ${balanceTone}`}>
-        <div className={`flex gap-4 ${compact ? 'flex-col' : 'flex-col lg:flex-row lg:items-center lg:justify-between'}`}>
-          <div className={`grid gap-3 ${compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:gap-6'}`}>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide opacity-70">Objetivo configurado</p>
-              <p className="mt-0.5 text-lg font-bold tabular-nums">
-                {configuredTotal} / {hasMoreAddressesAvailable ? liveAvailableCount : totalAddresses}
-              </p>
-              {hasMoreAddressesAvailable ? (
-                <p className="mt-1 text-xs font-medium opacity-80">
-                  {totalAddresses} en el reparto actual · {liveAvailableCount} disponibles
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          {!requiresRegenerate && !compact && (
-            <button
-              type="button"
-              onClick={onApply}
-              disabled={isBusy || isReadOnly || !isBalanced || participants.length === 0}
-              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isBusy ? (
-                <>
-                  <Icon name="loader" size={16} className="animate-spin" />
-                  Actualizando...
-                </>
-              ) : (
-                <>
-                  <Icon name="shuffle" size={16} />
-                  Actualizar reparto
-                </>
-              )}
-            </button>
-          )}
-        </div>
-
-        {!isBalanced && (
-          <p className="mt-2 text-xs font-medium opacity-80">
-            Ajusta las cantidades hasta que el objetivo coincida con el total antes de actualizar el reparto.
-          </p>
-        )}
-        {hasMoreAddressesAvailable && isBalanced && (
-          <p className="mt-2 text-xs font-medium opacity-80">
-            Hay direcciones nuevas fuera del reparto. Regenera el reparto para incluirlas antes de activar la campaña.
-          </p>
-        )}
-      </div>
-
-      {!requiresRegenerate && compact && (
+      {!requiresRegenerate && (
         <button
           type="button"
           onClick={onApply}
           disabled={isBusy || isReadOnly || !isBalanced || participants.length === 0}
-          className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 ${
+            compact ? 'w-full py-3' : 'shrink-0 py-2.5'
+          }`}
         >
           {isBusy ? (
             <>
@@ -1584,15 +1744,176 @@ const CampaignDistributionControl = ({
   );
 };
 
+const CampaignHistoryDetail = ({ summary, isLegacy = false }) => {
+  const [expandedTerritoryIds, setExpandedTerritoryIds] = useState(() => new Set());
+
+  const assignmentsByTerritory = useMemo(() => {
+    const grouped = new Map();
+
+    (summary?.assignments || []).forEach((assignment) => {
+      const territoryId = assignment.territoryId || 'sin-territorio';
+      if (!grouped.has(territoryId)) {
+        grouped.set(territoryId, []);
+      }
+      grouped.get(territoryId).push(assignment);
+    });
+
+    return grouped;
+  }, [summary?.assignments]);
+
+  const toggleTerritory = (territoryId) => {
+    setExpandedTerritoryIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(territoryId)) {
+        next.delete(territoryId);
+      } else {
+        next.add(territoryId);
+      }
+      return next;
+    });
+  };
+
+  if (!summary) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+        No hay datos históricos disponibles para esta campaña.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {isLegacy ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Historial anterior · resumen reconstruido desde las asignaciones guardadas.
+        </div>
+      ) : null}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Resumen general</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
+            <p className="text-lg font-bold tabular-nums text-slate-900">{summary.total || 0}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">total</p>
+          </div>
+          <div className="rounded-xl bg-emerald-50 px-3 py-2 text-center">
+            <p className="text-lg font-bold tabular-nums text-emerald-700">{summary.completed || 0}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">completadas</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
+            <p className="text-lg font-bold tabular-nums text-slate-900">{summary.pending || 0}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">pendientes</p>
+          </div>
+          <div className="rounded-xl bg-amber-50 px-3 py-2 text-center">
+            <p className="text-lg font-bold tabular-nums text-amber-700">{summary.inProgress || 0}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">en progreso</p>
+          </div>
+        </div>
+        <p className="mt-3 text-sm font-semibold text-slate-700">
+          Avance final: {summary.progressPercent ?? 0}%
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Por hermano</p>
+        <div className="mt-3 space-y-2">
+          {(summary.byParticipant || []).length === 0 ? (
+            <p className="text-sm text-slate-500">Sin participantes registrados.</p>
+          ) : (
+            summary.byParticipant.map((participant) => (
+              <div
+                key={participant.userId}
+                className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"
+              >
+                <p className="text-sm font-bold text-slate-900">{participant.userNameSnapshot}</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  {participant.total} total · {participant.completed} completadas · {participant.pending} pendientes · {participant.inProgress} en progreso
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Por territorio</p>
+        <div className="mt-3 space-y-2">
+          {(summary.byTerritory || []).length === 0 ? (
+            <p className="text-sm text-slate-500">Sin territorios registrados.</p>
+          ) : (
+            summary.byTerritory.map((territory) => {
+              const isExpanded = expandedTerritoryIds.has(territory.territoryId);
+              const territoryAssignments = assignmentsByTerritory.get(territory.territoryId) || [];
+
+              return (
+                <div
+                  key={territory.territoryId}
+                  className="overflow-hidden rounded-xl border border-slate-100"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleTerritory(territory.territoryId)}
+                    className="flex w-full items-center justify-between gap-3 bg-slate-50 px-3 py-3 text-left"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900">{territory.territoryName}</p>
+                      <p className="mt-0.5 text-xs text-slate-600">
+                        {territory.total} dir. · {territory.completed} completadas · {territory.pending} pend. · {territory.inProgress} en prog.
+                      </p>
+                    </div>
+                    <Icon
+                      name="chevronDown"
+                      size={16}
+                      className={`shrink-0 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {isExpanded ? (
+                    <div className="divide-y divide-slate-100 bg-white">
+                      {territoryAssignments.map((assignment, index) => {
+                        const progressMeta = getCampaignProgressMeta(assignment.status);
+                        return (
+                          <div
+                            key={`${assignment.addressId || 'address'}-${index}`}
+                            className="px-3 py-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {assignment.addressDisplay || assignment.addressSnapshot?.address || 'Dirección'}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  Responsable: {assignment.assignedUserName || 'Sin asignar'}
+                                </p>
+                              </div>
+                              <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${progressMeta.badgeClass}`}>
+                                {progressMeta.label}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
+    </div>
+  );
+};
+
 const CampaignsView = ({ onBack }) => {
   const {
     currentUser,
     territories,
     addresses,
     addressesLoading,
-    users,
-    showToast
+    users
   } = useApp();
+  const { showToast, removeToast } = useToast();
   const {
     campaigns,
     campaignParticipants,
@@ -1610,10 +1931,12 @@ const CampaignsView = ({ onBack }) => {
     handleActivateCampaign,
     handleCompleteCampaign,
     handleArchiveCampaign,
+    handleFinalizeAndArchiveCampaign,
     handleDeleteCampaign,
     handleUpdateCampaignAssignmentStatus,
     handleResetCampaignAssignment,
     handleReassignCampaignAssignments,
+    handleUndoCampaignReassignment,
     handleToggleCampaignAssignmentLock
   } = useCampaigns();
 
@@ -1643,59 +1966,74 @@ const CampaignsView = ({ onBack }) => {
     userId: null,
     userName: ''
   });
+  const [isCampaignMapOpen, setIsCampaignMapOpen] = useState(false);
   const [adminViewMode, setAdminViewMode] = useState('admin');
   const [isBusy, setIsBusy] = useState(false);
   const [reassignmentRequest, setReassignmentRequest] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
   const [campaignPendingDelete, setCampaignPendingDelete] = useState(null);
 
-  // ConfirmDialogs admin (activate / complete / archive / delete) son mutuamente
-  // exclusivos; un solo registro cubre los cuatro.
-  useBackHandler({
-    isOpen: confirmAction !== null,
-    onClose: () => {
-      setConfirmAction(null);
-      setCampaignPendingDelete(null);
-    },
-    id: 'campaigns-confirm-action'
-  });
   const [adminScreen, setAdminScreen] = useState('hub');
-  const [isTrackingExpanded, setIsTrackingExpanded] = useState(false);
-  const [isAssignmentsExpanded, setIsAssignmentsExpanded] = useState(false);
+  const [historyCampaignId, setHistoryCampaignId] = useState(null);
+  const [step3Tab, setStep3Tab] = useState('participants');
   const [step3DistributionFilter, setStep3DistributionFilter] = useState('all');
+  const [isHubProgressDetailOpen, setIsHubProgressDetailOpen] = useState(false);
+  const [isHubPendingAddressesOpen, setIsHubPendingAddressesOpen] = useState(true);
   const [distributionTargets, setDistributionTargets] = useState({});
   const distributionHydratedCampaignRef = useRef(null);
   const distributionApplyLockRef = useRef(null);
   const distributionSkipSaveRef = useRef(true);
   const distributionSaveTimeoutRef = useRef(null);
   const distributionTargetsRef = useRef({});
+  const selectedCampaignAssignmentsRef = useRef([]);
+  const selectedCampaignParticipantsRef = useRef([]);
+  const reassignmentUndoRef = useRef(null);
+  const reassignmentUndoTimeoutRef = useRef(null);
   const hasAutoSelectedAdminViewRef = useRef(false);
+  const [isCreatingNewCampaign, setIsCreatingNewCampaign] = useState(false);
   const prevSelectedCampaignIdRef = useRef(null);
-  const campaignDateInputRef = useRef(null);
   const distributionCopyTimeoutRef = useRef(null);
   const [distributionCopyFeedback, setDistributionCopyFeedback] = useState(false);
 
-  const openCampaignDatePicker = () => {
-    const input = campaignDateInputRef.current;
-    if (!input || input.disabled) return;
-    try {
-      if (typeof input.showPicker === 'function') {
-        input.showPicker();
-        return;
-      }
-    } catch {
-      // Safari puede lanzar si el gesto no es válido
+  const clearReassignmentUndo = useCallback((removeVisibleToast = true) => {
+    const activeUndo = reassignmentUndoRef.current;
+
+    if (reassignmentUndoTimeoutRef.current) {
+      clearTimeout(reassignmentUndoTimeoutRef.current);
+      reassignmentUndoTimeoutRef.current = null;
     }
-    input.focus();
-  };
+    reassignmentUndoRef.current = null;
+
+    if (removeVisibleToast && activeUndo?.toastId) {
+      removeToast(activeUndo.toastId);
+    }
+  }, [removeToast]);
+
+  useEffect(() => () => {
+    clearReassignmentUndo();
+  }, [clearReassignmentUndo]);
+
+  useEffect(() => {
+    if (adminScreen === 'step3') {
+      setStep3Tab('participants');
+    }
+  }, [adminScreen]);
 
   useEffect(() => {
     if (!isAdmin) return;
+    if (isCreatingNewCampaign) return;
     if (selectedCampaignId && campaigns.some((campaign) => campaign.id === selectedCampaignId)) return;
 
-    const nextCampaignId = activeCampaign?.id || campaigns[0]?.id || null;
+    const nextDraft = campaigns.find((campaign) => campaign.status === CAMPAIGN_STATUSES.DRAFT);
+    const nextCampaignId = activeCampaign?.id || nextDraft?.id || null;
     setSelectedCampaignId(nextCampaignId);
-  }, [activeCampaign, campaigns, isAdmin, selectedCampaignId]);
+  }, [activeCampaign, campaigns, isAdmin, isCreatingNewCampaign, selectedCampaignId]);
+
+  useEffect(() => {
+    if (selectedCampaignId) {
+      setIsCreatingNewCampaign(false);
+    }
+  }, [selectedCampaignId]);
 
   useEffect(() => {
     if (!isAdmin || campaignsLoading || hasAutoSelectedAdminViewRef.current) return;
@@ -1730,6 +2068,18 @@ const CampaignsView = ({ onBack }) => {
       });
   }, [campaignAssignments, selectedCampaign]);
 
+  useEffect(() => {
+    selectedCampaignAssignmentsRef.current = selectedCampaignAssignments;
+    selectedCampaignParticipantsRef.current = selectedCampaignParticipants;
+  }, [selectedCampaignAssignments, selectedCampaignParticipants]);
+
+  useEffect(() => {
+    const activeUndo = reassignmentUndoRef.current;
+    if (activeUndo && activeUndo.campaignId !== selectedCampaign?.id) {
+      clearReassignmentUndo();
+    }
+  }, [clearReassignmentUndo, selectedCampaign?.id]);
+
   const allTerritoryAddresses = useMemo(() => sortCampaignSourceAddresses(
     getEligibleCampaignAddresses(addresses, { territoryIds: allTerritoryIds }),
     territoryMap
@@ -1749,17 +2099,17 @@ const CampaignsView = ({ onBack }) => {
       setParticipantSearch('');
       setParticipantGenderFilter(null);
       setStep3DistributionFilter('all');
+      setIsHubProgressDetailOpen(false);
+      setIsHubPendingAddressesOpen(true);
+      setIsCampaignMapOpen(false);
     }
 
     if (!selectedCampaign) {
       setCampaignForm({ ...DEFAULT_CAMPAIGN_FORM });
-      setParticipantsDraft(availableUsers.map((user) => ({
+      setParticipantsDraft(availableUsers.map((user) => applyDefaultCampaignAssignment({
         userId: user.id,
         userNameSnapshot: user.name,
-        userRole: user.role,
-        capacityWeight: 1,
-        hardLimit: '',
-        isEnabled: true
+        userRole: user.role
       })));
       return;
     }
@@ -1767,7 +2117,8 @@ const CampaignsView = ({ onBack }) => {
     setCampaignForm({
       name: selectedCampaign.name || '',
       type: selectedCampaign.type || 'asamblea',
-      eventDate: selectedCampaign.eventDate || ''
+      eventDate: selectedCampaign.eventDate || '',
+      eventEndDate: selectedCampaign.eventEndDate || selectedCampaign.eventDate || ''
     });
 
     const participantsByUserId = new Map(
@@ -1777,7 +2128,7 @@ const CampaignsView = ({ onBack }) => {
     setParticipantsDraft(availableUsers.map((user) => {
       const participant = participantsByUserId.get(user.id);
       if (participant) {
-        return {
+        return resolveCampaignAssignment({
           id: participant.id,
           userId: participant.userId,
           userNameSnapshot: participant.userNameSnapshot,
@@ -1785,27 +2136,45 @@ const CampaignsView = ({ onBack }) => {
           capacityWeight: participant.capacityWeight ?? 1,
           hardLimit: participant.hardLimit ?? '',
           isEnabled: participant.isEnabled !== false
-        };
+        });
       }
 
-      return {
+      return applyDefaultCampaignAssignment({
         userId: user.id,
         userNameSnapshot: user.name,
-        userRole: user.role,
-        capacityWeight: 1,
-        hardLimit: '',
-        isEnabled: true
-      };
+        userRole: user.role
+      });
     }));
   }, [selectedCampaign, selectedCampaignParticipants, users]);
 
   useEffect(() => {
     if (adminViewMode !== 'admin') {
       setAdminScreen('hub');
-      setIsTrackingExpanded(false);
-      setIsAssignmentsExpanded(false);
+      setHistoryCampaignId(null);
     }
   }, [adminViewMode]);
+
+  const historyCampaign = useMemo(
+    () => campaignHistory.find((campaign) => campaign.id === historyCampaignId) || null,
+    [campaignHistory, historyCampaignId]
+  );
+
+  const historySummaryResult = useMemo(() => {
+    if (!historyCampaign) return null;
+
+    const participantsForHistory = campaignParticipants.filter(
+      (participant) => participant.campaignId === historyCampaign.id
+    );
+    const assignmentsForHistory = campaignAssignments.filter(
+      (assignment) => assignment.campaignId === historyCampaign.id
+    );
+
+    return resolveCampaignHistorySummary({
+      campaign: historyCampaign,
+      participants: participantsForHistory,
+      assignments: assignmentsForHistory
+    });
+  }, [campaignAssignments, campaignParticipants, historyCampaign]);
 
   const usersAvailableForCampaign = useMemo(
     () => [...users].sort((a, b) => a.name.localeCompare(b.name, 'es')),
@@ -1849,7 +2218,8 @@ const CampaignsView = ({ onBack }) => {
 
   const participantTargetsPreview = useMemo(() => {
     const totalAddresses = allTerritoryAddresses.length;
-    const enabledCount = participantsDraft.filter((participant) => participant.isEnabled !== false).length;
+    const resolvedDraft = participantsDraft.map(resolveCampaignAssignment);
+    const enabledCount = resolvedDraft.filter((participant) => participant.isEnabled !== false).length;
 
     if (totalAddresses === 0) {
       return { byUserId: {}, error: null };
@@ -1860,7 +2230,7 @@ const CampaignsView = ({ onBack }) => {
     }
 
     try {
-      const targets = calculateCampaignTargets(participantsDraft, totalAddresses);
+      const targets = calculateCampaignTargets(resolvedDraft, totalAddresses);
       const byUserId = targets.reduce((accumulator, target) => {
         accumulator[target.userId] = target.assignedCount;
         return accumulator;
@@ -1937,6 +2307,15 @@ const CampaignsView = ({ onBack }) => {
 
   const handleCloseParticipantMap = useCallback(() => {
     setParticipantMapState({ isOpen: false, userId: null, userName: '' });
+  }, []);
+
+  const handleOpenCampaignMap = useCallback(() => {
+    setParticipantMapState({ isOpen: false, userId: null, userName: '' });
+    setIsCampaignMapOpen(true);
+  }, []);
+
+  const handleCloseCampaignMap = useCallback(() => {
+    setIsCampaignMapOpen(false);
   }, []);
 
   const step3EnabledDistributionParticipants = useMemo(() => (
@@ -2119,17 +2498,7 @@ const CampaignsView = ({ onBack }) => {
   const distributionBalanceDiff = totalDistributionAddresses - distributionConfiguredTotal;
   const distributionIsBalanced = distributionBalanceDiff === 0;
 
-  const personalCampaign = useMemo(() => {
-    if (activeCampaign) return activeCampaign;
-
-    if (selectedCampaign && ![CAMPAIGN_STATUSES.COMPLETED, CAMPAIGN_STATUSES.ARCHIVED].includes(selectedCampaign.status)) {
-      return selectedCampaign;
-    }
-
-    return campaigns.find((campaign) => (
-      ![CAMPAIGN_STATUSES.COMPLETED, CAMPAIGN_STATUSES.ARCHIVED].includes(campaign.status)
-    )) || null;
-  }, [activeCampaign, campaigns, selectedCampaign]);
+  const personalCampaign = activeCampaign;
 
   const personalAssignments = useMemo(() => {
     if (!currentUser?.id || !personalCampaign) return [];
@@ -2180,20 +2549,78 @@ const CampaignsView = ({ onBack }) => {
   const inProgressAssignmentsCount = selectedCampaignAssignments.filter(
     (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
   ).length;
-  const enabledParticipantsCount = participantsDraft.filter((participant) => participant.isEnabled !== false).length;
+  const enabledParticipantsCount = participantsDraft
+    .map(resolveCampaignAssignment)
+    .filter((participant) => participant.isEnabled !== false).length;
   const progressPercent = selectedCampaignAssignments.length > 0
     ? Math.round((completedAssignmentsCount / selectedCampaignAssignments.length) * 100)
     : 0;
+
+  const hubProgressByParticipant = useMemo(() => (
+    participantSummary
+      .filter((participant) => participant.total > 0)
+      .map((participant) => ({
+        ...participant,
+        incomplete: participant.pending + participant.inProgress
+      }))
+      .sort((a, b) => {
+        if (b.incomplete !== a.incomplete) return b.incomplete - a.incomplete;
+        if (b.pending !== a.pending) return b.pending - a.pending;
+        return (a.userNameSnapshot || '').localeCompare(b.userNameSnapshot || '', 'es');
+      })
+  ), [participantSummary]);
+
+  const hubProgressByTerritory = useMemo(() => (
+    groupAssignmentsByTerritory(selectedCampaignAssignments)
+      .map((group) => {
+        const pending = group.assignments.filter(
+          (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.PENDING
+        ).length;
+        const inProgress = group.assignments.filter(
+          (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
+        ).length;
+        const completed = group.assignments.filter(
+          (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+        ).length;
+
+        return {
+          territoryId: group.territoryId,
+          territoryName: group.territoryName,
+          total: group.assignments.length,
+          pending,
+          inProgress,
+          completed,
+          incomplete: pending + inProgress
+        };
+      })
+      .sort((a, b) => (
+        (a.territoryName || '').localeCompare(b.territoryName || '', 'es', { numeric: true })
+      ))
+  ), [selectedCampaignAssignments]);
+
+  const hubPendingAddressesByTerritory = useMemo(() => {
+    const pendingAssignments = selectedCampaignAssignments.filter((assignment) => (
+      assignment.status === CAMPAIGN_PROGRESS_STATUSES.PENDING
+      || assignment.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
+    ));
+
+    return groupAssignmentsByTerritory(pendingAssignments).map((group) => ({
+      ...group,
+      assignments: [...group.assignments].sort((a, b) => (
+        getDisplayAddress(a.addressSnapshot, '').localeCompare(
+          getDisplayAddress(b.addressSnapshot, ''),
+          'es',
+          { numeric: true }
+        )
+      ))
+    }));
+  }, [selectedCampaignAssignments]);
+
   const participantsReady = enabledParticipantsCount > 0;
   const assignmentsGenerated = selectedCampaignAssignments.length > 0;
   const campaignIsActive = selectedCampaign?.status === CAMPAIGN_STATUSES.ACTIVE;
   const hasActiveCampaign = Boolean(activeCampaign);
   const shouldHideSetupSteps = hasActiveCampaign;
-
-  useEffect(() => {
-    if (!hasActiveCampaign || !assignmentsGenerated) return;
-    setIsTrackingExpanded(true);
-  }, [hasActiveCampaign, assignmentsGenerated, selectedCampaignId]);
 
   const hasSavedParticipants = useMemo(
     () => selectedCampaignId && campaignParticipants.some((p) => p.campaignId === selectedCampaignId),
@@ -2213,7 +2640,7 @@ const CampaignsView = ({ onBack }) => {
   const step3Complete = assignmentsGenerated;
 
   const step1Summary = selectedCampaign
-    ? `${selectedCampaign.name} · ${formatCampaignDate(selectedCampaign.eventDate)}`
+    ? `${selectedCampaign.name} · ${formatCampaignSchedule(selectedCampaign)}`
     : 'Nueva campaña sin guardar';
   const step2Summary = `${enabledParticipantsCount} activos · ${allTerritoryAddresses.length} direcciones`;
   const step2Subtitle = `${enabledParticipantsCount} activos · ${allTerritoryAddresses.length} direcciones a repartir`;
@@ -2406,10 +2833,6 @@ const CampaignsView = ({ onBack }) => {
 
       const updated = { ...participant, isEnabled: true, capacityWeight: 1 };
 
-      if (mode === 'auto') {
-        return { ...updated, hardLimit: '' };
-      }
-
       if (['1', '2', '3'].includes(mode)) {
         return { ...updated, hardLimit: Number(mode) };
       }
@@ -2438,7 +2861,7 @@ const CampaignsView = ({ onBack }) => {
     }
 
     await handleSaveCampaignStructure(campaignId, {
-      participants: participantsDraft
+      participants: participantsDraft.map(resolveCampaignAssignment)
     });
 
     return campaignId;
@@ -2471,6 +2894,10 @@ const CampaignsView = ({ onBack }) => {
   };
 
   const executeAdminAction = async (action) => {
+    if (['generate', 'complete', 'archive', 'finalize', 'delete'].includes(action)) {
+      clearReassignmentUndo();
+    }
+
     setIsBusy(true);
     try {
       if (action === 'save') {
@@ -2492,10 +2919,26 @@ const CampaignsView = ({ onBack }) => {
 
       if (action === 'complete' && selectedCampaign) {
         await handleCompleteCampaign(selectedCampaign.id);
+        setSelectedCampaignId(null);
+        setIsCreatingNewCampaign(true);
+        setAdminScreen('hub');
+        setHistoryCampaignId(null);
+      }
+
+      if (action === 'finalize' && selectedCampaign) {
+        await handleFinalizeAndArchiveCampaign(selectedCampaign.id);
+        setSelectedCampaignId(null);
+        setIsCreatingNewCampaign(true);
+        setAdminScreen('hub');
+        setHistoryCampaignId(null);
       }
 
       if (action === 'archive' && selectedCampaign) {
         await handleArchiveCampaign(selectedCampaign.id);
+        setSelectedCampaignId(null);
+        setIsCreatingNewCampaign(true);
+        setAdminScreen('hub');
+        setHistoryCampaignId(null);
       }
 
       if (action === 'delete' && campaignPendingDelete) {
@@ -2589,6 +3032,63 @@ const CampaignsView = ({ onBack }) => {
     });
   }, [assignmentsByUserId, selectedCampaign?.id, showToast]);
 
+  const handleUndoReassignment = useCallback(async (undoToken) => {
+    const requestedAt = Date.now();
+    const activeUndo = reassignmentUndoRef.current;
+    if (!activeUndo || activeUndo.operationId !== undoToken?.operationId) {
+      showToast('Solo se puede deshacer la reasignación más reciente.', 'info');
+      return;
+    }
+    if (requestedAt >= undoToken.expiresAt) {
+      clearReassignmentUndo();
+      showToast('El tiempo para deshacer esta reasignación terminó.', 'info');
+      return;
+    }
+
+    clearReassignmentUndo(false);
+    setIsBusy(true);
+
+    try {
+      const result = await handleUndoCampaignReassignment(undoToken, requestedAt);
+      const restoredById = new Map(
+        result.restoredAssignments.map((assignment) => [assignment.id, assignment])
+      );
+      const nextAssignments = selectedCampaignAssignmentsRef.current.map((assignment) => (
+        restoredById.has(assignment.id)
+          ? { ...assignment, ...restoredById.get(assignment.id) }
+          : assignment
+      ));
+
+      clearDistributionDraft(undoToken.campaignId);
+      distributionHydratedCampaignRef.current = null;
+      distributionSkipSaveRef.current = true;
+      setDistributionTargets(buildDistributionTargetsFromAssignments(
+        nextAssignments,
+        selectedCampaignParticipantsRef.current
+      ));
+
+      showToast(
+        result.restoredCount === 1
+          ? 'Reasignación deshecha'
+          : `${result.restoredCount} reasignaciones deshechas`,
+        'success'
+      );
+    } catch (error) {
+      console.error('Error deshaciendo reasignación:', error);
+      showToast(
+        error.message || 'No se pudo deshacer porque el reparto ya cambió.',
+        'warning',
+        5000
+      );
+    } finally {
+      setIsBusy(false);
+    }
+  }, [
+    clearReassignmentUndo,
+    handleUndoCampaignReassignment,
+    showToast
+  ]);
+
   const handleConfirmReassignment = async (targetUserId) => {
     if (!reassignmentRequest) return;
 
@@ -2624,6 +3124,41 @@ const CampaignsView = ({ onBack }) => {
         nextAssignments,
         selectedCampaignParticipants
       ));
+
+      clearReassignmentUndo();
+      const successMessage = result.movedCount === 1
+        ? `Dirección reasignada a ${result.targetUserName}`
+        : `${result.movedCount} direcciones reasignadas a ${result.targetUserName}`;
+      const remainingUndoTime = Math.max(
+        0,
+        result.undoToken.expiresAt - Date.now()
+      );
+
+      if (remainingUndoTime > 0) {
+        reassignmentUndoRef.current = {
+          operationId: result.undoToken.operationId,
+          campaignId: result.undoToken.campaignId,
+          toastId: null
+        };
+
+        const toastId = showToast(successMessage, 'success', remainingUndoTime, {
+          label: 'Deshacer',
+          onClick: () => handleUndoReassignment(result.undoToken)
+        });
+        if (reassignmentUndoRef.current?.operationId === result.undoToken.operationId) {
+          reassignmentUndoRef.current.toastId = toastId;
+        }
+
+        reassignmentUndoTimeoutRef.current = setTimeout(() => {
+          if (reassignmentUndoRef.current?.operationId === result.undoToken.operationId) {
+            reassignmentUndoRef.current = null;
+          }
+          reassignmentUndoTimeoutRef.current = null;
+        }, remainingUndoTime);
+      } else {
+        showToast(successMessage, 'success');
+      }
+
       setReassignmentRequest(null);
     } catch (error) {
       console.error('Error reasignando direcciones:', error);
@@ -2685,6 +3220,7 @@ const CampaignsView = ({ onBack }) => {
 
     const appliedTargets = { ...distributionTargetsRef.current };
 
+    clearReassignmentUndo();
     setIsBusy(true);
     try {
       await handleRedistributeCampaignAssignments(
@@ -2734,28 +3270,30 @@ const CampaignsView = ({ onBack }) => {
             </p>
             <h3 className="text-lg font-bold mt-1">{campaign.name}</h3>
             <p className={`text-sm mt-1 ${isSelected ? 'text-slate-200' : 'text-gray-500'}`}>
-              {formatCampaignDate(campaign.eventDate)}
+              {formatCampaignSchedule(campaign)}
             </p>
             <p className={`text-sm mt-3 ${isSelected ? 'text-slate-100' : 'text-gray-600'}`}>
               Territorios: {allTerritoryIds.length} · Direcciones: {addressCount}
             </p>
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setCampaignPendingDelete(campaign);
-              setConfirmAction('delete');
-            }}
-            disabled={isBusy}
-            aria-label={`Eliminar campaña ${campaign.name}`}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-colors disabled:opacity-60 ${
-              isSelected
-                ? 'border-slate-600 bg-slate-700 text-slate-100 hover:bg-red-600 hover:border-red-500'
-                : 'border-gray-200 bg-white text-gray-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
-            }`}
-          >
-            <Icon name="trash" size={16} />
-          </button>
+          {campaign.status === CAMPAIGN_STATUSES.DRAFT ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCampaignPendingDelete(campaign);
+                setConfirmAction('delete');
+              }}
+              disabled={isBusy}
+              aria-label={`Eliminar campaña ${campaign.name}`}
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-colors disabled:opacity-60 ${
+                isSelected
+                  ? 'border-slate-600 bg-slate-700 text-slate-100 hover:bg-red-600 hover:border-red-500'
+                  : 'border-gray-200 bg-white text-gray-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
+              }`}
+            >
+              <Icon name="trash" size={16} />
+            </button>
+          ) : null}
         </div>
       </div>
     );
@@ -2830,7 +3368,7 @@ const CampaignsView = ({ onBack }) => {
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-bold text-white">Direcciones por visitar</h1>
                 <p className="truncate text-xs text-white/70">
-                  {activeCampaign ? `${activeCampaign.name} - ${formatCampaignDate(activeCampaign.eventDate)}` : 'Sin campa\u00f1a activa'}
+                  {activeCampaign ? `${activeCampaign.name} - ${formatCampaignSchedule(activeCampaign)}` : 'Sin campa\u00f1a activa'}
                 </p>
               </div>
             </div>
@@ -2946,22 +3484,36 @@ const CampaignsView = ({ onBack }) => {
           </div>
         ) : (
           <>
+        {!hasActiveCampaign && (
+          <button
+            type="button"
+            onClick={() => {
+              setIsCreatingNewCampaign(true);
+              setSelectedCampaignId(null);
+              setHistoryCampaignId(null);
+              setAdminScreen('step1');
+            }}
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50"
+          >
+            <Icon name="plus" size={16} />
+            Nueva campaña
+          </button>
+        )}
+
         {selectedCampaign && assignmentsGenerated && (
           <section className="rounded-[30px] border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                  <Icon name="barChart" size={18} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-900">
-                    {completedAssignmentsCount} de {selectedCampaignAssignments.length} completadas
-                    <span className="ml-2 text-emerald-700">({progressPercent}%)</span>
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {pendingAssignmentsCount} pendientes · {inProgressAssignmentsCount} en progreso
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                <Icon name="activity" size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-900">
+                  {completedAssignmentsCount} de {selectedCampaignAssignments.length} completadas
+                  <span className="ml-2 text-emerald-700">({progressPercent}%)</span>
+                </p>
+                <p className="text-xs text-slate-500">
+                  {pendingAssignmentsCount} pendientes · {inProgressAssignmentsCount} en progreso
+                </p>
               </div>
             </div>
             <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-slate-100">
@@ -2970,6 +3522,217 @@ const CampaignsView = ({ onBack }) => {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
+
+            {campaignIsActive && (
+              <button
+                type="button"
+                onClick={() => setConfirmAction('finalize')}
+                disabled={isBusy}
+                className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-[#2C3E50] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#243342] disabled:opacity-60"
+              >
+                <Icon name="checkCircle" size={16} />
+                Finalizar y archivar
+              </button>
+            )}
+            {selectedCampaign?.status === CAMPAIGN_STATUSES.COMPLETED && (
+              <button
+                type="button"
+                onClick={() => setConfirmAction('archive')}
+                disabled={isBusy}
+                className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
+              >
+                Archivar campaña
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsHubProgressDetailOpen((previous) => !previous)}
+              aria-expanded={isHubProgressDetailOpen}
+              className="mt-3 flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-100"
+            >
+              <span>{isHubProgressDetailOpen ? 'Ocultar detalle' : 'Ver detalle del avance'}</span>
+              <Icon
+                name="chevronDown"
+                size={16}
+                className={`shrink-0 text-slate-400 transition-transform ${isHubProgressDetailOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {isHubProgressDetailOpen && (
+              <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Icon name="users" size={14} className="text-slate-500" />
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                      Por hermano
+                    </p>
+                  </div>
+                  {hubProgressByParticipant.length === 0 ? (
+                    <p className="rounded-2xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500">
+                      Aún no hay hermanos con direcciones repartidas.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {hubProgressByParticipant.map((participant) => {
+                        const isDone = participant.incomplete === 0;
+                        return (
+                          <li
+                            key={participant.userId}
+                            className="rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-900">
+                                  {participant.userNameSnapshot}
+                                </p>
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                  {participant.pending} pend. · {participant.inProgress} en prog. · {participant.completed} hechas
+                                </p>
+                              </div>
+                              <span
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                  isDone
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-amber-100 text-amber-700'
+                                }`}
+                              >
+                                {isDone ? 'Listo' : `${participant.incomplete} faltan`}
+                              </span>
+                            </div>
+                            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white">
+                              <div
+                                className="h-full rounded-full bg-emerald-500"
+                                style={{
+                                  width: `${participant.total > 0
+                                    ? Math.round((participant.completed / participant.total) * 100)
+                                    : 0}%`
+                                }}
+                              />
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Icon name="map" size={14} className="text-slate-500" />
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                      Por territorio
+                    </p>
+                  </div>
+                  {hubProgressByTerritory.length === 0 ? (
+                    <p className="rounded-2xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500">
+                      Sin territorios en el reparto.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {hubProgressByTerritory.map((territory) => (
+                        <li
+                          key={territory.territoryId}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-900">
+                              {territory.territoryName}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              {territory.completed}/{territory.total} completadas
+                              {territory.incomplete > 0
+                                ? ` · ${territory.incomplete} pendientes`
+                                : ''}
+                            </p>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                              territory.incomplete === 0
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-slate-200 text-slate-700'
+                            }`}
+                          >
+                            {territory.incomplete === 0 ? '100%' : `${Math.round((territory.completed / territory.total) * 100)}%`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {hubPendingAddressesByTerritory.length > 0 && (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsHubPendingAddressesOpen((previous) => !previous)}
+                      aria-expanded={isHubPendingAddressesOpen}
+                      className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-left transition-colors hover:border-slate-300 hover:bg-slate-100"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Icon name="mapPin" size={14} className="shrink-0 text-slate-500" />
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                          Direcciones pendientes
+                        </p>
+                        <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                          {pendingAssignmentsCount + inProgressAssignmentsCount}
+                        </span>
+                      </div>
+                      <Icon
+                        name="chevronDown"
+                        size={16}
+                        className={`shrink-0 text-slate-400 transition-transform ${isHubPendingAddressesOpen ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                    {isHubPendingAddressesOpen && (
+                      <div className="space-y-3">
+                        {hubPendingAddressesByTerritory.map((group) => (
+                          <div key={group.territoryId} className="space-y-2">
+                            <p className="px-1 text-xs font-bold text-slate-600">
+                              {group.territoryName}
+                            </p>
+                            <ul className="space-y-2">
+                              {group.assignments.map((assignment) => {
+                                const progressMeta = getCampaignProgressMeta(assignment.status);
+                                return (
+                                  <li
+                                    key={assignment.id}
+                                    className="rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="min-w-0">
+                                        <p className="truncate text-sm font-semibold text-slate-900">
+                                          {getDisplayAddress(assignment.addressSnapshot)}
+                                        </p>
+                                        <p className="mt-0.5 truncate text-xs text-slate-500">
+                                          {assignment.assignedUserName || 'Sin asignar'}
+                                        </p>
+                                      </div>
+                                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold ${progressMeta.badgeClass}`}>
+                                        {progressMeta.label}
+                                      </span>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setAdminScreen('step3')}
+                  className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-700 transition-colors hover:bg-indigo-100"
+                >
+                  Ver en Administrar reparto
+                  <Icon name="chevronRight" size={16} />
+                </button>
+              </div>
+            )}
           </section>
         )}
 
@@ -3011,194 +3774,90 @@ const CampaignsView = ({ onBack }) => {
             </div>
           )}
 
-          <CampaignHubStepCard
-            stepNumber={3}
-            title={campaignIsActive ? 'Administra el reparto' : 'Genera el reparto'}
-            summary={step3Summary}
-            icon="zap"
-            isComplete={step3Complete && campaignIsActive}
-            isSuggested={suggestedStep === 3}
-            onClick={() => setAdminScreen('step3')}
-          />
+          {!(selectedCampaign && assignmentsGenerated) && (
+            <CampaignHubStepCard
+              stepNumber={3}
+              title={campaignIsActive ? 'Administra el reparto' : 'Genera el reparto'}
+              summary={step3Summary}
+              icon="zap"
+              isComplete={step3Complete && campaignIsActive}
+              isSuggested={suggestedStep === 3}
+              onClick={() => setAdminScreen('step3')}
+            />
+          )}
         </section>
 
         {selectedCampaign && assignmentsGenerated && (
-          <SectionCard
-            title="Seguimiento del reparto"
-            subtitle={'Ajusta cuántas direcciones debe tener cada participante y actualiza el reparto'}
-            icon="activity"
-            eyebrow="Control"
-            tone="emerald"
-            collapsible
-            isExpanded={isTrackingExpanded}
-            onToggle={() => setIsTrackingExpanded((prev) => !prev)}
-            sectionId="campaign-tracking-section"
-            summaryLabel={distributionIsBalanced
-              ? `${distributionConfiguredTotal}/${totalDistributionAddresses} cuadra`
-              : `${distributionConfiguredTotal}/${totalDistributionAddresses}`}
-            rightSlot={(
-              <CopyDistributionButton
-                onClick={handleCopyDistributionList}
-                copied={distributionCopyFeedback}
-                disabled={isBusy || step3EnabledDistributionParticipants.length === 0}
-              />
+          <section className="rounded-[30px] border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700">
+                <Icon name="zap" size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-900">Resumen del reparto</p>
+                <p className="text-xs text-slate-500">
+                  {pendingAssignmentsCount} pendientes · {inProgressAssignmentsCount} en progreso · {completedAssignmentsCount} completadas
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-2xl bg-slate-50 px-3 py-2 text-center">
+                <p className="text-lg font-bold tabular-nums text-slate-900">{selectedCampaignAssignments.length}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">direcciones</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-3 py-2 text-center">
+                <p className="text-lg font-bold tabular-nums text-slate-900">{distributionControlParticipants.length}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">con reparto</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-3 py-2 text-center">
+                <p className="text-lg font-bold tabular-nums text-slate-900">{distributionConfiguredTotal}/{totalDistributionAddresses}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">objetivo</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setAdminScreen('step3')}
+              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700"
+            >
+              <Icon name="zap" size={16} />
+              Administrar reparto
+              <Icon name="chevronRight" size={16} />
+            </button>
+            {campaignIsActive && (
+              <button
+                type="button"
+                onClick={() => setConfirmAction('finalize')}
+                disabled={isBusy}
+                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-[#2C3E50]/20 bg-[#2C3E50]/5 px-4 py-3 text-sm font-bold text-[#2C3E50] transition-colors hover:bg-[#2C3E50]/10 disabled:opacity-60"
+              >
+                <Icon name="checkCircle" size={16} />
+                Finalizar y archivar
+              </button>
             )}
-          >
-            {isTrackingExpanded ? (
-              distributionControlParticipants.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
-                  {'A\u00fan no hay participantes con direcciones en esta campa\u00f1a.'}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <CampaignAddressDriftBanner
-                    drift={campaignAddressDrift}
-                    onRegenerate={() => executeAdminAction('generate')}
-                    isBusy={isBusy}
-                    isReadOnly={isReadOnlyCampaign}
-                  />
-                  <CampaignDistributionControl
-                    participants={distributionControlParticipants}
-                    distributionTargets={distributionTargets}
-                    totalAddresses={totalDistributionAddresses}
-                    configuredTotal={distributionConfiguredTotal}
-                    isBalanced={distributionIsBalanced}
-                    preservedCountsByUser={preservedCountsByUser}
-                    isBusy={isBusy}
-                    isReadOnly={isReadOnlyCampaign}
-                    onAdjustTarget={adjustDistributionTarget}
-                    onSetTarget={setDistributionTarget}
-                    onApply={handleApplyDistribution}
-                    assignmentsByUserId={assignmentsByUserId}
-                    onOpenParticipantMap={handleOpenParticipantMap}
-                    onRequestReassignment={handleOpenAssignmentReassignment}
-                    onRequestBulkReassignment={handleOpenBulkReassignment}
-                    onCompleteAssignment={handleAdminCompleteAssignment}
-                    assignmentsGenerated={assignmentsGenerated}
-                    liveAvailableCount={campaignAddressDrift.liveCount}
-                    requiresRegenerate={campaignRequiresRegenerate}
-                  />
-                </div>
-              )
-            ) : null}
-          </SectionCard>
-        )}
-
-        {selectedCampaign && assignmentsGenerated && (
-          <SectionCard
-            title="Direcciones asignadas"
-            subtitle={'Mueve, bloquea o resetea cada direcci\u00f3n de la campa\u00f1a sin tocar territorios ni revisitas'}
-            collapsible
-            isExpanded={isAssignmentsExpanded}
-            onToggle={() => setIsAssignmentsExpanded((prev) => !prev)}
-            sectionId="campaign-assignments-section"
-            summaryLabel={`${selectedCampaignAssignments.length} ${selectedCampaignAssignments.length === 1 ? 'direcci\u00f3n' : 'direcciones'}`}
-          >
-            {isAssignmentsExpanded ? (
-              <>
-                <div className="mb-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-bold text-slate-900">{'Aqu\u00ed puedes corregir el reparto sin empezar de nuevo'}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {'Usa esta lista para mover direcciones entre hermanos, bloquear asignaciones que no quieres alterar o resetear una direcci\u00f3n para devolverla a pendiente.'}
-                  </p>
-                </div>
-
-                {selectedCampaignAssignments.length === 0 ? (
-                  <EmptyState
-                    icon="mail"
-                    title={'A\u00fan no hay direcciones repartidas'}
-                    description={'Guarda la campa\u00f1a y genera la asignaci\u00f3n autom\u00e1tica para empezar a administrar el seguimiento.'}
-                  />
-                ) : (
-                  <div className="space-y-3">
-                    {selectedCampaignAssignments.map((assignment) => {
-                      const progressMeta = getCampaignProgressMeta(assignment.status);
-                      return (
-                        <div key={assignment.id} className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
-                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                            <div>
-                              <div className="mb-2 flex flex-wrap items-center gap-2">
-                                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold ${progressMeta.badgeClass}`}>
-                                  {progressMeta.label}
-                                </span>
-                                {assignment.manualLocked && (
-                                  <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700">
-                                    Bloqueada
-                                  </span>
-                                )}
-                              </div>
-                              <h4 className="text-base font-bold text-gray-900">{getDisplayAddress(assignment.addressSnapshot)}</h4>
-                              <p className="mt-1 text-sm text-gray-500">{assignment.addressSnapshot?.territoryName || 'Territorio'}</p>
-                              {assignment.completedByUserName && (
-                                <p className="mt-2 text-xs text-emerald-700">Completada por: {assignment.completedByUserName}</p>
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-2 md:flex-row lg:items-start">
-                              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                                {assignment.assignedUserName || selectedCampaignParticipants.find(
-                                  (participant) => participant.userId === assignment.assignedUserId
-                                )?.userNameSnapshot || 'Participante'}
-                              </div>
-                              {assignment.status !== CAMPAIGN_PROGRESS_STATUSES.COMPLETED ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAdminCompleteAssignment(assignment)}
-                                    disabled={isBusy || isReadOnlyCampaign}
-                                    className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                                  >
-                                    Marcar completada
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenAssignmentReassignment(assignment)}
-                                    disabled={isBusy || isReadOnlyCampaign}
-                                    className="rounded-xl bg-indigo-100 px-3 py-2 text-sm font-semibold text-indigo-700 disabled:opacity-50"
-                                  >
-                                    Cambiar responsable
-                                  </button>
-                                </>
-                              ) : null}
-                              <button
-                                onClick={() => handleToggleLock(assignment.id)}
-                                disabled={isBusy}
-                                className={`rounded-xl px-3 py-2 text-sm font-semibold ${assignment.manualLocked ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'}`}
-                              >
-                                {assignment.manualLocked ? 'Desbloquear' : 'Bloquear'}
-                              </button>
-                              <button
-                                onClick={() => handleResetAssignment(assignment.id)}
-                                disabled={isBusy || assignment.status === CAMPAIGN_PROGRESS_STATUSES.PENDING}
-                                className="rounded-xl bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-700 disabled:opacity-50"
-                              >
-                                Resetear
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            ) : null}
-          </SectionCard>
+          </section>
         )}
 
         {campaignHistory.length > 0 && (
               <SectionCard title="Historial" subtitle={'Campa\u00f1as cerradas para consulta posterior'}>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {campaignHistory.map((campaign) => {
+                const hasFrozenSummary = Boolean(campaign.finalSummary);
                 return (
-                  <div key={campaign.id} className="rounded-2xl border border-gray-200 bg-white p-4">
-                    <div>
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{formatCampaignTypeLabel(campaign.type)}</p>
-                        <h3 className="text-base font-bold text-gray-900 mt-1">{campaign.name}</h3>
-                        <p className="text-sm text-gray-500 mt-1">{formatCampaignDate(campaign.eventDate)}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    key={campaign.id}
+                    type="button"
+                    onClick={() => setHistoryCampaignId(campaign.id)}
+                    className="rounded-2xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-slate-400 hover:shadow-sm"
+                  >
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{formatCampaignTypeLabel(campaign.type)}</p>
+                    <h3 className="mt-1 text-base font-bold text-gray-900">{campaign.name}</h3>
+                    <p className="mt-1 text-sm text-gray-500">{formatCampaignSchedule(campaign)}</p>
+                    <p className="mt-3 text-xs font-semibold text-slate-600">
+                      {hasFrozenSummary ? 'Ver historial completo' : 'Historial anterior · ver detalle'}
+                    </p>
+                  </button>
                 );
               })}
             </div>
@@ -3206,6 +3865,20 @@ const CampaignsView = ({ onBack }) => {
         )}
           </>
         )}
+      <CampaignStepShell
+        isOpen={Boolean(historyCampaign)}
+        backHandlerId="campaigns-history-detail"
+        stepLabel={historySummaryResult?.isLegacy ? 'Historial anterior' : 'Historial'}
+        title={historyCampaign?.name || 'Campaña cerrada'}
+        subtitle={historyCampaign ? formatCampaignSchedule(historyCampaign) : ''}
+        onBack={() => setHistoryCampaignId(null)}
+      >
+        <CampaignHistoryDetail
+          summary={historySummaryResult?.summary || null}
+          isLegacy={Boolean(historySummaryResult?.isLegacy)}
+        />
+      </CampaignStepShell>
+
       <CampaignStepShell
         isOpen={adminScreen === 'step1'}
         backHandlerId="campaigns-step-one"
@@ -3246,34 +3919,27 @@ const CampaignsView = ({ onBack }) => {
               placeholder="Invitación Asamblea Abril"
             />
           </label>
-          <label className="space-y-2">
-            <span id="campaign-type-label-step" className="text-sm font-semibold text-gray-700">Tipo</span>
+          <div className="space-y-2">
+            <p id="campaign-type-label-step" className="text-sm font-semibold text-gray-700">Tipo</p>
             <CampaignTypeSelect
               value={campaignForm.type}
               onChange={(type) => setCampaignForm((previous) => ({ ...previous, type }))}
               disabled={isBusy || isReadOnlyCampaign}
             />
-          </label>
-          <label className="space-y-2 cursor-pointer" onClick={openCampaignDatePicker}>
-            <span className="text-sm font-semibold text-gray-700">Fecha</span>
-            <div className="group relative">
-              <div className="pointer-events-none absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl bg-sky-100 text-sky-700 group-has-[:disabled]:opacity-60">
-                <Icon name="calendar" size={16} />
-              </div>
-              <input
-                ref={campaignDateInputRef}
-                type="date"
-                value={campaignForm.eventDate}
-                onChange={(event) => setCampaignForm((previous) => ({ ...previous, eventDate: event.target.value }))}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  openCampaignDatePicker();
-                }}
-                disabled={isBusy || isReadOnlyCampaign}
-                className="w-full cursor-pointer rounded-2xl border border-gray-300 py-3 pl-12 pr-4 focus:border-slate-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
-              />
-            </div>
-          </label>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-gray-700">Fecha</p>
+            <CampaignDateRangePicker
+              startDate={campaignForm.eventDate}
+              endDate={campaignForm.eventEndDate}
+              onChange={(nextRange) => setCampaignForm((previous) => ({
+                ...previous,
+                eventDate: nextRange.eventDate,
+                eventEndDate: nextRange.eventEndDate
+              }))}
+              disabled={isBusy || isReadOnlyCampaign}
+            />
+          </div>
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
@@ -3317,30 +3983,17 @@ const CampaignsView = ({ onBack }) => {
 
         {(() => {
           const editableCampaigns = campaigns.filter((c) => [CAMPAIGN_STATUSES.DRAFT, CAMPAIGN_STATUSES.ACTIVE].includes(c.status));
-          const closedCampaigns = campaigns.filter((c) => [CAMPAIGN_STATUSES.COMPLETED, CAMPAIGN_STATUSES.ARCHIVED].includes(c.status));
 
-          if (campaigns.length === 0) {
+          if (editableCampaigns.length === 0) {
             return null;
           }
 
           return (
-            <div className="space-y-4">
-              {editableCampaigns.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">En curso o borrador</p>
-                  <div className="space-y-3">
-                    {editableCampaigns.map(renderSelectableCampaignCard)}
-                  </div>
-                </div>
-              )}
-              {closedCampaigns.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Cerradas</p>
-                  <div className="space-y-3">
-                    {closedCampaigns.map(renderSelectableCampaignCard)}
-                  </div>
-                </div>
-              )}
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">En curso o borrador</p>
+              <div className="space-y-3">
+                {editableCampaigns.map(renderSelectableCampaignCard)}
+              </div>
             </div>
           );
         })()}
@@ -3465,10 +4118,11 @@ const CampaignsView = ({ onBack }) => {
             </div>
           ) : (
             filteredParticipantsDraft.map((participant) => {
-              const currentMode = getParticipantAssignmentMode(participant);
+              const resolvedParticipant = resolveCampaignAssignment(participant);
+              const currentMode = getParticipantAssignmentMode(resolvedParticipant);
               const assignedCount = participantTargetsPreview.byUserId[participant.userId];
-              const previewBadge = getParticipantPreviewBadge(participant, assignedCount);
-              const isIncluded = participant.isEnabled !== false;
+              const previewBadge = getParticipantPreviewBadge(resolvedParticipant, assignedCount);
+              const isIncluded = resolvedParticipant.isEnabled !== false;
 
               return (
                 <div
@@ -3567,49 +4221,80 @@ const CampaignsView = ({ onBack }) => {
         onBack={() => setAdminScreen('hub')}
         footer={!campaignIsActive ? renderStep3PrimaryCta() : null}
       >
-        <div className="flex flex-wrap gap-2">
-          {!campaignIsActive && assignmentsGenerated && (
-            <button
-              type="button"
-              onClick={() => executeAdminAction('save')}
-              disabled={isBusy || isReadOnlyCampaign}
-              className="min-h-[44px] rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400 disabled:opacity-60"
-            >
-              Guardar campaña
-            </button>
-          )}
-          {assignmentsGenerated && (
-            <button
-              type="button"
-              onClick={() => executeAdminAction('generate')}
-              disabled={isBusy || isReadOnlyCampaign}
-              className="min-h-[44px] rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400 disabled:opacity-60"
-            >
-              Regenerar reparto
-            </button>
-          )}
-          {campaignIsActive && (
-            <button
-              type="button"
-              onClick={() => setConfirmAction('complete')}
-              disabled={isBusy}
-              className="min-h-[44px] rounded-2xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition-colors hover:border-blue-400 disabled:opacity-60"
-            >
-              Completar campaña
-            </button>
-          )}
-          {selectedCampaign && selectedCampaign.status !== CAMPAIGN_STATUSES.ARCHIVED && (
-            <button
-              type="button"
-              onClick={() => setConfirmAction('archive')}
-              disabled={isBusy}
-              className="min-h-[44px] rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-500 transition-colors hover:border-slate-400 disabled:opacity-60"
-            >
-              Archivar
-            </button>
-          )}
+        <div className="sticky top-0 z-10 -mx-4 -mt-4 border-b border-slate-300 bg-slate-100 px-4 py-3 shadow-sm">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-600">
+            Acciones
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {!campaignIsActive && assignmentsGenerated && (
+              <button
+                type="button"
+                onClick={() => executeAdminAction('save')}
+                disabled={isBusy || isReadOnlyCampaign}
+                className="min-h-[44px] rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
+              >
+                Guardar campaña
+              </button>
+            )}
+            {assignmentsGenerated && (
+              <button
+                type="button"
+                onClick={() => setConfirmAction('generate')}
+                disabled={isBusy || isReadOnlyCampaign}
+                className="min-h-[44px] rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
+              >
+                Regenerar reparto
+              </button>
+            )}
+            {assignmentsGenerated && (
+              <button
+                type="button"
+                onClick={handleOpenCampaignMap}
+                disabled={isBusy}
+                aria-label="Ver mapa del territorio"
+                title="Ver mapa del territorio"
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-300 bg-white px-3 text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
+              >
+                <Icon name="map" size={18} />
+              </button>
+            )}
+            {campaignIsActive && (
+              <button
+                type="button"
+                onClick={() => setConfirmAction('finalize')}
+                disabled={isBusy}
+                className="min-h-[44px] rounded-xl border border-[#2C3E50]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#2C3E50] transition-colors hover:bg-[#2C3E50]/5 disabled:opacity-60"
+              >
+                Finalizar y archivar
+              </button>
+            )}
+            {selectedCampaign?.status === CAMPAIGN_STATUSES.COMPLETED && (
+              <button
+                type="button"
+                onClick={() => setConfirmAction('archive')}
+                disabled={isBusy}
+                className="min-h-[44px] rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-slate-400 hover:text-slate-800 disabled:opacity-60"
+              >
+                Archivar
+              </button>
+            )}
+          </div>
         </div>
 
+        {assignmentsGenerated && (
+          <SegmentedToggle
+            value={step3Tab}
+            onChange={setStep3Tab}
+            options={[
+              { id: 'participants', label: 'Participantes', count: step3EnabledDistributionParticipants.length },
+              { id: 'addresses', label: 'Direcciones', count: selectedCampaignAssignments.length }
+            ]}
+            disabled={isBusy}
+            className="w-full"
+          />
+        )}
+
+        {(step3Tab === 'participants' || !assignmentsGenerated) && (
         <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -3679,14 +4364,6 @@ const CampaignsView = ({ onBack }) => {
             </div>
           ) : (
             <div className="mt-3 space-y-3">
-              {campaignAddressDrift.hasNewAddresses || campaignAddressDrift.hasStaleAssignments ? (
-                <CampaignAddressDriftBanner
-                  drift={campaignAddressDrift}
-                  onRegenerate={() => executeAdminAction('generate')}
-                  isBusy={isBusy}
-                  isReadOnly={isReadOnlyCampaign}
-                />
-              ) : null}
               {step3FilteredDistributionParticipants.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
                   {step3DistributionFilter === 'pioneers'
@@ -3722,6 +4399,94 @@ const CampaignsView = ({ onBack }) => {
             </div>
           )}
         </div>
+        )}
+
+        {step3Tab === 'addresses' && assignmentsGenerated && (
+          <div className="space-y-3">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-bold text-slate-900">Aquí puedes corregir el reparto sin empezar de nuevo</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Usa esta lista para mover direcciones entre hermanos, bloquear asignaciones que no quieres alterar o resetear una dirección para devolverla a pendiente.
+              </p>
+            </div>
+
+            {selectedCampaignAssignments.length === 0 ? (
+              <EmptyState
+                icon="mail"
+                title="Aún no hay direcciones repartidas"
+                description="Guarda la campaña y genera la asignación automática para empezar a administrar el seguimiento."
+              />
+            ) : (
+              selectedCampaignAssignments.map((assignment) => {
+                const progressMeta = getCampaignProgressMeta(assignment.status);
+                return (
+                  <div key={assignment.id} className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold ${progressMeta.badgeClass}`}>
+                            {progressMeta.label}
+                          </span>
+                          {assignment.manualLocked && (
+                            <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700">
+                              Bloqueada
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-base font-bold text-gray-900">{getDisplayAddress(assignment.addressSnapshot)}</h4>
+                        <p className="mt-1 text-sm text-gray-500">{assignment.addressSnapshot?.territoryName || 'Territorio'}</p>
+                        {assignment.completedByUserName && (
+                          <p className="mt-2 text-xs text-emerald-700">Completada por: {assignment.completedByUserName}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 md:flex-row lg:items-start">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                          {assignment.assignedUserName || selectedCampaignParticipants.find(
+                            (participant) => participant.userId === assignment.assignedUserId
+                          )?.userNameSnapshot || 'Participante'}
+                        </div>
+                        {assignment.status !== CAMPAIGN_PROGRESS_STATUSES.COMPLETED ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleAdminCompleteAssignment(assignment)}
+                              disabled={isBusy || isReadOnlyCampaign}
+                              className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                            >
+                              Marcar completada
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAssignmentReassignment(assignment)}
+                              disabled={isBusy || isReadOnlyCampaign}
+                              className="rounded-xl bg-indigo-100 px-3 py-2 text-sm font-semibold text-indigo-700 disabled:opacity-50"
+                            >
+                              Cambiar responsable
+                            </button>
+                          </>
+                        ) : null}
+                        <button
+                          onClick={() => handleToggleLock(assignment.id)}
+                          disabled={isBusy}
+                          className={`rounded-xl px-3 py-2 text-sm font-semibold ${assignment.manualLocked ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'}`}
+                        >
+                          {assignment.manualLocked ? 'Desbloquear' : 'Bloquear'}
+                        </button>
+                        <button
+                          onClick={() => handleResetAssignment(assignment.id)}
+                          disabled={isBusy || assignment.status === CAMPAIGN_PROGRESS_STATUSES.PENDING}
+                          className="rounded-xl bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-700 disabled:opacity-50"
+                        >
+                          Resetear
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </CampaignStepShell>
 
       </div>
@@ -3755,34 +4520,112 @@ const CampaignsView = ({ onBack }) => {
         participantName={participantMapState.userName}
       />
 
+      <LazyCampaignAssignmentsMapModal
+        isOpen={isCampaignMapOpen}
+        onClose={handleCloseCampaignMap}
+        campaign={selectedCampaign}
+        assignments={selectedCampaignAssignments}
+        onStatusChange={handlePublisherStatusChange}
+        isProcessing={isBusy || isReadOnlyCampaign}
+        modalId="campaign-step3-full-map"
+        participantName="Todo el territorio"
+      />
+
+      <ConfirmDialog
+        isOpen={confirmAction === 'generate'}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => executeAdminAction('generate')}
+        title="Regenerar reparto"
+        message="Vas a volver a repartir las direcciones. Se borrarán las asignaciones pendientes sin candado y se crearán otras nuevas (el hermano de cada dirección pendiente puede cambiar). Se mantienen las que ya están en progreso, completadas o con candado. ¿Seguro que quieres regenerar?"
+        confirmText="Sí, regenerar"
+        cancelText="Cancelar"
+        type="warning"
+        isProcessing={isBusy}
+        dialogId="campaigns-confirm-generate"
+      />
+
       <ConfirmDialog
         isOpen={confirmAction === 'activate'}
         onClose={() => setConfirmAction(null)}
         onConfirm={() => executeAdminAction('activate')}
-                  title={'Activar campa\u00f1a'}
-                  message={(() => {
-                    const counts = participantSummary.filter((p) => p.total > 0).map((p) => p.total);
-                    const minCount = counts.length > 0 ? Math.min(...counts) : 0;
-                    const maxCount = counts.length > 0 ? Math.max(...counts) : 0;
-                    const participantCount = counts.length;
-                    return `Vas a activar "${selectedCampaign?.name || ''}" con ${selectedCampaignAssignments.length} direcciones repartidas entre ${participantCount} hermanos. Cada uno recibir\u00e1 entre ${minCount} y ${maxCount} direcciones. Una vez activa, los hermanos podr\u00e1n ver sus asignaciones.`;
-                  })()}
+        title={'Activar campa\u00f1a'}
+        message={(() => {
+          const participantCount = participantSummary.filter((participant) => participant.total > 0).length;
+          const addressCount = selectedCampaignAssignments.length;
+
+          return (
+            <div className="space-y-4 text-left">
+              <p className="text-center text-base font-bold leading-snug text-slate-900">
+                {selectedCampaign?.name || 'Campaña'}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-2xl bg-slate-50 px-3 py-3 text-center">
+                  <p className="text-2xl font-bold tabular-nums text-slate-900">{addressCount}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {addressCount === 1 ? 'dirección' : 'direcciones'}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-3 py-3 text-center">
+                  <p className="text-2xl font-bold tabular-nums text-slate-900">{participantCount}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {participantCount === 1 ? 'hermano' : 'hermanos'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         confirmText={'S\u00ed, activar'}
         cancelText="Cancelar"
         type="success"
         isProcessing={isBusy}
+        dialogId="campaigns-confirm-activate"
       />
 
       <ConfirmDialog
-        isOpen={confirmAction === 'complete'}
+        isOpen={confirmAction === 'complete' || confirmAction === 'finalize'}
         onClose={() => setConfirmAction(null)}
-        onConfirm={() => executeAdminAction('complete')}
-                  title={'Completar campa\u00f1a'}
-                  message={'\u00bfSeguro que quieres cerrar esta campa\u00f1a activa y moverla al historial?'}
-        confirmText="Si, completar"
+        onConfirm={() => executeAdminAction(confirmAction === 'complete' ? 'complete' : 'finalize')}
+        title="Finalizar y archivar"
+        message={(() => {
+          const total = selectedCampaignAssignments.length;
+          const completed = selectedCampaignAssignments.filter(
+            (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+          ).length;
+          const pending = selectedCampaignAssignments.filter(
+            (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.PENDING
+          ).length;
+          const inProgress = selectedCampaignAssignments.filter(
+            (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.IN_PROGRESS
+          ).length;
+          const participantsWithMissing = participantSummary
+            .filter((participant) => participant.total > 0 && (participant.pending + participant.inProgress) > 0)
+            .map((participant) => {
+              const missing = participant.pending + participant.inProgress;
+              return `• ${participant.userNameSnapshot}: ${missing} faltante${missing === 1 ? '' : 's'}`;
+            });
+
+          const lines = [
+            `Resumen: ${total} direcciones · ${completed} completadas · ${pending} pendientes · ${inProgress} en progreso.`,
+            '',
+            participantsWithMissing.length > 0
+              ? `Hermanos con faltantes:\n${participantsWithMissing.join('\n')}`
+              : 'No hay hermanos con direcciones faltantes.',
+            '',
+            'Al finalizar y archivar:',
+            '• Desaparecerá del panel de los hermanos',
+            '• No cambia ni borra territorios ni direcciones',
+            '• Quedará en el historial para estadística de administradores',
+            '• Se podrá crear otra campaña'
+          ];
+
+          return lines.join('\n');
+        })()}
+        confirmText="Sí, finalizar y archivar"
         cancelText="Cancelar"
         type="success"
         isProcessing={isBusy}
+        dialogId="campaigns-confirm-finalize"
       />
 
       <ConfirmDialog
@@ -3792,12 +4635,19 @@ const CampaignsView = ({ onBack }) => {
           setCampaignPendingDelete(null);
         }}
         onConfirm={() => executeAdminAction('archive')}
-                  title={'Archivar campa\u00f1a'}
-                  message={'\u00bfSeguro que quieres archivar esta campa\u00f1a? Seguir\u00e1 disponible en el historial.'}
-        confirmText="Si, archivar"
+        title="Archivar campaña"
+        message={[
+          'Esta campaña ya está finalizada. Al archivarla:',
+          '• No cambia ni borra territorios ni direcciones',
+          '• El resumen estadístico se conserva',
+          '• Seguirá disponible en el historial de administradores',
+          '• Se podrá crear otra campaña'
+        ].join('\n')}
+        confirmText="Sí, archivar"
         cancelText="Cancelar"
         type="warning"
         isProcessing={isBusy}
+        dialogId="campaigns-confirm-archive"
       />
 
       <ConfirmDialog
@@ -3820,6 +4670,7 @@ const CampaignsView = ({ onBack }) => {
         cancelText="Cancelar"
         type="danger"
         isProcessing={isBusy}
+        dialogId="campaigns-confirm-delete"
       />
     </div>
   );

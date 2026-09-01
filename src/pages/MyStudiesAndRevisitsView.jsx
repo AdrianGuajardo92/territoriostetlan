@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../hooks/useToast';
-import { useBackHandler } from '../hooks/useBackHandler';
 import AddressCard from '../components/addresses/AddressCard';
 import Icon from '../components/common/Icon';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -11,12 +10,6 @@ const MyStudiesAndRevisitsView = ({ onBack }) => {
   const { showToast } = useToast();
   const [filter, setFilter] = useState('studies'); // 'studies', 'revisits'
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, address: null, type: null });
-
-  useBackHandler({
-    isOpen: confirmDialog.isOpen,
-    onClose: () => setConfirmDialog({ isOpen: false, address: null, type: null }),
-    id: 'my-studies-confirm-dialog'
-  });
 
   // Filtrar y procesar las direcciones confirmadas del usuario
   const { studies, revisits, totalItems } = useMemo(() => {
@@ -245,6 +238,7 @@ const MyStudiesAndRevisitsView = ({ onBack }) => {
         confirmText="Sí, liberar"
         cancelText="Cancelar"
         type="warning"
+        dialogId="my-studies-confirm-dialog"
       />
     </div>
   );

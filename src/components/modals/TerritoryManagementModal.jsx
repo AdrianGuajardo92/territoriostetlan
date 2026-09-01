@@ -17,7 +17,6 @@ const TerritoryManagementModal = ({ isOpen, onClose, modalId = 'territory-manage
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
 
-  useBackHandler({ isOpen: showConfirmDialog, onClose: () => setShowConfirmDialog(false), id: `${modalId}-confirm` });
   useBackHandler({ isOpen: showAssignModal, onClose: () => setShowAssignModal(false), id: `${modalId}-assign` });
   const [isReleasing, setIsReleasing] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -490,6 +489,7 @@ const TerritoryManagementModal = ({ isOpen, onClose, modalId = 'territory-manage
           cancelText="Cancelar"
           confirmButtonClass="bg-emerald-600 hover:bg-emerald-700"
           isLoading={isReleasing}
+          dialogId={`${modalId}-confirm`}
         />
 
         {/* Modal para asignar territorios */}

@@ -32,7 +32,12 @@ import {
   LazyInstallModal,
   LazyUpdatesModal
 } from './components/modals/LazyModals';
+import CampaignPendingReminderDialog from './components/campaigns/CampaignPendingReminderDialog';
 import { CAMPAIGN_PROGRESS_STATUSES } from './utils/campaignUtils';
+import {
+  hasSeenCampaignPendingReminder,
+  markCampaignPendingReminderSeen
+} from './utils/campaignPendingReminder';
 import {
   clearNavigationState,
   readNavigationState,
@@ -62,6 +67,8 @@ function AppContent() {
   const {
     activeCampaign,
     activeCampaignAssignments,
+    campaignsLoading,
+    myCampaignAssignments,
     myPendingCampaignAssignmentsCount
   } = useCampaigns();
   const { showToast } = useToast();
@@ -88,8 +95,13 @@ function AppContent() {
   const [isAppInstalled, setIsAppInstalled] = useState(
     () => window.matchMedia('(display-mode: standalone)').matches
   );
+  const [showCampaignPendingReminder, setShowCampaignPendingReminder] = useState(false);
 
   const activeCampaignCompletedCount = activeCampaignAssignments.filter(
+    (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
+  ).length;
+  const campaignPendingCount = myPendingCampaignAssignmentsCount;
+  const myCampaignCompletedCount = myCampaignAssignments.filter(
     (assignment) => assignment.status === CAMPAIGN_PROGRESS_STATUSES.COMPLETED
   ).length;
 
@@ -254,6 +266,7 @@ function AppContent() {
       hasBadge: !!activeCampaign && myPendingCampaignAssignmentsCount > 0,
       badgeCount: myPendingCampaignAssignmentsCount,
       ...(activeCampaign ? {
+        emphasize: true,
         campaignSubtitle: {
           name: activeCampaign.name,
           progress: currentUser?.role === 'admin'
@@ -417,6 +430,33 @@ function AppContent() {
   const handleBackFromCampaigns = () => {
     resetToTerritories();
   };
+
+  const dismissCampaignPendingReminder = () => {
+    if (currentUser?.id && activeCampaign?.id) {
+      markCampaignPendingReminderSeen(currentUser.id, activeCampaign.id);
+    }
+    setShowCampaignPendingReminder(false);
+  };
+
+  useEffect(() => {
+    if (!currentUser?.id || !activeCampaign?.id || campaignsLoading) {
+      setShowCampaignPendingReminder(false);
+      return;
+    }
+
+    if (!interactiveReady || !primaryViewsReady) return;
+    if (campaignPendingCount <= 0) return;
+    if (hasSeenCampaignPendingReminder(currentUser.id, activeCampaign.id)) return;
+
+    setShowCampaignPendingReminder(true);
+  }, [
+    activeCampaign?.id,
+    campaignPendingCount,
+    campaignsLoading,
+    currentUser?.id,
+    interactiveReady,
+    primaryViewsReady
+  ]);
 
   const handleOpenMyStudiesAndRevisits = () => {
     openExclusiveView('studiesAndRevisits');
@@ -587,6 +627,18 @@ function AppContent() {
         activeItem={activeModal}
         onOpenModal={handleOpenModal}
         handleLogout={handleLogout}
+      />
+
+      <CampaignPendingReminderDialog
+        isOpen={showCampaignPendingReminder}
+        onClose={dismissCampaignPendingReminder}
+        onConfirm={() => {
+          dismissCampaignPendingReminder();
+          handleOpenCampaigns();
+        }}
+        campaignName={activeCampaign?.name || 'Campaña activa'}
+        pendingCount={campaignPendingCount}
+        completedCount={myCampaignCompletedCount}
       />
 
       {/* CORRECCIÃ“N: Modales sin Suspense - Ya optimizados âš¡ */}

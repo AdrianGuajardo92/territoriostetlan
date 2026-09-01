@@ -25,7 +25,7 @@ export const PIONEER_NAMES = [
   'Gloria Romero',
 ];
 
-const normalizePersonName = (name) => {
+export const normalizePersonName = (name) => {
   if (!name || typeof name !== 'string') return '';
   return name
     .normalize('NFD')

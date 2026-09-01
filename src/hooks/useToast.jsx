@@ -13,6 +13,7 @@ export const useToast = () => {
       return {
         showToast: (message, type = 'info') => {
           console.log(`[Toast Fallback] ${type.toUpperCase()}: ${message}`);
+          return null;
         },
         removeToast: () => {}
       };
@@ -24,6 +25,7 @@ export const useToast = () => {
     return {
       showToast: (message, type = 'info') => {
         console.log(`[Toast Emergency] ${type.toUpperCase()}: ${message}`);
+        return null;
       },
       removeToast: () => {}
     };
@@ -36,37 +38,50 @@ export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
   // Función para mostrar toast
-  const showToast = useCallback((message, type = 'info', duration = 3000) => {
-    if (!message) return;
+  const showToast = useCallback((message, type = 'info', duration = 3000, action = null) => {
+    if (!message) return null;
     
     try {
       const id = `toast_${Date.now()}_${Math.random()}`;
+      const normalizedDuration = Number.isFinite(duration) && duration >= 0
+        ? duration
+        : 3000;
+      const normalizedAction = action && typeof action.onClick === 'function'
+        ? {
+          label: String(action.label || 'Acción'),
+          onClick: action.onClick
+        }
+        : null;
       const newToast = {
         id,
         message: String(message),
         type: String(type),
+        duration: normalizedDuration,
+        action: normalizedAction,
         createdAt: Date.now()
       };
 
       // Actualizar estado de forma segura
       setToasts(currentToasts => {
         const validToasts = Array.isArray(currentToasts) ? currentToasts : [];
-        const filteredToasts = validToasts.slice(-2); // Máximo 3 toasts
-        return [...filteredToasts, newToast];
+        const actionToasts = newToast.action
+          ? []
+          : validToasts.filter((toast) => toast.action).slice(-1);
+        const passiveToasts = validToasts.filter((toast) => !toast.action);
+        const availablePassiveSlots = 2 - actionToasts.length;
+        return [
+          ...actionToasts,
+          ...passiveToasts.slice(-availablePassiveSlots),
+          newToast
+        ];
       });
 
-      // Auto-remover
-      setTimeout(() => {
-        setToasts(currentToasts => {
-          const validToasts = Array.isArray(currentToasts) ? currentToasts : [];
-          return validToasts.filter(t => t.id !== id);
-        });
-      }, duration);
-
+      return id;
     } catch (error) {
       console.error('Error en showToast:', error);
       // Fallback a console
       console.log(`[Toast Error Fallback] ${type}: ${message}`);
+      return null;
     }
   }, []);
 
@@ -119,18 +134,36 @@ const ToastContainer = ({ toasts, onRemove }) => {
 
 // Componente individual de toast
 const ToastItem = ({ toast, onRemove }) => {
-  const { id, message, type } = toast;
+  const { id, message, type, duration = 3000, action } = toast;
+  const [isActionRunning, setIsActionRunning] = useState(false);
 
   // Auto-remover después de mostrar
   useEffect(() => {
+    if (isActionRunning) return undefined;
+
     const timer = setTimeout(() => {
       if (onRemove) {
         onRemove(id);
       }
-    }, 3000);
+    }, duration);
 
     return () => clearTimeout(timer);
-  }, [id, onRemove]);
+  }, [duration, id, isActionRunning, onRemove]);
+
+  const handleAction = async () => {
+    if (!action?.onClick || isActionRunning) return;
+
+    setIsActionRunning(true);
+    try {
+      await action.onClick();
+    } catch (error) {
+      console.error('Error ejecutando acción de toast:', error);
+    } finally {
+      if (onRemove) {
+        onRemove(id);
+      }
+    }
+  };
 
   // Configuración de estilos por tipo
   const getStyles = (toastType) => {
@@ -169,6 +202,16 @@ const ToastItem = ({ toast, onRemove }) => {
     <div className={`${styles.bg} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px] max-w-md pointer-events-auto animate-slide-in-from-right`}>
       <span className="text-lg font-bold">{styles.icon}</span>
       <span className="flex-1 text-sm font-medium">{message}</span>
+      {action && (
+        <button
+          onClick={handleAction}
+          disabled={isActionRunning}
+          className="rounded-md bg-white/20 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/30 disabled:cursor-wait disabled:opacity-60"
+          type="button"
+        >
+          {isActionRunning ? 'Procesando…' : action.label}
+        </button>
+      )}
       <button
         onClick={() => onRemove(id)}
         className="text-white/80 hover:text-white text-lg leading-none"

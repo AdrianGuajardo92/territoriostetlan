@@ -299,18 +299,6 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu, menuBadgeCount = 0 }) 
     id: 'territory-admin-quick-actions'
   });
 
-  useBackHandler({
-    isOpen: !!releaseTerritory,
-    onClose: () => setReleaseTerritoryId(null),
-    id: 'territory-admin-release-confirm'
-  });
-
-  useBackHandler({
-    isOpen: !!completeTerritory,
-    onClose: () => setCompleteTerritoryId(null),
-    id: 'territory-admin-complete-confirm'
-  });
-
   const swipeNavRef = useSwipeNavigation(
     isGeneralMapOpen ? null : handleSwipeLeft,
     isGeneralMapOpen ? null : handleSwipeRight,
@@ -683,6 +671,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu, menuBadgeCount = 0 }) 
         type="success"
         isProcessing={isAdminActionProcessing}
         processingText="Marcando..."
+        dialogId="territory-admin-release-confirm"
       />
 
       <ConfirmDialog
@@ -696,6 +685,7 @@ const TerritoriesView = ({ onSelectTerritory, onOpenMenu, menuBadgeCount = 0 }) 
         type="warning"
         isProcessing={isAdminActionProcessing}
         processingText="Completando..."
+        dialogId="territory-admin-complete-confirm"
       />
 
       {/* FAB: Propuesta rápida de dirección */}

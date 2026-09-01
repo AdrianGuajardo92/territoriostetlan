@@ -1,6 +1,7 @@
 import React from 'react';
 import Icon from './Icon';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useBackHandler } from '../../hooks/useBackHandler';
 
 const ConfirmDialog = ({
   isOpen,
@@ -12,9 +13,11 @@ const ConfirmDialog = ({
   cancelText = 'Cancelar',
   type = 'warning', // warning, danger, info, success
   isProcessing = false, // Para deshabilitar botones durante el procesamiento
-  processingText = 'Procesando...'
+  processingText = 'Procesando...',
+  dialogId = 'confirm-dialog'
 }) => {
   useBodyScrollLock(isOpen);
+  useBackHandler({ isOpen, onClose, id: dialogId });
 
   if (!isOpen) return null;
 
@@ -74,9 +77,9 @@ const ConfirmDialog = ({
             <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
               {title}
             </h3>
-            <p className="text-gray-600 text-center mb-6">
+            <div className="mb-6 text-center text-gray-600 whitespace-pre-line">
               {message}
-            </p>
+            </div>
             
             {/* Actions */}
             <div className="flex space-x-3">

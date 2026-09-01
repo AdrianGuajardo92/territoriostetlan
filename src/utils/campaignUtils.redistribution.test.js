@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildCampaignReassignmentUndoEntry,
   buildDistributionAssignmentFingerprint,
   buildDistributionTargetFingerprint,
   buildRedistributionNeeds,
   distributeAddressesAcrossParticipants,
+  shuffleCampaignItems,
+  isCampaignReassignmentUndoTokenExpired,
   selectCampaignAssignmentsForReassignment,
+  validateCampaignReassignmentUndoCandidate,
   validateRedistributionAddressPool
 } from './campaignUtils.js';
 
@@ -63,6 +67,57 @@ describe('distributeAddressesAcrossParticipants', () => {
     expect(counts.fabiola).toBe(3);
     expect(counts.ana).toBe(2);
     expect(assignments.length).toBe(5);
+  });
+
+  it('baraja a las personas y les deja direcciones seguidas', () => {
+    const addresses = [
+      { id: 't8-a', territoryId: 't8', address: 'Calle 8 A' },
+      { id: 't8-b', territoryId: 't8', address: 'Calle 8 B' },
+      { id: 't8-c', territoryId: 't8', address: 'Calle 8 C' },
+      { id: 't9-a', territoryId: 't9', address: 'Calle 9 A' },
+      { id: 't9-b', territoryId: 't9', address: 'Calle 9 B' }
+    ];
+    const participants = [
+      { userId: 'adrian', userNameSnapshot: 'Adrián Guajardo', isEnabled: true },
+      { userId: 'zoe', userNameSnapshot: 'Zoe López', isEnabled: true }
+    ];
+    const targets = [
+      { userId: 'adrian', assignedCount: 3 },
+      { userId: 'zoe', assignedCount: 2 }
+    ];
+    const territoryMap = {
+      t8: { id: 't8', name: 'Territorio 8' },
+      t9: { id: 't9', name: 'Territorio 9' }
+    };
+
+    const putZoeFirst = () => 0;
+    const assignments = distributeAddressesAcrossParticipants({
+      addresses,
+      participants,
+      targets,
+      territoryMap,
+      random: putZoeFirst
+    });
+
+    expect(assignments.map((assignment) => assignment.assignedUserId)).toEqual([
+      'zoe',
+      'zoe',
+      'adrian',
+      'adrian',
+      'adrian'
+    ]);
+    expect(assignments.slice(0, 2).map((assignment) => assignment.addressId)).toEqual(['t8-a', 't8-b']);
+    expect(assignments.slice(2).map((assignment) => assignment.addressId)).toEqual(['t8-c', 't9-a', 't9-b']);
+  });
+});
+
+describe('shuffleCampaignItems', () => {
+  it('no deja el orden alfabético original', () => {
+    const names = ['Ana', 'Bruno', 'Carla', 'Diego'];
+    const shuffled = shuffleCampaignItems(names, () => 0);
+
+    expect(shuffled).not.toEqual(names);
+    expect([...shuffled].sort()).toEqual([...names].sort());
   });
 });
 
@@ -165,5 +220,121 @@ describe('selectCampaignAssignmentsForReassignment', () => {
       assignmentId: 'progress-1',
       expectedStatus: 'pending'
     })).toThrow(/estado.*cambió/i);
+  });
+});
+
+describe('deshacer reasignaciones de campaña', () => {
+  const timestamp = (milliseconds) => ({
+    toMillis: () => milliseconds
+  });
+
+  it('captura el estado previo completo de una dirección en progreso', () => {
+    const startedAt = timestamp(50);
+    const assignment = {
+      id: 'progress-1',
+      campaignId: 'campaign-1',
+      assignedUserId: 'ana',
+      assignedUserName: 'Ana',
+      status: 'in_progress',
+      startedAt,
+      manualLocked: false,
+      groupId: 'group-1',
+      groupLabelSnapshot: 'Grupo 1',
+      lastMovedAt: timestamp(25)
+    };
+
+    expect(buildCampaignReassignmentUndoEntry(assignment)).toEqual({
+      assignmentId: 'progress-1',
+      campaignId: 'campaign-1',
+      previous: {
+        assignedUserId: 'ana',
+        assignedUserName: 'Ana',
+        groupId: 'group-1',
+        groupLabelSnapshot: 'Grupo 1',
+        manualLocked: false,
+        status: 'in_progress',
+        startedAt,
+        lastMovedAt: assignment.lastMovedAt
+      }
+    });
+  });
+
+  it('acepta una pendiente que no cambió después del movimiento', () => {
+    const movedAt = timestamp(100);
+    const undoEntry = buildCampaignReassignmentUndoEntry({
+      id: 'pending-1',
+      campaignId: 'campaign-1',
+      assignedUserId: 'ana',
+      assignedUserName: 'Ana',
+      status: 'pending',
+      manualLocked: false
+    });
+
+    expect(validateCampaignReassignmentUndoCandidate({
+      assignment: {
+        id: 'pending-1',
+        campaignId: 'campaign-1',
+        assignedUserId: 'luis',
+        status: 'pending',
+        manualLocked: true,
+        lastMoveOperationId: 'move-1',
+        lastMovedAt: movedAt,
+        updatedAt: movedAt
+      },
+      undoEntry,
+      operationId: 'move-1',
+      targetUserId: 'luis'
+    })).toBe(true);
+  });
+
+  it.each([
+    {
+      label: 'se movió nuevamente',
+      changes: { lastMoveOperationId: 'move-2' },
+      expected: /nuevamente/i
+    },
+    {
+      label: 'ya fue iniciada',
+      changes: { status: 'in_progress' },
+      expected: /iniciada o completada/i
+    },
+    {
+      label: 'cambió después del movimiento',
+      changes: { updatedAt: timestamp(101) },
+      expected: /cambió después/i
+    }
+  ])('rechaza el undo masivo si una dirección $label', ({ changes, expected }) => {
+    const movedAt = timestamp(100);
+    const undoEntry = buildCampaignReassignmentUndoEntry({
+      id: 'pending-1',
+      campaignId: 'campaign-1',
+      assignedUserId: 'ana',
+      status: 'pending'
+    });
+    const assignment = {
+      id: 'pending-1',
+      campaignId: 'campaign-1',
+      assignedUserId: 'luis',
+      status: 'pending',
+      manualLocked: true,
+      lastMoveOperationId: 'move-1',
+      lastMovedAt: movedAt,
+      updatedAt: movedAt,
+      ...changes
+    };
+
+    expect(() => validateCampaignReassignmentUndoCandidate({
+      assignment,
+      undoEntry,
+      operationId: 'move-1',
+      targetUserId: 'luis'
+    })).toThrow(expected);
+  });
+
+  it('vence el token al terminar la ventana indicada', () => {
+    const undoToken = { expiresAt: 15_000 };
+
+    expect(isCampaignReassignmentUndoTokenExpired(undoToken, 14_999)).toBe(false);
+    expect(isCampaignReassignmentUndoTokenExpired(undoToken, 15_000)).toBe(true);
   });
 });
