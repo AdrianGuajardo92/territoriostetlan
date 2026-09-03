@@ -1,0 +1,226 @@
+{
+  "status": "applied",
+  "commitWriteResults": 34,
+  "appliedUpdates": 32,
+  "appliedCreates": [
+    {
+      "reason": "address_missing_after_regen",
+      "addressId": "territorio-enlaces-2026-07-05-t04-004",
+      "restoreFromAssignmentId": "LHD9QIhASsLwzxVTsiOb",
+      "assignedUserId": "AKbxu3J2dwvsvtTW9D34",
+      "assignedUserName": "April Merino",
+      "fields": {
+        "campaignId": "15YEeqjmBYXl9rU1sBvK",
+        "addressId": "territorio-enlaces-2026-07-05-t04-004",
+        "addressSnapshot": {
+          "id": "territorio-enlaces-2026-07-05-t04-004",
+          "territoryId": "t04",
+          "territoryName": "Territorio 4",
+          "address": "C. 8 #1975",
+          "fullAddress": "C. 8 1975, La Joyita, 44390 Guadalajara, Jal.",
+          "name": "Rubén",
+          "phone": "",
+          "notes": "Sin datos",
+          "gender": "Desconocido",
+          "latitude": 20.7198902,
+          "longitude": -103.29064509999999,
+          "mapUrl": "https://www.google.com/maps/search/?api=1&query=20.7198902,-103.29064509999999",
+          "coords": [
+            20.7198902,
+            -103.29064509999999
+          ]
+        },
+        "assignedUserId": "AKbxu3J2dwvsvtTW9D34",
+        "assignedUserName": "April Merino",
+        "territoryId": "t04",
+        "groupId": null,
+        "groupLabelSnapshot": null,
+        "status": "pending",
+        "manualLocked": false,
+        "sortOrder": 18,
+        "startedAt": null,
+        "completedAt": null,
+        "completedByUserId": null,
+        "completedByUserName": null,
+        "lastMovedAt": null
+      },
+      "newAssignmentId": "restore_ms6b2z7l_003f87"
+    },
+    {
+      "reason": "address_missing_after_regen",
+      "addressId": "territorio-enlaces-2026-07-05-t12-004",
+      "restoreFromAssignmentId": "C2bNAwCxKswm3RyVAy2q",
+      "assignedUserId": "XYuqWjuKtGgKZdV93GX5",
+      "assignedUserName": "Ma. Ramírez",
+      "fields": {
+        "campaignId": "15YEeqjmBYXl9rU1sBvK",
+        "addressId": "territorio-enlaces-2026-07-05-t12-004",
+        "addressSnapshot": {
+          "id": "territorio-enlaces-2026-07-05-t12-004",
+          "territoryId": "t12",
+          "territoryName": "Territorio 12",
+          "address": "Av José María Iglesias #3886",
+          "fullAddress": "Av José María Iglesias 3886, Los Arrayanes, 44766 Guadalajara, Jal.",
+          "name": "Desconocido",
+          "phone": "",
+          "notes": "Sin dat",
+          "gender": "Desconocido",
+          "latitude": 20.678945199999998,
+          "longitude": -103.2784593,
+          "mapUrl": "https://www.google.com/maps/search/?api=1&query=20.678945199999998,-103.2784593",
+          "coords": [
+            20.678945199999998,
+            -103.2784593
+          ]
+        },
+        "assignedUserId": "XYuqWjuKtGgKZdV93GX5",
+        "assignedUserName": "Ma. Ramírez",
+        "territoryId": "t12",
+        "groupId": null,
+        "groupLabelSnapshot": null,
+        "status": "pending",
+        "manualLocked": false,
+        "sortOrder": 75,
+        "startedAt": null,
+        "completedAt": null,
+        "completedByUserId": null,
+        "completedByUserName": null,
+        "lastMovedAt": null
+      },
+      "newAssignmentId": "restore_ms6b2ze2_m30f5q"
+    }
+  ],
+  "skipped": [],
+  "conflictsFromPlan": [
+    {
+      "type": "now_preserved_was_pending",
+      "addressId": "territorio-enlaces-2026-07-05-t10-001",
+      "currentAssignmentId": "ByjpiO9WSnXuEvtuUVc7",
+      "currentStatus": "completed",
+      "currentLocked": false,
+      "currentUser": "Gabriela Silva",
+      "previousUser": "José Heredia",
+      "previousUserId": "hKkKciWCNeTfOPaWVVi4",
+      "action": "skip_do_not_force"
+    },
+    {
+      "type": "now_preserved_was_pending",
+      "addressId": "territorio-enlaces-2026-07-05-t10-003",
+      "currentAssignmentId": "Dfqs2qLes3dkjZQgpV8W",
+      "currentStatus": "completed",
+      "currentLocked": false,
+      "currentUser": "Gloria Romero",
+      "previousUser": "José Heredia",
+      "previousUserId": "hKkKciWCNeTfOPaWVVi4",
+      "action": "skip_do_not_force"
+    },
+    {
+      "type": "now_preserved_was_pending",
+      "addressId": "territorio-enlaces-2026-07-05-t15-001",
+      "currentAssignmentId": "3hL22LEOe8yFhSOtIpES",
+      "currentStatus": "completed",
+      "currentLocked": false,
+      "currentUser": "Luis Hernández",
+      "previousUser": "Miguel Silva",
+      "previousUserId": "4N32iUOt5h3LxCdzObFG",
+      "action": "skip_do_not_force"
+    }
+  ],
+  "verification": {
+    "totalAfter": 114,
+    "preservedAfter": 77,
+    "restoredPendingMatchingPrevious": 37,
+    "stillWrong": [],
+    "conflictStillSkipped": [
+      {
+        "addressId": "territorio-enlaces-2026-07-05-t10-001",
+        "status": "completed",
+        "user": "Gabriela Silva",
+        "wanted": "José Heredia"
+      },
+      {
+        "addressId": "territorio-enlaces-2026-07-05-t10-003",
+        "status": "completed",
+        "user": "Gloria Romero",
+        "wanted": "José Heredia"
+      },
+      {
+        "addressId": "territorio-enlaces-2026-07-05-t15-001",
+        "status": "completed",
+        "user": "Luis Hernández",
+        "wanted": "Miguel Silva"
+      }
+    ],
+    "touchedPreservedByMistake": [],
+    "expectedRestorable": 37
+  },
+  "backupPath": "/Users/adrianguajardo/Developer/territoriostetlan/tmp/campaign-restore-prewrite-backup-2026-07-29.json",
+  "planPath": "/Users/adrianguajardo/Developer/territoriostetlan/tmp/campaign-restore-plan-2026-07-29.json",
+  "appliedUpdateSample": [
+    {
+      "assignmentId": "Im8zytmniibY76dOZX83",
+      "addressId": "territorio-enlaces-2026-07-05-t01-003",
+      "fromUserId": "O7hR593QoXWiWTamAY74",
+      "fromUserName": "Alicia Ramos",
+      "toUserId": "mfiO25uVgXDe2id8ECcs",
+      "toUserName": "Adrián Merino",
+      "previousAssignmentId": "8BBo3P5Vow3JJmGJa6VE",
+      "patch": {
+        "assignedUserId": "mfiO25uVgXDe2id8ECcs",
+        "assignedUserName": "Adrián Merino"
+      }
+    },
+    {
+      "assignmentId": "lLzJVNbo7yRDUA6EfyTx",
+      "addressId": "territorio-enlaces-2026-07-05-t01-006",
+      "fromUserId": "F8tJDYIFIKSfhmX4liTK",
+      "fromUserName": "Adrián Guajardo",
+      "toUserId": "mfiO25uVgXDe2id8ECcs",
+      "toUserName": "Adrián Merino",
+      "previousAssignmentId": "DTVJIPaJPLJOKYAgGF5c",
+      "patch": {
+        "assignedUserId": "mfiO25uVgXDe2id8ECcs",
+        "assignedUserName": "Adrián Merino"
+      }
+    },
+    {
+      "assignmentId": "4lP2kqsL6BVChTqqIYZA",
+      "addressId": "territorio-enlaces-2026-07-05-t02-005",
+      "fromUserId": "jOA1v1EXeL2UjcFMdbAE",
+      "fromUserName": "Alison González",
+      "toUserId": "DDXMnl9L6qVWjlhaKBtX",
+      "toUserName": "Ana Ruiz",
+      "previousAssignmentId": "O9czU3K7gWckNDd2il7W",
+      "patch": {
+        "assignedUserId": "DDXMnl9L6qVWjlhaKBtX",
+        "assignedUserName": "Ana Ruiz"
+      }
+    },
+    {
+      "assignmentId": "wp9GgItcdcwip8Jy0uja",
+      "addressId": "territorio-enlaces-2026-07-05-t03-003",
+      "fromUserId": "KHfaaBsT96RCcAYCJXyf",
+      "fromUserName": "Antonio Isas",
+      "toUserId": "iAQiYX99d7ub3KD1uuOb",
+      "toUserName": "Andrea Alcázar",
+      "previousAssignmentId": "NwRqmFrqubtoEUAbQgM7",
+      "patch": {
+        "assignedUserId": "iAQiYX99d7ub3KD1uuOb",
+        "assignedUserName": "Andrea Alcázar"
+      }
+    },
+    {
+      "assignmentId": "rUklX0vPYBtx7fJlyccF",
+      "addressId": "territorio-enlaces-2026-07-05-t03-004",
+      "fromUserId": "AKbxu3J2dwvsvtTW9D34",
+      "fromUserName": "April Merino",
+      "toUserId": "KHfaaBsT96RCcAYCJXyf",
+      "toUserName": "Antonio Isas",
+      "previousAssignmentId": "GcGk05G5YFY3MVaz5dwQ",
+      "patch": {
+        "assignedUserId": "KHfaaBsT96RCcAYCJXyf",
+        "assignedUserName": "Antonio Isas"
+      }
+    }
+  ]
+}

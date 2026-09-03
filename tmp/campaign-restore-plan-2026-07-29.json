@@ -1,0 +1,658 @@
+{
+  "generatedAt": "2026-07-29T16:34:53.483Z",
+  "campaignId": "15YEeqjmBYXl9rU1sBvK",
+  "previousSource": "readTime:2026-07-29T15:58:00Z",
+  "validation": {
+    "currentTotal": 112,
+    "currentPreserved": 77,
+    "currentPendingUnlocked": 35,
+    "previousPendingTarget": 40,
+    "previousFullPendingCount": 40,
+    "preservedIdsSnapshot": [
+      "0BE0WiSxErxrIZQDySwx",
+      "0lx591rTuQKqbIZ1AM13",
+      "1uoBzI9St3EgLrR84Scq",
+      "2Rfp8KerCqX1f7C1cram",
+      "3hL22LEOe8yFhSOtIpES",
+      "40sInJVWkHY1Sx1AXbDT",
+      "4ZmpnI6fCzfUK6Ky6bPP",
+      "56Gz8EZKHXKuNviFchfz",
+      "57lU7XgAhhbGkTBZ1ccf",
+      "6CvBzMa7UaARDs9LWZKh",
+      "6z1BIChSXLvUOWZZs6gv",
+      "7W51l1j3DdSOlDxWp6bu",
+      "9HK1eIH6OLixlvBqI4ed",
+      "9OoYdqQPDsKcC4yNnSmn",
+      "9ouob6TOjdPDYhGjFsFr",
+      "AIqe9OrMYdWC3HeXm4zU",
+      "Ablck4Bh7QTkg1unRqv0",
+      "ByjpiO9WSnXuEvtuUVc7",
+      "CH4Ed0epqDyC87HPI0wk",
+      "Cm3pCt3KOqrMNGuobQAT",
+      "DQjtVwRo9ZAqeh4lTrZW",
+      "Dfqs2qLes3dkjZQgpV8W",
+      "HQzrBASCHTaWecDuQW89",
+      "Ie1l9vSu9cw05I58BZqX",
+      "Iw4dwpOywdBAiir5Kbrk",
+      "JZjz7KoA2v1rCwvwVPGA",
+      "JqSwfnNrkd3edRF9L19u",
+      "LBWFBXEGZiqzh7jAbClZ",
+      "LIiffExdUzD8zYbLGj08",
+      "LSzmhC7jCDLUrMip6wIS",
+      "LhzS2jeM2GouorQ3YW6g",
+      "MEluTvmxobh59hKe4Nrm",
+      "MimIiV7mc66AmulQ91lu",
+      "NQuo2RJ0QfwLcPKfbFVb",
+      "OQKvmZ4GnyEulVelAVgH",
+      "PakP58dEdYQA0xNsKTf0",
+      "Rc2M7TYzr21ta5PWn8aE",
+      "RpVDOCB4itQdqA26qMKl",
+      "TbaLC12U1W9xlsOuO8Fg",
+      "U6xsEO876VXQt21q1ozJ",
+      "UXGnb1og05jAwlE9roYv",
+      "UYZOWaH5ApS6PY9QCqqW",
+      "WFOenugb2EacJwkzGEfE",
+      "X7rIZpjyF2GSZn22g61c",
+      "XZPQpHPWJiBZZ2WiQGCx",
+      "XtmyIRlKGQccMu0HG5y9",
+      "Y3KGCr99qKJC4iTdWGRv",
+      "YIjBLDoj6mmVs74ryFCP",
+      "YSDADk2vCEIRMv8mZTeN",
+      "YnHfWaAywvg5FbTfIz8o",
+      "cA79QeaxZKe8tzqP80yW",
+      "cD7z19zUHVClY4XU0ezv",
+      "cXrUALnXG1qLhi7eweAu",
+      "cxVl4V8dVvLNn9Rf6fbc",
+      "dj4nosBxM8nUdwmdjIcR",
+      "eYth89wakaN4L0ymvhw6",
+      "eeCfJaGp0u0ool6b0LTe",
+      "f42M5nMTcu3hNuU7uv0t",
+      "fI4roch3X32PN5Udl5Tx",
+      "gonUpKpdybxBUgkqL7uX",
+      "hqhaOHaJgzTvZpIVLTCl",
+      "i1FZ3kry7BTBCOnMqdKA",
+      "iyiqaofbG0VjS0CWfjZH",
+      "lJQxxS1I8zIM7GfwShra",
+      "oUP9OcBK0LE4g5kbu4cz",
+      "pFEfXrcyjySpCZBIeQqf",
+      "rjko78tNO9xb9E70bUJr",
+      "sjPx53hHsQDy7YfMF4zu",
+      "t1JIrzpRwtoX7xfuRXuD",
+      "tVzxRgvmy6wqpYBqRGHK",
+      "uHHlpVsPguyOMCiDvI49",
+      "uMiSdNRIfSxeSpRMKXm3",
+      "uVvayCtvn65gIiJIvUlg",
+      "wuwzfcUEpLHhf5FOqCzj",
+      "xYvfko8yHchOb8eq08PU",
+      "zAqiJ4ObgYByjV4oewqi",
+      "zrGXLIy8DXWiMSCMQPFo"
+    ]
+  },
+  "updates": [
+    {
+      "assignmentId": "Im8zytmniibY76dOZX83",
+      "addressId": "territorio-enlaces-2026-07-05-t01-003",
+      "fromUserId": "O7hR593QoXWiWTamAY74",
+      "fromUserName": "Alicia Ramos",
+      "toUserId": "mfiO25uVgXDe2id8ECcs",
+      "toUserName": "Adrián Merino",
+      "previousAssignmentId": "8BBo3P5Vow3JJmGJa6VE",
+      "patch": {
+        "assignedUserId": "mfiO25uVgXDe2id8ECcs",
+        "assignedUserName": "Adrián Merino"
+      }
+    },
+    {
+      "assignmentId": "lLzJVNbo7yRDUA6EfyTx",
+      "addressId": "territorio-enlaces-2026-07-05-t01-006",
+      "fromUserId": "F8tJDYIFIKSfhmX4liTK",
+      "fromUserName": "Adrián Guajardo",
+      "toUserId": "mfiO25uVgXDe2id8ECcs",
+      "toUserName": "Adrián Merino",
+      "previousAssignmentId": "DTVJIPaJPLJOKYAgGF5c",
+      "patch": {
+        "assignedUserId": "mfiO25uVgXDe2id8ECcs",
+        "assignedUserName": "Adrián Merino"
+      }
+    },
+    {
+      "assignmentId": "4lP2kqsL6BVChTqqIYZA",
+      "addressId": "territorio-enlaces-2026-07-05-t02-005",
+      "fromUserId": "jOA1v1EXeL2UjcFMdbAE",
+      "fromUserName": "Alison González",
+      "toUserId": "DDXMnl9L6qVWjlhaKBtX",
+      "toUserName": "Ana Ruiz",
+      "previousAssignmentId": "O9czU3K7gWckNDd2il7W",
+      "patch": {
+        "assignedUserId": "DDXMnl9L6qVWjlhaKBtX",
+        "assignedUserName": "Ana Ruiz"
+      }
+    },
+    {
+      "assignmentId": "wp9GgItcdcwip8Jy0uja",
+      "addressId": "territorio-enlaces-2026-07-05-t03-003",
+      "fromUserId": "KHfaaBsT96RCcAYCJXyf",
+      "fromUserName": "Antonio Isas",
+      "toUserId": "iAQiYX99d7ub3KD1uuOb",
+      "toUserName": "Andrea Alcázar",
+      "previousAssignmentId": "NwRqmFrqubtoEUAbQgM7",
+      "patch": {
+        "assignedUserId": "iAQiYX99d7ub3KD1uuOb",
+        "assignedUserName": "Andrea Alcázar"
+      }
+    },
+    {
+      "assignmentId": "rUklX0vPYBtx7fJlyccF",
+      "addressId": "territorio-enlaces-2026-07-05-t03-004",
+      "fromUserId": "AKbxu3J2dwvsvtTW9D34",
+      "fromUserName": "April Merino",
+      "toUserId": "KHfaaBsT96RCcAYCJXyf",
+      "toUserName": "Antonio Isas",
+      "previousAssignmentId": "GcGk05G5YFY3MVaz5dwQ",
+      "patch": {
+        "assignedUserId": "KHfaaBsT96RCcAYCJXyf",
+        "assignedUserName": "Antonio Isas"
+      }
+    },
+    {
+      "assignmentId": "tDEBvwioX9uSW1cB9mMo",
+      "addressId": "territorio-enlaces-2026-07-05-t04-002",
+      "fromUserId": "9Qo3Fd34gxE2FKegrUMc",
+      "fromUserName": "Beker Alvizo",
+      "toUserId": "KHfaaBsT96RCcAYCJXyf",
+      "toUserName": "Antonio Isas",
+      "previousAssignmentId": "W1RiVwQeHAbnShSEAsxQ",
+      "patch": {
+        "assignedUserId": "KHfaaBsT96RCcAYCJXyf",
+        "assignedUserName": "Antonio Isas"
+      }
+    },
+    {
+      "assignmentId": "92LA2dULKaX3e1J7wVfo",
+      "addressId": "territorio-enlaces-2026-07-05-t05-003",
+      "fromUserId": "ioZkLchtvWnSzI13Kwrh",
+      "fromUserName": "Carlos Ramos",
+      "toUserId": "AKbxu3J2dwvsvtTW9D34",
+      "toUserName": "April Merino",
+      "previousAssignmentId": "Uq7keW7nF8W4xAHBEvRS",
+      "patch": {
+        "assignedUserId": "AKbxu3J2dwvsvtTW9D34",
+        "assignedUserName": "April Merino"
+      }
+    },
+    {
+      "assignmentId": "kBts3UMCU09atNH1H4xF",
+      "addressId": "territorio-enlaces-2026-07-05-t05-002",
+      "fromUserId": "Ach1BpD4ceY6130CbmjG",
+      "fromUserName": "Carolina Segura",
+      "toUserId": "9Qo3Fd34gxE2FKegrUMc",
+      "toUserName": "Beker Alvizo",
+      "previousAssignmentId": "quFGq2rCdp6EG7KR1i3r",
+      "patch": {
+        "assignedUserId": "9Qo3Fd34gxE2FKegrUMc",
+        "assignedUserName": "Beker Alvizo"
+      }
+    },
+    {
+      "assignmentId": "G2F9UNDmMB7g5XQWU2gu",
+      "addressId": "territorio-enlaces-2026-07-05-t08-003",
+      "fromUserId": "t7Dq4Y7E1PPNjK4nbYlo",
+      "fromUserName": "Cristina Ávila",
+      "toUserId": "vWkiy4cg6ZO1KXvIJvIs",
+      "toUserName": "Gabriela Silva",
+      "previousAssignmentId": "32hAfX2iyMkDclIBzeE4",
+      "patch": {
+        "assignedUserId": "vWkiy4cg6ZO1KXvIJvIs",
+        "assignedUserName": "Gabriela Silva"
+      }
+    },
+    {
+      "assignmentId": "j4spO3KdZ9mV0YuwiiO3",
+      "addressId": "territorio-enlaces-2026-07-05-t08-007",
+      "fromUserId": "k4BYDV9dIuBEbN9QSB4D",
+      "fromUserName": "Diego Serrano",
+      "toUserId": "vWkiy4cg6ZO1KXvIJvIs",
+      "toUserName": "Gabriela Silva",
+      "previousAssignmentId": "qialKxBCTAXIXShthKus",
+      "patch": {
+        "assignedUserId": "vWkiy4cg6ZO1KXvIJvIs",
+        "assignedUserName": "Gabriela Silva"
+      }
+    },
+    {
+      "assignmentId": "leTycz80GFzbJgZMBuAH",
+      "addressId": "territorio-enlaces-2026-07-05-t09-004",
+      "fromUserId": "f20x9qkB0sG5vqkYGMn3",
+      "fromUserName": "Eliseba Serrano",
+      "toUserId": "N7TSzZQwBBpIhz0CwGjo",
+      "toUserName": "Jehu Abner",
+      "previousAssignmentId": "GbNwJ5BXv6ER9aLIisJe",
+      "patch": {
+        "assignedUserId": "N7TSzZQwBBpIhz0CwGjo",
+        "assignedUserName": "Jehu Abner"
+      }
+    },
+    {
+      "assignmentId": "cF0deGlWk8kN7Y4oohsR",
+      "addressId": "territorio-enlaces-2026-07-05-t10-002",
+      "fromUserId": "zaVybEdo8YBN0PGIV5T2",
+      "fromUserName": "Gabriel Segura",
+      "toUserId": "mdGmbzuOLNtdgqDUxtP8",
+      "toUserName": "Jessica Isas",
+      "previousAssignmentId": "DMqVg9BnYc6QHtQrVT8t",
+      "patch": {
+        "assignedUserId": "mdGmbzuOLNtdgqDUxtP8",
+        "assignedUserName": "Jessica Isas"
+      }
+    },
+    {
+      "assignmentId": "sMMHoH7ISiAcwuihPcA0",
+      "addressId": "territorio-enlaces-2026-07-05-t10-006",
+      "fromUserId": "oQatDwSsKiHvLJEFY0mu",
+      "fromUserName": "Fabiola Guajardo",
+      "toUserId": "mdGmbzuOLNtdgqDUxtP8",
+      "toUserName": "Jessica Isas",
+      "previousAssignmentId": "KV4mX7Z0yiAFozyCxZMX",
+      "patch": {
+        "assignedUserId": "mdGmbzuOLNtdgqDUxtP8",
+        "assignedUserName": "Jessica Isas"
+      }
+    },
+    {
+      "assignmentId": "pLSpC8BPO0drv2itIhKU",
+      "addressId": "territorio-enlaces-2026-07-05-t10-004",
+      "fromUserId": "Vo9e1xxmGdw13adjCgj3",
+      "fromUserName": "Gabriela Martínez",
+      "toUserId": "WYlhg8FypStOUBpHZp8r",
+      "toUserName": "José Galindo",
+      "previousAssignmentId": "SGJq32p16zZgulWIa7rZ",
+      "patch": {
+        "assignedUserId": "WYlhg8FypStOUBpHZp8r",
+        "assignedUserName": "José Galindo"
+      }
+    },
+    {
+      "assignmentId": "eEyO5t9pPGybmI5nHov5",
+      "addressId": "territorio-enlaces-2026-07-05-t11-008",
+      "fromUserId": "uZOWZadfaDijwXsjZPGy",
+      "fromUserName": "Graciela Limones",
+      "toUserId": "kbZYx1GM8coGjnPddlWM",
+      "toUserName": "Julio Mora",
+      "previousAssignmentId": "ubDDuX68DlEbpKjToPZw",
+      "patch": {
+        "assignedUserId": "kbZYx1GM8coGjnPddlWM",
+        "assignedUserName": "Julio Mora"
+      }
+    },
+    {
+      "assignmentId": "IhRxYha18OTefRUfwIOX",
+      "addressId": "territorio-enlaces-2026-07-05-t11-012",
+      "fromUserId": "Juden5fiwWHSxJOEZZ95",
+      "fromUserName": "Greta Hernández",
+      "toUserId": "e81Ek2W3Cii4rvMLtD8l",
+      "toUserName": "Karina González",
+      "previousAssignmentId": "DIqJmmAOqeUXk57ckmNo",
+      "patch": {
+        "assignedUserId": "e81Ek2W3Cii4rvMLtD8l",
+        "assignedUserName": "Karina González"
+      }
+    },
+    {
+      "assignmentId": "62tLV8VJ4GIU51chNPEP",
+      "addressId": "territorio-enlaces-2026-07-05-t11-005",
+      "fromUserId": "kE3IHxGcVVK0tUVLsvzo",
+      "fromUserName": "Gritzel Hernandez",
+      "toUserId": "qmsTfquL6uSf0fGBovso",
+      "toUserName": "Luis Isas",
+      "previousAssignmentId": "FN4N2TtOoBOM67AVIchg",
+      "patch": {
+        "assignedUserId": "qmsTfquL6uSf0fGBovso",
+        "assignedUserName": "Luis Isas"
+      }
+    },
+    {
+      "assignmentId": "s7NHMMCktQL3UPmUGgCs",
+      "addressId": "territorio-enlaces-2026-07-05-t11-002",
+      "fromUserId": "DCZugysgKkC44aQgYISJ",
+      "fromUserName": "Jehonatán Chávez",
+      "toUserId": "XYuqWjuKtGgKZdV93GX5",
+      "toUserName": "Ma. Ramírez",
+      "previousAssignmentId": "jPbJThuGxoALeqBafnxB",
+      "patch": {
+        "assignedUserId": "XYuqWjuKtGgKZdV93GX5",
+        "assignedUserName": "Ma. Ramírez"
+      }
+    },
+    {
+      "assignmentId": "Lxg2VYOu6BF8tZdMXtPp",
+      "addressId": "territorio-enlaces-2026-07-05-t12-001",
+      "fromUserId": "mdGmbzuOLNtdgqDUxtP8",
+      "fromUserName": "Jessica Isas",
+      "toUserId": "j3Bjeu3GfIe8Tkvg8uB3",
+      "toUserName": "Margarita Ballardo",
+      "previousAssignmentId": "5ht2xO0lTt1imsiLBp5R",
+      "patch": {
+        "assignedUserId": "j3Bjeu3GfIe8Tkvg8uB3",
+        "assignedUserName": "Margarita Ballardo"
+      }
+    },
+    {
+      "assignmentId": "4Qa2on3zXvo5UgeszgaQ",
+      "addressId": "territorio-enlaces-2026-07-05-t12-002",
+      "fromUserId": "N7TSzZQwBBpIhz0CwGjo",
+      "fromUserName": "Jehu Abner",
+      "toUserId": "j3Bjeu3GfIe8Tkvg8uB3",
+      "toUserName": "Margarita Ballardo",
+      "previousAssignmentId": "CMSTKi0f16JxJeTm5cQZ",
+      "patch": {
+        "assignedUserId": "j3Bjeu3GfIe8Tkvg8uB3",
+        "assignedUserName": "Margarita Ballardo"
+      }
+    },
+    {
+      "assignmentId": "xMBtZcCvYeRJ2RXdHEvC",
+      "addressId": "territorio-enlaces-2026-07-05-t13-002",
+      "fromUserId": "WYlhg8FypStOUBpHZp8r",
+      "fromUserName": "José Galindo",
+      "toUserId": "XAdIAbxtPP11LOukV3wD",
+      "toUserName": "Marisol Isas",
+      "previousAssignmentId": "LA7dKnkllYxJEfQVuM0d",
+      "patch": {
+        "assignedUserId": "XAdIAbxtPP11LOukV3wD",
+        "assignedUserName": "Marisol Isas"
+      }
+    },
+    {
+      "assignmentId": "AFfevV1w1134IPCB3hHR",
+      "addressId": "territorio-enlaces-2026-07-05-t13-006",
+      "fromUserId": "Vv88uISN6R8sjYZUTDNb",
+      "fromUserName": "Jorge Perea",
+      "toUserId": "XAdIAbxtPP11LOukV3wD",
+      "toUserName": "Marisol Isas",
+      "previousAssignmentId": "O8Jhvxwov1MozkIl3aP3",
+      "patch": {
+        "assignedUserId": "XAdIAbxtPP11LOukV3wD",
+        "assignedUserName": "Marisol Isas"
+      }
+    },
+    {
+      "assignmentId": "YfEBUQnaEeWoDUHDlEQ5",
+      "addressId": "territorio-enlaces-2026-07-05-t13-001",
+      "fromUserId": "hKkKciWCNeTfOPaWVVi4",
+      "fromUserName": "José Heredia",
+      "toUserId": "Wpq755821PXzEnQVokUS",
+      "toUserName": "Martha Martínez",
+      "previousAssignmentId": "krqZmztcJRoqNBZbTr8R",
+      "patch": {
+        "assignedUserId": "Wpq755821PXzEnQVokUS",
+        "assignedUserName": "Martha Martínez"
+      }
+    },
+    {
+      "assignmentId": "reEcfEd3W7LPgQ5hWNPG",
+      "addressId": "territorio-enlaces-2026-07-05-t13-003",
+      "fromUserId": "rMBYBFEvDaL4gyq8i6LI",
+      "fromUserName": "Joshua Garcia",
+      "toUserId": "Wpq755821PXzEnQVokUS",
+      "toUserName": "Martha Martínez",
+      "previousAssignmentId": "wGffkjmCNAzvoWzlBBwn",
+      "patch": {
+        "assignedUserId": "Wpq755821PXzEnQVokUS",
+        "assignedUserName": "Martha Martínez"
+      }
+    },
+    {
+      "assignmentId": "C3PGbhh3xwynilGh6op0",
+      "addressId": "territorio-enlaces-2026-07-05-t13-004",
+      "fromUserId": "kbZYx1GM8coGjnPddlWM",
+      "fromUserName": "Julio Mora",
+      "toUserId": "Wpq755821PXzEnQVokUS",
+      "toUserName": "Martha Martínez",
+      "previousAssignmentId": "zYSq1BrMuIlXoaBOGsBk",
+      "patch": {
+        "assignedUserId": "Wpq755821PXzEnQVokUS",
+        "assignedUserName": "Martha Martínez"
+      }
+    },
+    {
+      "assignmentId": "c2L0b1bgyzgdX9Jz3IPQ",
+      "addressId": "territorio-enlaces-2026-07-05-t14-002",
+      "fromUserId": "4UzH6Jkap11ShX0ArZQI",
+      "fromUserName": "Leilany Silva",
+      "toUserId": "2rQK9DSApeAsDeeiF7OV",
+      "toUserName": "Martín Martínez",
+      "previousAssignmentId": "d2RIj8wLy6V5S99JVZIu",
+      "patch": {
+        "assignedUserId": "2rQK9DSApeAsDeeiF7OV",
+        "assignedUserName": "Martín Martínez"
+      }
+    },
+    {
+      "assignmentId": "662zWw4NRVkze5ipapuU",
+      "addressId": "territorio-enlaces-2026-07-05-t14-004",
+      "fromUserId": "e81Ek2W3Cii4rvMLtD8l",
+      "fromUserName": "Karina González",
+      "toUserId": "2rQK9DSApeAsDeeiF7OV",
+      "toUserName": "Martín Martínez",
+      "previousAssignmentId": "QhvmgqmIFVxnzIvsNqJ9",
+      "patch": {
+        "assignedUserId": "2rQK9DSApeAsDeeiF7OV",
+        "assignedUserName": "Martín Martínez"
+      }
+    },
+    {
+      "assignmentId": "sTPM6zGXQ19OuysWN74L",
+      "addressId": "territorio-enlaces-2026-07-05-t15-004",
+      "fromUserId": "qmsTfquL6uSf0fGBovso",
+      "fromUserName": "Luis Isas",
+      "toUserId": "9NTYgy2J19UCXGSi5aJw",
+      "toUserName": "Montserrat Ruiz",
+      "previousAssignmentId": "y1TeT5XaJLsz9ikf6JWy",
+      "patch": {
+        "assignedUserId": "9NTYgy2J19UCXGSi5aJw",
+        "assignedUserName": "Montserrat Ruiz"
+      }
+    },
+    {
+      "assignmentId": "xBh8ZLphZBoEJXbPo3Zp",
+      "addressId": "territorio-enlaces-2026-07-05-t15-005",
+      "fromUserId": "XYuqWjuKtGgKZdV93GX5",
+      "fromUserName": "Ma. Ramírez",
+      "toUserId": "9NTYgy2J19UCXGSi5aJw",
+      "toUserName": "Montserrat Ruiz",
+      "previousAssignmentId": "yPbE2AO5JKmZuALuaOyM",
+      "patch": {
+        "assignedUserId": "9NTYgy2J19UCXGSi5aJw",
+        "assignedUserName": "Montserrat Ruiz"
+      }
+    },
+    {
+      "assignmentId": "RqtrRddnsaISsODPnzjw",
+      "addressId": "territorio-enlaces-2026-07-05-t17-008",
+      "fromUserId": "j3Bjeu3GfIe8Tkvg8uB3",
+      "fromUserName": "Margarita Ballardo",
+      "toUserId": "AACgOmZh3i2Dz8YDue8w",
+      "toUserName": "Rosaura Chávez",
+      "previousAssignmentId": "IcO0lw9NBTR3qPQ6q308",
+      "patch": {
+        "assignedUserId": "AACgOmZh3i2Dz8YDue8w",
+        "assignedUserName": "Rosaura Chávez"
+      }
+    },
+    {
+      "assignmentId": "z62vrCTeSwE6R41rn9OY",
+      "addressId": "territorio-enlaces-2026-07-05-t19-003",
+      "fromUserId": "WmRUYcK3BminOOT5rdXR",
+      "fromUserName": "Maricela Murillo",
+      "toUserId": "It6qNxKl6RJLw32yaXXr",
+      "toUserName": "Valeria Valencia",
+      "previousAssignmentId": "uNTbJTIGGuQ7LU1fewRf",
+      "patch": {
+        "assignedUserId": "It6qNxKl6RJLw32yaXXr",
+        "assignedUserName": "Valeria Valencia"
+      }
+    },
+    {
+      "assignmentId": "vOsgGJyLJZMsTZbtVRrR",
+      "addressId": "territorio-enlaces-2026-07-05-t20-004",
+      "fromUserId": "XAdIAbxtPP11LOukV3wD",
+      "fromUserName": "Marisol Isas",
+      "toUserId": "It6qNxKl6RJLw32yaXXr",
+      "toUserName": "Valeria Valencia",
+      "previousAssignmentId": "qVPsLzpQQAfNEN85jBVb",
+      "patch": {
+        "assignedUserId": "It6qNxKl6RJLw32yaXXr",
+        "assignedUserName": "Valeria Valencia"
+      }
+    }
+  ],
+  "creates": [
+    {
+      "reason": "address_missing_after_regen",
+      "addressId": "territorio-enlaces-2026-07-05-t04-004",
+      "restoreFromAssignmentId": "LHD9QIhASsLwzxVTsiOb",
+      "assignedUserId": "AKbxu3J2dwvsvtTW9D34",
+      "assignedUserName": "April Merino",
+      "fields": {
+        "campaignId": "15YEeqjmBYXl9rU1sBvK",
+        "addressId": "territorio-enlaces-2026-07-05-t04-004",
+        "addressSnapshot": {
+          "id": "territorio-enlaces-2026-07-05-t04-004",
+          "territoryId": "t04",
+          "territoryName": "Territorio 4",
+          "address": "C. 8 #1975",
+          "fullAddress": "C. 8 1975, La Joyita, 44390 Guadalajara, Jal.",
+          "name": "Rubén",
+          "phone": "",
+          "notes": "Sin datos",
+          "gender": "Desconocido",
+          "latitude": 20.7198902,
+          "longitude": -103.29064509999999,
+          "mapUrl": "https://www.google.com/maps/search/?api=1&query=20.7198902,-103.29064509999999",
+          "coords": [
+            20.7198902,
+            -103.29064509999999
+          ]
+        },
+        "assignedUserId": "AKbxu3J2dwvsvtTW9D34",
+        "assignedUserName": "April Merino",
+        "territoryId": "t04",
+        "groupId": null,
+        "groupLabelSnapshot": null,
+        "status": "pending",
+        "manualLocked": false,
+        "sortOrder": 18,
+        "startedAt": null,
+        "completedAt": null,
+        "completedByUserId": null,
+        "completedByUserName": null,
+        "lastMovedAt": null
+      }
+    },
+    {
+      "reason": "address_missing_after_regen",
+      "addressId": "territorio-enlaces-2026-07-05-t12-004",
+      "restoreFromAssignmentId": "C2bNAwCxKswm3RyVAy2q",
+      "assignedUserId": "XYuqWjuKtGgKZdV93GX5",
+      "assignedUserName": "Ma. Ramírez",
+      "fields": {
+        "campaignId": "15YEeqjmBYXl9rU1sBvK",
+        "addressId": "territorio-enlaces-2026-07-05-t12-004",
+        "addressSnapshot": {
+          "id": "territorio-enlaces-2026-07-05-t12-004",
+          "territoryId": "t12",
+          "territoryName": "Territorio 12",
+          "address": "Av José María Iglesias #3886",
+          "fullAddress": "Av José María Iglesias 3886, Los Arrayanes, 44766 Guadalajara, Jal.",
+          "name": "Desconocido",
+          "phone": "",
+          "notes": "Sin dat",
+          "gender": "Desconocido",
+          "latitude": 20.678945199999998,
+          "longitude": -103.2784593,
+          "mapUrl": "https://www.google.com/maps/search/?api=1&query=20.678945199999998,-103.2784593",
+          "coords": [
+            20.678945199999998,
+            -103.2784593
+          ]
+        },
+        "assignedUserId": "XYuqWjuKtGgKZdV93GX5",
+        "assignedUserName": "Ma. Ramírez",
+        "territoryId": "t12",
+        "groupId": null,
+        "groupLabelSnapshot": null,
+        "status": "pending",
+        "manualLocked": false,
+        "sortOrder": 75,
+        "startedAt": null,
+        "completedAt": null,
+        "completedByUserId": null,
+        "completedByUserName": null,
+        "lastMovedAt": null
+      }
+    }
+  ],
+  "deletes": [],
+  "alreadyOk": [
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t01-001",
+      "assignmentId": "Jo9TJWqsqwMeWhbeFX3i",
+      "assignedUserName": "Adrián Merino"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t03-002",
+      "assignmentId": "OGkbaCEw4l6haTYFNEvH",
+      "assignedUserName": "Ana Ruiz"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t03-001",
+      "assignmentId": "4n8MJKhsh3hNkoNadZTR",
+      "assignedUserName": "Andrea Alcázar"
+    }
+  ],
+  "conflicts": [
+    {
+      "type": "now_preserved_was_pending",
+      "addressId": "territorio-enlaces-2026-07-05-t10-001",
+      "currentAssignmentId": "ByjpiO9WSnXuEvtuUVc7",
+      "currentStatus": "completed",
+      "currentLocked": false,
+      "currentUser": "Gabriela Silva",
+      "previousUser": "José Heredia",
+      "previousUserId": "hKkKciWCNeTfOPaWVVi4",
+      "action": "skip_do_not_force"
+    },
+    {
+      "type": "now_preserved_was_pending",
+      "addressId": "territorio-enlaces-2026-07-05-t10-003",
+      "currentAssignmentId": "Dfqs2qLes3dkjZQgpV8W",
+      "currentStatus": "completed",
+      "currentLocked": false,
+      "currentUser": "Gloria Romero",
+      "previousUser": "José Heredia",
+      "previousUserId": "hKkKciWCNeTfOPaWVVi4",
+      "action": "skip_do_not_force"
+    },
+    {
+      "type": "now_preserved_was_pending",
+      "addressId": "territorio-enlaces-2026-07-05-t15-001",
+      "currentAssignmentId": "3hL22LEOe8yFhSOtIpES",
+      "currentStatus": "completed",
+      "currentLocked": false,
+      "currentUser": "Luis Hernández",
+      "previousUser": "Miguel Silva",
+      "previousUserId": "4N32iUOt5h3LxCdzObFG",
+      "action": "skip_do_not_force"
+    }
+  ],
+  "notes": [],
+  "summary": {
+    "updates": 32,
+    "creates": 2,
+    "deletes": 0,
+    "alreadyOk": 3,
+    "conflicts": 3,
+    "preservedUntouched": 77,
+    "abort": false
+  }
+}

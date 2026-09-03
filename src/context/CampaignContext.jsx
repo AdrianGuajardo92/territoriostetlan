@@ -23,6 +23,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { canParticipantReceiveCampaignAddress } from '../config/campaignAddressRestrictions';
 import { useToast } from '../hooks/useToast';
 import { useApp } from './AppContext';
 import {
@@ -36,6 +37,7 @@ import {
   normalizeCampaignDateRange,
   buildCampaignFinalizeUpdate,
   buildCampaignFinalSummary,
+  buildDistributionTargetsFromAssignments,
   buildCampaignReassignmentUndoEntry,
   buildRedistributionNeeds,
   buildTerritoryMap,
@@ -50,6 +52,7 @@ import {
   prepareDistributionTargetsForApply,
   selectCampaignAssignmentsForReassignment,
   sortCampaigns,
+  validateCampaignAddressAssignments,
   validateCampaignReassignmentUndoCandidate,
   validateDistributionTargets,
   validateRedistributionAddressPool,
@@ -496,6 +499,10 @@ export const CampaignProvider = ({ children }) => {
       options
     ))
       .map(normalizeParticipantConfig)
+      .map((participant) => ({
+        ...participant,
+        isEnabled: participant.isEnabled || (Number(participantTargets[participant.userId]) || 0) > 0
+      }))
       .filter((participant) => participant.isEnabled);
 
     if (campaignSpecificParticipants.length === 0) {
@@ -545,6 +552,11 @@ export const CampaignProvider = ({ children }) => {
       targets: redistributionNeeds,
       territoryMap
     });
+
+    validateCampaignAddressAssignments([
+      ...preservedAssignments,
+      ...generatedAssignments
+    ]);
 
     const batch = writeBatch(db);
 
@@ -676,6 +688,11 @@ export const CampaignProvider = ({ children }) => {
       territoryMap
     });
 
+    validateCampaignAddressAssignments([
+      ...preservedAssignments,
+      ...generatedAssignments
+    ]);
+
     const batch = writeBatch(db);
 
     pendingUnlockedAssignments.forEach((assignment) => {
@@ -713,6 +730,12 @@ export const CampaignProvider = ({ children }) => {
     });
 
     showToast('Asignacion automatica generada correctamente', 'success');
+    return {
+      distributionTargets: buildDistributionTargetsFromAssignments(
+        [...preservedAssignments, ...generatedAssignments],
+        campaignSpecificParticipants
+      )
+    };
   }, [
     addresses,
     campaignAssignments,
@@ -1105,7 +1128,7 @@ export const CampaignProvider = ({ children }) => {
     assertCampaignAssignmentsWritable(latestCampaign);
 
     const targetParticipant = latestParticipants.find((participant) => (
-      participant.userId === targetUserId && participant.isEnabled !== false
+      participant.userId === targetUserId
     ));
     if (!targetParticipant) {
       throw new Error('La persona seleccionada ya no participa en esta campaña.');
@@ -1121,6 +1144,14 @@ export const CampaignProvider = ({ children }) => {
     });
     if (assignmentsToMove.length === 0) {
       throw new Error('Esta persona ya no tiene direcciones pendientes para reasignar.');
+    }
+    const incompatibleAssignment = assignmentsToMove.find((assignment) => (
+      !canParticipantReceiveCampaignAddress(assignment, targetParticipant)
+    ));
+    if (incompatibleAssignment) {
+      throw new Error(
+        'Esa dirección solamente se puede asignar a uno de los varones autorizados.'
+      );
     }
     if (assignmentsToMove.length + 1 > FIRESTORE_BATCH_LIMIT) {
       throw new Error('Hay demasiadas direcciones para moverlas en una sola operación.');

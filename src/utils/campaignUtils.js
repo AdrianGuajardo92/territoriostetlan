@@ -1,4 +1,5 @@
-﻿import { getDisplayAddress, getFullAddress } from './helpers';
+﻿import { canParticipantReceiveCampaignAddress } from '../config/campaignAddressRestrictions';
+import { getDisplayAddress, getFullAddress } from './helpers';
 
 export const CAMPAIGN_STATUSES = {
   DRAFT: 'draft',
@@ -430,7 +431,81 @@ export const distributeAddressesAcrossParticipants = ({
     throw new Error('No se pudo completar la distribucion de direcciones.');
   }
 
-  return assignments;
+  return enforceCampaignAddressRestrictions(assignments);
+};
+
+const getAssignmentParticipant = (assignment) => ({
+  userId: assignment.assignedUserId,
+  userNameSnapshot: assignment.assignedUserName
+});
+
+const swapAssignmentParticipants = (first, second) => {
+  const firstUserId = first.assignedUserId;
+  const firstUserName = first.assignedUserName;
+
+  first.assignedUserId = second.assignedUserId;
+  first.assignedUserName = second.assignedUserName;
+  second.assignedUserId = firstUserId;
+  second.assignedUserName = firstUserName;
+};
+
+/**
+ * Conserva los conteos exactos por persona y corrige el responsable mediante
+ * intercambios cuando una dirección tiene una lista limitada de destinatarios.
+ */
+export const enforceCampaignAddressRestrictions = (assignments = []) => {
+  const restrictedAssignments = assignments.map((assignment) => ({ ...assignment }));
+
+  for (let index = 0; index < restrictedAssignments.length; index += 1) {
+    const assignment = restrictedAssignments[index];
+    const currentParticipant = getAssignmentParticipant(assignment);
+
+    if (canParticipantReceiveCampaignAddress(assignment, currentParticipant)) {
+      continue;
+    }
+
+    const swapIndex = restrictedAssignments.findIndex((candidate, candidateIndex) => {
+      if (candidateIndex === index) return false;
+
+      const candidateParticipant = getAssignmentParticipant(candidate);
+      return (
+        canParticipantReceiveCampaignAddress(assignment, candidateParticipant)
+        && canParticipantReceiveCampaignAddress(candidate, currentParticipant)
+      );
+    });
+
+    if (swapIndex === -1) {
+      throw new Error(
+        'No hay suficiente capacidad entre los varones autorizados para cubrir las direcciones restringidas.'
+      );
+    }
+
+    swapAssignmentParticipants(assignment, restrictedAssignments[swapIndex]);
+  }
+
+  const invalidAssignment = restrictedAssignments.find((assignment) => (
+    !canParticipantReceiveCampaignAddress(assignment, getAssignmentParticipant(assignment))
+  ));
+
+  if (invalidAssignment) {
+    throw new Error('No se pudieron respetar las restricciones especiales del reparto.');
+  }
+
+  return restrictedAssignments;
+};
+
+export const validateCampaignAddressAssignments = (assignments = []) => {
+  const invalidAssignment = assignments.find((assignment) => (
+    !canParticipantReceiveCampaignAddress(assignment, getAssignmentParticipant(assignment))
+  ));
+
+  if (invalidAssignment) {
+    throw new Error(
+      'Hay una dirección restringida asignada a una persona no autorizada. Reasígnala antes de continuar.'
+    );
+  }
+
+  return true;
 };
 
 export const groupAssignmentsByTerritory = (assignments = []) => {
@@ -603,9 +678,8 @@ export const buildDistributionTargetsFromAssignments = (
   participants = []
 ) => {
   const targets = {};
-  const enabledParticipants = participants.filter((participant) => participant.isEnabled !== false);
 
-  enabledParticipants.forEach((participant) => {
+  participants.forEach((participant) => {
     targets[participant.userId] = 0;
   });
 
@@ -622,10 +696,9 @@ export const sanitizeDistributionTargets = (
   preservedCountsByUser = {},
   totalAddresses = Number.POSITIVE_INFINITY
 ) => {
-  const enabledParticipants = participants.filter((participant) => participant.isEnabled !== false);
   const sanitized = {};
 
-  enabledParticipants.forEach((participant) => {
+  participants.forEach((participant) => {
     const minTarget = preservedCountsByUser[participant.userId] || 0;
     const parsed = Math.max(0, Number.parseInt(String(rawTargets[participant.userId] ?? 0), 10) || 0);
     sanitized[participant.userId] = Math.max(minTarget, Math.min(totalAddresses, parsed));

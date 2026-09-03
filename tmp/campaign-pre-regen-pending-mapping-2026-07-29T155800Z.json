@@ -1,0 +1,717 @@
+{
+  "note": "Solo diagnóstico lectura via Firestore readTime. No modifica Firebase.",
+  "projectId": "gestor-territorios-ls",
+  "campaignId": "15YEeqjmBYXl9rU1sBvK",
+  "campaignName": "Asamblea regional 2026",
+  "readTime": "2026-07-29T15:58:00Z",
+  "regenActivityAt": "2026-07-29T15:58:41.014Z",
+  "performedBy": "Luis Hernández",
+  "previousPendingUnlockedCount": 40,
+  "previousTotalAssignments": 114,
+  "currentTotalAssignments": 112,
+  "remappedAddressCount": 35,
+  "previousPendingUnlocked": [
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t01-001",
+      "assignedUserId": "mfiO25uVgXDe2id8ECcs",
+      "assignedUserName": "Adrián Merino",
+      "assignmentId": "JxjfzBDDViNg7UuzwGbK",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t01-003",
+      "assignedUserId": "mfiO25uVgXDe2id8ECcs",
+      "assignedUserName": "Adrián Merino",
+      "assignmentId": "8BBo3P5Vow3JJmGJa6VE",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t01-006",
+      "assignedUserId": "mfiO25uVgXDe2id8ECcs",
+      "assignedUserName": "Adrián Merino",
+      "assignmentId": "DTVJIPaJPLJOKYAgGF5c",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t02-005",
+      "assignedUserId": "DDXMnl9L6qVWjlhaKBtX",
+      "assignedUserName": "Ana Ruiz",
+      "assignmentId": "O9czU3K7gWckNDd2il7W",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t03-002",
+      "assignedUserId": "DDXMnl9L6qVWjlhaKBtX",
+      "assignedUserName": "Ana Ruiz",
+      "assignmentId": "q8EkXpicYkkOETWZjsVU",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t03-001",
+      "assignedUserId": "iAQiYX99d7ub3KD1uuOb",
+      "assignedUserName": "Andrea Alcázar",
+      "assignmentId": "SrLnetjqSriaHkNCovVv",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t03-003",
+      "assignedUserId": "iAQiYX99d7ub3KD1uuOb",
+      "assignedUserName": "Andrea Alcázar",
+      "assignmentId": "NwRqmFrqubtoEUAbQgM7",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t03-004",
+      "assignedUserId": "KHfaaBsT96RCcAYCJXyf",
+      "assignedUserName": "Antonio Isas",
+      "assignmentId": "GcGk05G5YFY3MVaz5dwQ",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t04-002",
+      "assignedUserId": "KHfaaBsT96RCcAYCJXyf",
+      "assignedUserName": "Antonio Isas",
+      "assignmentId": "W1RiVwQeHAbnShSEAsxQ",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t04-004",
+      "assignedUserId": "AKbxu3J2dwvsvtTW9D34",
+      "assignedUserName": "April Merino",
+      "assignmentId": "LHD9QIhASsLwzxVTsiOb",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t05-003",
+      "assignedUserId": "AKbxu3J2dwvsvtTW9D34",
+      "assignedUserName": "April Merino",
+      "assignmentId": "Uq7keW7nF8W4xAHBEvRS",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t05-002",
+      "assignedUserId": "9Qo3Fd34gxE2FKegrUMc",
+      "assignedUserName": "Beker Alvizo",
+      "assignmentId": "quFGq2rCdp6EG7KR1i3r",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t08-003",
+      "assignedUserId": "vWkiy4cg6ZO1KXvIJvIs",
+      "assignedUserName": "Gabriela Silva",
+      "assignmentId": "32hAfX2iyMkDclIBzeE4",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t08-007",
+      "assignedUserId": "vWkiy4cg6ZO1KXvIJvIs",
+      "assignedUserName": "Gabriela Silva",
+      "assignmentId": "qialKxBCTAXIXShthKus",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t09-004",
+      "assignedUserId": "N7TSzZQwBBpIhz0CwGjo",
+      "assignedUserName": "Jehu Abner",
+      "assignmentId": "GbNwJ5BXv6ER9aLIisJe",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-002",
+      "assignedUserId": "mdGmbzuOLNtdgqDUxtP8",
+      "assignedUserName": "Jessica Isas",
+      "assignmentId": "DMqVg9BnYc6QHtQrVT8t",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-006",
+      "assignedUserId": "mdGmbzuOLNtdgqDUxtP8",
+      "assignedUserName": "Jessica Isas",
+      "assignmentId": "KV4mX7Z0yiAFozyCxZMX",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-004",
+      "assignedUserId": "WYlhg8FypStOUBpHZp8r",
+      "assignedUserName": "José Galindo",
+      "assignmentId": "SGJq32p16zZgulWIa7rZ",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-001",
+      "assignedUserId": "hKkKciWCNeTfOPaWVVi4",
+      "assignedUserName": "José Heredia",
+      "assignmentId": "WCEwwCSuCIqEv1m5RICB",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-003",
+      "assignedUserId": "hKkKciWCNeTfOPaWVVi4",
+      "assignedUserName": "José Heredia",
+      "assignmentId": "1bK8qhkJybP0mSsgIzzb",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t11-008",
+      "assignedUserId": "kbZYx1GM8coGjnPddlWM",
+      "assignedUserName": "Julio Mora",
+      "assignmentId": "ubDDuX68DlEbpKjToPZw",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t11-012",
+      "assignedUserId": "e81Ek2W3Cii4rvMLtD8l",
+      "assignedUserName": "Karina González",
+      "assignmentId": "DIqJmmAOqeUXk57ckmNo",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t11-005",
+      "assignedUserId": "qmsTfquL6uSf0fGBovso",
+      "assignedUserName": "Luis Isas",
+      "assignmentId": "FN4N2TtOoBOM67AVIchg",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t11-002",
+      "assignedUserId": "XYuqWjuKtGgKZdV93GX5",
+      "assignedUserName": "Ma. Ramírez",
+      "assignmentId": "jPbJThuGxoALeqBafnxB",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t12-004",
+      "assignedUserId": "XYuqWjuKtGgKZdV93GX5",
+      "assignedUserName": "Ma. Ramírez",
+      "assignmentId": "C2bNAwCxKswm3RyVAy2q",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t12-001",
+      "assignedUserId": "j3Bjeu3GfIe8Tkvg8uB3",
+      "assignedUserName": "Margarita Ballardo",
+      "assignmentId": "5ht2xO0lTt1imsiLBp5R",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t12-002",
+      "assignedUserId": "j3Bjeu3GfIe8Tkvg8uB3",
+      "assignedUserName": "Margarita Ballardo",
+      "assignmentId": "CMSTKi0f16JxJeTm5cQZ",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-002",
+      "assignedUserId": "XAdIAbxtPP11LOukV3wD",
+      "assignedUserName": "Marisol Isas",
+      "assignmentId": "LA7dKnkllYxJEfQVuM0d",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-006",
+      "assignedUserId": "XAdIAbxtPP11LOukV3wD",
+      "assignedUserName": "Marisol Isas",
+      "assignmentId": "O8Jhvxwov1MozkIl3aP3",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-001",
+      "assignedUserId": "Wpq755821PXzEnQVokUS",
+      "assignedUserName": "Martha Martínez",
+      "assignmentId": "krqZmztcJRoqNBZbTr8R",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-003",
+      "assignedUserId": "Wpq755821PXzEnQVokUS",
+      "assignedUserName": "Martha Martínez",
+      "assignmentId": "wGffkjmCNAzvoWzlBBwn",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-004",
+      "assignedUserId": "Wpq755821PXzEnQVokUS",
+      "assignedUserName": "Martha Martínez",
+      "assignmentId": "zYSq1BrMuIlXoaBOGsBk",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t14-002",
+      "assignedUserId": "2rQK9DSApeAsDeeiF7OV",
+      "assignedUserName": "Martín Martínez",
+      "assignmentId": "d2RIj8wLy6V5S99JVZIu",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t14-004",
+      "assignedUserId": "2rQK9DSApeAsDeeiF7OV",
+      "assignedUserName": "Martín Martínez",
+      "assignmentId": "QhvmgqmIFVxnzIvsNqJ9",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t15-001",
+      "assignedUserId": "4N32iUOt5h3LxCdzObFG",
+      "assignedUserName": "Miguel Silva",
+      "assignmentId": "9KTIuArZHZtbPuA6aEk8",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t15-004",
+      "assignedUserId": "9NTYgy2J19UCXGSi5aJw",
+      "assignedUserName": "Montserrat Ruiz",
+      "assignmentId": "y1TeT5XaJLsz9ikf6JWy",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t15-005",
+      "assignedUserId": "9NTYgy2J19UCXGSi5aJw",
+      "assignedUserName": "Montserrat Ruiz",
+      "assignmentId": "yPbE2AO5JKmZuALuaOyM",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t17-008",
+      "assignedUserId": "AACgOmZh3i2Dz8YDue8w",
+      "assignedUserName": "Rosaura Chávez",
+      "assignmentId": "IcO0lw9NBTR3qPQ6q308",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t19-003",
+      "assignedUserId": "It6qNxKl6RJLw32yaXXr",
+      "assignedUserName": "Valeria Valencia",
+      "assignmentId": "uNTbJTIGGuQ7LU1fewRf",
+      "status": "pending"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t20-004",
+      "assignedUserId": "It6qNxKl6RJLw32yaXXr",
+      "assignedUserName": "Valeria Valencia",
+      "assignmentId": "qVPsLzpQQAfNEN85jBVb",
+      "status": "pending"
+    }
+  ],
+  "remappedAddresses": [
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-003",
+      "oldDocId": "1bK8qhkJybP0mSsgIzzb",
+      "newDocId": "Dfqs2qLes3dkjZQgpV8W",
+      "docRecreated": true,
+      "oldUser": "José Heredia",
+      "newUser": "Gloria Romero",
+      "oldStatus": "pending",
+      "newStatus": "completed",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t08-003",
+      "oldDocId": "32hAfX2iyMkDclIBzeE4",
+      "newDocId": "G2F9UNDmMB7g5XQWU2gu",
+      "docRecreated": true,
+      "oldUser": "Gabriela Silva",
+      "newUser": "Cristina Ávila",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t12-001",
+      "oldDocId": "5ht2xO0lTt1imsiLBp5R",
+      "newDocId": "Lxg2VYOu6BF8tZdMXtPp",
+      "docRecreated": true,
+      "oldUser": "Margarita Ballardo",
+      "newUser": "Jessica Isas",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t01-003",
+      "oldDocId": "8BBo3P5Vow3JJmGJa6VE",
+      "newDocId": "Im8zytmniibY76dOZX83",
+      "docRecreated": true,
+      "oldUser": "Adrián Merino",
+      "newUser": "Alicia Ramos",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t15-001",
+      "oldDocId": "9KTIuArZHZtbPuA6aEk8",
+      "newDocId": "3hL22LEOe8yFhSOtIpES",
+      "docRecreated": true,
+      "oldUser": "Miguel Silva",
+      "newUser": "Luis Hernández",
+      "oldStatus": "pending",
+      "newStatus": "completed",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t12-002",
+      "oldDocId": "CMSTKi0f16JxJeTm5cQZ",
+      "newDocId": "4Qa2on3zXvo5UgeszgaQ",
+      "docRecreated": true,
+      "oldUser": "Margarita Ballardo",
+      "newUser": "Jehu Abner",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t11-012",
+      "oldDocId": "DIqJmmAOqeUXk57ckmNo",
+      "newDocId": "IhRxYha18OTefRUfwIOX",
+      "docRecreated": true,
+      "oldUser": "Karina González",
+      "newUser": "Greta Hernández",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-002",
+      "oldDocId": "DMqVg9BnYc6QHtQrVT8t",
+      "newDocId": "cF0deGlWk8kN7Y4oohsR",
+      "docRecreated": true,
+      "oldUser": "Jessica Isas",
+      "newUser": "Gabriel Segura",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t01-006",
+      "oldDocId": "DTVJIPaJPLJOKYAgGF5c",
+      "newDocId": "lLzJVNbo7yRDUA6EfyTx",
+      "docRecreated": true,
+      "oldUser": "Adrián Merino",
+      "newUser": "Adrián Guajardo",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t11-005",
+      "oldDocId": "FN4N2TtOoBOM67AVIchg",
+      "newDocId": "62tLV8VJ4GIU51chNPEP",
+      "docRecreated": true,
+      "oldUser": "Luis Isas",
+      "newUser": "Gritzel Hernandez",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t09-004",
+      "oldDocId": "GbNwJ5BXv6ER9aLIisJe",
+      "newDocId": "leTycz80GFzbJgZMBuAH",
+      "docRecreated": true,
+      "oldUser": "Jehu Abner",
+      "newUser": "Eliseba Serrano",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t03-004",
+      "oldDocId": "GcGk05G5YFY3MVaz5dwQ",
+      "newDocId": "rUklX0vPYBtx7fJlyccF",
+      "docRecreated": true,
+      "oldUser": "Antonio Isas",
+      "newUser": "April Merino",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t17-008",
+      "oldDocId": "IcO0lw9NBTR3qPQ6q308",
+      "newDocId": "RqtrRddnsaISsODPnzjw",
+      "docRecreated": true,
+      "oldUser": "Rosaura Chávez",
+      "newUser": "Margarita Ballardo",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-006",
+      "oldDocId": "KV4mX7Z0yiAFozyCxZMX",
+      "newDocId": "sMMHoH7ISiAcwuihPcA0",
+      "docRecreated": true,
+      "oldUser": "Jessica Isas",
+      "newUser": "Fabiola Guajardo",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-002",
+      "oldDocId": "LA7dKnkllYxJEfQVuM0d",
+      "newDocId": "xMBtZcCvYeRJ2RXdHEvC",
+      "docRecreated": true,
+      "oldUser": "Marisol Isas",
+      "newUser": "José Galindo",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t03-003",
+      "oldDocId": "NwRqmFrqubtoEUAbQgM7",
+      "newDocId": "wp9GgItcdcwip8Jy0uja",
+      "docRecreated": true,
+      "oldUser": "Andrea Alcázar",
+      "newUser": "Antonio Isas",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-006",
+      "oldDocId": "O8Jhvxwov1MozkIl3aP3",
+      "newDocId": "AFfevV1w1134IPCB3hHR",
+      "docRecreated": true,
+      "oldUser": "Marisol Isas",
+      "newUser": "Jorge Perea",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t02-005",
+      "oldDocId": "O9czU3K7gWckNDd2il7W",
+      "newDocId": "4lP2kqsL6BVChTqqIYZA",
+      "docRecreated": true,
+      "oldUser": "Ana Ruiz",
+      "newUser": "Alison González",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t14-004",
+      "oldDocId": "QhvmgqmIFVxnzIvsNqJ9",
+      "newDocId": "662zWw4NRVkze5ipapuU",
+      "docRecreated": true,
+      "oldUser": "Martín Martínez",
+      "newUser": "Karina González",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-004",
+      "oldDocId": "SGJq32p16zZgulWIa7rZ",
+      "newDocId": "pLSpC8BPO0drv2itIhKU",
+      "docRecreated": true,
+      "oldUser": "José Galindo",
+      "newUser": "Gabriela Martínez",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t05-003",
+      "oldDocId": "Uq7keW7nF8W4xAHBEvRS",
+      "newDocId": "92LA2dULKaX3e1J7wVfo",
+      "docRecreated": true,
+      "oldUser": "April Merino",
+      "newUser": "Carlos Ramos",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t04-002",
+      "oldDocId": "W1RiVwQeHAbnShSEAsxQ",
+      "newDocId": "tDEBvwioX9uSW1cB9mMo",
+      "docRecreated": true,
+      "oldUser": "Antonio Isas",
+      "newUser": "Beker Alvizo",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t10-001",
+      "oldDocId": "WCEwwCSuCIqEv1m5RICB",
+      "newDocId": "ByjpiO9WSnXuEvtuUVc7",
+      "docRecreated": true,
+      "oldUser": "José Heredia",
+      "newUser": "Gabriela Silva",
+      "oldStatus": "pending",
+      "newStatus": "completed",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t14-002",
+      "oldDocId": "d2RIj8wLy6V5S99JVZIu",
+      "newDocId": "c2L0b1bgyzgdX9Jz3IPQ",
+      "docRecreated": true,
+      "oldUser": "Martín Martínez",
+      "newUser": "Leilany Silva",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t11-002",
+      "oldDocId": "jPbJThuGxoALeqBafnxB",
+      "newDocId": "s7NHMMCktQL3UPmUGgCs",
+      "docRecreated": true,
+      "oldUser": "Ma. Ramírez",
+      "newUser": "Jehonatán Chávez",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-001",
+      "oldDocId": "krqZmztcJRoqNBZbTr8R",
+      "newDocId": "YfEBUQnaEeWoDUHDlEQ5",
+      "docRecreated": true,
+      "oldUser": "Martha Martínez",
+      "newUser": "José Heredia",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t20-004",
+      "oldDocId": "qVPsLzpQQAfNEN85jBVb",
+      "newDocId": "vOsgGJyLJZMsTZbtVRrR",
+      "docRecreated": true,
+      "oldUser": "Valeria Valencia",
+      "newUser": "Marisol Isas",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t08-007",
+      "oldDocId": "qialKxBCTAXIXShthKus",
+      "newDocId": "j4spO3KdZ9mV0YuwiiO3",
+      "docRecreated": true,
+      "oldUser": "Gabriela Silva",
+      "newUser": "Diego Serrano",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t05-002",
+      "oldDocId": "quFGq2rCdp6EG7KR1i3r",
+      "newDocId": "kBts3UMCU09atNH1H4xF",
+      "docRecreated": true,
+      "oldUser": "Beker Alvizo",
+      "newUser": "Carolina Segura",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t19-003",
+      "oldDocId": "uNTbJTIGGuQ7LU1fewRf",
+      "newDocId": "z62vrCTeSwE6R41rn9OY",
+      "docRecreated": true,
+      "oldUser": "Valeria Valencia",
+      "newUser": "Maricela Murillo",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t11-008",
+      "oldDocId": "ubDDuX68DlEbpKjToPZw",
+      "newDocId": "eEyO5t9pPGybmI5nHov5",
+      "docRecreated": true,
+      "oldUser": "Julio Mora",
+      "newUser": "Graciela Limones",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-003",
+      "oldDocId": "wGffkjmCNAzvoWzlBBwn",
+      "newDocId": "reEcfEd3W7LPgQ5hWNPG",
+      "docRecreated": true,
+      "oldUser": "Martha Martínez",
+      "newUser": "Joshua Garcia",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t15-004",
+      "oldDocId": "y1TeT5XaJLsz9ikf6JWy",
+      "newDocId": "sTPM6zGXQ19OuysWN74L",
+      "docRecreated": true,
+      "oldUser": "Montserrat Ruiz",
+      "newUser": "Luis Isas",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t15-005",
+      "oldDocId": "yPbE2AO5JKmZuALuaOyM",
+      "newDocId": "xBh8ZLphZBoEJXbPo3Zp",
+      "docRecreated": true,
+      "oldUser": "Montserrat Ruiz",
+      "newUser": "Ma. Ramírez",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    },
+    {
+      "addressId": "territorio-enlaces-2026-07-05-t13-004",
+      "oldDocId": "zYSq1BrMuIlXoaBOGsBk",
+      "newDocId": "C3PGbhh3xwynilGh6op0",
+      "docRecreated": true,
+      "oldUser": "Martha Martínez",
+      "newUser": "Julio Mora",
+      "oldStatus": "pending",
+      "newStatus": "pending",
+      "oldCreateTime": "2026-07-07T18:46:44.224210Z",
+      "newCreateTime": "2026-07-29T15:58:40.848006Z"
+    }
+  ]
+}

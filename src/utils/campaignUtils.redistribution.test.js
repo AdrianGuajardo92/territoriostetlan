@@ -2,15 +2,42 @@ import { describe, it, expect } from 'vitest';
 import {
   buildCampaignReassignmentUndoEntry,
   buildDistributionAssignmentFingerprint,
+  buildDistributionTargetsFromAssignments,
   buildDistributionTargetFingerprint,
   buildRedistributionNeeds,
   distributeAddressesAcrossParticipants,
+  enforceCampaignAddressRestrictions,
   shuffleCampaignItems,
   isCampaignReassignmentUndoTokenExpired,
+  prepareDistributionTargetsForApply,
   selectCampaignAssignmentsForReassignment,
   validateCampaignReassignmentUndoCandidate,
   validateRedistributionAddressPool
 } from './campaignUtils.js';
+
+describe('participantes visibles en la administración del reparto', () => {
+  const participants = [
+    { userId: 'active', isEnabled: true },
+    { userId: 'without-default-assignment', isEnabled: false }
+  ];
+
+  it('conserva con objetivo 0 a quienes no recibieron reparto', () => {
+    expect(buildDistributionTargetsFromAssignments([], participants)).toEqual({
+      active: 0,
+      'without-default-assignment': 0
+    });
+  });
+
+  it('permite asignar manualmente a una persona excluida por defecto', () => {
+    expect(prepareDistributionTargetsForApply({
+      active: 1,
+      'without-default-assignment': 1
+    }, participants, {}, 2)).toEqual({
+      active: 1,
+      'without-default-assignment': 1
+    });
+  });
+});
 
 describe('buildRedistributionNeeds', () => {
   it('calcula necesidades cuando Fabiola sube a 3 y Ana baja a 2', () => {
@@ -108,6 +135,77 @@ describe('distributeAddressesAcrossParticipants', () => {
     ]);
     expect(assignments.slice(0, 2).map((assignment) => assignment.addressId)).toEqual(['t8-a', 't8-b']);
     expect(assignments.slice(2).map((assignment) => assignment.addressId)).toEqual(['t8-c', 't9-a', 't9-b']);
+  });
+
+  it('reserva las seis direcciones especiales para los varones autorizados', () => {
+    const restrictedAddressIds = [
+      'territorio-enlaces-2026-07-05-t01-005',
+      'territorio-enlaces-2026-07-05-t01-004',
+      'territorio-enlaces-2026-07-05-t01-002',
+      'territorio-enlaces-2026-07-05-t01-006',
+      'territorio-enlaces-2026-07-05-t01-001',
+      'territorio-enlaces-2026-07-05-t01-003'
+    ];
+    const addresses = [
+      ...restrictedAddressIds.map((id, index) => ({
+        id,
+        territoryId: 't1',
+        address: `Especial ${index + 1}`
+      })),
+      ...Array.from({ length: 6 }, (_, index) => ({
+        id: `normal-${index + 1}`,
+        territoryId: 't2',
+        address: `Normal ${index + 1}`
+      }))
+    ];
+    const participants = [
+      { userId: 'ana', userNameSnapshot: 'Ana Ruiz', isEnabled: true },
+      { userId: 'adrian', userNameSnapshot: 'Adrián Guajardo', isEnabled: true }
+    ];
+    const targets = [
+      { userId: 'ana', assignedCount: 6 },
+      { userId: 'adrian', assignedCount: 6 }
+    ];
+
+    const assignments = distributeAddressesAcrossParticipants({
+      addresses,
+      participants,
+      targets,
+      territoryMap: {
+        t1: { id: 't1', name: 'Territorio 1' },
+        t2: { id: 't2', name: 'Territorio 2' }
+      },
+      random: () => 0.999
+    });
+
+    const restrictedAssignments = assignments.filter((assignment) => (
+      restrictedAddressIds.includes(assignment.addressId)
+    ));
+    const counts = assignments.reduce((result, assignment) => {
+      result[assignment.assignedUserId] = (result[assignment.assignedUserId] || 0) + 1;
+      return result;
+    }, {});
+
+    expect(restrictedAssignments).toHaveLength(6);
+    expect(restrictedAssignments.every((assignment) => assignment.assignedUserId === 'adrian')).toBe(true);
+    expect(counts).toEqual({ adrian: 6, ana: 6 });
+  });
+
+  it('avisa cuando los autorizados no tienen cupo suficiente', () => {
+    const assignments = [
+      {
+        addressId: 'territorio-enlaces-2026-07-05-t01-001',
+        assignedUserId: 'ana',
+        assignedUserName: 'Ana Ruiz'
+      },
+      {
+        addressId: 'normal-1',
+        assignedUserId: 'maria',
+        assignedUserName: 'María López'
+      }
+    ];
+
+    expect(() => enforceCampaignAddressRestrictions(assignments)).toThrow(/capacidad.*autorizados/i);
   });
 });
 
