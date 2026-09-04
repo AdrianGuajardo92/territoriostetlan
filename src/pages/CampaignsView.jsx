@@ -47,7 +47,13 @@ import {
   isRestrictedCampaignAddress
 } from '../config/campaignAddressRestrictions';
 import { isPioneerName, isPioneerUser } from '../config/congregationPioneers';
-import { getRegionalAssembly2026ProgramUrl } from '../config/campaignProgramLinks';
+import {
+  BIBLE_STUDY_CAMPAIGN_2026_LSM_REPORT_URL,
+  BIBLE_STUDY_CAMPAIGN_2026_VIDEO_POSTER_URL,
+  BIBLE_STUDY_CAMPAIGN_2026_VIDEO_URL,
+  getBibleStudyCampaign2026Guide,
+  getRegionalAssembly2026ProgramUrl
+} from '../config/campaignProgramLinks';
 import { useIsDesktop } from '../hooks/useMediaQuery';
 import {
   CampaignHubStepCard,
@@ -1003,6 +1009,117 @@ const AnimatedAssignmentCardSlot = memo(({
   && prev.statusResolver === next.statusResolver
 ));
 
+const CampaignTipVideoModal = ({
+  isOpen,
+  tip,
+  tipNumber,
+  onClose
+}) => {
+  const videoRef = useRef(null);
+  const [hasVideoError, setHasVideoError] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setHasVideoError(false);
+      return undefined;
+    }
+
+    videoRef.current?.pause();
+    return undefined;
+  }, [isOpen, tip]);
+
+  const resetToSegmentStart = (video) => {
+    if (!tip || !video) return;
+    video.currentTime = tip.startTime;
+  };
+
+  const handleVideoReady = (event) => {
+    const video = event.currentTarget;
+    resetToSegmentStart(video);
+    const playPromise = video.play();
+    playPromise?.catch?.(() => {
+      // Si el navegador bloquea la reproducción automática, el botón de reproducción queda disponible.
+    });
+  };
+
+  const handleVideoPlay = (event) => {
+    const video = event.currentTarget;
+    if (!tip || video.currentTime < tip.startTime || video.currentTime >= tip.endTime) {
+      resetToSegmentStart(video);
+    }
+  };
+
+  const handleVideoTimeUpdate = (event) => {
+    const video = event.currentTarget;
+    if (!tip || video.currentTime < tip.endTime) return;
+
+    video.pause();
+    resetToSegmentStart(video);
+  };
+
+  const handleVideoEnded = (event) => {
+    resetToSegmentStart(event.currentTarget);
+  };
+
+  const segmentVideoUrl = tip
+    ? `${BIBLE_STUDY_CAMPAIGN_2026_VIDEO_URL}#t=${tip.startTime},${tip.endTime}`
+    : BIBLE_STUDY_CAMPAIGN_2026_VIDEO_URL;
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={tipNumber ? `Consejo ${tipNumber} · Fragmento en LSM` : 'Fragmento en LSM'}
+      size="lg"
+      modalId="bible-study-campaign-tip-video"
+    >
+      <div className="max-h-[calc(85vh-4.5rem)] overflow-y-auto p-4 sm:p-5">
+        {hasVideoError ? (
+          <div className="flex aspect-video items-center justify-center rounded-2xl bg-slate-900 p-6 text-center text-sm text-white">
+            No fue posible cargar el fragmento en LSM. Puedes abrir el informe oficial en JW.ORG con el enlace de abajo.
+          </div>
+        ) : (
+          <video
+            key={`${tip?.startTime}-${tip?.endTime}`}
+            ref={videoRef}
+            src={segmentVideoUrl}
+            poster={BIBLE_STUDY_CAMPAIGN_2026_VIDEO_POSTER_URL}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+            onLoadedMetadata={handleVideoReady}
+            onPlay={handleVideoPlay}
+            onTimeUpdate={handleVideoTimeUpdate}
+            onEnded={handleVideoEnded}
+            onError={() => setHasVideoError(true)}
+            className="aspect-video w-full rounded-2xl bg-black shadow-lg"
+          >
+            Tu navegador no puede reproducir este video.
+          </video>
+        )}
+
+        <div className="mt-4 rounded-2xl bg-indigo-50 p-4">
+          <p className="text-sm font-semibold leading-relaxed text-slate-900">{tip?.text}</p>
+          <p className="mt-2 text-xs font-bold uppercase tracking-wide text-indigo-700">
+            Fragmento en Lengua de Señas Mexicana
+          </p>
+        </div>
+
+        <a
+          href={BIBLE_STUDY_CAMPAIGN_2026_LSM_REPORT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+        >
+          <Icon name="externalLink" size={15} />
+          Ver el informe completo en JW.ORG
+        </a>
+      </div>
+    </Modal>
+  );
+};
+
 const PublisherAssignmentsSection = ({
   activeCampaign,
   assignments,
@@ -1017,6 +1134,9 @@ const PublisherAssignmentsSection = ({
 }) => {
   const [exitingAssignmentId, setExitingAssignmentId] = useState(null);
   const [processingAssignmentId, setProcessingAssignmentId] = useState(null);
+  const [isCampaignGuideExpanded, setIsCampaignGuideExpanded] = useState(false);
+  const [selectedCampaignTip, setSelectedCampaignTip] = useState(null);
+  const [isCampaignTipVideoOpen, setIsCampaignTipVideoOpen] = useState(false);
   const pendingExitRef = useRef(null);
   const exitingOverlayRef = useRef(null);
 
@@ -1104,6 +1224,7 @@ const PublisherAssignmentsSection = ({
     [CAMPAIGN_PROGRESS_STATUSES.COMPLETED]: completedCount
   };
   const programUrl = getRegionalAssembly2026ProgramUrl(activeCampaign);
+  const campaignGuide = getBibleStudyCampaign2026Guide(activeCampaign);
 
   return (
     <div className="space-y-4">
@@ -1140,6 +1261,79 @@ const PublisherAssignmentsSection = ({
           ))}
         </div>
       </SectionCard>
+
+      {campaignGuide ? (
+        <SectionCard
+          title="Consejos para la campaña"
+          subtitle="Ideas sencillas para ofrecer cursos bíblicos"
+          icon="lightbulb"
+          tone="indigo"
+          collapsible
+          isExpanded={isCampaignGuideExpanded}
+          onToggle={() => setIsCampaignGuideExpanded((previous) => !previous)}
+          summaryLabel={`${campaignGuide.tips.length} consejos · ${campaignGuide.resources.length} enlaces`}
+          sectionId="bible-study-campaign-guide"
+        >
+          <div className="space-y-5">
+            <ul className="space-y-3">
+              {campaignGuide.tips.map((tip, index) => (
+                <li key={tip.startTime}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCampaignTip({ ...tip, number: index + 1 });
+                      setIsCampaignTipVideoOpen(true);
+                    }}
+                    aria-label={`${tip.text} Ver fragmento en Lengua de Señas Mexicana`}
+                    className="group flex w-full items-start gap-3 rounded-2xl p-2 text-left text-sm leading-relaxed text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-900"
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 flex-1">{tip.text}</span>
+                    <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2 py-1 text-[11px] font-bold text-indigo-700 shadow-sm ring-1 ring-indigo-100">
+                      <Icon name="video" size={12} aria-hidden="true" />
+                      Ver fragmento
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <div className="border-t border-slate-100 pt-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                Ideas en JW.ORG
+              </p>
+              <div className="grid gap-2 lg:grid-cols-3">
+                {campaignGuide.resources.map((resource) => (
+                  <a
+                    key={resource.url}
+                    href={resource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex min-h-[76px] items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 transition-colors hover:border-indigo-200 hover:bg-indigo-50"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200 group-hover:ring-indigo-200">
+                      <Icon name="externalLink" size={15} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900">{resource.label}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-500">{resource.description}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
+
+      <CampaignTipVideoModal
+        isOpen={isCampaignTipVideoOpen}
+        tip={selectedCampaignTip}
+        tipNumber={selectedCampaignTip?.number}
+        onClose={() => setIsCampaignTipVideoOpen(false)}
+      />
 
       {visibleGroupedAssignments.length === 0 ? (
         <EmptyState
