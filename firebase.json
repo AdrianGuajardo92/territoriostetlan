@@ -10,6 +10,18 @@
         "firebase-debug.*.log",
         "*.local"
       ]
+    },
+    {
+      "source": "functions-auto-release",
+      "codebase": "auto-release",
+      "ignore": [
+        "node_modules",
+        "test",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
     }
   ]
 }

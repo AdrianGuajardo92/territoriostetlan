@@ -12,6 +12,8 @@ import ExportAddressesModal from './ExportAddressesModal';
 import TerritoryManagementModal from './TerritoryManagementModal';
 import ArchivedAddressesPortal from '../admin/ArchivedAddressesPortal';
 import QuickProposalReviewMap from '../admin/QuickProposalReviewMap';
+import CongregationsDirectory from '../admin/CongregationsDirectory';
+import AdminActionsHome from '../admin/AdminActionsHome';
 import { extractCoordinatesFromUrl } from '../../utils/territoryHelpers';
 import { filterPioneerUsers } from '../../config/congregationPioneers';
 import { formatRelativeTime, getDisplayAddress, getProposalAddressDisplay } from '../../utils/helpers';
@@ -26,7 +28,7 @@ import {
   saveQuickProposalDraft
 } from '../../utils/quickProposalDrafts';
 
-const ADMIN_VIEW_IDS = new Set(['actions', 'backup', 'no_access', 'proposals', 'users']);
+const ADMIN_VIEW_IDS = new Set(['actions', 'backup', 'congregations', 'no_access', 'proposals', 'users']);
 const ADMIN_CHILD_MODAL_IDS = new Set([
   'admin-list',
   'archived-addresses',
@@ -529,55 +531,56 @@ const AdminModal = (props = {}) => {
     }
   };
 
-  // Configuración de opciones del administrador con diseño elegante
+  // Opciones del centro de administración.
   const adminOptions = [
     {
       id: 'proposals',
       title: 'Propuestas de Cambios',
       description: pendingProposalsCount > 0 ? `${pendingProposalsCount} pendientes` : 'Ver cambios propuestos',
-      icon: 'fas fa-clipboard-check',
+      icon: 'clipboardCheck',
       badge: pendingProposalsCount,
-      color: 'orange',
       action: () => navigateToAdminView('proposals')
     },
     {
       id: 'users',
       title: 'Gestión de Usuarios',
       description: 'Administrar publicadores',
-      icon: 'fas fa-users-cog',
-      color: 'blue',
+      icon: 'users',
       action: () => navigateToAdminView('users')
     },
     {
       id: 'territories',
       title: 'Gestión de Territorios',
       description: 'Liberar y administrar territorios',
-      icon: 'fas fa-map-marked-alt',
-      color: 'indigo',
+      icon: 'map',
       action: () => openAdminChildModal('territory-management')
+    },
+    {
+      id: 'congregations',
+      title: 'Congregaciones del territorio',
+      description: 'Consultar congregaciones, circuitos y correos',
+      icon: 'building',
+      action: () => navigateToAdminView('congregations')
     },
     {
       id: 'backup',
       title: 'Respaldo de Datos',
       description: 'Crear backups del sistema',
-      icon: 'fas fa-download',
-      color: 'green',
+      icon: 'download',
       action: () => navigateToAdminView('backup')
     },
     {
       id: 'archived',
       title: 'Direcciones Archivadas',
       description: 'Ver historial de direcciones eliminadas',
-      icon: 'fas fa-archive',
-      color: 'gray',
+      icon: 'archive',
       action: () => openAdminChildModal('archived-addresses')
     },
     {
       id: 'stats',
       title: 'Estadísticas Completas',
       description: 'Análisis detallado con filtros y exportación',
-      icon: 'fas fa-chart-line',
-      color: 'purple',
+      icon: 'trending-up',
       action: () => openAdminChildModal('stats')
     }
   ];
@@ -692,125 +695,11 @@ const AdminModal = (props = {}) => {
         );
       
       case 'actions':
-        // Configuración de colores para cada opción
-        const colorConfig = {
-          orange: {
-            bg: 'from-orange-50 to-amber-100',
-            iconBg: 'bg-orange-500',
-            text: 'text-orange-600',
-            accent: 'border-orange-200',
-            hover: 'hover:shadow-orange-100/50'
-          },
-          blue: {
-            bg: 'from-blue-50 to-indigo-100',
-            iconBg: 'bg-blue-500',
-            text: 'text-blue-600',
-            accent: 'border-blue-200',
-            hover: 'hover:shadow-blue-100/50'
-          },
-          green: {
-            bg: 'from-green-50 to-emerald-100',
-            iconBg: 'bg-green-500',
-            text: 'text-green-600',
-            accent: 'border-green-200',
-            hover: 'hover:shadow-green-100/50'
-          },
-          gray: {
-            bg: 'from-gray-50 to-gray-100',
-            iconBg: 'bg-gray-500',
-            text: 'text-gray-600',
-            accent: 'border-gray-200',
-            hover: 'hover:shadow-gray-100/50'
-          },
-          indigo: { 
-            bg: 'from-indigo-50 to-blue-100', 
-            iconBg: 'bg-indigo-500', 
-            text: 'text-indigo-600',
-            accent: 'border-indigo-200',
-            hover: 'hover:shadow-indigo-100/50'
-          },
-          purple: {
-            bg: 'from-purple-50 to-violet-100',
-            iconBg: 'bg-purple-500',
-            text: 'text-purple-600',
-            accent: 'border-purple-200',
-            hover: 'hover:shadow-purple-100/50'
-          }
-        };
+        return <AdminActionsHome options={adminOptions} />;
 
-        return (
-          <div className="space-y-8">
-            {/* Título de bienvenida */}
-            <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-slate-600 to-gray-700 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-                <i className="fas fa-tools text-3xl text-white"></i>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Centro de Administración</h3>
-              <p className="text-gray-600 max-w-md mx-auto">Gestiona todos los aspectos del sistema desde este panel central</p>
-            </div>
+      case 'congregations':
+        return <CongregationsDirectory />;
 
-            {/* Grid de opciones elegantes - Perfecto 2x2 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {adminOptions.map(option => {
-                const config = colorConfig[option.color] || colorConfig.blue;
-                
-                return (
-                <button 
-                  key={option.id} 
-                  onClick={option.action} 
-                    className={`
-                      relative p-6 bg-gradient-to-br ${config.bg} 
-                      border-2 ${config.accent} rounded-3xl text-left 
-                      transition-all duration-300 ease-out
-                      hover:shadow-2xl ${config.hover} hover:scale-[1.02]
-                      transform backdrop-blur-sm border-white/20 group
-                    `}
-                  >
-                    {/* Badge de notificación elegante */}
-                  {option.badge > 0 && (
-                      <div className="absolute -top-3 -right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white text-sm rounded-2xl w-8 h-8 flex items-center justify-center font-bold animate-pulse shadow-lg">
-                      {option.badge}
-                      </div>
-                  )}
-                    
-                  <div className="flex items-start">
-                      {/* Ícono elegante */}
-                      <div className={`w-16 h-16 ${config.iconBg} rounded-2xl flex items-center justify-center mr-4 shadow-lg transform group-hover:scale-110 transition-transform`}>
-                        <i className={`${option.icon} text-2xl text-white`}></i>
-                      </div>
-                      
-                      {/* Contenido */}
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-gray-800 transition-colors">{option.title}</h4>
-                        <p className="text-sm text-gray-600 leading-relaxed">{option.description}</p>
-                      </div>
-                      
-                      {/* Flecha elegante */}
-                      <div className="ml-2 mt-2">
-                        <i className="fas fa-arrow-right text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all"></i>
-                      </div>
-                    </div>
-                  </button>
-
-                );
-              })}
-            </div>
-            
-            {/* Footer informativo */}
-            <div className="bg-gradient-to-r from-slate-100 to-gray-100 rounded-2xl p-6 border border-slate-200">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-slate-600 rounded-xl flex items-center justify-center mr-4">
-                  <i className="fas fa-info-circle text-white text-lg"></i>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-800 mb-1">Acceso Exclusivo</h4>
-                  <p className="text-sm text-slate-600">Solo los administradores pueden acceder a estas funciones avanzadas</p>
-                    </div>
-                  </div>
-            </div>
-          </div>
-        );
-      
       case 'proposals':
         // Filtrar propuestas según el filtro seleccionado
         const getFilteredProposals = () => {
@@ -1670,23 +1559,23 @@ const AdminModal = (props = {}) => {
         size="full"
         modalId={modalId}
       >
-        <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-gray-50">
-          {/* Header elegante con temática consistente */}
-          <div className="shadow-xl px-4 py-6 flex-shrink-0" style={{ backgroundColor: '#2C3E50' }}>
-            <div className="flex items-center justify-between">
-              {/* Título con ícono */}
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                  <i className="fas fa-user-shield text-2xl text-white"></i>
+        <div className="flex h-full min-h-0 flex-col bg-[#F4F6F9]">
+          <div className="flex-shrink-0 bg-[#22374A] px-4 py-4 sm:px-7 sm:py-[17px] lg:px-10">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                <div className="relative flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-xl bg-[#354B5F] sm:h-[46px] sm:w-[46px]" aria-hidden="true">
+                  <Icon name="user" size={25} strokeWidth={1.7} className="-translate-x-0.5 text-white" />
+                  <Icon name="shield" size={14} strokeWidth={1.7} className="absolute bottom-2 right-1 rounded-sm bg-[#354B5F] text-white sm:bottom-2.5 sm:right-1.5" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">Panel de Administrador</h2>
-                  <p className="text-white/70 text-sm">Gestión completa del sistema</p>
+                <div className="min-w-0">
+                  <h2 className="text-[17px] font-semibold leading-[22px] text-white sm:text-[22px] sm:leading-[26px]">Panel de Administrador</h2>
+                  <p className="mt-1 text-xs leading-4 text-[#C5D0DA] sm:text-sm sm:leading-5">Gestión completa del sistema</p>
                 </div>
               </div>
               
               {/* Botón cerrar / volver - inteligente según la vista */}
               <button
+                type="button"
                 onClick={() => {
                   if (view !== 'actions' && view !== 'no_access') {
                     navigateToAdminView('actions');
@@ -1694,22 +1583,15 @@ const AdminModal = (props = {}) => {
                     onClose();
                   }
                 }}
-                className="p-3 rounded-xl transition-all transform hover:scale-105 group"
-                style={{ backgroundColor: '#34495e' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a526b'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#34495e'}
+                aria-label={view !== 'actions' && view !== 'no_access' ? 'Volver al centro de administración' : 'Cerrar centro de administración'}
+                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[#30485C] text-[#DFE5EB] transition-colors hover:bg-[#3A526B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
-                {view !== 'actions' && view !== 'no_access' ? (
-                  <i className="fas fa-arrow-left text-white text-lg"></i>
-                ) : (
-                  <Icon name="x" size={20} className="text-white group-hover:rotate-90 transition-transform" />
-                )}
+                <Icon name={view !== 'actions' && view !== 'no_access' ? 'arrowLeft' : 'x'} size={20} aria-hidden="true" />
               </button>
             </div>
           </div>
           
-          {/* Contenido scrolleable con diseño elegante */}
-          <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+          <div className={`min-h-0 flex-1 overflow-y-auto ${view === 'actions' ? 'px-5 pb-8 pt-8 sm:px-6 sm:pt-10 lg:pt-[54px]' : 'p-4 sm:p-6'}`}>
             {renderContent()}
           </div>
         </div>

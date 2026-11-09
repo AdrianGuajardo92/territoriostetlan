@@ -11,7 +11,7 @@
     "clean": "rm -rf .vite node_modules/.vite dist && npm run build",
     "fresh": "npm run clean && npm run dev",
     "format": "prettier --write .",
-    "test": "vitest run"
+    "test": "vitest run --exclude \"functions-auto-release/**\""
   },
   "dependencies": {
     "dexie": "^4.0.11",
